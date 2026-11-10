@@ -334,7 +334,7 @@ details[open] summary { margin-bottom: 10px; }
           <p class="note" id="route-odds" style="margin:6px 0 0"></p>
         </div></details>
       </div>
-    <p class="note" style="margin:0">Duplighosts → Jr. Troopa → Hallway Bowser → Final Bowser · click a numbered step to jump there · ★ = planned press</p>
+    <p class="note" style="margin:0">Duplighosts → Jr. Troopa → Hallway Bowser → Final Bowser · click a step to jump there · ★ = planned press</p>
     <label class="f" style="margin:0">Duplighosts route<select id="s-duproute"><option value="rta">RTA: Spiny Surge (no lock)</option><option value="charge">Charge lock: Mario Charge, Bombette Do Nothing</option></select><small id="duproute-note"></small></label>
     <label class="f" style="margin:0">Jr. Troopa route<select id="s-jrroute"><option value="charge">Charge lock: T1 Super Charge, beeps on T3-T6</option><option value="shine">Old: a shine lock carried through the turns (v72)</option></select></label>
 </aside>
@@ -441,17 +441,17 @@ const ENDGAME = [
   { h: 'Jr. Troopa', turns: [
     { text: 'T1: Charge; Bomb', steps: [{ label: 'Bomb', cat: 'K' }] },
     { text: 'T2: Bomb; Whacka [Up 1]', steps: [{ label: 'Wait in this turn\'s first menu until Locked; then Bomb, and Whacka as fast as you like (the bar hiding counts it)', cat: 'M', turn: 'jr_whacka', pre: [{ cat: 'K', id: 'jr_bomb' }], hud: true }] },
-    { text: 'T3: Charge; Bomb - Life Shroom', steps: [{ label: 'Bomb → Close Call', cat: 'K', prof: 'jrcc_bomb', turn: 'jr_bomb_cc', pre: [{ cat: 'M', id: 'jr_charge' }], hud: true }] },
+    { text: 'T3: Charge; Bomb', steps: [{ label: 'Bomb → Close Call', cat: 'K', prof: 'jrcc_bomb', turn: 'jr_bomb_cc', pre: [{ cat: 'M', id: 'jr_charge' }], hud: true }] },
     { text: 'T4: Bomb; Maple Syrup [Down 1]', steps: [{ label: 'Maple Syrup → Close Call', cat: 'M', prof: 'jrcc_syrup', turn: 'jr_syrup_cc', pre: [{ cat: 'K', id: 'jr_bomb' }], hud: true }] },
-    { text: 'T5: Charge; Do Nothing - Life Shroom', steps: [{ label: 'Do Nothing → Close Call', cat: 'S', prof: 'jrcc_nothing', turn: 'jr_nothing_cc', pre: [{ cat: 'M', id: 'jr_charge' }], hud: true }] },
+    { text: 'T5: Charge; Do Nothing', steps: [{ label: 'Do Nothing → Close Call', cat: 'S', prof: 'jrcc_nothing', turn: 'jr_nothing_cc', pre: [{ cat: 'M', id: 'jr_charge' }], hud: true }] },
     { text: 'T6: Bounce x6; Bomb if 5 capped', steps: [{ label: 'Bounce → 6, 5+ either side', cat: 'K', prof: 'jrpb5' }] },
     { text: 'T7: Star Storm if 4 capped / Shooting Star [Down 5] if 4 capped', steps: [] } ] },
   { h: 'Hallway Bowser', turns: [
-    { text: 'T1: Charge; Spiny Flip [3, 6] [47] - Danger', steps: [{ label: 'Spiny Flip', cat: 'B', turn: 'hw_spiny', pre: [{ cat: 'M', id: 'hw_charge' }], hud: true, imps: Array.from({ length: 33 }, (_, i) => 138 + i) }] },
-    { text: 'T2: Time Out; Spiny Flip [3, 6] [44]', steps: [{ label: 'Time Out → STOP', cat: 'B', prof: 'timeout' }] },
-    { text: 'T3: Bounce x3; Spiny Flip [3, 3] [23]', steps: [] },
-    { text: 'T4: Bounce x3; Spiny Flip [3, 0] [11]', steps: [] },
-    { text: 'T5: Jump x2; Spiny Flip [3, 0] [0]', steps: [] } ] },
+    { text: 'T1: Charge; Spiny Flip - Danger', steps: [{ label: 'Spiny Flip', cat: 'B', turn: 'hw_spiny', pre: [{ cat: 'M', id: 'hw_charge' }], hud: true, imps: Array.from({ length: 33 }, (_, i) => 138 + i) }] },
+    { text: 'T2: Time Out; Spiny Flip', steps: [{ label: 'Time Out → STOP', cat: 'B', prof: 'timeout' }] },
+    { text: 'T3: Bounce x3; Spiny Flip', steps: [] },
+    { text: 'T4: Bounce x3; Spiny Flip', steps: [] },
+    { text: 'T5: Jump x2; Spiny Flip', steps: [] } ] },
   // Final Bowser phase 2 (fb2_route/README.md). The T6 Super Charge locks the seed from its rays (the step below has it
   // as its pre, as Hallway T1); the page then beeps the A that closes the "+3" popup (the Close Call lever), reads the
   // frame it happened on from the popup closing, follows Bowser's turn with the coin, and beeps the Power Bounce A.
@@ -475,9 +475,9 @@ const ENDGAME = [
 const ENDGAME_JR = { h: 'Jr. Troopa', turns: [
   { text: 'T1: Charge; Bomb', steps: [{ label: 'Super Charge first (its rays lock the seed), then Bomb', cat: 'K', chg: 'jr', jr: 1 }] },
   { text: 'T2: Bomb; Whacka [Up 1]', steps: [{ label: 'Bomb, then Whacka (the bar hiding counts each)', cat: 'M', chg: 'jr', jr: 3 }] },
-  { text: 'T3: Charge; Bomb - Life Shroom', steps: [{ label: 'Bomb on the beep → Close Call', cat: 'K', prof: 'jrcc_bomb', chg: 'jr', jr: 5 }] },
+  { text: 'T3: Charge; Bomb', steps: [{ label: 'Bomb on the beep → Close Call', cat: 'K', prof: 'jrcc_bomb', chg: 'jr', jr: 5 }] },
   { text: 'T4: Bomb; Maple Syrup [Down 1]', steps: [{ label: 'Maple Syrup on the beep → Close Call', cat: 'M', prof: 'jrcc_syrup', chg: 'jr', jr: 7 }] },
-  { text: 'T5: Charge; Do Nothing - Life Shroom', steps: [{ label: 'Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 9 }] },
+  { text: 'T5: Charge; Do Nothing', steps: [{ label: 'Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 9 }] },
   { text: 'T6: Bounce x6; Bomb if 5 capped', steps: [{ label: 'Power Bounce on the beep → 6 (5 + Bomb)', cat: 'K', prof: 'jrpb5', chg: 'jr', jr: 10 }] },
   { text: 'T7: Star Storm if 4 capped / Shooting Star [Down 5] if 4 capped', steps: [] } ] };
 /* The Duplighosts on the Charge-lock route (dup_charge/README.md), selectable in the route panel instead of the RTA turn
@@ -2073,7 +2073,7 @@ function applyProfile() {
     routeStep = Math.min(routeStep, RT().length - 1); const S = RT()[routeStep], C = CAT[S.cat];
     $('target-label').textContent = { M: 'Target on Mario', K: 'Target on Jr. Troopa', B: 'Target on Bowser', S: 'Partner’s Strategies' }[S.cat];
     $('fight-help').textContent = 'Now: ' + S.t + ' ' + S.label + '. This step\'s screen is ' + C.screen + '; its box goes on ' + C.box + '. Each kind of screen (on Mario, on Jr. Troopa, on Bowser, the Partner’s Strategies menu) is saved once, the first time a step needs it; after each confirm the page moves to the next step by itself.';
-    // v76: one line per turn ("N. Tn: actions"; the runner read the step labels under each turn as the route repeated).
+    // v87: no step numbers (the runner: they counted steps, not boxes: Final Bowser read 10. T1 then 12. T2). v76: one line per turn ("Tn: actions"; the runner read the step labels under each turn as the route repeated).
     // The step's label is the line's tooltip; the line of the current step is highlighted. Step indices are unchanged: a
     // turn's line carries its first step's index (Final Bowser T1's two steps share one line).
     let k = 0; const esc = s => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -2081,7 +2081,7 @@ function applyProfile() {
       f.turns.map(tu => {
         if (!tu.steps.length) return '<li style="list-style:none; margin-left:-1.4em">' + tu.text + '</li>';
         const i0 = k; k += tu.steps.length; const cur = routeStep >= i0 && routeStep < k;
-        return '<li style="list-style:none; margin-left:-1.4em"><span data-i="' + i0 + '" class="chip' + (cur ? ' on' : '') + '" title="' + esc(tu.steps.map((s, j) => (i0 + j + 1) + '. ' + s.label + (s.optional ? ' (optional)' : '')).join('\n')) + '" style="cursor:pointer; margin:2px 4px 2px 0; display:inline-block' + (cur ? '; font-weight:700' : '') + '">' + (i0 + 1) + '. ' + tu.text + '</span></li>';
+        return '<li style="list-style:none; margin-left:-1.4em"><span data-i="' + i0 + '" class="chip' + (cur ? ' on' : '') + '" title="' + esc(tu.steps.map((s, j) => s.label + (s.optional ? ' (optional)' : '')).join('\n')) + '" style="cursor:pointer; margin:2px 4px 2px 0; display:inline-block' + (cur ? '; font-weight:700' : '') + '">' + tu.text + '</span></li>';
       }).join('')).join('');
   } else {
     $('target-label').textContent = P.id === 'timeout' ? "Time Out's Hand on Hallway" : "Bombette's do-nothing menu";
