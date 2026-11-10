@@ -1,3 +1,68 @@
+# Time Out Timer v88: the Final Bowser Charge read on console (Nov 10)
+
+Console logs of 2026-11-09 (b75b56e2, c565d268, 4bc65351; clips 19-28-16, 20-11-18, "fbfull/20-17-50"), five Final Bowser
+fb1 reads (4bc65351 repeats c565d268's T1). Method: emulator renders of the same Charge (Final Bowser phase-2 T1 state, Mario
+at 10 HP, Lakilester out, the aura, the stage lightning; `fb2_route/t14_log.py` SHOTS, seed 1234abcd) turned into page
+captures with the S-Video path and fed through `chgReplay`, alone and with each console read's capture times; then the
+console reads swept over the read's settings. No picture is committed (`fixtures/console_1109_fb.json` holds capture times,
+levels and new-picture flags only).
+
+## Root cause
+Not the arena's levels, the aura, Lakilester, the scaling or the ray template: on console the Final Bowser pictures look
+like the emulator's through the S-Video path, the burst levels match (base 83 / plateau +56 against 77 / +49), and the console
+Jr. Troopa rays look the same as Final Bowser's. Two things in the read itself, both made worse by Final Bowser's looser
+profile:
+1. **The placement misread the console's picture clock.** In a busy scene the N64 shows a game frame one vblank late and the
+   next one on time (new pictures 3 then 1 vblanks apart), and now and then a game frame runs 3 vblanks. Every console read
+   of these sessions has it (Jr. Troopa's too: 17 odd gaps in 40), but Jr. Troopa's tight brightness curve (tol 1.5) holds the
+   placement, while Final Bowser's (tol 4 + 0.3 x level, flat at 50-55 over frames 12-20) let the time cost take a
+   late-then-on-time pair for a skipped frame: 4bc65351 T2 was placed one frame off from frame 13 on (picture 350 ms as frame
+   14, 367 ms as 15; frame 13 is due at 334 ms, so 350 ms is frame 13 one vblank late). Shown with the emulator: its own
+   pictures on 4bc65351 T2's capture clock (each picture the game frame due by then) read noise (2425 / 1.04 against
+   6582 / 2.43 on an even clock), on c565d268 T1's 5031 / 1.97.
+   **Fix** (`chgGameFrames`, `chgVbGrid`): on a clean 16.7 ms grid the placement counts vblanks, each picture on time or one
+   late (a state of the DP), 2 vblanks a game frame plus one for a frame that ran long (cost 2.5), never fewer. Off the grid
+   (a jittery browser) the old time cost. The emulator on 4bc65351 T2's clock then locks (5233 / 2.19).
+2. **The read only finds the seed within ~0.5 world units of the rays' centre**, and the centre came from Mario's patch
+   with 0.37 world units per raster px of his shift. Swept on the console reads: 4bc65351 T1 locks at dx 0 (6235 / 2.48) and
+   -0.5 (4162 / 2.16), noise at +0.5; c565d268 T1 (Mario 17.1 px right) locks only at dx 6 (5162 / 2.14; 5 and 7 noise, dy +-2
+   noise). The emulator shifted 17 px reads noise at the page's 6.22 and locks at 5.5-6. It is stage 1 that drops the seed:
+   4bc65351 T1's true seed still scores 5255 at +0.5 when searched on its own. The projection says 17 raster px = 5.7 units.
+   **Fix** (fb1 profile): `dxK: 0.35` and `cenAlts`: the re-reads try the centre 0.5 units to either side before the frame
+   shifts.
+
+## Numbers (replays of the kept reads; maxAlts 3)
+| read | live (v86 / v86.1) | v87 replay | v88 |
+|---|---|---|---|
+| c565d268 T1 (Mario +17.1 px) | 4901 / 1.98 2bcf1649 | 4800 / 1.90 | **5161 / 2.14** 2bcf1649 |
+| 4bc65351 T1 (2nd fight) | 5825 / 1.98 bda9033b | 5616 / 1.97 | **6235 / 2.48** bda9033b |
+| 4bc65351 T2 (2nd fight) | 6201 / 2.45 d836ca08 | 6128 / 2.51 | 5882 / 2.40 d836ca08 |
+| 4bc65351 T2 (c565d268's fight) | 2738 / 1.03 noise | 2530 / 1.03 | 2427 / 1.02 noise (see below) |
+| b75b56e2 T1 (Mario +17.2 px) | 3094 / 1.05 noise | 3133 / 1.03 | 2829 / 1.01 noise |
+Emulator T1 render (1234abcd): 6582 / 2.43 (an fb1 lock's ratio is 2-3: the aura's relaxed path score lifts the runner-up).
+The control reads of the same logs (4 Duplighosts, 7 Jr. Troopa, 2 Hallway) replay to their live seeds at 3.5-5.8 (one Jr.
+read at 1.93 as live); the placement keeps every frame they locked with (the Hallway read: 31 of 33, same lock).
+
+**The locks are true.** 4bc65351's T1 lock bda9033b and T2 lock d836ca08 are 2369 LCG steps apart (one stream; a chance
+match ~1e-6). c565d268's T2 read, searched only on the 7500 seeds after its fight's T1 lock 2bcf1649, finds 8b09dfe1 at 2376
+steps (4509, 2.08 x the next; with 1500-4000 steps the same stream 19 steps earlier): 2bcf1649 is true too. The clips: on
+both fights the runner confirmed Cloud Nine with no beep (F 138 / 128) and Bowser hit Mario; the locks' states give 0.50 /
+0.59 miss at those frames, no prediction either way (the T1 fits keep the coin and the aura pattern open), so the outcome
+neither confirms nor contradicts them. The stream check does.
+
+## Not done
+- **b75b56e2 T1 and c565d268's T2 still read noise** in the full search, at every centre (dx 4.5-7.5 / -2..2, dy -2..2), with
+  the frames +-1..3, with stage 1 kept 4x wider (K 65536, 3000 to stage 2) and with the aura search relaxed (offsets to 64,
+  per-frame draws to 10). The T2 seed is right there on the stream, so its initial rays rank too low for stage 1; b75b56e2's
+  fight has no other Charge read to check against. Suggested next step (not built): when the carry is gone (Bowser's T1 hit
+  is not modelled), search T2 on the stream 1500-4000 steps after the T1 lock first (the two fights: 2369, 2376).
+- The clock anchor still takes the trigger picture as on time; on the new placement a late trigger picture puts frame 3
+  half a frame late on the page's clock (not changed: the lever corrections were learned on this anchor).
+
+## Tests
+New `test_console_1109_fb.js` (in `run_suite.sh`): the placement on the five console fb1 reads and five control reads
+(fixture only), the stream steps, and with the logs present the replays above. Version checks moved to v88.
+
 # Time Out Timer v87: the Final Bowser carry rebuilt, the Strategies-screen press reading, the arena gate, Jr. Troopa's replan (Nov 10)
 
 v87 was first written on 2026-11-09 and lost uncommitted when the cloud container restarted (`V87_RECOVERY.md` keeps that

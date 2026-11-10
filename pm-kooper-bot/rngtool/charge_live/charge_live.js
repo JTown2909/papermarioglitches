@@ -76,7 +76,12 @@ const CHG_PROF = {
   // both effects in stage 1 (A's initial rays alone ranked the true seed below 65536 on the T1 render: Lakilester and the
   // stars cover part of them), B's base draw 24 .. 38 steps after A's (the aura's draws on frames 0-2); the lock starts the
   // T1-T4 tracker (fb14_live.js). A real bar hide arms it, as on the Hallway.
-  fb1: { id: 'fb1', turn: null, cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB1, bolts: false, aura: true, early: false, offs: Array.from({ length: 15 }, (_, i) => 24 + i), effects: [0, 1], trigLo: 6, trigHi: 27, trigN: true, trigCut: [12.5, 20.0], shapeUp: 0.2, shiftAlts: [1, -1], tol: tb => 4 + 0.3 * Math.abs(tb), trigMin: 250, trigMax: 1000, baseMin: 30, shape: true, altMs: 12000 },
+  // v88: dxK, cenAlts: this read only finds the seed within ~0.5 world units of the rays' true centre (stage 1 drops it
+  // further off: console 4bc65351 T1 locks at dx 0 and -0.5, not at +0.5; the true seed still scores 5255 there in stage 2),
+  // and Mario's patch places the centre only that well: 0.35 world units per raster px of his shift (the projection: 17 raster
+  // px = 5.7, the console c565d268 T1 locks at 6.0 for his 17.1 px, at 5 or 7 it reads noise; 0.37 put it at 6.3), and the
+  // re-reads try the centre half a unit to either side before the frame shifts.
+  fb1: { id: 'fb1', turn: null, cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB1, bolts: false, aura: true, early: false, offs: Array.from({ length: 15 }, (_, i) => 24 + i), effects: [0, 1], trigLo: 6, trigHi: 27, trigN: true, trigCut: [12.5, 20.0], shapeUp: 0.2, shiftAlts: [1, -1], dxK: 0.35, cenAlts: [[-0.5, 0], [0.5, 0]], tol: tb => 4 + 0.3 * Math.abs(tb), trigMin: 250, trigMax: 1000, baseMin: 30, shape: true, altMs: 12000 },
   dup: { id: 'dup', turn: null, cams: () => CHG_CAMS, mario: () => CHG_MARIO, bright: () => CHG_BRIGHT_DUP, bolts: false, early: false, offs: [24, 25], effects: [0, 1], trigLo: 5, trigHi: 25, trigN: true, tol: () => 1.5, trigMin: 250, trigMax: 1000, baseMin: 30, shape: true, altMs: 6000 },
   // jr: the Jr. Troopa steps (chg 'jr'). The lock goes to jrLock (jr_live.js): the T1 lock starts the tracker that carries it
   // through the fight; the T3 / T5 locks check the carry or start it again.
@@ -288,6 +293,18 @@ function chgFreshFlags(F, P) {
   const diff = (a, b) => { let s = 0; for (let y = 40; y < 440; y += 8) for (let x = 24; x < 616; x += 8) s += Math.abs(a[y * 640 + x] - b[y * 640 + x]); return s / (50 * 74); };
   const fm = (P || chgP()).freshMin || 0.8; return F.map((f, i) => (f.fresh != null ? !!f.fresh : i === 0 || diff(f.Y, F[i - 1].Y) > fm));
 }
+/* v88: the console's picture clock. In a busy scene the N64 often shows a game frame one vblank late (new pictures 3 then 1
+ * vblank apart: every console read of 2026-11-09 has it, Jr. Troopa's included) and now and then a game frame takes 3
+ * vblanks (from there on the pictures sit on the other vblank parity). On a clean vblank grid (capture times every 16.7 ms)
+ * the placement counts in vblanks: between two pictures, 2 per game frame, plus one per frame that ran long, plus or minus
+ * the one-vblank lateness of each picture (a state of the placement). Returns each picture's vblank index from the first,
+ * or null (times off the grid: a browser that jitters) for the old time cost. */
+function chgVbGrid(ts) {
+  const VB = FRAME / 2; if (ts.length < 3) return null; let clean = 0;
+  for (let j = 1; j < ts.length; j++) { const dt = ts[j] - ts[j - 1]; if (Math.abs(dt - VB * Math.round(dt / VB)) <= 4) clean++; }
+  return clean >= 0.9 * (ts.length - 1) ? ts.map(t => Math.round((t - ts[0]) / VB)) : null;
+}
+const CHG_VB_COST = { lag: 2.5, late: 0.5, bad: 9 };
 /* distinct game frames: frame 0 is 3 game frames before the first one 5 brighter than the menu (7 route clips);
  * out[CHG_N + 2], out[CHG_N + 3] = frames -2 and -1 (Mario's position) */
 function chgGameFrames(ban) {     // ban: Set of j * 64 + n, assignments an earlier placement used for a skipped frame
@@ -298,24 +315,30 @@ function chgGameFrames(ban) {     // ban: Set of j * 64 + n, assignments an earl
   // same every Charge (CHG_BRIGHT, 7 route clips, sd < 0.7), and by the time between pictures (the browser's frame
   // times jitter by +-17 ms and it drops pictures), by dynamic programming over n
   const J = []; for (let i = ti; i < F.length; i++) if (i === ti || fresh[i]) J.push(i);
-  if (window.__chgDebug) CHG.J0 = F.map((f, i) => [Math.round(f.t - F[ti].t), +f.m.toFixed(1), i >= 1 ? +diff(f.Y, F[i - 1].Y).toFixed(2) : null]);
-  const base = CHG.trig.base, INF = 1e18, cost = [], from = [], BR = chgP().bright(), TOL = chgP().tol;
-  for (let j = 0; j < J.length; j++) { cost.push(new Float64Array(NN + 3).fill(INF)); from.push(new Int16Array(NN + 3)); }
-  if (chgP().trigN) { const d = F[ti].m - base; for (let n = 3; n <= 5; n++) cost[0][n] = Math.min(25, ((d - BR[n - 3]) / TOL(BR[n - 3])) ** 2) + 3 * (n - 3); }
-  else cost[0][3] = 0;
+  const vb = chgVbGrid(J.map(i => F[i].t)), NL = vb ? 2 : 1, VC = CHG_VB_COST;     // v88: in vblanks, with each picture's lateness
+  if (window.__chgDebug) CHG.J0 = F.map((f, i) => [Math.round(f.t - F[ti].t), +f.m.toFixed(1), i >= 1 && f.Y && F[i - 1].Y ? +diff(f.Y, F[i - 1].Y).toFixed(2) : null]);
+  const base = CHG.trig.base, INF = 1e18, cost = [], from = [], BR = chgP().bright(), TOL = chgP().tol, W = NN + 3;
+  for (let j = 0; j < J.length; j++) { cost.push(new Float64Array(W * NL).fill(INF)); from.push(new Int16Array(W * NL)); }
+  for (let L = 0; L < NL; L++) {
+    if (chgP().trigN) { const d = F[ti].m - base; for (let n = 3; n <= 5; n++) cost[0][n * NL + L] = Math.min(25, ((d - BR[n - 3]) / TOL(BR[n - 3])) ** 2) + 3 * (n - 3) + L * VC.late; }
+    else cost[0][3 * NL + L] = L * VC.late;
+  }
   for (let j = 1; j < J.length; j++) {
-    const d = F[J[j]].m - base, dt = F[J[j]].t - F[J[j - 1]].t;
-    for (let n = 3; n < NN + 3; n++) {
+    const d = F[J[j]].m - base, dt = F[J[j]].t - F[J[j - 1]].t, dv = vb ? vb[j] - vb[j - 1] : 0;
+    for (let n = 3; n < W; n++) {
       if (ban && ban.has(j * 64 + n)) continue;
       const tb = BR[n - 3], cb = (tb == null ? 0 : Math.min(25, ((d - tb) / TOL(tb)) ** 2));
-      for (let st2 = 0; st2 <= 3; st2++) { const p = n - st2; if (p < 3 || cost[j - 1][p] >= INF) continue;
-        const c = cost[j - 1][p] + cb + Math.min(9, ((dt - FRAME * st2) / 12) ** 2) + [3, 0, 2, 4][st2];
-        if (c < cost[j][n]) { cost[j][n] = c; from[j][n] = p; } }
+      for (let L = 0; L < NL; L++) for (let st2 = 0; st2 <= 3; st2++) { const p = n - st2; if (p < 3) continue;
+        for (let Lp = 0; Lp < NL; Lp++) { const c0 = cost[j - 1][p * NL + Lp]; if (c0 >= INF) continue;
+          let tc; if (vb) { const e = dv - 2 * st2 - (L - Lp); tc = e === 0 ? 0 : e > 0 ? Math.min(VC.bad, VC.lag * e) : VC.bad; }
+          else tc = Math.min(9, ((dt - FRAME * st2) / 12) ** 2);
+          const c = c0 + cb + tc + [3, 0, 2, 4][st2] + L * VC.late;
+          if (c < cost[j][n * NL + L]) { cost[j][n * NL + L] = c; from[j][n * NL + L] = p * NL + Lp; } } }
     }
   }
   const path = new Array(J.length);
-  if (J.length) { let n = 3; for (let k = 4; k < NN + 3; k++) if (cost[J.length - 1][k] < cost[J.length - 1][n]) n = k;
-    for (let j = J.length - 1; j >= 0; j--) { path[j] = n; if (n < NN && (out[n] == null || j === 0 || from[j][n] !== n)) out[n] = J[j]; if (j) n = from[j][n]; } }
+  if (J.length) { const CL = cost[J.length - 1]; let k = 3 * NL; for (let x = 3 * NL + 1; x < W * NL; x++) if (CL[x] < CL[k]) k = x;
+    for (let j = J.length - 1; j >= 0; j--) { const n = (k / NL) | 0; path[j] = n; const pk = j ? from[j][k] : -1; if (n < NN && (out[n] == null || j === 0 || ((pk / NL) | 0) !== n)) out[n] = J[j]; if (j) k = pk; } }
   // where this placement says a game frame had no picture of its own (or a picture was shown twice) inside the rays: the
   // assignments a retry bans so that the next-best placement puts it elsewhere (chgRetry)
   CHG.skips = []; for (let j = 1; j < J.length; j++) if (path[j] !== path[j - 1] + 1 && path[j] <= 36) CHG.skips.push(j * 64 + path[j]);
@@ -482,7 +505,7 @@ function chgMarioWide(G) {
 function chgCentre(G) {
   let sh = chgMarioShift([G[CHG_N + 2], G[CHG_N + 3], G[0], G[1]].map(f => f && f.Y));
   if (!(sh.ncc >= CHG_NCC_MIN) && chgP().trigMin) { const w = chgMarioShift(chgMarioWide(G)); if (w.ncc > sh.ncc) sh = Object.assign(w, { wide: true }); }
-  const dxw = Math.abs(sh.dx) >= 3 && sh.ncc > 0.6 ? sh.dx * 0.37 : 0;
+  const dxw = Math.abs(sh.dx) >= 3 && sh.ncc > 0.6 ? sh.dx * (chgP().dxK || 0.37) : 0;
   const c = chgP().cams().centre; return { sh, dxw, cen: [c[0] + dxw, c[1], c[2]] };
 }
 /* FB2: stage 1 from frames 0..22 while the rays go on (chgSearch waits for the full maps before the joint stage) */
@@ -523,7 +546,7 @@ if (window.__chgDebug) {
     if (sh.wide) CHG.info.marioWide = true;
     if (weak) { CHG.info.marioWeak = true; slog('chargeMarioWeak', { marioNcc: +sh.ncc.toFixed(2), scan: chgMarioScan() }); }
     if (E) { CHG.info.early = { mapsMs: E.mapsMs, startedBeforeRaysEndMs: Math.round(CHG.tEnd - E.t1) }; CHG.info.prof = chgP().id; }
-    CHG.F0 = CHG.frames; CHG.cen = cen; CHG.alt = 0; CHG.forced = 0; CHG.ban = new Set(); CHG.attShift = 0; CHG.sweep = 0; CHG.gshift = 0; CHG.seenG = new Set([chgGKey(G)]);
+    CHG.F0 = CHG.frames; CHG.cen = cen; CHG.cen0 = cen; CHG.cenAlt = 0; CHG.alt = 0; CHG.forced = 0; CHG.ban = new Set(); CHG.attShift = 0; CHG.sweep = 0; CHG.gshift = 0; CHG.seenG = new Set([chgGKey(G)]);
     if (!CHG.replay) chgRecStart();
     CHG.frames = []; CHG.G = G; CHG.state = 'search'; CHG.tSearch = E ? E.t1 : t1; chgShow();
     if (!CHG.replay) slog('chargeMaps', CHG.info);
@@ -709,7 +732,10 @@ async function chgRetry() {
  * then every picture one frame earlier / later for the other profiles. null: none left. */
 function chgGKey(G) { return G.map(f => (f ? Math.round(f.t * 10) : '-')).join(','); }
 function chgNextG() {
-  const SA = chgShiftOrder(chgP().shiftAlts, CHG.trig), GS = [-1, 1];
+  const SA = chgShiftOrder(chgP().shiftAlts, CHG.trig), GS = [-1, 1], CA = chgP().cenAlts;
+  // v88: the centre half a world unit to either side first (the same placement), then back to the measured centre
+  if (CA && CHG.cen0 && (CHG.cenAlt || 0) < CA.length) { const [dx, dy] = CA[CHG.cenAlt++], c = CHG.cen0; CHG.cen = [c[0] + dx, c[1] + dy, c[2]]; return { G: chgGameFrames(null), info: { cen: [dx, dy] } }; }
+  if (CHG.cen0) CHG.cen = CHG.cen0;
   for (let guard = 0; guard < 200; guard++) {
     let G, info;
     if (SA && CHG.sweep < SA.length) {

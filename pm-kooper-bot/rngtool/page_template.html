@@ -1639,7 +1639,7 @@ function setText(h, d) { $('headline').textContent = h; $('detail').textContent 
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v87';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v88';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2425,6 +2425,7 @@ window.__tot = { VERSION, zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },
   // v80 (test_console_1108.js): Mario's match on one raster; a capture handed to the live read (not a replay: kept as live)
   chgMarioNcc: Y => chgMarioShift([Y]).ncc, chgMarioRef: () => { const M = CHG_MARIO; return { w: M.w, h: M.h, x0: M.x0, y0: M.y0, b64: M.b64 }; },
+  chgPlaceTest: (frames, trig, prof) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF[prof], trig: Object.assign({}, trig), frames }); const G = chgGameFrames(null), r = { n: frames.map(f => G.indexOf(f)), trigN: CHG.trig.n }; CHG.frames = []; return r; },   // v88: the placement alone (frames: t, m, fresh)
   chgSolveTest: (frames, trig, prof) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF[prof], trig, trig0: Object.assign({}, trig), frames, menu: null, taps: [], pres: [], tEnd: performance.now(), early: null, state: 'maps', shapeBad: 0 }); return chgSolve(); },
   jrStepNow, jrReset, jrConfirm: (k, t, h) => jrConfirm(k, t, h, 'test'), jrSettle, jrDeath, jrTens, jrStepFor, jrStepAt10,
   jrConfirmClock: (k, c) => { const h = JRS()[k].hide; jrConfirm(k, zw.t0 + num('vlag') + (c + h + num('pfix')) * zw.rate, h, 'test'); },
