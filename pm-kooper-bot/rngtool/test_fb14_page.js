@@ -8,7 +8,9 @@
  * the Strategies panel with the hand on なにもしない), at the capture frames REFM and REFS.
  * MANIFEST.lateMs: drop a picture only when it is that late (default 25 ms, as a busy browser; the end-to-end runs on a
  * loaded machine use more, so that the turns are tested rather than the machine).
- * usage: [CRATE=33.367] [CPUS=n] node test_fb14_page.js URLBASE MANIFEST.json   (URLBASE/tot.html = the standalone page;
+ * v87: VCLOCK=1 (the page's clock = the fed picture's time; with LATEMS=600000 nothing is dropped), MANIFEST.truthSeeds
+ * (diagnostic: the true seeds for the page's fb14Truth trace).
+ * usage: [CRATE=33.367] [CPUS=n] [VCLOCK=1] node test_fb14_page.js URLBASE MANIFEST.json   (URLBASE/tot.html = the standalone page;
  *   MANIFEST = { frames: [url, ...], refM: i, refS: i, step: 'charge' } (urls relative to URLBASE); serve with
  *   python3 -m http.server --bind 127.0.0.1 PORT)
  * Prints JSON: the Charge triggers / locks / no-locks with their timing, the FB14 events (locks, carry checks, plans with
@@ -23,8 +25,12 @@ const fs = require('fs');
     localStorage.setItem('tot-boxes', JSON.stringify({ coin: { x: 1080 / 1280, y: 40 / 720, w: 40 / 1280, h: 52 / 720 }, target: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 } }));
   });
   await p.goto(base + '/tot.html');
-  const out = await p.evaluate(async ({ dbg, base, M, crate, cpus, t5 }) => {
-    const T = window.__tot, F = window.__fb14; if (dbg) { window.__fb14dbg = []; window.__chgDebug = true; if (M.truth) window.__fb14truth = M.truth; if (M.truthAura) window.__fb14truthAura = M.truthAura; if (M.truthT6) window.__fb14truthT6 = parseInt(M.truthT6, 16); } document.getElementById('s-crate').value = crate; if (cpus) document.getElementById('s-chgcpu').value = cpus;
+  const out = await p.evaluate(async ({ dbg, base, M, crate, cpus, t5, vclock }) => {
+    const T = window.__tot, F = window.__fb14;
+    // v87 VCLOCK=1: the page's clock is the fed picture's time (performance.now overridden), so a busy page reads late
+    // pictures at their own time instead of dropping them (LATEMS large): v86 / v87 runs dropped 1300-2900 pictures
+    const realNow = performance.now.bind(performance); let vt = null; if (vclock) performance.now = () => (vt != null ? vt : realNow());
+    if (M.truthSeeds) window.__fb14seeds = { off: M.truthSeeds.off, s: Uint32Array.from(M.truthSeeds.s, x => typeof x === 'string' ? parseInt(x, 16) : x) }; if (dbg) { window.__fb14dbg = []; window.__chgDebug = true; if (M.truth) window.__fb14truth = M.truth; if (M.truthAura) window.__fb14truthAura = M.truthAura; if (M.truthT6) window.__fb14truthT6 = parseInt(M.truthT6, 16); } document.getElementById('s-crate').value = crate; if (cpus) document.getElementById('s-chgcpu').value = cpus;
     if (t5) document.getElementById('s-fb2t5').value = t5;
     const BOX = { M: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 }, B: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 }, S: { x: 0.33, y: 0.317, w: 0.176, h: 0.1 } };
     const bmp = new Map(); let next = 0; const nf = M.frames.length;
@@ -39,12 +45,13 @@ const fs = require('fs');
     F.reloadTargets();
     T.setStep(T.RT().findIndex(s => s.fb14 === (M.turn || 1) && s.fb14role === (M.step || 'charge')));
     want(0); await bmp.get(0); for (let i = 1; i < Math.min(nf, 60); i++) await bmp.get(i);
-    const lateMs = M.lateMs || 25, t0 = performance.now() + 300, late = [], beeps = [], trace = [], slow = [];
+    const lateMs = M.lateMs || 25, t0 = realNow() + 300, late = [], beeps = [], trace = [], slow = [];
     for (let i = 0; i < nf; i++) {
       want(i); const im = await bmp.get(i); bmp.delete(i);
-      const tf = t0 + i * 1000 / 60, w = tf - performance.now(); if (w > 1) await new Promise(r => setTimeout(r, w)); else if (w < -lateMs) { late.push(i); im.close(); continue; }
+      const tf = t0 + i * 1000 / 60, w = tf - realNow(); if (w > 1) await new Promise(r => setTimeout(r, w)); else if (w < -lateMs) { late.push(i); im.close(); continue; }
+      if (vclock) vt = tf;
       const vf = new VideoFrame(im, { timestamp: Math.round(i * 1e6 / 60) }); im.close();
-      const ta = performance.now(); T.V.src = vf; try { T.onFrame(tf); } finally { T.V.src = null; vf.close(); } const dt = performance.now() - ta; if (dt > 30) slow.push([i, Math.round(dt), T.CHG.state]);
+      const ta = realNow(); T.V.src = vf; try { T.onFrame(tf); } finally { T.V.src = null; vf.close(); } const dt = realNow() - ta; if (dt > 30) slow.push([i, Math.round(dt), T.CHG.state]);
       if (dbg) trace.push([i, +(T.V.score || 0).toFixed(3), T.V.present ? 1 : 0, T.step()]);
     }
     for (let k = 0; k < 100 && ['maps', 'search', 'capture'].includes(T.CHG.state); k++) await new Promise(r => setTimeout(r, 100));
@@ -56,7 +63,9 @@ const fs = require('fs');
       fb14: { on: F.FB14.on, states: F.FB14.states.length, M: F.FB14.M, P: F.FB14.P, pb: F.FB14.pb, t6: F.FB14.t6 && { at: F.FB14.t6.at, bases: F.FB14.t6.bases.length }, taps: F.FB14.t0 != null ? F.FB14.taps.map(t => +(F.pic(t) - 4.8).toFixed(1)) : [], vis: F.FB14.t0 != null ? F.FB14.vis.map(v => [+(F.pic(v[0]) + 30).toFixed(1), +(F.pic(v[1]) - 4).toFixed(1)]) : [] },
       fb2: window.__fb2 && { on: window.__fb2.FB2.on, plan: window.__fb2.FB2.plan, kSeen: window.__fb2.FB2.kSeen },
       place: dbg && T.CHG.G0 ? T.CHG.G0 : undefined, pics: dbg ? T.CHG.J0 : undefined, trace: dbg ? trace : undefined, lockStates: dbg ? window.__fb14dbg : undefined, states: dbg ? F.FB14.states.slice(0, 400).map(S => ({ s: S.s >>> 0, nc: S.nc, f: S.f, l: S.l, w: +(S.w * S.lw).toExponential(2), err: S.err, c: Array.from(S.c).join(''), ph: S.ph, sh: S.sh, out: S.out })) : undefined, step: T.step(), panels: { chg: document.getElementById('chg-status').innerText, fb14: document.getElementById('fb14-status').innerText, fb2: document.getElementById('fb2-status').innerText } };
-  }, { dbg: !!process.env.DBG, base, M, crate: process.env.CRATE || '33.367', cpus: process.env.CPUS || '', t5: process.env.T5 || '' });
-  out.pageErrors = errs.slice(0, 5); console.log(JSON.stringify(out));
+  }, { dbg: !!process.env.DBG, base, M, crate: process.env.CRATE || '33.367', cpus: process.env.CPUS || '', t5: process.env.T5 || '', vclock: process.env.VCLOCK === '1' });
+  out.pageErrors = errs.slice(0, 5);
+  if (process.env.CAPS_OUT) { const caps = await p.evaluate(() => (window.__tot.CHG_CAPS || []).filter(c => c.prof === 'fb1')); fs.writeFileSync(process.env.CAPS_OUT, JSON.stringify(caps)); }   // v87 (diagnostic): the page's kept Final Bowser reads
+  console.log(JSON.stringify(out));
   await b.close();
 })();

@@ -208,6 +208,7 @@ details[open] summary { margin-bottom: 10px; }
       <summary>Advanced</summary>
       <div class="grid2">
         <label class="f">Max extra wait for the window (s)<input id="s-zwwin" type="number" step="0.5" min="0" value="1"><small>How far past the lead the page may look for the window (1 s = 30 frames; 0 = off on Hallway T2).</small></label>
+        <label class="f">Wider window up to (s)<input id="s-zwlater" type="number" step="0.5" min="0" value="1.5"><small>A wider window up to this far past the lead is beeped instead when it makes your press more likely to land (Close Calls, Do Nothing, Time Out).</small></label>
         <label class="f">Duplighosts goal<select id="s-dupgoal"><option value="auto" selected>Auto: 4 when it's free (Ultra Boots), 4 first (Normal Boots)</option><option value="free">4 when it's free</option><option value="safe3">3+ safe</option><option value="run2">4 if 2+ frame window</option><option value="four">4 first (widest all-4 window)</option></select><small>Which Do Nothing frame to beep (v83: always a frame that gives the goal with a perfect press, the centre of the widest run of such frames): the widest 3+ window, an all-4 frame whenever one is in reach (inside the widest 3+ window it can be), an all-4 window only if 2+ frames wide, or the widest all-4 window (Normal Boots' default).</small></label>
         <label class="f">Normal Boots Close Call (Goombario's Charge)<select id="s-nbcc"><option value="wait" selected>Wait it out: the Charge confirm on the beep (default)</option><option value="cancel">Press A on the beep to close his box</option></select><small>v85: Jr. Troopa T2-T4 and Hallway T1. Wait it out (default): confirm Goombario's Charge on the beep (its target screen, hand on Goombario) and never press A in his "attack power up" box (it closes by itself 133 frames later). Press A: confirm the Charge whenever you like, then press A on the beep to close the box (the whole box, 60 frames, is the window). Both plan a perfect press; waiting is the default because the beeped press is then the confirm itself, while the box A has to be planned around the confirm as read from the status bar (-2..+1 frames): model 92-97% vs 82-93% with a perfect press, 81-86% vs 76-78% with a ±1-frame spread (test_nb_cc_page.js). Press A when the lock comes late (it can still be planned until the box closes).</small></label>
         <label class="f">Best chance: beep only from (0–1)<input id="s-zwedge" type="number" step="0.01" value="0.4"><small>Below this the page says No edge (a blind press is 0.31).</small></label>
@@ -349,7 +350,7 @@ const FRAME = R.FRAME_MS;
 const $ = id => document.getElementById(id);
 
 /* ---------- settings ---------- */
-const SET = ['react', 'lag', 'off', 'min', 'lead', 'beeps', 'gapms', 'range', 'vlag', 'wthr', 'tmatch', 'cpu', 'zoom', 'voff', 'pfix', 'prof', 'chgsc', 'chgdx', 'chgdy', 'fb2t5', 'wtype', 'zwwin', 'zwedge', 'chgcpu', 'crate', 'duproute', 'jrroute', 'dupgoal', 'boots', 'nbcc', 'fbhp'];
+const SET = ['react', 'lag', 'off', 'min', 'lead', 'beeps', 'gapms', 'range', 'vlag', 'wthr', 'tmatch', 'cpu', 'zoom', 'voff', 'pfix', 'prof', 'chgsc', 'chgdx', 'chgdy', 'fb2t5', 'wtype', 'zwwin', 'zwlater', 'zwedge', 'chgcpu', 'crate', 'duproute', 'jrroute', 'dupgoal', 'boots', 'nbcc', 'fbhp'];
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('tot-settings') || '{}'); if (s.lead === '4' && !localStorage.getItem('tot-lead15')) { s.lead = '1.5'; localStorage.setItem('tot-lead15', '1'); } if (!localStorage.getItem('tot-beeps3')) { if (s.beeps === '4' || s.beeps === undefined) s.beeps = '3'; localStorage.setItem('tot-beeps3', '1'); } SET.forEach(k => { if (s[k] !== undefined && $('s-' + k)) { $('s-' + k).value = s[k]; if ($('s-' + k).tagName === 'SELECT' && $('s-' + k).selectedIndex < 0) $('s-' + k).selectedIndex = 0; } }); } catch (e) {} }
 function saveSettings() { try { const s = {}; SET.forEach(k => s[k] = $('s-' + k).value); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }
 const num = k => parseFloat($('s-' + k).value) || 0;
@@ -1231,8 +1232,25 @@ const dupGoal = () => { const e = typeof $ === 'function' && $('s-dupgoal'), v =
  *  free:  in the widest main run, a top frame if one keeps PP_FREE_M frames of main either side (else the centre)
  *  run2:  the centre of the widest top run if it is 2+ frames, else free
  *  four:  the centre of the widest top run (the Normal Boots Duplighosts default), else free */
-const PP_TOL = 0.05, PP_FREE_M = 1;
-function ppPick(share, share4, a, b, from, W, sc, goal) {
+const PP_TOL = 0.05, PP_FREE_M = 1, PP_LATER_GAIN = 0.03;
+/* v87 (console log 2f22d4dc, the runner: "why a 2-frame window when a much bigger one came shortly after"): v83 only looked
+ * in the extra-wait window (Settings, default 1 s) and took the widest run there. Now a frame up to "Wider window up to" s
+ * (default 1.5) later is taken instead when its chance with the runner's own press spread (pressDist: the rms of the Press
+ * check presses) is PP_LATER_GAIN higher; and the next wider window after the pick is reported (the strip shows it). Only the
+ * levers with one outcome (Close Calls, Do Nothing, Time Out); the Duplighosts' and the Power Bounce's goals as v83. */
+function ppPick(share, share4, a, b, from, W, sc, goal, later) {
+  const P0 = ppPick0(share, share4, a, b, from, W, sc, goal);
+  if (!P0.ok || share4 || !(later > 0)) return P0;
+  const at = c => (c >= a && c <= b ? share[c - a] || 0 : 0);
+  let best = 0; for (let c = from; c <= from + W + later; c++) best = Math.max(best, at(c));
+  const ok = c => at(c) >= Math.max(0.5, best - PP_TOL) - 1e-12, runOf = c => { let s0 = c, e0 = c; while (s0 - 1 >= a && ok(s0 - 1)) s0--; while (e0 + 1 <= b && ok(e0 + 1)) e0++; return { start: s0, end: e0, length: e0 - s0 + 1 }; };
+  let pick = P0, s0 = sc(P0.target);
+  for (let c = from + W + 1; c <= from + W + later; c++) if (ok(c) && sc(c) > s0 + PP_LATER_GAIN && sc(c) > sc(pick.target) + 1e-9) pick = { target: c, ok: true, run: runOf(c), run4: null, later: true };
+  // the next wider window after the pick (shown on the strip)
+  let next = null; for (let c = pick.run.end + 1; c <= from + W + later; c++) if (ok(c)) { const r = runOf(c); if (r.length > pick.run.length && (!next || r.length > next.length)) next = { start: r.start, length: r.length, sc: +sc(Math.floor((r.start + r.end) / 2)).toFixed(3) }; c = r.end; }
+  return Object.assign(pick, { next, sc0: +s0.toFixed(3), scPick: +sc(pick.target).toFixed(3) });
+}
+function ppPick0(share, share4, a, b, from, W, sc, goal) {
   const at = (sh, c) => (c >= a && c <= b ? sh[c - a] || 0 : 0);
   let best = 0; for (let c = from; c <= from + W; c++) best = Math.max(best, at(share, c));
   if (best < 0.5) { let k = from; for (let c = from; c <= from + W; c++) if (at(share, c) > at(share, k) + 1e-12) k = c; return { target: k, ok: false, run: { start: k, end: k, length: 1 }, run4: null }; }
@@ -1256,14 +1274,15 @@ function ppPick(share, share4, a, b, from, W, sc, goal) {
 }
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
   goal = goal || (prof.id === 'dup3' ? dupGoal() : /^jrpb5n?$/.test(prof.id) ? 'free' : 'safe3');     // v83: Jr. Power Bounce: 6 with 5+ either side (the route's label)
-  const D = Math.max(...PD.map(x => Math.abs(x[0]))), X = lim ? 0 : 10, a = from - D, b = lim ? Math.min(lim.hi, from + W) : from + W + X + D, top = R.TOP[prof.id] ? R.PROFILES[R.TOP[prof.id]] : null;
+  const later = lim ? 0 : Math.max(0, Math.round((num('zwlater') - num('zwwin')) * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)));      // v87
+  const D = Math.max(...PD.map(x => Math.abs(x[0]))), X = lim ? 0 : 10, a = from - D, b = lim ? Math.min(lim.hi, from + W) : from + W + later + X + D, top = R.TOP[prof.id] ? R.PROFILES[R.TOP[prof.id]] : null;
   const share = zwShare(list, a, b, prof), share4 = top ? zwShare(list, a, b, top) : null;
   if (lim) for (let c = a; c < lim.lo && c <= b; c++) share[c - a] = 0;     // v85: an A before the box opens does nothing
   const scOf = sh => c => { let v = 0; for (const [d, q] of PD) v += q * (sh[c + d - a] || 0); return v; };
   const sc = scOf(share), sc4 = share4 ? scOf(share4) : null, type = wtype(), honest = (p, k) => (adj ? (1 - adj.d) * p + adj.d * adj[k] : p);
   let target = null, w = null, none = null, pk = null;
   if (type === 'best') {
-    pk = ppPick(share, share4, a, b, from, W, sc, goal);
+    pk = ppPick(share, share4, a, b, from, W, sc, goal, later);
     target = pk.target; w = pk.run;
     if (honest(share[target - a] || 0, 'b3') < num('zwedge')) none = 'edge';
   } else {
@@ -1271,7 +1290,7 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
     if (!pr) none = 'window'; else { target = pr.target; w = pr.w; }
   }
   const t = target;
-  return { target, w, w4: pk ? pk.run4 : null, none, type, a, b, D, share, share4, p: t != null ? honest(sc(t), 'b3') : null, p4: t != null && sc4 ? honest(sc4(t), 'b4') : null,
+  return { target, w, w4: pk ? pk.run4 : null, next: pk ? pk.next : null, later: pk ? !!pk.later : false, none, type, a, b, D, share, share4, p: t != null ? honest(sc(t), 'b3') : null, p4: t != null && sc4 ? honest(sc4(t), 'b4') : null,
     pp: t != null ? honest(share[t - a] || 0, 'b3') : null, pp4: t != null && share4 ? honest(share4[t - a] || 0, 'b4') : null, ppStates: t != null ? share[t - a] || 0 : null,
     pStates: t != null ? sc(t) : null, doubt: adj ? adj.d : 0, goal: sc4 ? goal : undefined };
 }
@@ -1290,7 +1309,8 @@ function ppText(m, prof, long) {
     t = 'Perfect press: ' + part(n3, m.pp, ps, m.win) + (m.win4 ? ', ' + n4 + ' (' + ws(m.win4) + ')' : ', not ' + n4);
   } else t = 'Perfect press: works' + (ps >= 0.995 ? '' : ' for ' + pc(ps) + ' of the states') + ' · ' + ws(m.win);
   t += conf;
-  if (long) t += '. Counting your press spread: ' + pc(m.p) + (m.p4 != null ? ' / ' + pc(m.p4) : '') + '.';
+  if (m.next) t += ' · a wider window (' + m.next.length + ' frames) ' + (m.next.inFrames / 30).toFixed(1) + ' s later, ' + pc(m.next.p) + ' with your spread';
+  if (long) t += '. Counting your press spread: ' + pc(m.p) + (m.p4 != null ? ' / ' + pc(m.p4) : '') + (m.later ? ' (a later, wider window: more likely to land)' : '') + '.';
   return t;
 }
 function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the frames the press can take, the states stepped to h first
@@ -1334,7 +1354,7 @@ function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the f
   for (let c = Math.max(a, disp.first); c <= Math.min(b - D, disp.first + tab.length - 1); c++) { tab[c - disp.first] = share[c - a] >= 0.5; if (tab4) tab4[c - disp.first] = C.share4[c - a] >= 0.5; }   // the window part from every state
   cancelBeeps();
   st.plan = { tMade: now, w: { start: w.start - Fa, end: w.end - Fa, length: w.length }, target: target - Fa, aim4: false, tPress, tLast, rate, seedBL: A.seedBL, baseF: Fa, carried: true, from: from - Fa, to: from + W - Fa, first, prof: PROF().id,
-    tab, tab4, type, beeps: nBeeps(), bias: lb, mix: { p: best, p4: C.p4, pStates: C.pStates, pp: C.pp, pp4: C.pp4, ppStates: C.ppStates, win: w.length, win4: C.w4 ? C.w4.length : null, doubt: +S.doubt.toFixed(4), groups: S.list.length, zw: true, goal: C.goal }, PD, early: early != null, zwKey: S.key, zwState: S.list[0], zwShare0: S.list[0].w / S.list.reduce((x, q) => x + q.w, 0), zwAbs: target };
+    tab, tab4, type, beeps: nBeeps(), bias: lb, mix: { next: C.next ? { inFrames: C.next.start - target, length: C.next.length, p: C.next.sc } : null, later: C.later || undefined, p: best, p4: C.p4, pStates: C.pStates, pp: C.pp, pp4: C.pp4, ppStates: C.ppStates, win: w.length, win4: C.w4 ? C.w4.length : null, doubt: +S.doubt.toFixed(4), groups: S.list.length, zw: true, goal: C.goal }, PD, early: early != null, zwKey: S.key, zwState: S.list[0], zwShare0: S.list[0].w / S.list.reduce((x, q) => x + q.w, 0), zwAbs: target };
   playBeeps(tPress);
   slog('plan', { prof: PROF().id, step: routeStep, mix: st.plan.mix, type, target, tPress: Math.round(tPress), firstBeepIn: Math.round(tPress - (nBeeps() - 1) * num('gapms') - now), beeps: nBeeps(), zw: true, why: why || undefined, early: early != null || undefined, press: PD === PRESS_ERR ? '1' : +Math.sqrt(PD.reduce((x, [d, q]) => x + q * d * d, 0)).toFixed(2) });
   st.msg = null; render(); if (typeof chgShow === 'function') chgShow(); return true;

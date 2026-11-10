@@ -13,6 +13,8 @@ then T5 (Peach Beam, A every 20 frames outside menus for the text) and the T6 Su
 rendered and fed after all of it: the page's T6 lock (narrowed by the carried stream) against the true seed.
 Writes OUT/report.json (per turn: the plan, the confirm pressed, Bowser's attack and dodge value, miss at -1/0/+1; T6:
 the lock, its time, the truth). Needs the page served at URLBASE (tot.html) with OUT under it.
+Env (v87): GUARD=1 one A in Bowser's turn; TRUTH=1 the true seeds into the manifest (the page's fb14Truth trace);
+KEEP=1 keeps renders / video / frames / states (deleted as the run goes by default).
 Env: START=4 begins at the build's T4 menu; STOP_ON_HIT=1 stops after a turn where Bowser hit (the route is off then);
 LATEMS (default 25) drops a picture later than that; WAIT frames on each lever screen (default 400).
 Run from /tmp/claude-0/pm/bot1: DISPLAY=:93 M64P_GFX=... M64P_DATA=... PYTHONPATH=. python3 fb14_e2e.py BUILD SEEDHEX OUT URLBASE [TURNS=4] [T6=1]"""
@@ -23,6 +25,15 @@ from route_build import TURNS
 
 HERE = os.path.dirname(os.path.abspath(__file__)); RNG = os.path.dirname(HERE)
 WAIT = int(os.environ.get('WAIT', '400'))
+GUARD = os.environ.get('GUARD') == '1'      # v87: one A in Bowser's turn (confirm + 400 on T1, + 87 on T2-T4), as a guard
+
+
+def ncap(n):
+    """v87: the capture index (t6_capsim.py, 60 fps against 29.97 game fps) where game step n of a stretch first shows; the
+    v86 2 n drifted by a frame every ~500"""
+    c = max(0, int(n * 60 / 29.97 - 0.5) - 2)
+    while int((c + 0.5) / 60 * 29.97) < n: c += 1
+    return c
 
 
 class Seg:
@@ -56,6 +67,8 @@ def capsim(d, n, out, seed):
     subprocess.run([sys.executable, os.path.join(HERE, 't6_capsim.py'), d, '0', str(n - 1), out, str(seed)], check=True, stdout=subprocess.DEVNULL)
     jd = out + '_j'; shutil.rmtree(jd, ignore_errors=True); os.makedirs(jd)
     subprocess.run(['ffmpeg', '-v', 'error', '-i', out + '.mkv', '-q:v', '3', '-start_number', '0', jd + '/f%05d.jpg'], check=True)
+    if not os.environ.get('KEEP'):          # v87: /dev/shm filled up once (an OOM): the renders and the video go as soon as the jpgs are out
+        shutil.rmtree(d, ignore_errors=True); os.remove(out + '.mkv')
     return sorted(os.listdir(jd))
 
 
@@ -76,13 +89,20 @@ def play_after_confirm(seg, pa, shot, cap=4000):
     seg.step(A, 0, shot); k0 = seg.n
     if pa == 'cloud_nine':
         for i in range(259):
-            k = seg.n - k0; seg.step(A if k in (132, 152, 172) else 0, 0, shot)
+            k = seg.n - k0; seg.step(A if k in (132, 152, 172) or (GUARD and k == 400) else 0, 0, shot)
     n = 0
-    while bstate(seg.r.e) != 13 and n < cap: seg.step(0, 0, shot); n += 1
+    while bstate(seg.r.e) != 13 and n < cap:
+        k = seg.n - k0; seg.step(A if GUARD and ((pa == 'cloud_nine' and k == 400) or (pa != 'cloud_nine' and k == 87)) else 0, 0, shot); n += 1
+
+
+def wave_now(r):
+    """v87: Bowser's TurnsSinceShockwave (actor + 0x88 + 8) is 0: the wave came this turn"""
+    a = r.e.u32(BSTATUS + 0xE0); return bool(a) and r.e.s32(a + 0x88 + 8) == 0
 
 
 def outcome(r):
-    return dict(hp=r.e.s8(PLAYER_DATA + 2), ko=r.partner_ko(), charges=r.e.s8(BSTATUS + 0x97), menu=bstate(r.e) == 13)
+    its = [r.e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10)]
+    return dict(hp=r.e.s8(PLAYER_DATA + 2), ko=r.partner_ko(), charges=r.e.s8(BSTATUS + 0x97), menu=bstate(r.e) == 13, shroom=its.count(149), wave=wave_now(r))
 
 
 def run_page(urlbase, out, manifest, tag):
@@ -120,9 +140,11 @@ if __name__ == '__main__':
         jpg = capsim(sa.d, sa.n, os.path.join(out, 't%da_cap' % t), seed + t)
         segA = ['%s/t%da_cap_j/%s' % (rel, t, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')))
+        if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
+            man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0)
         # the reference screens: capture frames of those game frames (2 per game frame)
         for nm, ref in (('refM', refM), ('refS', refS)):
-            if ref and ref[1] == t: man[nm] = len(frames) + 2 * ref[2]
+            if ref and ref[1] == t: man[nm] = len(frames) + ncap(ref[2])
             elif ref: man[nm] = report['ref_' + nm]
         for nm in ('refM', 'refS'):
             if nm in man: report['ref_' + nm] = man[nm]
@@ -143,14 +165,15 @@ if __name__ == '__main__':
         nxt = os.path.join(out, 'x%d.st' % (t + 1)); r.e.save(nxt); X = nxt
         row.update(outcome=oc, minus1=nb[-1], plus1=nb[1], s0_rays0_true='%08x' % sa.s0[M + 13] if t != 3 else None)
         MHP = int(os.environ.get('MARIO_HP', '5'))          # v86: the build's Mario HP (MARIO_HP=10: the runner's T1-T4, route_build.py)
-        ok = lambda o, tt: o['hp'] == MHP and (tt != 4 or (o['ko'] and o['ko'][0] != 0))
+        # v87: at 10 HP a hit kills Mario and the Life Shroom revives him to 10: a miss keeps the Shroom; T4: the wave came
+        ok = lambda o, tt: o['hp'] == MHP and o['shroom'] >= 1 and (tt != 4 or o['wave'])
         row.update(miss=ok(oc, t), miss_m1=ok(nb[-1], t), miss_p1=ok(nb[1], t))
         print(json.dumps({k: v for k, v in row.items() if k != 'page'}), flush=True)
         report['turns'].append(row)
         if not row['miss'] and os.environ.get('STOP_ON_HIT'): print('Bowser hit: the route is off (Peach heals Mario); stopping', flush=True); do_t6 = False; break
         # the actual stretch: segment a up to the confirm, then segment b
         jb = capsim(sb.d, sb.n, os.path.join(out, 't%db_cap' % t), seed + 10 + t)
-        na = 2 * (R0 + 1 + d)                                      # capture frames of a before the confirm's picture
+        na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
         frames = frames + segA[:na] + ['%s/t%db_cap_j/%s' % (rel, t, f) for f in jb]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
         json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
@@ -188,9 +211,9 @@ if __name__ == '__main__':
         s7.idle(WAIT)
         j7 = capsim(s7.d, s7.n, os.path.join(out, 't67_cap'), seed + 67)
         # the video: T5 / T6 to step M6 + 76 (its picture is shot M6 + 77), then pass 2 (its first shot is step M6 + 77's)
-        f56 = ['%s/t56_cap_j/%s' % (rel, f) for f in j5][:2 * (nZ + 1)]
+        f56 = ['%s/t56_cap_j/%s' % (rel, f) for f in j5][:ncap(nZ + 1)]
         man = dict(frames=frames + f56 + ['%s/t67_cap_j/%s' % (rel, f) for f in j7], step='charge' if start == 1 else 'lever', turn=start, lateMs=lateMs, refM=report.get('ref_refM'), refS=report.get('ref_refS'),
-                   refB=len(frames) + len(f56) + 2 * (R7 + 10))
+                   refB=len(frames) + len(f56) + ncap(R7 + 10))
         res = run_page(urlbase, out, man, 't7')
         planT7 = ev(res, 'fb2PlanT7'); d = planT7[0].get('d') if planT7 and planT7[0].get('d') is not None else None
         kSeen = ev(res, 'fb2K')
@@ -209,3 +232,6 @@ if __name__ == '__main__':
         print(json.dumps(report['t7'])[:3000], flush=True)
         truth += s5.s0; json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
     json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
+    if not os.environ.get('KEEP'):          # v87: the capture frames too (only report / page / manifest json stay)
+        for jd in glob.glob(os.path.join(out, '*_cap_j')): shutil.rmtree(jd, ignore_errors=True)
+        for x in glob.glob(os.path.join(out, '*.st')): os.remove(x)
