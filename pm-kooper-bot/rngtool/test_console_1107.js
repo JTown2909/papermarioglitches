@@ -42,7 +42,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
     T.setStep(jrI); const aj = T.withSample(sj, () => T.chgArena()), pj = T.withSample(sj, () => T.chgArenaProf(T.CHG_PROF.jr, true));
     out.arenaJr = { a: aj.a, prof: pj.id, step: T.step(), jrI };
     T.setStep(jrI); const ad = T.withSample(sd, () => T.chgArena()), pd = T.withSample(sd, () => T.chgArenaProf(T.CHG_PROF.jr, true));
-    out.arenaDup = { a: ad.a, prof: pd.id, step: T.step() };
+    out.arenaDup = { a: ad.a, prof: pd.id, held: T.step() === jrI && T.chgBackTo() === 0 }; T.chgBackResolve(); out.arenaDup.step = T.step();      // v90: the move waits for the Charge's burst
     T.setStep(jrI + 2); const pd2 = T.withSample(sd, () => T.chgArenaProf(T.CHG_PROF.jr, false));      // not a real hide: no move
     out.arenaNotReal = { prof: pd2.id, step: T.step(), want: jrI + 2 };
     // 3. a coin lock on the Duplighost step: no plan
@@ -86,15 +86,15 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
     console.log('  ' + a.clip + ': lock ' + a.seed + ', measured frame ' + d.f + ', seen ' + a.seen + ' (' + want + '), page classes f-2..f+2 per state: ' + d.byQ.map(q => q.cls.join('')).join(' '));
     check(near, 'Duplighost ' + a.seed + ': the copies seen (' + a.seen + ') are predicted within 1 frame of the measured Do Nothing frame' + (at0 ? ' (on it)' : ''));
     const err = (a.tObs - a.tPress - FIX.vlag) / FIX.consoleRate - 0.5 + FIX.off - d.van;
-    check(Math.abs(err - a.err - 1) < 0.05, 'press reading ' + err.toFixed(2) + ' = the log\'s ' + a.err + ' + 1 (v87: the grey-frame offset 2, not 3)');
+    check(Math.abs(err - a.err - 0.8) < 0.05, 'press reading ' + err.toFixed(2) + ' = the log\'s ' + a.err + ' + 0.8 (v87: the grey-frame offset 2, not 3; v90: 0.2 earlier, 2.2)');
     check(a.boxGoneCap - a.boxHighlightCap === 2, 'one highlighted game frame before the box goes (confirm + 2 / + 3, as the emulator)');
   });
   check(r.dup[0].byQ.some(q => q.cls[2] === 2), '55ee0a3f: the failed attempt (FFCC) is the model on the measured frame, 2 before the target');
-  check(r.dup.every(d => d.van === 2), 'v87: dup3 reads the press from the Strategies box\'s grey frame (confirm + 2; console input display 2026-11-09)');
+  check(r.dup.every(d => d.van === 2.2), 'v87 / v90: dup3 reads the press from the Strategies box\'s grey frame (confirm + 2; console input display 2026-11-09)');
   // 2
   console.log('  arena jr ' + JSON.stringify(r.arenaJr) + ' dup ' + JSON.stringify(r.arenaDup));
   check(r.arenaJr.a !== 'dup' && r.arenaJr.prof === 'jr' && r.arenaJr.step === r.arenaJr.jrI, 'Jr. Troopa\'s arena (console colours) stays on Jr. Troopa');
-  check(r.arenaDup.a === 'dup' && r.arenaDup.prof === 'dup' && r.arenaDup.step === 0, 'the Duplighost room at a bar hide on a Jr. Troopa step goes back to the Duplighosts');
+  check(r.arenaDup.a === 'dup' && r.arenaDup.prof === 'dup' && r.arenaDup.held && r.arenaDup.step === 0, 'the Duplighost room at a bar hide on a Jr. Troopa step goes back to the Duplighosts once its Charge burst is captured (v90: not at the hide)');
   check(r.arenaNotReal.prof === 'jr' && r.arenaNotReal.step === r.arenaNotReal.want, 'not at a real bar hide: no move');
   // 3
   console.log('  walk lock: ' + JSON.stringify(r.walkLock).slice(0, 200));
@@ -117,7 +117,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
   check(r.list.lis.some(x => /^T1: Charge; Bombette Do Nothing/.test(x)) && r.list.lis.some(x => /^T1: Charge; Bomb$/.test(x)), 'each turn reads "Tn: actions" (v87: no step numbers)');
   check(/^T1: Charge; Bomb/.test(r.list.cur || ''), 'the current step\'s turn line is highlighted');
   check(!r.list.lis.some(x => /Life Shroom|Spiny Flip \[/.test(x)), 'v87: no Life Shroom and no Spiny Flip numbers in the route texts');
-  check(r.version === 'v89' && r.ver === 'v89', 'version v89 in the log and the header');
+  check(r.version === 'v90' && r.ver === 'v90', 'version v90 in the log and the header');
   check(r.title === 'Paper Mario Any% (No ACE) (RNG Manipulation)' && /RNG Manipulation/.test(r.h1), 'the page\'s new name in the title and header');
   await p.close();
   // 8. the Final Bowser plan / re-score

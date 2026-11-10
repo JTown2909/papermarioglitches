@@ -28,19 +28,19 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     out.cls = A.map(a => { T.setStep(0); T.dupTrackerAt(parseInt(a.seed, 16), a.qs, performance.now() - 2000); const S = T.dupStatesAt(100), f = Math.round(a.target + a.err);
       return S.map(q => ({ w: q.w, c: T.dupClasses(q.s, q.nc, q.g, f - 4, f + 4) })); });
     out.keys = ['dup3', 'dup4', 'fb14', 'jrcc_bomb', 'jrcc_syrup', 'jrcc_nothing', 'jrpb5', 'timeout'].map(k => T.leverKey(k));
-    out.fb0 = T.leverBias('fb14'); T.leverAdd('fb14', 0 - out.fb0); T.leverAdd('fb14', 0 - out.fb0); out.fb1 = T.leverBias('fb14'); localStorage.removeItem('tot-fb14press');
+    out.fb0 = T.leverBias('fb14'); for (let i = 0; i < 3; i++) T.leverAdd('fb14', -2.4); out.fb3 = T.leverBias('fb14'); T.leverAdd('fb14', -2.4); out.fb1 = T.leverBias('fb14'); for (let i = 0; i < 4; i++) T.leverAdd('fb14', -6); out.fbMax = T.leverBias('fb14'); localStorage.removeItem('tot-fb14press-v90');
     T.setStep(0); T.dupTrackerAt(parseInt(A[0].seed, 16), A[0].qs, performance.now() - 2000); T.st.plan = null; T.makePlan(); const P = T.st.plan;
     out.plan = P ? { bias: P.bias, dt: (P.tPress - T.pressTime(P.tLast, P.rate, P.target)) / P.rate, prof: P.prof } : null;
     return out;
   }, A);
-  check(r.van.dup3 === 2 && r.van.dup4 === 2 && r.van.jrcc_nothing === 2, '1. the Strategies screen (dup3, dup4, jrcc_nothing) reads the press from its grey frame, confirm + 2 ' + JSON.stringify(r.van));
+  check(r.van.dup3 === 2.2 && r.van.dup4 === 2.2 && r.van.jrcc_nothing === 2.2, '1. the Strategies screen (dup3, dup4, jrcc_nothing) reads the press from its grey frame, confirm + 2, and v90: 0.2 frame earlier ' + JSON.stringify(r.van));
   const like = {}; for (let s = -2; s <= 3; s++) { let L = 1; for (let i = 0; i < A.length; i++) { const S = r.cls[i], tot = S.reduce((x, q) => x + q.w, 0); L *= S.filter(q => q.c[4 + s] === A[i].copies).reduce((x, q) => x + q.w, 0) / tot; } like[s] = L; }
   console.log('  likelihood of the copies seen (' + A.length + ' attempts) if the true press was the v86 reading + s: ' + Object.entries(like).map(([s, L]) => (s > 0 ? '+' : '') + s + ': ' + L.toExponential(2)).join(', '));
   check(like[1] > like[0] && like[2] === 0 && like[3] === 0, '2. the copies fit the v87 reading (+1) best, and rule out a 2-frame misread');
   const v87 = A.map(a => a.err + 1), mean = v87.reduce((x, y) => x + y, 0) / v87.length;
   console.log('  Duplighost presses as v87 reads them: ' + v87.map(x => x.toFixed(2)).join(', ') + ' (mean ' + mean.toFixed(2) + ')');
   check(JSON.stringify(r.keys) === JSON.stringify([null, null, 'fb14', null, null, null, null, null]), '3. only Final Bowser\'s levers keep a learned correction ' + JSON.stringify(r.keys));
-  check(Math.abs(r.fb0 - 2.37) < 0.01 && Math.abs(r.fb1 - r.fb0) < 0.2, '3. Final Bowser +' + r.fb0.toFixed(2) + ', still +' + r.fb1.toFixed(2) + ' after two presses on time with it');
+  check(Math.abs(r.fb0) < 0.01 && Math.abs(r.fb3) < 0.01 && Math.abs(r.fb1 - 1.2) < 0.01 && Math.abs(r.fbMax - 1.5) < 0.01, '3. v90: Final Bowser starts at 0, 3 presses at -2.4 move nothing, the 4th gives +' + r.fb1.toFixed(2) + ' (shrunk 4 / 8), never past +1.5 (' + r.fbMax + ')');
   check(r.plan && r.plan.prof === 'dup3' && Math.abs(r.plan.dt) < 0.01, '3. a Duplighost plan beeps on the global offset alone (' + JSON.stringify(r.plan) + ')');
   check(!errs.length, 'no page errors ' + errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);

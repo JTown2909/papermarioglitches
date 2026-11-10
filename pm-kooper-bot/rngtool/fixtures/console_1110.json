@@ -1,0 +1,19 @@
+{
+  "about": "Console session 2026-11-10 (page v89): Duplighosts log 86e76da9-1794342067984 (clip be7230e2 15-20-24), Jr. Troopa logs 1c4d37ef-1794342211248 (clip 15-21-42) and f485687d-1794342373856 (clip 15-24-19), Hallway 6f44cbbd-1794342446263, Final Bowser 54c12cf2-1794342653400 (clip 15-28-30) and 8cc2055f-1794343342044 (clip 15-40-48); Jr. Troopa T5 of 4080354f-1794272486217 (2026-11-09, page v86.1, clip 19-59-56, input display). Numbers from the logs and read off the clips; no pictures (chargeCaptures stripped).",
+  "clipOffsetMs": { "1c4d37ef": 1570188.5, "86e76da9": 1492455, "4080354f": 757222 },
+  "strategies": [
+    { "log": "4080354f", "page": "v86.1", "turn": "T5", "seed": "6ebb74e4", "target": 1118, "win": [1118, 1119], "errV86": -1.23, "c_v87": 1117.77, "outcome": "dodge", "clip": { "subtle": 69.667, "grey": 69.7, "gone": 69.733, "pageClose": 69.699 } },
+    { "log": "1c4d37ef", "page": "v89", "turn": "T5", "seed": "21752841", "qs": [6, 8, 9], "target": 213, "win": [213, 213], "err": -0.4, "c_v89": 212.6, "outcome": "death", "clip": { "subtle": 85.483, "grey": null, "gone": 85.517, "pageClose": 85.517 } },
+    { "log": "f485687d", "page": "v89", "turn": "T5", "seed": "35e4ebc5", "qs": [5], "target": 183, "win": [183, 184], "err": -0.87, "c_v89": 182.13, "outcome": "death" }
+  ],
+  "dupStrategies": { "log": "86e76da9", "clip": { "subtle": 8.667, "grey": 8.7, "gone": 8.733, "pageClose": 8.701 }, "target": 203, "err": -1.87, "worksV89": true },
+  "bombBar": [
+    { "log": "4080354f", "page": "v86.1", "target": 1060, "win": 1, "err": -0.3, "outcome": "dodge" },
+    { "log": "1c4d37ef", "page": "v89", "target": 259, "win": 2, "err": -1.55, "outcome": "death" },
+    { "log": "f485687d", "page": "v89", "target": 1080, "win": 1, "err": -1.33, "outcome": "death" }
+  ],
+  "jrAnchors": "every Jr. Troopa Charge read of 11-09 / 11-10 (14) places its trigger picture as frame 3 (n0 3, no shift) and locks the same seed on v86.1, v87, v88 and v89",
+  "arena": { "log": "1c4d37ef", "dupLever": 1501156, "barHide": 1515872, "L": 53.3, "br": 14.7, "lbr": 5.5, "stepWas": 1, "chargeNotSeen": true, "runnerClickBack": 1551089 },
+  "fbLever": { "log": "54c12cf2", "turn": 2, "target": 896, "win": 1, "c": 897.86, "bias": 2.37, "outcome": "hit", "v86seed": [-2.54, -2.2] },
+  "fbNolock": { "log": "8cc2055f", "t1": { "nolockAt": 66891, "retryStop": 66891, "cloudNineBar": 59080 }, "t2BarHide": 84747, "t2UpMs": 17067, "clickT2": 86446, "clickT4": 126327 }
+}

@@ -373,10 +373,15 @@ function pressTime(tLast, rate, f) { return tLast + (f - 0.5 + num('off')) * rat
  * grey frame (all 5 clips of 11-09), so dup3 / dup4 now read the press with vanish 2 (pmrng_core.js), and the copies
  * the clips show fit that frame (test_press_lever.js). No Duplighost correction; Jr. Troopa and Time Out unchanged. */
 const ZW_MAX_AHEAD = 10000;      // ms (zwPlan): the latest press a zero-wait plan may ask for
-const LEVER_PRESS0 = { fb14: [-2.54, -2.2] }, LEVER_STORE = { fb14: 'tot-fb14press' };
+/* v90 (console log 54c12cf2, T2: the Do Nothing read +1.86 on a one-frame window with the +2.37 correction, the runner 0.5
+ * before the beep, and Bowser hit): the two v86 presses that seeded the correction are not the runner's habit (his Jr. Troopa
+ * and Duplighost presses on the same Strategies screen are -0.6 on average against the beeps), and no outcome ever showed the
+ * shifted beeps working. The correction starts at 0 (a new store: the browsers that kept the old presses start over), needs 4
+ * presses on the beeps, is shrunk towards 0 (n / (n + 4) of the mean) and moves the beeps at most 1.5 frames. */
+const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v90' }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
 const leverKey = id => (id === 'fb14' ? 'fb14' : null);
 function leverList(k) { if (!LEVER_STORE[k]) return []; try { const L = JSON.parse(localStorage.getItem(LEVER_STORE[k]) || 'null'); if (Array.isArray(L) && L.length) return L.slice(-8); } catch (e) {} return (LEVER_PRESS0[k] || []).slice(); }
-function leverBias(k) { const L = leverList(k); if (!L.length) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-3, Math.min(3, -m)); }
+function leverBias(k) { const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * L.length / (L.length + 4))); }
 function leverAdd(k, e) { if (!LEVER_STORE[k]) return []; const L = leverList(k).concat([+e.toFixed(2)]).slice(-8); try { localStorage.setItem(LEVER_STORE[k], JSON.stringify(L)); } catch (x) {} return L; }
 // the earliest confirm frame (on a clock with frame 0 at tLast) whose press and every beep before it are still ahead
 function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) - tLast) / rate + 0.5 - num('off') - 1e-9); }
@@ -746,6 +751,7 @@ function addTurn(f, id, why, imps, shifts, src) {
 // a press read off the video: its frame is known to about +-2 frames (capture cards read the screen closing a frame or
 // two off; run 3: all 4 Duplighosts copied on a press read 1.7 frames early). Every working frame that close is a candidate.
 const PRESS_TOL = 2, SHIFTS = [-2, -1, 0, 1, 2];
+const PRESS_EDGE = 0.3;      // v90: a press read within this of a window edge is 'edge' (the reading cannot tell the frames apart)
 function nearWorking(seedBL, f, prof) { const out = []; for (let d = -PRESS_TOL; d <= PRESS_TOL; d++) if (R.works(seedBL, 0, f + d, 0, prof)) out.push(d); return out; }
 // which uncertain input the open candidates belong to (for the messages)
 function hypKind() { const e = [...st.turnEv].reverse().find(x => x.imps || x.shifts); return e && e.imps ? 'spiny' : 'frame'; }
@@ -1639,7 +1645,7 @@ function setText(h, d) { $('headline').textContent = h; $('detail').textContent 
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v89';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v90';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2315,12 +2321,13 @@ function measurePress(tObs) {
   if (onBeeps && !lk) { presses.push(err); while (presses.length > 8) presses.shift(); }
   try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {}
   const inWin = f >= P.w.start && f <= P.w.end, works = R.works(P.seedBL, 0, f, 0, PROF()), likely = !works && nearWorking(P.seedBL, f, PROF()).length > 0;
+  const g = f + (c >= f ? 1 : -1), edge = (g >= P.w.start && g <= P.w.end) !== inWin && Math.abs(c - f) > 0.5 - PRESS_EDGE;      // v90 (jrPress)
   // candidates for the carry, most likely first: the beeps put the press on the aimed frame (emulator: every press on the
   // ideal frame), while the video read can be off by a frame or two on a capture card (run 3: 1.7 frames early)
   const near = nearWorking(P.seedBL, f, PROF()).sort((a, b) => Math.abs(f + a - P.target) - Math.abs(f + b - P.target) || Math.abs(a) - Math.abs(b));
-  P.measured = { frame: f, c, err, inWin, works, likely, tObs, onBeeps };
+  P.measured = { frame: f, c, err, inWin, works, likely, tObs, onBeeps, edge };
   if (lk && onBeeps && !P.fb14) leverAdd(lk, err - (P.bias || 0));     // v87: the lever's own press record
-  slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely, near, onBeeps, bias: P.bias ? +P.bias.toFixed(2) : undefined, lever: lk ? +leverBias(lk).toFixed(2) : undefined }); st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
+  slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely, near, onBeeps, edge: edge || undefined, bias: P.bias ? +P.bias.toFixed(2) : undefined, lever: lk ? +leverBias(lk).toFixed(2) : undefined }); st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
   const stp = isRoute() && RT()[routeStep];
   if (stp && stp.turn && !unmodeledAfter(P.tLast) && !(P.mix && P.mix.zw && !onBeeps)) { if (near.length) addTurn(P.baseF + f, stp.turn, 'Carrying the seed through this turn.', null, near, 'press'); else { st.needResync = true; st.turnEv = []; } }
   showPresses();
@@ -2335,7 +2342,7 @@ function showPresses() {
   const avg = presses.length ? presses.reduce((a, b) => a + b, 0) / presses.length : 0;
   const spread = presses.length ? Math.sqrt(presses.reduce((a, b) => a + (b - avg) * (b - avg), 0) / presses.length) : 0;
   const dir = x => Math.abs(x) < 0.5 ? 'on time' : (Math.abs(r(x)) + ' frames ' + (x > 0 ? 'late' : 'early'));
-  const fr = q => q.works ? 'a working frame' : q.likely ? 'a failing frame by the video, but a working one is within ' + PRESS_TOL + ' frames' : 'a failing frame';
+  const fr = q => q.edge ? 'on the edge of the window: the video cannot tell whether it ' + (q.inWin ? 'worked' : 'missed') : q.works ? 'a working frame' : q.likely ? 'a failing frame by the video, but a working one is within ' + PRESS_TOL + ' frames' : 'a failing frame';
   const head = P && !P.onBeeps ? 'Pressed ' + Math.abs(Math.round(P.err)) + ' frames ' + (P.err < 0 ? 'before' : 'after') + ' the beeps: ' + fr(P) : 'Last press: ' + dir(last) + (P ? (P.inWin ? ' (inside the window, ' : ' (outside the window, ') + fr(P) + ')' : '');
   let s = '';
   const lq = P || st.lastPress;
@@ -2344,7 +2351,7 @@ function showPresses() {
   const ready = presses.length >= 3 && Math.abs(avg) >= 0.5, step = x => Math.round(x * 2) / 2;
   if (ready) s += 'Consistently off? Calibrate… (next to this) moves the beep and visual offsets by the measured error, after you confirm.';
   const lkS = leverKey(PROF().id); if (lkS) s += ' This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(leverBias(lkS)).toFixed(1) + ' frames ' + (leverBias(lkS) >= 0 ? 'later' : 'earlier') + ', from your last ' + leverList(lkS).length + ' presses here.';
-  const lp = P || st.lastPress, good = lp ? (lp.works ? true : lp.likely ? null : false) : null;
+  const lp = P || st.lastPress, good = lp ? (lp.edge ? null : lp.works ? true : lp.likely ? null : false) : null;
   const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--ink)';
   $('press-msg').innerHTML = '<span style="color:' + (good === null ? 'var(--bg)' : '#fff') + '; background:' + col + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head + (good === true ? ' ✓' : good === false ? ' ✗' : lp && lp.likely ? ' ?' : '') + '</span><br>' + s;
 }
@@ -2428,7 +2435,7 @@ window.__tot = { VERSION, zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t
   chgPlaceTest: (frames, trig, prof) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF[prof], trig: Object.assign({}, trig), frames }); const G = chgGameFrames(null), r = { n: frames.map(f => G.indexOf(f)), trigN: CHG.trig.n }; CHG.frames = []; return r; },   // v88: the placement alone (frames: t, m, fresh)
   chgSolveTest: (frames, trig, prof) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF[prof], trig, trig0: Object.assign({}, trig), frames, menu: null, taps: [], pres: [], tEnd: performance.now(), early: null, state: 'maps', shapeBad: 0 }); return chgSolve(); },
   jrStepNow, jrReset, jrConfirm: (k, t, h) => jrConfirm(k, t, h, 'test'), jrSettle, jrDeath, jrTens, jrStepFor, jrStepAt10,
-  jrConfirmClock: (k, c) => { const h = JRS()[k].hide; jrConfirm(k, zw.t0 + num('vlag') + (c + h + num('pfix')) * zw.rate, h, 'test'); },
+  jrScreenAt: (c, van) => jrScreenClosed(zw.t0 + num('vlag') + (c + van + num('pfix')) * zw.rate), jrConfirmClock: (k, c) => { const h = JRS()[k].hide; jrConfirm(k, zw.t0 + num('vlag') + (c + h + num('pfix')) * zw.rate, h, 'test'); },
   // v85 (test_nb_cc_page.js): the Normal Boots trackers, the box A read from the bar's return on clock frame P + 5
   jrFrame: (t, pr) => jrFrame(t, pr), JRS: () => JRS(), JR_SEQ_NB, HW_SEQ_NB, nbccMode: () => nbccMode(), nbCancelPlan: w => nbCancelPlan(w), nbCancelSeen: (t, w) => nbCancelSeen(t, w), NB_BACK_H,
   nbCancelSeenClock: P => nbCancelSeen(zw.t0 + num('vlag') + (P + NB_BACK_H + num('pfix')) * zw.rate, 'bar'),
@@ -2447,7 +2454,7 @@ window.__tot = { VERSION, zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t
   // v76 (test_console_1107.js)
   // v77 (charge_live/test_capture_replay.js)
   chgReplay: (c, o) => chgReplay(c, o), chgCapFromV1: (c, f) => chgCapFromV1(c, f), CHG_CAPS, CHG_CAP_FMT, chgDbAll: () => chgDbAll(), chgDbStats: () => chgDbStats(), chgDbClear: () => chgDbClear(), chgLockBy: P => chgLockBy(P || chgP()), chgPicEncode: (Y, f) => chgPicEncode(Y, f), chgPicDecode: (b, f) => chgPicDecode(b, f),
-  chgArenaProf: (P, real) => chgArenaProf(P, real), autoPlan: () => autoPlan(), fb14Trigger: () => fb14Trigger(), fb14AfterLock: () => fb14AfterLock(), chgShiftOrder: (a, t) => chgShiftOrder(a, t), render: () => render(),
+  chgArenaProf: (P, real) => chgArenaProf(P, real), chgBackTo: () => CHG.backTo, chgBackResolve: () => chgBackResolve(), autoPlan: () => autoPlan(), fb14Trigger: () => fb14Trigger(), fb14AfterLock: () => fb14AfterLock(), chgShiftOrder: (a, t) => chgShiftOrder(a, t), render: () => render(),
   withSample: (f, fn) => { const o = sample; sample = f; try { return fn(); } finally { sample = o; } } };   // for testing
 })();
 </script>

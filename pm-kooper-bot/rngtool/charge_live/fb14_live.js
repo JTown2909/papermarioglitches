@@ -142,7 +142,7 @@ const fbPic = t => (t - FB14.t0) / fbRate();
 /* v87: one of the per-lever corrections (page_template.html leverBias: Final Bowser, Duplighosts); each press is kept as the
  * runner's own error against the beep (the measured error minus the correction the beeps had), so the correction does not
  * decay to 0 as the presses come in on time (v86 kept the error against the target) */
-function fb14PressList() { return typeof leverList === 'function' ? leverList('fb14') : [-2.54, -2.2]; }
+function fb14PressList() { return typeof leverList === 'function' ? leverList('fb14') : []; }
 function fb14Bias() { return typeof leverBias === 'function' ? leverBias('fb14') : 0; }
 function fb14PressAdd(err) { return typeof leverAdd === 'function' ? leverAdd('fb14', err) : []; }
 const fbPressT = F => FB14.t0 + (F - 1.7 + num('off') + fb14Bias()) * fbRate() - num('vlag');
@@ -408,6 +408,10 @@ function fb14Frame(t, present) {
   FB14.lastT = t;
   if (FB14.pendChg && !['armed', 'capture'].includes(CHG.state) && !fb14Held()) { const { M, turn } = FB14.pendChg; FB14.pendChg = null; fb14Advance(Math.min(fb14Horizon(performance.now()), M + 10)); fb14Input('chg', M, turn, FB14_CHGD); if (window.__fb14seeds) fb14Truth('chg' + turn); }
   if (FB14.rearm && !FB14.refining && ['locked', 'nolock', 'failed'].includes(CHG.state)) { const n = fb14Step(); if (n && n.fb14 === FB14.rearm && n.chg === 'fb1') { slog('fb14ReaderRearmed', { turn: n.fb14 }); chgReset(); } FB14.rearm = null; }
+  // v90 (log 8cc2055f): a T1 Charge that read no lock left the reader 'nolock' on the Cloud Nine step, so T2's Charge (its bar
+  // hide 25 s later) was never captured and the route stayed on T1 until the runner clicked. Once a read has given up (no
+  // re-read pending), the reader arms again for the next turn's Charge, as after a lock (fb14AfterLock).
+  if (fb14Step() && ['nolock', 'failed'].includes(CHG.state) && !CHG.F0 && !CHG.replay && !FB14.refining) { slog('fb14ReaderRearmed', { turn: fb14Step().fb14, why: 'after a no-lock' }); chgReset('the last Charge read gave no clear seed'); }
   if (!FB14.on && !fb14Step()) return;
   if (present && FB14.visFrom == null) FB14.visFrom = t;
   if (!present && FB14.visFrom != null) { FB14.vis.push([FB14.visFrom, t]); if (FB14.vis.length > 200) FB14.vis.shift(); FB14.visFrom = null; }

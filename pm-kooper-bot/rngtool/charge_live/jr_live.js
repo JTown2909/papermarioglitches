@@ -594,9 +594,12 @@ function jrPress(inp) {
   const rate = zw.rate; if (inp.t - inp.h * rate < (P.tMade || 0)) return;      // the plan came after the press
   const c = zwF(inp.t, inp.h + num('pfix')), f = Math.round(c), err = c - P.zwAbs, onBeeps = Math.abs(err) <= 5 && !P.stopped;
   const d = f - P.zwAbs, inWin = P.target + d >= P.w.start && P.target + d <= P.w.end;
+  // v90 (log 1c4d37ef T5: read 212.6 on the one-frame window 213, "works", and Mario was hit): a reading within PRESS_EDGE of
+  // a window edge cannot tell the two frames apart (the picture's vblank; the console reading's own spread): logged as edge
+  const g = P.target + d + (c >= f ? 1 : -1), inG = g >= P.w.start && g <= P.w.end, edge = inG !== inWin && Math.abs(c - f) > 0.5 - PRESS_EDGE;
   if (onBeeps) { presses.push(err); while (presses.length > 8) presses.shift(); try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {} }
-  V.pressNote = null; P.measured = { frame: f, c, err, inWin, works: inWin, likely: false, tObs: inp.t, onBeeps };
-  slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works: inWin, likely: false, near: [], onBeeps, src: inp.src, k: inp.k });
+  V.pressNote = null; P.measured = { frame: f, c, err, inWin, works: inWin, likely: false, tObs: inp.t, onBeeps, edge };
+  slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works: inWin, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined });
   st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
   if (typeof showPresses === 'function') showPresses();
 }

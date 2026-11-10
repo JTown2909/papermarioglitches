@@ -1,3 +1,92 @@
+# Time Out Timer v90: the console session of Nov 10 (Jr. Troopa T3 / T5, the Strategies reading, Final Bowser's lever and T2 Charge, the arena back-move)
+
+Console logs of 2026-11-10 (page v89): 86e76da9 (Duplighosts, clip 15-20-24), 1c4d37ef and f485687d (Ultra Jr. Troopa, clips
+15-21-42, 15-24-19), 6f44cbbd (Hallway win), 54c12cf2 and 8cc2055f (Final Bowser, clips 15-28-30, 15-40-48). Method: the clips
+frame by frame (60 fps), synced to the logs by the HUD bar's hides (every hide of a clip at one offset to the millisecond:
+1c4d37ef page = clip + 1570188.5 ms, 86e76da9 + 1492455, 8cc2055f + 51380, 11-09's 4080354f + 757222); every Jr. Troopa /
+Duplighost / Hallway Charge read of 11-09 and 11-10 (27) replayed through the v86.1, v87, v88 and v89 pages; the console
+Strategies presses with known outcomes against the page's own model. No picture is committed (`fixtures/console_1110.json`
+holds numbers only). The emulator was not run for this version (see "Not done").
+
+## What happened (the clips)
+- **1c4d37ef T3** (Bomb Close Call, plan pp 0.999, window 2): Mario died (0/10, the Life Shroom, 10/10; clip 52-60 s). The
+  press read -1.55 from the bar hide, outside the window. **The runner pressed early**: the reading and the model agree
+  with the death. f485687d's T3 is the same (-1.33 on a one-frame window, death). v86's two T3 Bombs read -0.25 / -0.3 and
+  dodged: the same reading, the same model, a later press.
+- **1c4d37ef T5** (Do Nothing, plan pp 0.965, **one-frame window 213**): Mario at 3/10 on the Strategies screen, hit for 7, the
+  second Life Shroom (clip 87-96 s): a real death (the HP read was right; T4's Syrup at 10 HP had no roll, as the tracker
+  assumed, and the T5 Charge locked afresh at 4.37, so neither the death nor the carry is in the T5 states). The page read
+  the press at 212.6: "works" by 0.1 frame. The clip: the Strategies panel changes faintly at 85.483 s and is gone at
+  85.517 s (no grey picture in between); the page closed it at 85.517. 11-09's T5 (clip 19-59-56): faint change 69.667,
+  grey 69.700, gone 69.733, page close 69.699. **The page reads the same game frame on both** (2 vblanks after the faint
+  change), so v87's vanish 2 is right in its frame; what is off is the fraction (below).
+- **f485687d T5** (window 183-184): read 182.13, outside; death. Consistent.
+- **T6** (1c4d37ef): the Power Bounce plan (pp 0.991) came 1.5 s after the T5 press, on states that had Mario dodge; its
+  beeps (1660.4-1661.4 s) went out before the hit showed, and the coin went inconsistent 0.6 s after the last one (doubt
+  0.61, then 1). It followed from the T5 reading (fix 1): on v90 the same press reads outside the window, on the edge.
+- **The clock-shift hypothesis (v88 / v89 moving the Jr. Troopa clock) is ruled out**: all 14 Jr. Troopa reads of 11-09 /
+  11-10 place the trigger picture as frame 3 (n0 3, no shift) and lock the same seed on v86.1, v87, v88 and v89 (ratios equal
+  or up by 0.02-0.25 on v88); the whole-Charge shift re-reads are Final Bowser's only (fb1 `shiftWide`). The Duplighost and
+  Hallway reads the same (Hallway 6f44cbbd's Time Out: +0.28 in its 5-frame window, a win).
+
+## Root causes and fixes
+1. **The Strategies-screen reading is 0.1-0.3 frame late** (`pmrng_core.js` `STRAT_VAN` 2.2 for dup3 / dup4 /
+   jrcc_nothing; v87-v89: 2). Every console Do Nothing with a known outcome, against the model's window, as a function of a
+   constant x added to the v89 reading:
+
+   | press | read (v89 reading) | window | outcome | x that fits |
+   |---|---|---|---|---|
+   | 4080354f T5 (11-09) | 1117.77 | 1118-1119 | dodged | -0.27 .. +1.73 |
+   | 1c4d37ef T5 (11-10) | 212.60 | 213 | died | below -0.10 (or +0.90 and up) |
+   | f485687d T5 (11-10) | 182.13 | 183-184 | died | below +0.37 |
+   | 9 Duplighost Do Nothings (11-07 / 11-09, copies counted) | | | | likelihood 4.9e-3 at -0.55..-0.15, 2.2e-3 at -0.1..+0.2, 0 below -0.6 or above +0.85 |
+
+   Only **x = -0.27 .. -0.15** fits all of them: the reading moves 0.2 frame earlier (the grey picture shows on the vblank
+   after its game frame starts). v89's reading fits all but 1c4d37ef's T5, which is exactly the press it called "works".
+   The bar-read levers (Bomb, Syrup, Power Bounce, Time Out) are unchanged: their known outcomes fit as read.
+2. **"works" on a fraction of a frame.** A press read within `PRESS_EDGE` (0.3 frame) of a window edge is logged and shown
+   as `edge` ("on the edge of the window: the video cannot tell"), not ✓ / ✗ (`jrPress`, `measurePress`).
+3. **Final Bowser's lever correction double-counted** (54c12cf2 T2: target 896, one-frame window, the beep +2.37 frames
+   late from v86's two seed presses; the runner pressed 0.51 before the beep, read +1.86, Bowser hit). The seed presses
+   (-2.54, -2.2) were never matched by an outcome, and the runner's presses on the same Strategies screen in Jr. Troopa /
+   Duplighosts are about -0.6 against the beeps. The correction now starts at 0 in a new store (`tot-fb14press-v90`: the
+   browsers holding the old presses start over), needs 4 presses on the beeps, is shrunk to n / (n + 4) of the mean and
+   moves the beeps at most 1.5 frames (`leverBias`). Final Bowser's own panel reading (FB14_VAN S 2) is left as it is
+   (no Final Bowser outcome yet pins its fraction).
+4. **Final Bowser T2 Charge never read** (8cc2055f; the clip: a Super Charge burst at T1 33.6 s, none at T3 (the Jelly),
+   one at T4). T1's read gave no lock (4984 / 1.78; the -1 / +1 wide re-reads 2506 / 2511, noise), the Cloud Nine was read
+   from the bar before any lock (pending), and the reader stayed 'nolock' on the Cloud Nine step: only a lock re-armed it
+   (`fb14AfterLock`). T2's Charge hide (84.7 s, bar up 17 s) found nothing armed and the route stayed on T1 until the
+   runner clicked (86.4 s and 126.3 s are clicks: no event before them). Now once a read has given up (no re-read pending)
+   the reader arms again on a Final Bowser step (`fb14Frame`, `fb14ReaderRearmed` why "after a no-lock"); the burst then
+   moves the route (`fb14StepByBurst`). The two `rejected` events (100.3 / 103.5 s, -4.2 / -5.3) are coin shines off the
+   48 + 24k grid (Bowser's attack flashes): the shine filter working, nothing to fix. T4 locked fresh (6862 / 2.39) with
+   no stream prior: there was no earlier lock to search after. **Not fixed:** why T1 read 1.78 (Mario +0.3 px, 47 frames).
+5. **Duplighost back-move after a won fight** (1c4d37ef: a bar hide in the Duplighost room 15 s after their Do Nothing,
+   route on Jr. Troopa T1, moved it back to Duplighosts T1; no Charge followed, the runner clicked forward). A move back
+   to the Duplighosts from a later fight now waits for a whole Charge burst captured in that arena (`CHG.backTo`,
+   `chgBackResolve` at the end of the capture); no burst (`chargeNotSeen`), the route stays. A click always goes.
+
+## Not a page bug
+- T3 (both logs): the runner's presses, -1.55 and -1.33 against the beeps, outside 2- and 1-frame windows. v87's "wider
+  window up to 1.5 s later" made both plans (`later`), with the beeps on the chosen frame as usual.
+- T5 of 1c4d37ef was a 62% plan (p 0.62 with the runner's spread; pp 0.965 is the perfect press) on a one-frame window.
+
+## Tests
+New `test_console_1110.js` (in `run_suite.sh`): the T5 outcome table on the v90 reading (and that v89's does not fit
+1c4d37ef), the page reading 1c4d37ef's T5 press as 212.4 outside and on the edge, the edge rule, the held Duplighost
+back-move (no burst: stays; a burst: goes), the Final Bowser correction from 0 with the old store ignored, the reader
+re-armed after a no-lock (not while a re-read is pending). Changed: `test_press_lever.js` (vanish 2.2; the correction
+rules), `test_fb14_v86.js` 5 (no seeded correction), `test_console_1107.js` (the back-move waits for the burst); version
+checks to v90.
+
+## Not done
+- No emulator run: the post-death model was checked from the logs (the T5 lock is fresh, T4 at 10 HP has no roll), and the
+  Strategies offset from the console outcomes only (3 Jr. Troopa presses and 9 Duplighost attempts; the window of fits is
+  -0.27 .. -0.15).
+- Final Bowser T1's 1.78 read (8cc2055f) is not analysed.
+- f485687d's clip was not read frame by frame (its T3 and T5 follow from the log).
+
 # Time Out Timer v89: the two Final Bowser noise reads, the stream prior, missing pictures (Nov 10)
 
 Console logs of 2026-11-09 (b75b56e2, c565d268, 4bc65351), the reads v88 left as noise: b75b56e2 T1 (2829 / 1.01) and

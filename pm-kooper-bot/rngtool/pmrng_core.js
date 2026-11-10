@@ -124,6 +124,11 @@
    * effects: extra draws in the script phase of a frame (before the coin); rolls: in order, each must pass.
    * vanish: frames from the confirm until the saved target-screen box changes (press check). All measured in the
    * emulator (JP) frame by frame. */
+  /* v90: the Strategies screen is read 0.2 frame later than its grey frame's picture time puts it. Every console press there
+   * with a known outcome fits only with the reading 0.10-0.27 frame earlier (Jr. Troopa T5: 11-09 dodged at 1117.77 of
+   * window 1118-1119, 11-10 died at 212.6 of window 213 and at 182.13 of window 183-184; the Duplighosts' copies are most
+   * likely for -0.15..-0.55): the picture shows on the vblank after the game frame's own (charge_live/README.md, v90). */
+  const STRAT_VAN = 2.2;
   const PROFILES = {
     timeout: { id: 'timeout', name: 'Hallway Bowser: Time Out', short: 'Time Out works', effects: EFFECTS,
       rolls: [{ at: ROLL, max: 100, ok: v => v <= 30 }], vanish: 2, minRun: 3,
@@ -132,7 +137,7 @@
     // "do nothing"; each Duplighost rolls RandInt(1000) < 600 to copy on the enemy turn. On the all-copy path there are
     // no other draws (13 seeds checked, every roll matched).
     dup4: { id: 'dup4', name: 'Duplighosts: all 4 copy Bombette', short: 'all 4 Duplighosts copy', effects: {},
-      rolls: [13, 110, 207, 304].map(at => ({ at, max: 1000, ok: v => v < 600 })), vanish: 2, minRun: 2,   // v87: the page closes the Strategies screen on its grey frame (confirm + 2; console clips 2026-11-09, input display)
+      rolls: [13, 110, 207, 304].map(at => ({ at, max: 1000, ok: v => v < 600 })), vanish: STRAT_VAN, minRun: 2,   // v87: the page closes the Strategies screen on its grey frame (confirm + 2; console clips 2026-11-09, input display)
       screen: 'the Partner’s Strategies menu with the hand on なにもしない (do nothing)', box: 'the Strategies panel (both lines and a little below)' },
     // Final Jr. Troopa (battle 0x0207), Bombette (Super), Mario at 2 HP (Close Call active under 6 HP). Close Call is
     // rand_int(100) < 30 when his attack hits (he only attacks Mario; in base form always Leap, no attack-choice roll).
@@ -144,7 +149,7 @@
       effects: { 118: [].concat(...Array(10).fill([359, 10, 10])) }, rolls: [{ at: 163, max: 100, ok: v => v < 30 }], vanish: 2, minRun: 2,
       screen: 'Maple Syrup target screen (hand on Mario)', box: 'the マリオ name box in the top-left' },
     jrcc_nothing: { id: 'jrcc_nothing', name: 'Jr. Troopa: Close Call after Bombette does nothing', short: 'Close Call', group: 'jr',
-      effects: {}, rolls: [{ at: 26, max: 100, ok: v => v < 30 }], vanish: 2, minRun: 2,   // v87: the Strategies screen greys on confirm + 2 (the page's close), goes on + 3 (console input display)
+      effects: {}, rolls: [{ at: 26, max: 100, ok: v => v < 30 }], vanish: STRAT_VAN, minRun: 2,   // v87: the Strategies screen greys on confirm + 2 (the page's close), goes on + 3 (console input display)
       screen: 'the Partner’s Strategies menu with the hand on なにもしない', box: 'the Strategies panel (both lines and a little below)' },
     // Power Bounce vs Jr. Troopa (chance 70: 140, 98, 68, 47, 32...): 6+ hits = the first four cap rolls pass. Rolls
     // every 27 frames; hit-effect draws one frame after each. AC press timing inside the windows does not matter.
@@ -207,7 +212,7 @@
     };
   }
   PROFILES.dup3 = { id: 'dup3', name: 'Duplighosts: 3+ copy Bombette', short: '3+ Duplighosts copy', effects: {}, rolls: [{ at: 13 }], sim: dupSim(3),
-    vanish: 2, minRun: 2, screen: PROFILES.dup4.screen, box: PROFILES.dup4.box };
+    vanish: STRAT_VAN, minRun: 2, screen: PROFILES.dup4.screen, box: PROFILES.dup4.box };
   /* Duplighosts: the earliest frame in [from, to] where all 4 copy and both neighbours give 3+; returns
    * {target, window} with window = the 3+ run around it, or null */
   // base profile -> its better outcome: aim at a frame with the better outcome whose neighbours both give the base one

@@ -96,10 +96,11 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   check(pc.f === 1010 && pc.plan === 'reading' && pc.n === 1, '8. a pending Charge on 1000: the states stop at 1010 (v87: its frame -2 .. +2), no plan ("reading"), and the Charge then goes into them ' + JSON.stringify(pc));
   // ---- 5. the lever press bias: both console lever presses 2.2-2.5 frames early; the beeps come that much later
   const pb = await p.evaluate(() => { const X = window.__fb14, FB = X.FB14; X.reset(); FB.t0 = 1000; FB.rate = 33.367;
-    const b0 = X.bias(), t0 = X.pressT(900); X.pressAdd(-2.4); X.pressAdd(-2.4); const b1 = X.bias(); for (let i = 0; i < 8; i++) X.pressAdd(0.1); const b2 = X.bias(); localStorage.removeItem('tot-fb14press');
+    const b0 = X.bias(), t0 = X.pressT(900); X.pressAdd(-2.4); X.pressAdd(-2.4); const b1 = X.bias(); for (let i = 0; i < 8; i++) X.pressAdd(0.1); const b2 = X.bias(); localStorage.removeItem('tot-fb14press-v90');
     return { b0, t0, b1, b2, v85: 1000 + (900 - 1.7 + (+document.getElementById('s-off').value)) * 33.367 - (+document.getElementById('s-vlag').value) }; });
-  check(Math.abs(pb.b0 - 2.37) < 0.01 && Math.abs((pb.t0 - pb.v85) / 33.367 - 2.37) < 0.01, '5. the lever beep for a frame comes 2.37 frames later than v85\'s (the two logged presses: -2.54, -2.2) ' + JSON.stringify(pb));
-  check(Math.abs(pb.b1 - 2.385) < 0.01 && Math.abs(pb.b2 + 0.1) < 0.01, '5. it follows the last 8 lever presses (' + pb.b1 + ', then ' + pb.b2 + ')');
+  // v90: no seeded correction (log 54c12cf2: the +2.37 put the T2 beep 2 frames late); 4+ presses, shrunk, at most 1.5 frames
+  check(Math.abs(pb.b0) < 0.01 && Math.abs((pb.t0 - pb.v85) / 33.367) < 0.01, '5. v90: the lever beep starts on v85\'s frame (no seeded correction) ' + JSON.stringify(pb));
+  check(Math.abs(pb.b1) < 0.01 && Math.abs(pb.b2 + 0.1 * 8 / 12) < 0.01, '5. v90: two presses move nothing; 8 presses at +0.1 give ' + pb.b2.toFixed(3) + ' (shrunk 8 / 12)');
   await p.close();
   // ---- 4. the Recover setting
   for (const [hp, want] of [['hi', [0]], ['lo', [1]], ['any', [0, 1]]]) {

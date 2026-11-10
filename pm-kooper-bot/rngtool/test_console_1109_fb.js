@@ -36,7 +36,7 @@ function clockBreaks(F, nOf, ti) {
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('http://127.0.0.1:' + srv.address().port + '/tot.html');
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v89', 'page version v89');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v90', 'page version v90');
   // ---- 1. the placement
   for (const R of FIX.reads) {
     const out = await p.evaluate(R => { const T = window.__tot, FR = 1000 / 29.97;

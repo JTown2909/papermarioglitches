@@ -119,6 +119,7 @@ function chgStepActive() { return !!chgProfNow(); }
 const CHG_ARENA_LOW = [30, 165, 300, 190], CHG_ARENA_TOP = [30, 40, 300, 100];
 function chgArenaBox(b) { const [SX, OX, SY, OY] = chgMap(); return { x: (OX + b[0] * SX) / 1280, y: (OY + b[1] * SY) / 720, w: (b[2] - b[0]) * SX / 1280, h: (b[3] - b[1]) * SY / 720 }; }
 function chgArena() {
+  if (typeof window !== 'undefined' && window.__chgArenaTest) return window.__chgArenaTest();      // (tests: { a, L, br, lbr })
   const rgb = b => { const g = sample(chgArenaBox(b), 32, 8), n = g.length / 4; let r = 0, gr = 0, bl = 0; for (let i = 0; i < g.length; i += 4) { r += g[i]; gr += g[i + 1]; bl += g[i + 2]; } return [r / n, gr / n, bl / n]; };
   const lo = rgb(CHG_ARENA_LOW), tp = rgb(CHG_ARENA_TOP), L = 0.299 * lo[0] + 0.587 * lo[1] + 0.114 * lo[2], br = tp[2] - tp[0], lbr = lo[2] - lo[0];
   // v87: Final Bowser's lit floor reads L 95-125 (console 114, emulator renders ~100); a near-white picture (a flash, a fade:
@@ -186,11 +187,14 @@ function chgArenaProf(P0, real) {
   // Duplighosts (console session 2026-11-07: two Duplighost Charges on the Jr. Troopa step were locked as Jr. Troopa's T1,
   // jrFight / jrStart, and no Do Nothing was planned). The Duplighost room at a real bar hide is that fight; Jr. Troopa's
   // arena never reads as it (grey floor, B - R below 0; the rule needs B - R above +2 and is tested first).
-  if (P0 === CHG_PROF.jr && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); chgPendDrop('arena'); setStep(dupI); return CHG_PROF.dup; }
+  // v90 (log 1c4d37ef): a bar hide in the Duplighost room right after their fight was won (the route already on Jr. Troopa T1)
+  // moved the route back to Duplighosts T1 and the runner had to click forward. A move back now waits for a real Charge burst
+  // in that arena (chgBackResolve, at the end of the capture); no burst (chargeNotSeen), the route stays. A click always goes.
+  if (P0 === CHG_PROF.jr && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr, held: true }); chgPendDrop('arena'); CHG.backTo = dupI; return CHG_PROF.dup; }
   if (P0 === CHG_PROF.jr && real && A.a === 'fb' && fbI >= 0 && arenaMoveOk(fbI, A)) { slog('chargeArena', { arena: 'final bowser', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); setStep(fbI); return fb1I >= 0 ? CHG_PROF.fb1 : CHG_PROF.fb2; }
   if ((P0 === CHG_PROF.fb2 || P0 === CHG_PROF.dup || P0 === CHG_PROF.fb1) && A.a === 'hw') { slog('chargeArena', { arena: 'hallway', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); return CHG_PROF.hw; }
   if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.dup) && real && A.a === 'fb' && fbI >= 0 && arenaMoveOk(fbI, A)) { slog('chargeArena', { arena: 'final bowser', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); chgPendDrop('arena'); setStep(fbI); return fb1I >= 0 ? CHG_PROF.fb1 : CHG_PROF.fb2; }
-  if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.fb2 || P0 === CHG_PROF.fb1) && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); chgPendDrop('arena'); setStep(dupI); return CHG_PROF.dup; }
+  if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.fb2 || P0 === CHG_PROF.fb1) && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr, held: true }); chgPendDrop('arena'); CHG.backTo = dupI; return CHG_PROF.dup; }
   return P0;
 }
 const chgP = () => CHG.prof || CHG_PROF.hw;
@@ -218,7 +222,12 @@ function chgPendResolve() {
   CHG.preUsed = CHG.trig.t; V.preDone = V.preDone || {}; V.preDone[hi + ':' + hidePre] = true;
   slog('chargeConfirm', { at: Math.round(tObs), from: P ? 'bar' : 'burst' }); preConfirm(hwPre, tObs);
 }
-function chgReset(why) { if (CHG.pend) chgPendDrop('reset'); if (CHG.rec && CHG.rec.attempts.length && typeof chgRecEnd === 'function') chgRecEnd('reset'); if (CHG.workers) CHG.workers.forEach(w => w.terminate()); Object.assign(CHG, { state: 'idle', ring: [], frames: [], res: null, workers: null, means: [], trig: null, why: why || null, taps: [], pres: [], spiny: null, prof: null, early: null, info: null, armP: null, G: null, F0: null, skips: null, alt: 0, forced: 0, trigT0: null, rec: null, Gfix: null, seenG: null, attShift: 0, sweep: 0, gshift: 0 }); if (typeof fb2Reset === 'function') fb2Reset(); chgShow(); }
+/* v90: a held move back to the Duplighosts (chgArenaProf) goes once the capture has run a whole Charge burst in their arena */
+function chgBackResolve() {
+  const i = CHG.backTo; CHG.backTo = null; if (i == null || CHG.replay) return;
+  if (routeStep !== i) { slog('chargeArenaBack', { from: routeStep, to: i }); setStep(i); }
+}
+function chgReset(why) { if (CHG.pend) chgPendDrop('reset'); if (CHG.rec && CHG.rec.attempts.length && typeof chgRecEnd === 'function') chgRecEnd('reset'); if (CHG.workers) CHG.workers.forEach(w => w.terminate()); Object.assign(CHG, { state: 'idle', ring: [], frames: [], res: null, workers: null, means: [], trig: null, why: why || null, taps: [], pres: [], spiny: null, prof: null, early: null, info: null, armP: null, G: null, F0: null, skips: null, alt: 0, forced: 0, trigT0: null, rec: null, Gfix: null, seenG: null, attShift: 0, sweep: 0, gshift: 0, backTo: null }); if (typeof fb2Reset === 'function') fb2Reset(); chgShow(); }
 chgReset();
 let chgCv = null, chgCtx = null;
 function chgCanvas() { if (!chgCv) { chgCv = document.createElement('canvas'); chgCv.width = 640; chgCv.height = 480; chgCtx = chgCv.getContext('2d', { willReadFrequently: true }); } return chgCtx; }
@@ -243,7 +252,7 @@ function chgFrame(t, present) {
   CHG.presN = present ? (CHG.presN || 0) + 1 : 0;
   if (present && CHG.state !== 'capture' && (CHG.state !== 'armed' || CHG.presN > 15)) { if (CHG.state === 'armed') { CHG.state = 'idle'; CHG.ring = []; CHG.means = []; } CHG.hideT = null; CHG.armP = null; return; }   // the burst can flicker the coin box: only a bar back for 1/4 s disarms
   if (CHG.hideT == null && !present) {
-    const real = V.hudGone === t && V.hudWasUp > 600, P = chgArenaProf(chgProfNow(), real);
+    CHG.backTo = null; const real = V.hudGone === t && V.hudWasUp > 600, P = chgArenaProf(chgProfNow(), real);
     // a capture the other arena's profile started (the FB2 profile arms on any hide) is not this Charge: drop it
     if (CHG.state === 'capture' && CHG.prof && CHG.prof !== P) { slog('chargeArenaDrop', { prof: CHG.prof.id }); CHG.state = 'idle'; CHG.frames = []; CHG.ring = []; CHG.means = []; CHG.trig = null; CHG.early = null; if (CHG.workers) { CHG.workers.forEach(w => w.terminate()); CHG.workers = null; } if (typeof fb2Reset === 'function') fb2Reset(); }
     if (P.trigMin && !real) { CHG.hideT = -1e12; CHG.armP = null; return; }   // not a confirm: the bar was not up
@@ -282,7 +291,7 @@ function chgFrame(t, present) {
       const d = m - CHG.trig.base; if (d < lo - 10 || d > hi + 10 + (chgP().shapeUp || 0) * Math.abs(hi)) CHG.shapeBad++; } }
   if ((dt > 330 && dt < 400 && m < CHG.trig.base + 15) || CHG.shapeBad > 3) { slog('chargeFalseTrigger', { m: +m.toFixed(1), shapeBad: CHG.shapeBad || 0 }); CHG.state = 'armed'; CHG.ring = CHG.frames.slice(-16); CHG.frames = []; return; }
   if (chgP().early && !CHG.early && dt > (CHG_EARLY_N - 3 + 1.5) * FRAME) { if (typeof FB14 !== 'undefined' && FB14.t6 && chgP().id === 'fb2') CHG.early = { narrow: true }; else { CHG.early = { t }; setTimeout(chgEarly, 0); } }   // stage 1 while the rays go on
-  if (dt > CHG_N * FRAME) { CHG.state = 'maps'; CHG.tEnd = t; CHG.taps = []; CHG.pres = []; setTimeout(chgSolve, 0); }
+  if (dt > CHG_N * FRAME) { chgBackResolve(); CHG.state = 'maps'; CHG.tEnd = t; CHG.taps = []; CHG.pres = []; setTimeout(chgSolve, 0); }
 }
 /* the coin while the seed is searched: kept, so the tracker gets the Lakilester menu's shines once it is locked */
 function chgCoin(t, present) { if (CHG.state === 'search' || CHG.state === 'maps') { CHG.pres.push([t, present]); if (CHG.pres.length > 4000) CHG.pres.shift(); } }
