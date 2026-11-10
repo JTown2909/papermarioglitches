@@ -1,3 +1,103 @@
+# Time Out Timer v89: the two Final Bowser noise reads, the stream prior, missing pictures (Nov 10)
+
+Console logs of 2026-11-09 (b75b56e2, c565d268, 4bc65351), the reads v88 left as noise: b75b56e2 T1 (2829 / 1.01) and
+c565d268's T2 (in log 4bc65351, 2427 / 1.02). Method: the page's own maps of each read dumped and scored natively with
+`kernel.c` (the true T2 seed 8b09dfe1 from v88's stream check; per frame, per effect, per placement shift; stage 1's K-th
+best), then the fixes replayed through the page. No picture is committed.
+
+## Root cause: the whole Charge one game frame off, and stage 1 too narrow to survive it
+Both reads are placed one game frame early from the trigger picture on (the picture placed on frame n is game frame
+n + 1): c565d268 T2's true seed scores 4509 as placed and 5273 with every picture moved one frame (frame n gets the picture
+placed on n - 1); its initial rays alone 775 -> 883. The three console locks score best as placed (2bcf1649 5161 vs 4840,
+bda9033b 6235 vs 5940, d836ca08 5882 vs 5624). The pictures themselves are clean: side by side with c565d268 T1 (same
+Mario offset, locks) there is no occlusion, flash or blend that differs; what both noise reads share is a capture frame
+missing right after the trigger picture (none at +33 ms; 4bc65351 T1 has one at +17 / +33 too and reads on time, so it is
+not a sure sign), and the trigger's level does not tell frame 3 from 4 (d0 8.7 / 9.1 against the locks' 8.7-9.3).
+v88 did retry the read one frame off, but stage 1 keeps a seed only if its *initial* rays (frames 0-21, faint under the
+alpha ramp) rank in the top 16384 of 2^32 for one of the two effects, and the true seed's did not even at the right shift
+(A 396 against the K-th 403, B 487 against 589). At K 65536 (K-th 376 / 558) it passes and ranks within the first 700 of
+the joint list; stage 2 then scores it 5273 against 2668 off its stream.
+**Fix** (fb1 profile `shiftWide`, `CHG_K_WIDE` / `CHG_M2_WIDE`): Final Bowser's re-reads try the whole-Charge shifts
+first, -1 before +1 (both off reads were -1), each with stage 1 four times wider (K 65536) and 1000 candidates to stage 2,
+then v88's centre alternatives and the placement re-reads. A wide re-read takes 6-7 s; the lock comes 9-11 s after the
+replay starts (the fb1 re-reads may run to 13.5 s after the rays).
+
+## The stream prior (`fb14_live.js` fbStream*, `chgSolve`)
+Every Final Bowser Charge lock of an attempt is kept (`FB14.stream`: the seed its rays start from); `fb14CarryGone` keeps
+it, a new attempt / boots change resets it, and it expires after 8 minutes. A later Charge's seed must lie on the RNG
+stream after it: the page searches the window FBS_LO..FBS_HI = 500..9000 LCG steps after the kept seed first (whenever
+there is no carried stream, or the carried search did not lock, i.e. Bowser hit and the carry is off), as placed and then
+one frame either side, its candidates ranked by their initial rays (in c565d268's T2 window the true seed ranks 1st of
+8500) and the best 300 scored over the whole Charge (stage 2: every part's rays, respawns and the aura draws on every
+frame 3-47). A window lock needs score >= FBS_MIN 3000 and FBS_RATIO 1.5 x the best seed off its own stream (+-48 steps).
+The window: T1 -> T2 was 2369 and 2376 steps in the two locked fights; a turn of the model draws ~1100-1250 per 100 frames,
+and FBS_HI leaves room for T1 -> T4 when T2 / T3 were not read; Bowser's hit path (not modelled) is inside it on both fights.
+A stream lock (or a full-search lock found on the window) starts at the background doubt (ZW_BG0) instead of v82's
+ratio-based prior doubt: it is confirmed by an independent read. Without a kept lock nothing changes (full search, v88
+thresholds). If the window does not lock, the full search runs as before.
+
+**Trajectories.** The scorer already uses every picture and the motion between them: stage 2 scores a seed's predicted
+rays on every placed picture (positions moving with each part's speed, its respawns at new angles, the aura's draws per
+frame by dynamic programming), and stage 1 / the window's ranking scores each part's initial ray over the frames it flies
+(v..v+8). What v89 adds is the whole-trajectory shift (a read one frame off) and the earlier lock's stream.
+
+**The learned capture model.** From the console locks: the whole-Charge offset (2 of 5 console fb1 reads one frame
+late, none early: tried first), the window (the two locked T1 -> T2 pairs) and the thresholds (wrong windows, below). The
+brightness / blur model is not refitted: v88 found the console Final Bowser levels and pictures match the emulator through
+the S-Video path, and the Jr. Troopa / Duplighost / Hallway locks use other profiles.
+
+## Numbers (replays; maxAlts 3)
+| read | v88 | v89 full search | v89 on the stream window |
+|---|---|---|---|
+| c565d268 T1 (Mario +17.1 px) | 5161 / 2.14 2bcf1649 | 5161 / 2.14 2bcf1649 (first read) | (first Charge: no window) |
+| 4bc65351 T1 (2nd fight) | 6235 / 2.48 bda9033b | 6235 / 2.48 (first read) | (no window) |
+| 4bc65351 T2 (2nd fight) | 5882 / 2.40 d836ca08 | 5882 / 2.40 (first read) | 5882 / 2.98, 2369 steps after bda9033b |
+| 4bc65351 T2 (c565d268's fight) | 2427 / 1.02 noise | **5293 / 2.00 8b09dfe1** (re-read 1: -1, wide; 10.6 s) | **4509 / 2.13 8b09dfe1**, 2376 steps after 2bcf1649 (2.5 s) |
+| b75b56e2 T1 (Mario +17.2 px) | 2829 / 1.01 noise | **6928 / 2.21 44a7ee8c** (re-read 1: -1, wide; 9.1 s) | (first Charge: no window) |
+b75b56e2 T1's 44a7ee8c is not confirmed by a second read (the fight has none, and the clip ends before T2); it scores 2.3x
+the best noise any other Final Bowser read reaches, at the same one-frame shift as the confirmed 8b09dfe1.
+The 19 other reads of these logs (5 Duplighosts, 12 Jr. Troopa, 2 Hallway; 4bc65351 repeats c565d268's) replay to the same
+seed, score and ratio on v88 and v89, attempt for attempt.
+
+## False locks
+- Stream prior, wrong windows: 125 random windows over the 5 console fb1 reads, each as placed and one frame either side
+  (375 window searches): **0 locks**; best score 2851, best ratio 1.39 (never both 3000 and 1.5). The true windows: 4509 /
+  2.13 and 5882 / 2.98. A window after another fight's lock (4 cases, in the test): no lock.
+- Full search with the wide re-reads, negatives (each fb1 read with its pictures shuffled / reversed: the same pictures,
+  levels and clock, no seed's motion): 10 searched (5 not seen: Mario not found), **0 locks** (best 948-1554 / 1.01-1.10).
+- Missing data (below): 0 wrong locks in 102.
+- Emulator negatives were not rerun (v88's renders were gone with the container).
+
+## Missing pictures (the runner: "even with missing data")
+Missing pictures were already unknown, not mismatches (a game frame with no picture adds nothing to any seed's score;
+a covered region has no ridge). v89 fixes the placement across a gap: a run of dropped capture frames (100 ms and more)
+was placed as at most 3 game frames plus frames that "ran long" (capped cost), so every picture after it sat 3+ frames
+early; the placement now steps as many game frames as the vblanks say (up to 16). Measured on the console locks (4 full
+search reads, 2 stream reads; random drops, contiguous gaps, an early stop; a dropped picture takes its repeats with it;
+a box 200 x 150 at level 250 (flash, aura) or 60 (a shadow) on 30% of the pictures):
+| missing | full search (4 reads) | stream window (2 reads) | wrong locks |
+|---|---|---|---|
+| 10% of the pictures, random | 12 / 12 | 6 / 6 | 0 |
+| 25%, random | 8 / 12 | 6 / 6 | 0 |
+| 50%, random | 9 / 12 (v88 placement: 3) | 1 / 6 | 0 |
+| a gap of 6 pictures (100 ms) | 7 / 8 (v88 placement: 3) | 4 / 4 | 0 |
+| a gap of 12 pictures (200 ms) | 2 / 8 (1) | 4 / 4 (2) | 0 |
+| the last 25% / 40% missing | 4 / 4, 4 / 4 | 2 / 2, 2 / 2 | 0 |
+| 30% of the pictures half covered (level 250 / 60) | 4 / 4, 4 / 4 | 2 / 2, 2 / 2 | 0 |
+Never a wrong lock: with too little left, no lock.
+
+## The clock anchor (not changed)
+v88 noted that a late trigger picture leaves the page's frame clock half a frame late. Not changed: the Final Bowser lever
+correction (v86, kept per lever) was learned from two presses (logs C, F: -2.54, -2.2) whose reads are not in these logs,
+so it cannot be re-derived on a new anchor; moving the anchor alone would shift every Final Bowser press reading by up to
+half a frame against it. The whole-frame part is fixed: a shift re-read or a shifted window lock moves the trigger's
+frame and the clock with it (`trig.n`, `trig.t`), as the carried-stream shifts did.
+
+## Tests
+`test_console_1109_fb.js`: v88's checks, plus the two former noise reads lock (44a7ee8c, 8b09dfe1), the T2 reads lock on
+the window after their fight's T1 lock at 2376 / 2369 steps, four windows after another fight's lock do not, and a quarter
+of c565d268 T1's pictures dropped never locks another seed. Version checks moved to v89.
+
 # Time Out Timer v88: the Final Bowser Charge read on console (Nov 10)
 
 Console logs of 2026-11-09 (b75b56e2, c565d268, 4bc65351; clips 19-28-16, 20-11-18, "fbfull/20-17-50"), five Final Bowser

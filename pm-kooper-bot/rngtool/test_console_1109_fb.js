@@ -6,8 +6,9 @@
  *     Duplighosts) keep the frames they locked with.
  *  2. The T1 and T2 locks of one fight are one RNG stream (LCG steps between the two seeds): the console locks are true.
  *  3. With the logs (skipped when absent): the reads replayed through the page. c565d268 T1 and 4bc65351 T1 / T2 lock their
- *     seeds; b75b56e2 T1 and 4bc65351's first T2 make no confident lock (still unread: README v88, not done); that T2 read
- *     on the stream after its fight's T1 lock finds its seed; the control reads lock their live seeds.
+ *     seeds; v89: b75b56e2 T1 and 4bc65351's first T2 lock too (the wide shift re-read), the T2 reads lock on the stream
+ *     window after their fight's T1 lock (and not after another fight's), a quarter of the pictures dropped never locks a
+ *     wrong seed; the control reads lock their live seeds.
  * usage: node test_console_1109_fb.js   (PAGE=path to timeout_timer_standalone.html; serves on 127.0.0.1 only) */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path'), http = require('http');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
@@ -35,7 +36,7 @@ function clockBreaks(F, nOf, ti) {
   await new Promise(r => srv.listen(0, '127.0.0.1', r));
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('http://127.0.0.1:' + srv.address().port + '/tot.html');
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v88', 'page version v88');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v89', 'page version v89');
   // ---- 1. the placement
   for (const R of FIX.reads) {
     const out = await p.evaluate(R => { const T = window.__tot, FR = 1000 / 29.97;
@@ -64,14 +65,25 @@ function clockBreaks(F, nOf, ti) {
       const [k, i] = key.split(':'), r = await replay(caps[k][+i], 3), live = caps[k][+i].result;
       check(r.state === 'locked' && r.best.seed === seed && r.best.ratio >= ratio, '3. ' + key + ' ' + caps[k][+i].stepT + ' locks ' + seed + ': ' + (r.best && r.best.score + ' / ' + r.best.ratio) + ' (live ' + live.score + ' / ' + live.ratio + ')');
     }
-    for (const key of FIX.v88.noise) {
+    // v89: v88's two noise reads lock on the wide whole-Charge shift (README v89)
+    for (const [key, [seed, ratio]] of Object.entries(FIX.v89.locks)) {
       const [k, i] = key.split(':'), r = await replay(caps[k][+i], 3);
-      check(r.state !== 'locked' || r.best.ratio < 1.8, '3. ' + key + ' ' + caps[k][+i].stepT + ': no confident lock (' + r.state + ' ' + (r.best && r.best.seed + ' ' + r.best.score + ' / ' + r.best.ratio) + ')');
+      check(r.state === 'locked' && r.best.seed === seed && r.best.ratio >= ratio, '3. v89 ' + key + ' ' + caps[k][+i].stepT + ' locks ' + seed + ' (was noise): ' + (r.best && r.best.seed + ' ' + r.best.score + ' / ' + r.best.ratio));
     }
-    const u = new Uint32Array(2500); let s = fwd(parseInt(S.c56t2[0], 16) >>> 0, 1500); for (let i = 0; i < u.length; i++) { u[i] = s; s = fwd(s, 1); }
-    const rs = await replay(caps['4bc65351'][8], 0, Buffer.from(u.buffer).toString('base64'));
-    const k2 = rs.best ? steps(S.c56t2[0], rs.best.seed, 5000) : -1;
-    check(rs.state === 'locked' && Math.abs(k2 - S.c56t2[2]) <= 48, '3. 4bc65351 T2 (c565d268 fight) on the stream 1500-4000 steps after its T1 lock: ' + (rs.best && rs.best.seed + ' ' + rs.best.score + ' / ' + rs.best.ratio) + ', ' + k2 + ' steps (the same stream as ' + S.c56t2[1] + ' within 48)');
+    // v89: the stream prior (the window after the fight's last lock) and windows after another fight's lock
+    const sreplay = (c, st) => p.evaluate(async ([c, st]) => { const r = await window.__tot.chgReplay(c, { maxAlts: 0, stream: st, streamOnly: true }); return { state: r.state, best: r.best, stream: r.info.stream }; }, [c, st]);
+    for (const [key, from, seed, n] of FIX.v89.streamLocks) {
+      const [k, i] = key.split(':'), r = await sreplay(caps[k][+i], from);
+      check(r.state === 'locked' && r.best.seed === seed && r.best.stream && r.best.stream.steps === n, '3. stream: ' + key + ' on the window after ' + from + ' locks ' + seed + ' at ' + n + ' steps (' + (r.best && r.best.score + ' / ' + r.best.ratio + ', ' + (r.best.stream && r.best.stream.steps)) + ')');
+    }
+    for (const [key, from] of FIX.v89.streamWrong) {
+      const [k, i] = key.split(':'), r = await sreplay(caps[k][+i], from);
+      check(r.state !== 'locked', '3. stream: ' + key + ' on the window after another fight\'s lock ' + from + ': no lock (' + r.state + ', best ' + (r.stream && r.stream.tries.map(t => t.best + '/' + t.ratio).join(' ')) + ')');
+    }
+    // v89: missing pictures (a quarter of the burst's new pictures dropped): the right seed or no lock, never another
+    { const c = caps.c565d268[7], ti = c.trig.i, burst = c.F.map((e, k) => k).filter(k => k > ti && c.F[k][3] >= 0 && c.F[k][0] < 1600), drop = []; burst.filter((x, j) => j % 4 === 1).forEach(k => { drop.push(k); for (let j = k + 1; j < c.F.length && c.F[j][2] === 0; j++) drop.push(j); });   // (a dropped picture takes its repeats with it)
+      const r = await p.evaluate(async ([c, drop]) => { const r = await window.__tot.chgReplay(c, { maxAlts: 1, drop }); return { state: r.state, best: r.best }; }, [c, drop]);
+      check(r.state !== 'locked' || r.best.seed === '2bcf1649', '3. missing data: c565d268 T1 with a quarter of its ' + burst.length + ' pictures dropped: ' + r.state + ' ' + (r.best && r.best.seed + ' ' + r.best.score + ' / ' + r.best.ratio)); }
     for (const R of FIX.reads.filter(R => R.prof !== 'fb1')) {
       const r = await replay(caps[R.log][R.idx], 2);
       check(r.state === 'locked' && r.best.seed === R.live.seed, '3. control ' + R.log + ' ' + R.stepT + ' locks ' + R.live.seed + ' (' + (r.best && r.best.seed + ' ' + r.best.score + ' / ' + r.best.ratio) + ', live ' + R.live.score + ' / ' + R.live.ratio + ')');

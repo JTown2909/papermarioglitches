@@ -217,14 +217,18 @@ async function chgReplay(cap, opts) {
   if (!cap.v) { Gfix = await chgV1Frames(cap, T0); F = Gfix.filter(Boolean).sort((a, b) => a.t - b.t); trig = { t: T0, tRaw: T0, n: 3, base: cap.base, i: Math.max(0, F.indexOf(Gfix[3])) }; }
   else {
     const Ys = []; for (const b of cap.pics) Ys.push(await chgPicDecode(b, cap.fmt));
+    // v89 (tests: missing data): opts.occ [[pic, x0, y0, x1, y1, level]] covers a box of a picture (640x480) with one level;
+    // opts.drop [capture indices] removes those captured frames (a dropped OBS frame: no picture, no time)
+    if (opts.occ) for (const [pi, x0, y0, x1, y1, v] of opts.occ) { const Y = Ys[pi] = Ys[pi] && Ys[pi].slice(); if (!Y) continue; for (let y = Math.max(0, y0); y < Math.min(480, y1); y++) Y.fill(v, y * 640 + Math.max(0, x0), y * 640 + Math.min(640, x1)); }
     F = cap.F.map(e => ({ t: T0 + e[0], m: e[1], fresh: e[2], Y: e[3] >= 0 ? Ys[e[3]] : null }));
+    if (opts.drop && opts.drop.length) { const D = new Set(opts.drop), T = cap.trig; let ti = T.i; F = F.filter((f, i) => { if (D.has(i) && i !== T.i) { if (i < T.i) ti--; return false; } return true; }); cap = Object.assign({}, cap, { trig: Object.assign({}, T, { i: ti }) }); }
     if (cap.fixed) { Gfix = new Array(CHG_N + 4).fill(null); cap.F.forEach((e, i) => { const n = e[4]; if (n != null) Gfix[n >= 0 ? n : CHG_N + 4 + n] = F[i]; }); }
     const T = cap.trig; trig = { t: T0 - (T.n - 3) * FRAME, tRaw: T0, n: T.n, base: T.base, i: T.i, d0: T.d0, cut: T.cut };
   }
   const cands = cap.cands ? Array.from(new Uint32Array(chgUnB64(cap.cands).buffer)) : null;
   return new Promise(resolve => {
     Object.assign(CHG, { prof: P, trig, frames: F, Gfix, menu: null, taps: [], pres: [], tEnd: performance.now(), early: null });
-    CHG.replay = { resolve, fb14: !!opts.fb14, maxAlts: opts.maxAlts, clock: !!opts.clock, cands, attempts: [], t0: performance.now() };
+    CHG.replay = { resolve, fb14: !!opts.fb14, maxAlts: opts.maxAlts, clock: !!opts.clock, cands, stream: opts.stream ? { seed: parseInt(opts.stream, 16) >>> 0 } : null, streamOnly: !!opts.streamOnly, attempts: [], t0: performance.now() };   // opts.stream (v89): the earlier lock's seed (hex)
     if (P.early && !cands) { CHG.state = 'capture'; CHG.early = { t: performance.now() }; chgEarly(); }   // FB2: stage 1 from the early maps, as live
     CHG.state = 'maps'; chgSolve();
   });

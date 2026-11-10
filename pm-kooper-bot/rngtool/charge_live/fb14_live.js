@@ -47,7 +47,7 @@ const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000;
 const FB14_MISSW = 0.01;     // v86: a state whose Bowser hit Mario on a turn the bar showed a miss (the HP read can be wrong: not 0)
 const FB14_HIDE = { jelly: 2, peach: 2 }, FB14_JSHIFTS = [[-1, 0.25], [0, 0.5], [1, 0.25]];
 var FB14 = { on: false };
-function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null }); }
+function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: null }); }
 fb14Reset();
 /* ---- the random numbers (fast, no arrays) ---- */
 let FBV = 0;
@@ -156,6 +156,9 @@ const fb14Step = () => { const s = isRoute() && RT()[routeStep]; return s && s.f
 function fb14Prior(res, contra) {
   const top = res && res.top, a = top && top[0], b = top && top[1], ratio = a && b && b.sc > 0 ? a.sc / b.sc : (CHG.info && CHG.info.best ? CHG.info.best.ratio : 9);
   const ps = res && res.placeScores, sc = ps ? [ps[0], ps[-1], ps[1]].filter(x => x != null).sort((x, y) => y - x) : null, close = sc && sc.length > 1 && sc[1] / sc[0] > 0.9;
+  // v89: a lock on the RNG stream after this attempt's last lock (searched there, or found by the full search and on it)
+  const sst = res && res.stream ? res.stream.steps : res && a && FB14.stream ? fbStreamSteps(a.seed) : -1;
+  if (sst >= FBS_LO - 48) return { d: ZW_BG0, ratio: +(+ratio).toFixed(2), stream: sst, contra: !!contra };
   let d = ZW_BG0; if (ratio < 3.5) d = Math.max(d, Math.min(0.42, 0.05 + (3.5 - ratio) * 0.3)); if (close) d = Math.min(0.49, d + 0.1); if (contra) d = Math.max(d, 0.5);
   return { d: +d.toFixed(3), ratio: +(+ratio).toFixed(2), close: !!close, contra: !!contra };
 }
@@ -266,6 +269,7 @@ function fb14Lock(res) {
   const d0 = how === 'carried' ? { d: ZW_BG0, carried: true } : fb14Prior(res, hadCarry); FB14.prior = d0;
   Object.assign(FB14, { on: true, why: null, turn, lockN: FB14.lockN + 1, plan: null, bg: d0.d / (1 - d0.d), bgFrom: Math.min(M + 61, menuF), how });
   FB14.doubt = d0.d; if (d0.d > ZW_BG0) slog('fb14Prior', d0);
+  if (res.top && res.top[0]) fbStreamNote(res.top[0].seed, res.stream ? 'stream' : how || 'fresh');     // v89: the next Charge's window starts here
   FB14.M[turn] = M;
   if (res.joint && res.joint.cur) { res.joint.cur.M = M; FB14.charges = (FB14.charges || []).filter(c => c.M !== M).concat([res.joint.cur]).slice(-2); }
   // confirms the page saw before this lock landed (a slow lock): their frames from the clock the lock has just fixed
@@ -368,6 +372,23 @@ function fb14ChgCands() {
   slog('fb14ChgCands', { M: pc.M, turn: pc.turn, states: FB14.states.length, cands: dmap.size });
   return dmap.size ? [...dmap.keys()] : null;
 }
+/* v89: the stream prior. Every Final Bowser Charge lock of this attempt (T1's, a carried one, a stream one) is kept as the
+ * seed its rays start from (FB14.stream); a later Charge of the same attempt draws its rays FBS_LO..FBS_HI LCG steps after it
+ * on one RNG stream (console 2026-11-09: T1 -> T2 2369 and 2376; a turn draws 1100-1250 per 100 frames, the T1 -> T2
+ * stretch with Bowser's hit, Cloud Nine and the menus 2300-2500; FBS_HI leaves room for T1 -> T4 when T2 / T3 were not
+ * read). So when the carry is gone (Bowser's hit is not modelled) or there is none, that window is searched first, on its
+ * own threshold (FBS_RATIO, measured on wrong windows: README v89), before the full search. Kept across fb14CarryGone, reset
+ * with the attempt (fb14Reset) and after FBS_MAXMS. */
+const FBS_LO = 500, FBS_HI = 9000, FBS_RATIO = 1.5, FBS_MIN = 3000, FBS_MAXMS = 8 * 60000;
+function fbStreamNote(seed, how) {
+  FB14.stream = { seed: seed >>> 0, t: performance.now(), how, n: ((FB14.stream && FB14.stream.n) || 0) + 1 };
+  slog('fbStreamNote', { seed: (seed >>> 0).toString(16).padStart(8, '0'), how });
+}
+function fbStreamOk() { const S = FB14.stream; return !!S && performance.now() - S.t < FBS_MAXMS; }
+/* the window's seeds (before A's base-angle draw) after the kept lock */
+function fbStreamCands(S) { S = S || FB14.stream; const out = new Array(FBS_HI - FBS_LO); let x = chgFwd(S.seed, FBS_LO); for (let i = 0; i < out.length; i++) { out[i] = x; x = (Math.imul(x, 0x5D588B65) + 1) >>> 0; } return out; }
+/* LCG steps from the kept lock to seed (within FBS_HI + 48), or -1 */
+function fbStreamSteps(seed, S) { S = S || FB14.stream; if (!S) return -1; let x = S.seed >>> 0; const t = seed >>> 0; for (let i = 0; i <= FBS_HI + 48; i++) { if (x === t) return i; x = (Math.imul(x, 0x5D588B65) + 1) >>> 0; } return -1; }
 /* v87: hold the pending Charge's input while its narrowed search may still lock on the carried stream */
 function fb14Held() {
   const pc = FB14.pendChg; if (!pc || !FB14.on || typeof CHG === 'undefined' || typeof chgP !== 'function' || chgP().id !== 'fb1') return false;
@@ -791,6 +812,6 @@ async function fb1Stage2(W, call, top, times, t3, narrow) {
   times.hyps = Math.round(performance.now() - t4);
   return { top: all.slice(0, 5), fb1: { hyps: hy, times } };
 }
-window.__fb14 = { FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
+window.__fb14 = { FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN }), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
