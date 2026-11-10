@@ -94,6 +94,6 @@ def frame(n, path):
 out = '/dev/shm/pmbot/cd2_frames'; os.makedirs(out, exist_ok=True)
 for fn in os.listdir(out): os.remove(os.path.join(out, fn))
 for n in range(len(T)): frame(n, os.path.join(out, 'c%04d.png' % n))
-frame(len(T) - 1, '/home/user/HackMidwest/pm-kooper-bot/pra01_rmc_v3_climb_diagram.png')
-subprocess.run(['ffmpeg', '-v', 'error', '-y', '-framerate', '5', '-i', os.path.join(out, 'c%04d.png'), '-pix_fmt', 'yuv420p', '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-c:v', 'libx264', '-crf', '20', '/home/user/HackMidwest/pm-kooper-bot/videos/pra01_rmc_v3_climb_diagram.mp4'], check=True)
+frame(len(T) - 1, '/home/user/papermarioglitches/pm-kooper-bot/pra01_rmc_v3_climb_diagram.png')
+subprocess.run(['ffmpeg', '-v', 'error', '-y', '-framerate', '5', '-i', os.path.join(out, 'c%04d.png'), '-pix_fmt', 'yuv420p', '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2', '-c:v', 'libx264', '-crf', '20', '/home/user/papermarioglitches/pm-kooper-bot/videos/pra01_rmc_v3_climb_diagram.mp4'], check=True)
 print('ok', len(T), CW, CH)

@@ -38,5 +38,5 @@ dr.rectangle([lx, ly, lx + 22, ly + 22], fill=(200, 200, 205)); dr.text((lx + 32
 dr.text((lx, ly), 'blank = not tested (the tilt-20\nwalk steps ~2.1 units, so it never\nstopped in those columns)', fill=(30, 30, 30), font=f14); ly += 70
 dr.text((lx, ly), 'Number in a cell = how many of\n30 (tilt x tornado frame) input\ncombos clip from that spot.', fill=(30, 30, 30), font=f14); ly += 80
 dr.text((lx, ly), 'Inputs tested at each spot:\n- jump, A held 5, stick neutral\n  on frame 0\n- LEFT tilt 20/30/40/60/80\n  from frame 1\n- tornado on frame 6..11\n- then neutral 2nd jump and the\n  down-left 3rd jump\nReal inputs, JP, CountPerOp 1.', fill=(30, 30, 30), font=f14)
-im.save('/home/user/HackMidwest/pm-kooper-bot/pra01_rmc_v3_standmap.png')
+im.save('/home/user/papermarioglitches/pm-kooper-bot/pra01_rmc_v3_standmap.png')
 print(im.size, sum(1 for o in out if o[2]), 'working')

@@ -35,4 +35,4 @@ for k in ('slide_23', 'slide_2', 'stand_now', 'slide_no', 'stand_load'):
     dr.ellipse([lx, ly, lx + 16, ly + 16], fill=COL[k]); dr.text((lx + 26, ly), '%s (%d)' % (LBL[k], cnt[k]), fill=(30, 30, 30), font=f12); ly += 28 + (14 if k == 'stand_now' else 0)
 ly += 10
 dr.text((lx, ly), 'Rule of thumb:\n- heights 6-16: sliding, jump 2-3 frames after\n  landing -> this is where the route jumps from\n- heights 17-29 sliding: cannot jump at all\n- standing near the top (x ~491, height 22-26):\n  jump on the landing frame only\n- standing low by x 499 or high by x 495-490:\n  no jump, star piece cave loads next frame\nReal inputs, JP, CountPerOp 1. A tested 0-5\nframes after landing (held up to 6 frames).', fill=(30, 30, 30), font=f12)
-im.save('/home/user/HackMidwest/pm-kooper-bot/pra01_rmc_v3_jumpmap.png'); print(im.size, cnt)
+im.save('/home/user/papermarioglitches/pm-kooper-bot/pra01_rmc_v3_jumpmap.png'); print(im.size, cnt)

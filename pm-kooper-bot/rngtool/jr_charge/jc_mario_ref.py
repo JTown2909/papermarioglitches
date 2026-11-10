@@ -29,7 +29,7 @@ if __name__ == '__main__':
         name, spec = a.split('='); d, c = spec.split(':'); c = int(c)
         Y = luma_png('%s/%04d.png' % (d, c))          # image after step c shows frame c-1 = frame -1
         frames[name] = Y; refs[name] = Y[Y0:Y0 + H, X0:X0 + W].copy()
-    hw = json.load(open('/home/user/HackMidwest/pm-kooper-bot/rngtool/charge_live/mario_ref.json'))
+    hw = json.load(open('/home/user/papermarioglitches/pm-kooper-bot/rngtool/charge_live/mario_ref.json'))
     refs['hallway_route_clip'] = np.frombuffer(base64.b64decode(hw['b64']), np.uint8).reshape(hw['h'], hw['w'])
     for rn, R in refs.items():
         print('ref', rn, {fn: shift(R, Y) for fn, Y in frames.items()})

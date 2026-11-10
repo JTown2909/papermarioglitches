@@ -53,4 +53,4 @@ ax.set_xlim(540, 650); ax.set_ylim(48, -48); ax.set_aspect('equal'); ax.grid(alp
 ax.set_xlabel('x'); ax.set_ylabel('z'); ax.legend(loc='lower right', fontsize=9)
 cb = fig.colorbar(sc, ax=ax, fraction=0.03, pad=0.01); cb.set_label('lowest Lakilester speed (at C-down) that clips from this spot')
 ax.set_title('Where Mario must stand and how fast Lakilester must be to clip through the mirror')
-plt.savefig('/home/user/HackMidwest/pm-kooper-bot/figures/pra18_clip_speeds.png', dpi=90)
+plt.savefig('/home/user/papermarioglitches/pm-kooper-bot/figures/pra18_clip_speeds.png', dpi=90)

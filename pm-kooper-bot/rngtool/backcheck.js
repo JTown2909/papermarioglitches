@@ -1,5 +1,5 @@
 // (log analysis) usage: node backcheck.js tolFrames fromSec seed t0ms: walk the coin draws back from a lock and match earlier shines
-const R = require('/home/user/HackMidwest/pm-kooper-bot/rngtool/pmrng_core.js');
+const R = require('./pmrng_core.js');
 const L = require('./run3.json').events, FR = 1000 / 30, TOL = +(process.argv[2] || 10), FROM = +(process.argv[3] || 560) * 1000;
 const t0 = +(process.argv[5] || 612371), lockSeed = (+(process.argv[4] || 1380350928)) >>> 0;
 const obs = L.filter(e => e.ev === 'shine' && e.at < t0 - 100 && e.at > FROM).map(e => e.at).reverse();

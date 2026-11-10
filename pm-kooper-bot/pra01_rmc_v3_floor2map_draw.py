@@ -31,4 +31,4 @@ for k in ('clip', 'jump_noclip', 'stand', 'nojump'):
     dr.ellipse([lx, ly, lx + 16, ly + 16], fill=COL[k]); dr.text((lx + 26, ly), '%s (%d)' % (LBL[k], cnt[k]), fill=(30, 30, 30), font=f12); ly += 28 + (14 if '\n' in LBL[k] else 0)
 ly += 10
 dr.text((lx, ly), 'Same as floor 1: landing sliding blocks\nthe jump for 2 frames; A works on frames\n2 and 3, but only frame 2 clips.\nNo landing has a 2-frame clip window.\nWaiting 4+ frames usually slides you off\nand loads the star piece cave.\nReal inputs, JP, CountPerOp 1.', fill=(30, 30, 30), font=f12)
-im.save('/home/user/HackMidwest/pm-kooper-bot/pra01_rmc_v3_floor2map.png'); print(cnt)
+im.save('/home/user/papermarioglitches/pm-kooper-bot/pra01_rmc_v3_floor2map.png'); print(cnt)

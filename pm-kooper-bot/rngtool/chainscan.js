@@ -1,5 +1,5 @@
 // (log analysis) usage: node chainscan.js log.json fromSec toSec part parts   [W=lo,hi to force gap windows]
-const R = require('/home/user/HackMidwest/pm-kooper-bot/rngtool/pmrng_core.js');
+const R = require('./pmrng_core.js');
 const L = require(process.argv[2]).events, T0 = +process.argv[3] * 1000, T1 = +process.argv[4] * 1000, part = +process.argv[5], parts = +process.argv[6];
 const FRAME = 1000 / 30, FLICKER = 3500;
 const W = process.env.W; const gapWin = (a, b, hid) => { const E = Math.round((b - a) / FRAME); if (W) { const [l, h] = W.split(",").map(Number); return [Math.max(24, E - l), E + h]; } return hid <= 1200 ? [Math.max(24, E - 2), E + 2] : hid <= FLICKER ? [Math.max(24, E - 2), E + 8] : [Math.max(48, E - 30), E + 60]; };
