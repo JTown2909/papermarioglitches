@@ -93,10 +93,34 @@ so it cannot be re-derived on a new anchor; moving the anchor alone would shift 
 half a frame against it. The whole-frame part is fixed: a shift re-read or a shifted window lock moves the trigger's
 frame and the clock with it (`trig.n`, `trig.t`), as the carried-stream shifts did.
 
+## End to end (emulator, VCLOCK=1, GUARD=1, MARIO_HP=10; `fb14_e2e.py`, idle machine)
+Planned frame, the claim, and whether Bowser missed with the confirm on the planned frame / one early / one late (T4: the
+wave came). The build is the T1 menu at 10 HP rebuilt after the restart (`/dev/shm/fb2r/b10_test`, Bowser HP 80).
+| seed | T1 | T2 | T3 | T4 |
+|---|---|---|---|---|
+| 9e3779b9 | 481, 0.78: yes / yes / yes | 1396, 0.97: yes / yes / yes | 1939, 0.75: yes / yes / yes | 2523, 0.98: yes / yes / yes (the wave missed) |
+| 1234abcd | 445, 0.65: yes / yes / yes | 1299, 0.75: yes / yes / yes | no plan | no plan (+1: hit) |
+Every Charge locked (T2 / T4 on the carried stream). 1234abcd: right after T2's plan the coin put the carried states at
+doubt 0.97 ("No edge", the carry dropped: `fb14NoEdge`, `fb14CarryGone`), so T3 had none; T4's Charge locked fresh but its
+fits held no true state (`fb14Truth` 0). That is the carry's coin weighting, which v89 does not touch (the stream window
+is only searched when the carried search does not lock); not compared with v88 on this rebuilt build. The harness logs
+`chargeStream` / `fbStreamNote` now (`test_fb14_page.js`). Xvfb must be 800x600 (a 1280x1024 screen put the game in a
+corner of every grabbed picture and the page never saw a Charge).
+
 ## Tests
 `test_console_1109_fb.js`: v88's checks, plus the two former noise reads lock (44a7ee8c, 8b09dfe1), the T2 reads lock on
 the window after their fight's T1 lock at 2376 / 2369 steps, four windows after another fight's lock do not, and a quarter
-of c565d268 T1's pictures dropped never locks another seed. Version checks moved to v89.
+of c565d268 T1's pictures dropped never locks another seed. Version checks moved to v89. Run: the Final Bowser tests
+(test_fb14_model / _ai / _v86 / _chain / _v87 / _plan, test_fbnb_turn / _ai), test_console_1107 / 1108 / 1108b / 1109_fb, the
+charge tests (test_fix_proposal, test_zw_tolerant), test_arena_gate, test_press_lever, test_lock_badge, test_carry_page and the
+version-checked tests: all pass; charge_live/test_capture_replay fails as before (a clip file it needs is not here).
+
+## Not done
+- b75b56e2 T1's lock 44a7ee8c has no second read to confirm it (its fight has no other Charge read; the clip ends before T2).
+- The emulator negatives for the wide re-reads and the stream window (v88's renders are gone): the false-lock numbers are
+  from the console reads (wrong windows, shuffled pictures).
+- The clock anchor's half frame (above).
+- A gap of 200 ms in the full search still mostly fails (2 / 8, never wrong): the initial rays are needed by stage 1.
 
 # Time Out Timer v88: the Final Bowser Charge read on console (Nov 10)
 

@@ -57,7 +57,7 @@ const fs = require('fs');
     for (let k = 0; k < 100 && ['maps', 'search', 'capture'].includes(T.CHG.state); k++) await new Promise(r => setTimeout(r, 100));
     if (M.waitMs) await new Promise(r => setTimeout(r, M.waitMs));
     const S = T.SLOG, ev = n => S.filter(x => x.ev === n), C = T.CHG, cf = t => +((t - t0) * 60 / 1000).toFixed(1);   // capture frame of a page time
-    const fbe = S.filter(x => /^fb14|^fb2|^charge(Lock|NoLock|Trigger|Narrow|NotSeen|Retry|Error|Arena)|^step$|^beepsStopped|^screenClosed/.test(x.ev));
+    const fbe = S.filter(x => /^fb14|^fb2|^charge(Lock|NoLock|Trigger|Narrow|Stream|NotSeen|Retry|Error|Arena)|^fbStream|^step$|^beepsStopped|^screenClosed/.test(x.ev));
     const plans = ev('fb14Plan').map(x => Object.assign({}, x, { tPressCap: x.tPress != null ? cf(x.tPress) : null }));
     return { lateIdx: late.slice(0, 80), slow: slow.slice(0, 40), t0, clockT0: F.FB14.t0, clockT0Cap: F.FB14.t0 != null ? cf(F.FB14.t0) : null, rate: F.FB14.rate, late: late.length, state: C.state, info: C.info, events: fbe, plans,
       fb14: { on: F.FB14.on, states: F.FB14.states.length, M: F.FB14.M, P: F.FB14.P, pb: F.FB14.pb, t6: F.FB14.t6 && { at: F.FB14.t6.at, bases: F.FB14.t6.bases.length }, taps: F.FB14.t0 != null ? F.FB14.taps.map(t => +(F.pic(t) - 4.8).toFixed(1)) : [], vis: F.FB14.t0 != null ? F.FB14.vis.map(v => [+(F.pic(v[0]) + 30).toFixed(1), +(F.pic(v[1]) - 4).toFixed(1)]) : [] },
