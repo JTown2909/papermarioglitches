@@ -1,3 +1,99 @@
+# Time Out Timer v87: the Final Bowser carry rebuilt, the Strategies-screen press reading, the arena gate, Jr. Troopa's replan (Nov 10)
+
+v87 was first written on 2026-11-09 and lost uncommitted when the cloud container restarted (`V87_RECOVERY.md` keeps that
+report). This version re-applies it from those notes and re-tests it on a rebuilt emulator, plus the console sessions of
+2026-11-09 (logs 1794269090764 .. 1794273591960, clips not committed). Repository: JTown2909/papermarioglitches.
+
+## 0. The emulator after a restart
+`make_states.sh` (one command) builds the normal and the debug (RNG-trace) core, harness.so, the harness dir
+`/tmp/claude-0/pm/bot1` and every battle state the v84-v87 scripts use (Final Bowser phase 2 Ultra / Normal Boots, Jr.
+Troopa Ultra / Normal Boots, Hallway Ultra / Normal Boots, Duplighosts), each from `../boss_battle_start_setup.py` with its
+DIAGNOSTIC setup written in the script (BOOTS / FP / ITEMS / STARBEAM restored). Check: 4 new T1-T4 debug-core logs on a
+rebuilt MARIO_HP=10 route build are exact against `fb14_live.js` and `t14model.py`; test_fb14_model / _ai / test_fbnb_turn pass.
+
+## 1. Final Bowser T1 -> T4: the carry (Task A, `fb14_live.js`, `charge_live.js`)
+The model was right (continuous T1 -> T4 logs: `fb2_route/chain_log.py`, 7 logs, 2 guarded, `test_fb14_chain.js`: 18643
+frames checked, 28 / 28 dodge tests). The page lost the game's state:
+| # | what broke | fix |
+|---|---|---|
+| 1 | a T2 lock landing after the Do Nothing confirm skipped every carried state ("matched 0 of 8000") | each state keeps its seed after the rays (`ca`); a late lock checks that |
+| 2 | the end check also asked for the coin's phase (the true fit had it 11 frames off: the first v87 build planned T2 at 99.85% on a frame Bowser hit) | the seed only |
+| 3 | the cap cut the true state (ranked 3000-7000 by prior) | cap by w x lw, 12000 |
+| 4 | the T2 / T4 full search took 4-9 s | searched on the carried stream (Charge frame -2..+2, 14-24 candidates), its input held until that lock, the lock applied directly (no placement / joint, 5-7 s) |
+| 5 | the T2 Charge read 2 frames off | shifts -2..+2; matched states keep their coin history; the clock follows the matched states' vote only at 60%+ |
+| 6 | T4's wave particles in another order (1 of 13 waves, lost log) | a second hypothesis (8%) from T4's Charge |
+| 7 | harness | `fb14_e2e.py`: capture indices by the real 60 / 29.97 cadence, a miss keeps the Life Shroom (at 10 HP a hit kills and the Shroom revives to 10: v86's 1234abcd "misses" were hits), T4 needs the wave, GUARD=1; `test_fb14_page.js` VCLOCK=1 |
+New in the rebuilt logs: 1 of 7 T4 waves (5eed0fb2) ran its particles in a third order after T4's test; the stream is the
+model's again after the wave, so the T4 beep and the carry are unaffected. A guarded T4 (A on P + 87) makes Lakilester
+block the wave (not KO'd): checked to its test only. `test_fb14_v87.js`: fixes 1-4 and 6 on the page.
+
+## 2. The Strategies-screen press reading (console 2026-11-09)
+The runner's presses on the Strategies screen read about 2 frames early (Duplighosts -2.36, -1.34, -3.33, -1.82, -2.99; Jr.
+Troopa T5 -1.23 while it dodged). Two clips have the input display (19-50-01 Duplighosts, 19-59-56 Jr. Troopa): the
+Strategies box greys 10-11 capture frames after the A shows and is gone 12-13 after it, while a Mario action's bar hides
+11-14 after its A (HUD_HIDE 3): grey = confirm + 2, gone = confirm + 3, as the emulator. The page closes the screen on the
+grey frame (all 5 Duplighost clips of the session), and dup3 / dup4 / jrcc_nothing assumed the gone frame: **vanish 3 -> 2**.
+On the clip with the input display the Do Nothing A is 256.2 game frames after the Charge's A where the page read 254.0:
+the other ~1.2 frames are the Charge clock's own placement. The copies of 9 Duplighost clips fit only the v87 reading
+(likelihood 0 at the v86 reading and at a 2-frame misread; `test_press_lever.js`). bf4fbf04 (logged -2.99, "works false",
+3 copies): the press was at 243 on the model's clock, inside the 5-frame window; the lock and the model were right.
+| lever (screen) | presses as logged | as v87 reads them | |
+|---|---|---|---|
+| Duplighosts Do Nothing (Strategies) | -2.36, -1.34, -3.33, -1.82, -2.99 (11-09); -2.34, -1.77, -1.31, -0.81 (11-07) | +1 each: mean -1.0 | the clock's placement is part of it (input display: -0.76 on bf4fbf04) |
+| Jr. Troopa T5 Do Nothing (Strategies) | -1.23 (dodged) | -0.23 | |
+| Jr. Troopa T3 Bomb (target on him) | -0.25, -0.3 | unchanged | |
+| Jr. Troopa T4 Maple Syrup (target on Mario) | -2.26 (died), -1.92, +0.22 | unchanged | mixed: no correction |
+| Jr. Troopa T6 Power Bounce | +0.26 | unchanged | |
+| Final Bowser Do Nothing / Cloud Nine (logs C, F) | -2.54, -2.2 | unchanged (FB reads the grey frame already, VAN.S 2) | v86 correction kept |
+So **no Duplighost correction** (it would have made the presses late). Final Bowser keeps v86's learned correction, now kept
+per lever (`leverBias`) and stored against the beep, so it no longer decays to 0 as the presses come in on time.
+
+## 3. Arena moves gated (log bf4fbf04)
+A near-white picture on the Duplighosts' step (L 245) read as Final Bowser's arena and moved the route there. Now an arena is
+L < 170, and an automatic move goes forward one fight at a time, only after that fight's minimum time since the fight before
+it was last active (Duplighosts -> Jr. Troopa 90 s, -> Hallway 60 s, -> Final Bowser 80 s and 5 min after the Duplighosts;
+the session's gaps were 190-440, ~140, 173 s); a skipped fight is never automatic; a move back (a retry) and a manual step
+always go. Refused moves log `arenaRejected`. `test_arena_gate.js`.
+
+## 4. Jr. Troopa: the 30-second beep (log 2f22d4dc) and the window choice
+- After the T3 Charge's own lock (a new clock) v86.1 left the Ultra Boots Charge confirm in the old clock: the Bomb's earliest
+  frame came out ~1050 and the replan beeped 30 s later. The Charge is frame -13 of its own clock on both boots; a plan whose
+  early floor puts the press more than 10 s past the frames the page is at is no edge (`zwTooFar`). `test_jr_v87.js`.
+- A frame up to "Wider window up to" s (Settings, default 1.5) past the lead is beeped when its chance with the runner's press
+  spread is 3 points higher; the plan text shows the next wider window. Levers with one outcome. `test_pp_later.js`.
+
+## 5. Final Bowser on console: the Charge read is weak (open)
+Six console fb1 reads (logs b75b56e2, c565d268, 4bc65351): 4901 / 1.98, 5825 / 1.98, 6201 / 2.45 (weak: the prior doubt keeps
+them off the beeps) and three noise reads (best ~2700-3100 at 1.03-1.07); every Jr. Troopa / Duplighost / Hallway read of the
+same sessions scores 6200-8700 at 3.5-5.5, and the emulator renders lock at 6736-7364 / 2.7-2.8. Replayed through v86 and v87:
+the same. Ruled out: Mario's position (17 px right on half of them; the Hallway shows the same and locks; any shift tried
+reads noise on b75b56e2), the trigger frame (the brightness curve matches CHG_BRIGHT_FB1 frame 3; the ±1 retries ran), the
+profile (fb2 reads noise too). Not found yet. The page now says "WAIT, searching…" on the Cloud Nine step while a read runs
+(the runner confirms Cloud Nine about 4 s after the Charge).
+
+## 6. End to end (emulator, VCLOCK=1, GUARD=1, MARIO_HP=10)
+Both seeds on the v87 Task A code (the two runs overlapped with each other and the tests: VCLOCK keeps the page's clock on
+the pictures, nothing was dropped). Planned frame and the perfect-press claim; whether Bowser missed (T4: the wave came and
+missed Mario) with the confirm on the planned frame / one early / one late.
+| seed | T1 | T2 | T3 | T4 |
+|---|---|---|---|---|
+| 1234abcd | 367, 0.956: yes / yes / no | 1279, 0.999: yes / yes / yes | 1796, 0.996: yes / yes / yes | 2315, 1.0: yes / yes / yes (guarded: Lakilester blocked the wave) |
+| 9e3779b9 | 381, 0.935: yes / yes / no | 1259, 1.0: yes / yes / yes | **no plan** (blind; hit) | no plan (blind; the wave, hit) |
+9e3779b9 T3: the page read the T2 Do Nothing 3 frames early (1256 for the pressed 1259; 1234abcd read its T2 confirm exact),
+outside the -2..+2 shifts, and made no T3 plan or "No edge" at all after the Jelly: a bug left open (section "Not done").
+Only 2 of the 8 seeds asked for were run: the session went to the console logs of 2026-11-09 (sections 2-5).
+
+## Tests
+New: `test_fb14_chain.js`, `test_fb14_v87.js`, `test_press_lever.js`, `test_arena_gate.js`, `test_jr_v87.js`, `test_pp_later.js`
+(all in `run_suite.sh`); fixtures `fb14_chain_logs.json`, `console_1109_press.json`. Version checks moved to v87. Full
+`run_suite.sh` on this code: every test rc 0 except the four that read files the restart removed (the uploaded logs and
+clips of earlier sessions, `/tmp/claude-0/pm/bot1/data`): test_torch_core, charge_live/test_route_replay, test_session_plans,
+test_capture_replay, and the two log replays.
+
+## Not done
+Task B (the Do Nothing Ultra Jr. Troopa route, ub2) and Task C; the e2e seeds beyond those above; the Final Bowser console
+read (section 5); the e2e T2 confirm misread on 9e3779b9 (section 6).
+
 # Time Out Timer v86.1: Jr. Troopa after a restart (hotfix, Nov 10)
 
 Console 2026-11-09 (page v86; logs 1794269702752 and 1794269850246, the second holds the first; clips 19-14-36 and

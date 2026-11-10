@@ -1,3 +1,5 @@
+> v87 is now in the code: see charge_live/README.md, "Time Out Timer v87". These are the notes it was rebuilt from.
+
 # v87 recovery notes
 
 The v87 work (Final Bowser T1-T4 carry fix, guarding checks, the Do Nothing Jr. Troopa route) was lost uncommitted when the cloud container restarted on 2026-11-09. This is the agent's report of it, reconstructed from its transcript, kept so the work can be re-applied. Nothing below is in the code yet; base is v86 (f9a0d51).

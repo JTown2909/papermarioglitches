@@ -30,7 +30,7 @@ function truth(g) {
   await p.addInitScript(() => { const real = performance.now.bind(performance); window.__dt = 0; performance.now = () => real() + window.__dt; });
   await p.goto('file://' + PAGE);
   let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) fails++; };
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v86.1', 'page version v86.1');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v87', 'page version v87');
   // A. the read -> hypotheses
   const A = await p.evaluate(() => {
     const T = window.__tot, o = {};
