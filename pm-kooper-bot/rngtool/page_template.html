@@ -2039,12 +2039,18 @@ function onFrame(t) {
   }
 }
 function screenClosed(t) {
-  if (isRoute() && RT()[routeStep] && RT()[routeStep].cat === 'B' && V.present) V.closePend = { t, step: routeStep };
+  // v92 (e2e 5eed0fb2: the saved Mario screen matched Mario's and Lakilester's action wheels at 0.92, and the wheel
+  // "closed" when a submenu opened: the route went on to Cloud Nine / T2 before the Charge / Cloud Nine; console v86
+  // saw it too): on the Final Bowser steps a close counts only when the status bar hides with it, as a confirm does
+  // (a submenu leaves it up)
+  const z = isRoute() && RT()[routeStep];
+  if (z && (z.cat === 'B' || z.fb14) && V.present) V.closePend = { t, step: routeStep, fb14: !!z.fb14 && z.cat !== 'B' };
   else { V.lastClose = t; checkPress(t); }
 }
 function closeTick(t, on) {
   const c = V.closePend; if (!c) return;
   if (V.hudGone && V.hudGone >= c.t - 2 * FRAME) { V.closePend = null; V.lastClose = c.t; checkPress(c.t); }
+  else if (c.fb14 && (on || t - c.t > 450 || routeStep !== c.step)) { V.closePend = null; slog('fb14CloseNoHide', { at: Math.round(c.t), step: c.step }); }
   else if (on || t - c.t > 450 || routeStep !== c.step) { V.closePend = null; slog('targetBackout', { at: Math.round(c.t), step: c.step }); V.pressNote = 'You backed out of the target screen (the status bar stayed up): not counted as a press.'; showPresses(); V.pressNote = null; }
 }
 function drawPreview() {
@@ -2100,9 +2106,12 @@ function setStep(i) {
   slog('step', { to: i }); const was = routeStep; st.hwDone = false; if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
   if (RT()[was] && /^Hallway Bowser/.test(RT()[was].t || '') && !/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '') && routeStep > was) st.hwLeft = { at: performance.now(), hides: 0 };
   else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); }
-$('route-list').addEventListener('click', e => { const li = e.target.closest('[data-i]'); if (li) setStep(+li.dataset.i); });
-$('route-prev').onclick = () => setStep(routeStep - 1); $('route-next').onclick = () => setStep(routeStep + 1); $('route-reset').onclick = () => setStep(0);
-document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || !isRoute()) return; if (e.key === '[') setStep(routeStep - 1); else if (e.key === ']') setStep(routeStep + 1); });
+// v92: the runner's own route moves (a click, the buttons, the keys) are told from the page's (a screen, a burst): a Final
+// Bowser read takes the runner's turn only (fb14Lock)
+function userStep(i) { st.userStepT = performance.now(); slog('userStep', { from: routeStep, to: i }); setStep(i); }
+$('route-list').addEventListener('click', e => { const li = e.target.closest('[data-i]'); if (li) userStep(+li.dataset.i); });
+$('route-prev').onclick = () => userStep(routeStep - 1); $('route-next').onclick = () => userStep(routeStep + 1); $('route-reset').onclick = () => userStep(0);
+document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || !isRoute()) return; if (e.key === '[') userStep(routeStep - 1); else if (e.key === ']') userStep(routeStep + 1); });
 $('s-prof').addEventListener('change', () => { saveSettings(); applyProfile(); });
 /* the Duplighost route (route panel): RTA (the Spiny Surge turn, played without the page) or the Charge lock */
 function dupRouteNote() {
@@ -2273,6 +2282,7 @@ const presses = (function () { try { return JSON.parse(localStorage.getItem('tot
 // Every time the target screen closes, say what happened. With a beep plan: early/late vs the aimed frame (feeds the
 // Fine offset suggestion). Locked but no plan: the frame you confirmed on and whether Time Out works there.
 function checkPress(tObs) {
+  if (typeof fb14OwnClose === 'function' && isRoute() && fb14OwnClose(tObs, RT()[routeStep])) return;     // v92: the Charge's own screen, seen after its burst
   if (typeof fb14Confirm === 'function' && isRoute()) fb14Confirm(tObs, RT()[routeStep]);     // Final Bowser T1-T4: the lever's frame
   if (typeof jrStepNow === 'function' && jrStepNow()) { slog('screenClosed', { at: Math.round(tObs), step: routeStep, jr: true }); jrScreenClosed(tObs); return; }   // v82: the press is measured at the confirm (jrPress)   // Jr. Troopa: the bar count moves the route
   { const z = isRoute() && RT()[routeStep];
@@ -2451,7 +2461,7 @@ window.__tot = { VERSION, zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t
   jrTrackerAt: (seed, qs, trigT, k, hp10) => { chgReset(); jrReset(); const trig = { t: trigT }; Object.assign(JRT, { on: true, k: k || 0, t0: trigT, trigSeen: trig }, hp10 ? { hp10 } : {}); jrConfirm(k || 0, trigT - 16 * FRAME, 3, 'test'); Object.assign(CHG, { prof: CHG_PROF.jr, trig, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'jr'; },
   dupPlanAt, dupClasses, dupStatesAt: h => zwStatesAt(h).list.map(q => ({ s: q.s >>> 0, nc: q.nc, g: q.g, w: q.w })), dupRoute, dupNoLockMsg, chgArena: () => chgArena(), chgProfNow: () => chgProfNow(), CHG_PROF,
   dupTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.dup, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'dup'; },
-  zwTap: t => zwTap(t), screenClosed, closeTick, hwStepByTarget, presses, calPreview, zwStates: n => zwStates(n), fastTable, pickRun, nBeeps, earliestFrame, pressTime, consoleRate, CR, stripData, CHG, chgReset, chgMap, chgGame, chgFrameBox, chgEvalAt, chgPlanAt, zwF: (t, l) => zwF(t, l), zw, WALK, walkWatch, EDGES, st, R, evaluate, find, newSegment, makePlan, tap, V, startCam, onFrame, addShine, coinBack, checkPress, preConfirm, baseState, setStep, RT, showPresses, SLOG, step: () => routeStep,
+  zwTap: t => zwTap(t), screenClosed, closeTick, hwStepByTarget, presses, calPreview, zwStates: n => zwStates(n), fastTable, pickRun, nBeeps, earliestFrame, pressTime, consoleRate, CR, stripData, CHG, chgReset, chgMap, chgGame, chgFrameBox, chgEvalAt, chgPlanAt, zwF: (t, l) => zwF(t, l), zw, WALK, walkWatch, EDGES, st, R, evaluate, find, newSegment, makePlan, tap, V, startCam, onFrame, addShine, coinBack, checkPress, preConfirm, baseState, setStep, userStep, RT, showPresses, SLOG, step: () => routeStep,
   // v76 (test_console_1107.js)
   // v77 (charge_live/test_capture_replay.js)
   chgReplay: (c, o) => chgReplay(c, o), chgCapFromV1: (c, f) => chgCapFromV1(c, f), CHG_CAPS, CHG_CAP_FMT, chgDbAll: () => chgDbAll(), chgDbStats: () => chgDbStats(), chgDbClear: () => chgDbClear(), chgLockBy: P => chgLockBy(P || chgP()), chgPicEncode: (Y, f) => chgPicEncode(Y, f), chgPicDecode: (b, f) => chgPicDecode(b, f),

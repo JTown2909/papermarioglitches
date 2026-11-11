@@ -146,6 +146,7 @@ def runner_press(res, nbefore, M, R0, GM1, G, t):
     info = dict(hide=H, lock_s=round((lock[0] - H) / 29.97, 2) if lock else None, trig_s=round((trig[0] - H) / 29.97, 2) if trig else None,
                 plan_s=round((plans[0]['E'] - H) / 29.97, 2) if plans else None, beep_s=round((plans[0]['T'] - H) / 29.97, 2) if plans else None,
                 nplans=len(plans), noedge=len(noedge), noedge_s=round((noedge[0] - H) / 29.97, 2) if noedge else None)
+    plans = [x for x in plans if x['E'] >= H]          # (a plan from before this turn's Charge is not this turn's beeps)
     first = next((x for x in plans if x['E'] <= Dl and x['E'] < x['T']), None)
     if first:
         # follow the beeps: the plan up at the press (a replan before the target moves it; a "No edge" after it cancels)
@@ -246,7 +247,7 @@ if __name__ == '__main__':
         if RUNNER:
             P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
             blind = not rinfo['planned']
-            if d >= WAIT: d = WAIT - 1
+            d = max(0, min(d, WAIT - 1))
         else:
             tgt = plans[0]['target'] if plans else None      # the first beeps are the ones pressed
             d = (GM1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm

@@ -6,6 +6,10 @@
  *  3. the light fits (end seeds only): a carried match locks at once; no match returns 'light' with the turn kept for the
  *     refine (no fresh states from a light list);
  *  4. D T2's narrowed read: adce13ad, light fits, under 2.5 s (v91 4.5-4.8 s replayed; live 3.0 s).
+ *  5. e2e 5eed0fb2 T1 (the route moved by a screen, T1's lock read as T2's): a lever screen closing within 2.5 s of its
+ *     turn's Charge burst is the Charge's own (no confirm, the route stays); a lock keeps its burst's turn unless the
+ *     runner moved the route after the burst; a screen closing with the status bar up (an action wheel's submenu) is not a
+ *     Final Bowser confirm.
  * usage: node test_fb14_v92.js [PAGE] */
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), http = require('http');
@@ -49,6 +53,19 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     out.fallback = await narrowed(true, bad(false));
     out.lightOk = await narrowed(true, lite());
     out.lightNo = await narrowed(true, bad(true));
+    // 5. the Charge's own screen after its burst; the lock's turn
+    { const RT = T.RT(), l1 = RT.findIndex(x => x.fb14 === 1 && x.fb14role === 'lever'), l2 = RT.findIndex(x => x.fb14 === 2 && x.fb14role === 'lever'), l4 = RT.findIndex(x => x.fb14 === 4 && x.fb14role === 'lever');
+      X.reset(); T.setStep(l1); const now = performance.now(); FB.lastBurst = { turn: 1, t: now - 60 };
+      const n0 = T.SLOG.length; T.screenClosed(now); const own = { step: T.step(), l1, ev: T.SLOG.slice(n0).map(e => e.ev), pT: Object.keys(FB.pT || {}).length };
+      own.late = X.ownClose(now + 4000, RT[l1]); own.otherTurn = X.ownClose(now, RT[l2]);
+      out.own = own;
+      const lockTurn = async user => { setup(); FB.trigTurn = 2; FB.trigStep = l2; FB.tTrig = performance.now(); T.setStep(l2); await wait(5); if (user) T.userStep(l4); else T.setStep(l4);
+        const n1 = T.SLOG.length; X.lock(res(0)); const L2 = T.SLOG.slice(n1); return { turn: (L2.find(e => e.ev === 'fb14Lock') || {}).turn, kept: L2.some(e => e.ev === 'fb14TurnKept') }; };
+      // a close with the status bar still up (a submenu opened from the action wheel): dropped; with the bar hiding: a confirm
+      { X.reset(); T.setStep(l1); const t1 = performance.now() + 100000, V = T.V, n2 = T.SLOG.length; V.present = true; V.hudGone = 0; T.screenClosed(t1); T.closeTick(t1 + 500, false);
+        const a = { step: T.step(), ev: T.SLOG.slice(n2).map(e => e.ev) }; const n3 = T.SLOG.length; T.screenClosed(t1 + 1000); V.hudGone = t1 + 1060; T.closeTick(t1 + 1070, false);
+        out.noHide = { a, b: { step: T.step(), ev: T.SLOG.slice(n3).map(e => e.ev) }, l1 }; V.present = false; V.hudGone = 0; }
+      out.turnScreen = await lockTurn(false); out.turnUser = await lockTurn(true); }
     return out;
   }, { L, seeds });
   console.log(JSON.stringify(r).slice(0, 1500));
@@ -58,6 +75,10 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   check(r.fallback.held.length === 2 && r.fallback.held[0][1] && r.fallback.held[0][0] < r.fallback.held[1][0] && !r.fallback.held[1][1] && r.fallback.held[1][0] === r.full.held[0][0], '2. no prefiltered match: every state held again ' + JSON.stringify(r.fallback.held));
   check(r.lightOk.how === 'carried' && r.lightOk.nTrue >= 1, '3. light fits, a carried match: locked at once');
   check(r.lightNo.how === 'light' && r.lightNo.light && r.lightNo.trigTurn === 2, '3. light fits, no match: \'light\' (refine next), the turn kept (' + r.lightNo.trigTurn + ')');
+  check(r.own.step === r.own.l1 && r.own.ev.includes('fb14OwnClose') && !r.own.ev.includes('fb14ConfirmBeforeLock') && r.own.pT === 0, '5. Cloud Nine\'s screen closing 60 ms after T1\'s burst: the Charge\'s own, no confirm, the route stays ' + JSON.stringify(r.own.ev));
+  check(r.noHide.a.step === r.noHide.l1 && r.noHide.a.ev.includes('fb14CloseNoHide') && !r.noHide.a.ev.includes('fb14ConfirmBeforeLock') && r.noHide.b.ev.includes('fb14ConfirmBeforeLock'), '5. a Final Bowser screen closing with the status bar up (a submenu from the wheel): not a confirm; with the bar hiding: a confirm ' + JSON.stringify(r.noHide));
+  check(!r.own.late && !r.own.otherTurn, '5. 4 s after the burst, or another turn\'s step: a confirm as before');
+  check(r.turnScreen.turn === 2 && r.turnScreen.kept && r.turnUser.turn === 4 && !r.turnUser.kept, '5. the route moved by the page during the read: the lock keeps the burst\'s T2 (' + JSON.stringify(r.turnScreen) + '); by the runner: their T4 (' + JSON.stringify(r.turnUser) + ')');
   if (!fs.existsSync(DLOG)) console.log('skip 4: log D is not in ' + LD);
   else {
     const caps = JSON.parse(fs.readFileSync(DLOG, 'utf8')).chargeCaptures;

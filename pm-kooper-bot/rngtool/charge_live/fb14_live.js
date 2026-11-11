@@ -165,7 +165,11 @@ function fb14Prior(res, contra) {
 function fb14Lock(res) {
   const tL0 = performance.now(), H = res.fb1 && res.fb1.hyps, stp = fb14Step(), trig0 = [FB14.trigTurn, FB14.trigStep];
   // v91 (A 153.4 s): the runner moved the route while the rays were read: the turn is theirs
-  const turn = stp && FB14.trigStep != null && routeStep !== FB14.trigStep ? stp.fb14 : FB14.trigTurn || (stp ? stp.fb14 : 1); FB14.trigTurn = null; FB14.trigStep = null;
+  // v92 (e2e 5eed0fb2: the route moved by a screen during T1's read, and the T1 lock was taken as T2's): only a move of the
+  // runner's own (a click after the burst) is theirs; one by a screen or a burst is not
+  const userMoved = stp && FB14.trigStep != null && routeStep !== FB14.trigStep && st.userStepT != null && FB14.tTrig != null && st.userStepT >= FB14.tTrig;
+  if (stp && FB14.trigStep != null && routeStep !== FB14.trigStep && !userMoved) slog('fb14TurnKept', { turn: FB14.trigTurn, step: routeStep, trigStep: FB14.trigStep });
+  const turn = userMoved ? stp.fb14 : FB14.trigTurn || (stp ? stp.fb14 : 1); FB14.trigTurn = null; FB14.trigStep = null;
   if (!H || !H.hy.length) { FB14.why = 'no hypotheses from the rays'; fb14Show(); return; }
   const rate = chgRate(), P = fb2Patterns(), first = !FB14.on || FB14.t0 == null;
   FB14.menuT = CHG.menuSince || null;      // the bar up in Mario's menu before this Charge (charge_live.js chgFrame)
@@ -678,6 +682,17 @@ function fb14Tick(t) {
 const FB14_EDGE_ON = 0.4, FB14_EDGE_OFF = 0.55;
 const FB14_SHIFTS = [[-2, 0.1], [-1, 0.25], [0, 0.4], [1, 0.2], [2, 0.05]];
 const FB14_C9AFTER = 2500, FB14_C9HIDE = 2, FB14_C9SHIFTS = [[-2, 0.1], [-1, 0.2], [0, 0.35], [1, 0.25], [2, 0.1]];
+/* v92 (e2e 5eed0fb2 T1: Mario's action wheel matched the saved Mario target screen, the screen "closed" when the submenu
+ * opened and moved the route to Cloud Nine's step; the Charge's own target screen then closed 0.06 s after its burst and
+ * was taken as Cloud Nine's confirm, the route went to T2 and T1's lock was read as T2's). A lever screen closing within
+ * FB14_OWNCLOSE of this turn's Charge burst is that Charge's own: the partner's screen is up 4.5 s after the burst at the
+ * earliest (every console clip 5.2-5.9 s after the hide). Not a confirm, the route stays. */
+const FB14_OWNCLOSE = 2500;
+function fb14OwnClose(tObs, stp) {
+  const lb = FB14.lastBurst; if (!stp || !stp.fb14 || stp.fb14role !== 'lever' || !lb || lb.turn !== stp.fb14) return false;
+  const dt = tObs - lb.t; if (dt < -200 || dt > FB14_OWNCLOSE) return false;
+  slog('fb14OwnClose', { turn: stp.fb14, afterMs: Math.round(dt), step: routeStep }); return true;
+}
 function fb14Confirm(tObs, stp, shifts, src) {
   if (!stp || !stp.fb14) return;
   const turn = stp.fb14;
@@ -928,6 +943,6 @@ async function fb1Stage2(W, call, top, times, t3, narrow) {
   times.hyps = Math.round(performance.now() - t4);
   return { top: all.slice(0, 5), fb1: { hyps: hy, times } };
 }
-window.__fb14 = { FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
+window.__fb14 = { FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), ownClose: (t, s) => fb14OwnClose(t, s), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
