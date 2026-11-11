@@ -147,7 +147,8 @@ def runner_press(res, nbefore, M, R0, GM1, G, t):
                 plan_s=round((plans[0]['E'] - H) / 29.97, 2) if plans else None, beep_s=round((plans[0]['T'] - H) / 29.97, 2) if plans else None,
                 nplans=len(plans), noedge=len(noedge), noedge_s=round((noedge[0] - H) / 29.97, 2) if noedge else None)
     plans = [x for x in plans if x['E'] >= H]          # (a plan from before this turn's Charge is not this turn's beeps)
-    first = next((x for x in plans if x['E'] <= Dl and x['E'] < x['T']), None)
+    # (the beeps followed when they start before the runner's own confirm time, or before the screen is up at all: T3's Jelly)
+    first = next((x for x in plans if x['E'] <= max(Dl, R0 + 1) and x['E'] < x['T']), None)
     if first:
         # follow the beeps: the plan up at the press (a replan before the target moves it; a "No edge" after it cancels)
         cur = first

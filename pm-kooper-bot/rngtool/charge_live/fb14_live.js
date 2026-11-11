@@ -309,7 +309,9 @@ function fb14Lock(res) {
   if (turn === 4) FB14.states = fb14WaveSplit(FB14.states);     // v87: the T4 wave's second particle order
   // v91 (B, log a53781d5: the hit of an earlier attempt kept every later plan at "hit", no log line): a fresh lock after a
   // hit (the Life Shroom revive) is this fight's seed again; its turns are planned
-  if (FB14.hit && FB14.hit !== 4) { slog('fb14HitCleared', { hit: FB14.hit, turn, how }); FB14.hit = null; FB14.hpw = null; FB14.hitLogged = null; }
+  if (FB14.hit && FB14.hit !== 4) { slog('fb14HitCleared', { hit: FB14.hit, turn, how }); FB14.hit = null; FB14.hpw = FB14.hpw ? { seen10: FB14.hpw.seen10, tenRun: 0, blankRun: 0, ok: {}, done: Object.assign({}, FB14.hpw.done) } : null; FB14.hitLogged = null; }
+  // (v92, e2e 5eed0fb2 attempt 2: T4's lock landed after T4's confirm; the watch built anew then never saw the "10" before an
+  // open turn, so T4's wave hit was never read, no "Route off", and the Peach Beam was taken: the watch keeps what it saw)
   slog('fb14Lock', { turn, M, how, hyps: H.hy.length, n: H.n, fits: FB14.n0, states: FB14.states.length, best: Math.round(H.best), a: (H.a >>> 0).toString(16), ms: { check: Math.round(tL1 - tL0), build: Math.round(performance.now() - tL1) }, stream: res.stream ? res.stream.steps : undefined });
   FB14.decide = { t: performance.now(), turn };      // v91 (logs B, E, F): every lock ends in a plan or a logged "No edge" (fb14Frame's watchdog)
   { const s1 = fb14Step(); if (s1 && s1.fb14 === 1 && s1.fb14role === 'charge') { const c1l = RT().findIndex(x => x.fb14 === 1 && x.fb14role === 'lever'); if (c1l >= 0) { slog('fb14StepByLock', { from: routeStep, to: c1l }); setStep(c1l); } } }
@@ -511,7 +513,7 @@ function fb14HpWatch(t, present) {
   W.tenRun = one ? W.tenRun + 1 : 0; W.blankRun = one ? 0 : W.blankRun + 1;
   const open = [4, 3, 2, 1].find(k => FB14.pT && FB14.pT[k] != null && !W.done[k]);
   if (open == null || FB14.pT[open] > t) { if (W.tenRun >= 6) W.seen10 = true; return; }
-  const pT = FB14.pT[open]; if (!W.seen10 || t < pT + 2000) return;
+  const pT = FB14.pT[open]; if (t < pT + 2000) { if (W.tenRun >= 6) W.seen10 = true; return; } if (!W.seen10) return;     // (v92: a watch begun after the confirm reads the 10 HP there)
   if (t - pT > 25000) { W.done[open] = 'late'; return; }
   if (one) W.ok[open] = (W.ok[open] || 0) + 1;
   if (W.blankRun >= 10) { W.done[open] = 'hit'; FB14.hit = open; if (open === 4) FB14.routeOff = 'T4\'s wave hit Mario (the route needs it blocked)'; slog('fb14Hit', { turn: open, afterMs: Math.round(t - pT), tens: +v.toFixed(2) }); cancelBeeps(); if (st.plan && st.plan.fb14) st.plan = null; fb14CarryGone(); fb14Show(); render(); }

@@ -10,6 +10,7 @@
  *     turn's Charge burst is the Charge's own (no confirm, the route stays); a lock keeps its burst's turn unless the
  *     runner moved the route after the burst; a screen closing with the status bar up (an action wheel's submenu) is not a
  *     Final Bowser confirm.
+ *  7. a lock clearing an earlier hit keeps the HP watch's "10 HP seen" (5eed0fb2 attempt 2: T4's wave hit never read).
  *  6. no plan for a Charge turn's lever before that Charge was seen (e2e 5eed0fb2: T2 beeped during Bowser's T1 attack).
  * usage: node test_fb14_v92.js [PAGE] */
 const { chromium } = require('playwright');
@@ -41,7 +42,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     const res = nc48 => ({ fb1: { hyps: { hy: [{ s48: s61, nc48, sc: 100, esc: 100, p: 0, q: 0, aura: Array.from(S0.c) }], a, best: 100, n: 1 } }, trigT: FB.t0 + (M + 16) * rate });
     const isTrue = S => (S.s >>> 0) === sAt(S.f);
     const wait = ms => new Promise(r => setTimeout(r, ms)), sorted = a => (a || []).slice().sort((x, y) => x - y).join(',');
-    const narrowed = async (pre, hres, verify) => { setup(); const n0 = T.SLOG.length; FB.pendChg = { M, turn: 2 }; T.CHG.state = 'search'; const pr0 = T.CHG.prof; T.CHG.prof = { id: 'fb1' };
+    const narrowed = async (pre, hres, verify, before) => { setup(); if (before) before(); const n0 = T.SLOG.length; FB.pendChg = { M, turn: 2 }; T.CHG.state = 'search'; const pr0 = T.CHG.prof; T.CHG.prof = { id: 'fb1' };
       if (pre) { X.preCands(); for (let k = 0; k < 200 && !(FB.pre && FB.pre.done); k++) await wait(5); }
       const c = X.chgCands(), N = T.CHG.narrow14; N.done = true; N.ok = true; window.__fb14verifyHeld = !!verify;
       const how = X.lock(hres), log = T.SLOG.slice(n0); window.__fb14verifyHeld = false; T.CHG.state = 'idle'; T.CHG.prof = pr0;
@@ -54,6 +55,9 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     out.fallback = await narrowed(true, bad(false));
     out.lightOk = await narrowed(true, lite());
     out.lightNo = await narrowed(true, bad(true));
+    // 7. a lock after a T3 hit keeps the HP watch's "10 seen" (attempt 2 of 5eed0fb2: T4's wave hit never read)
+    await narrowed(true, res(0), false, () => { FB.hit = 3; FB.hpw = { seen10: true, tenRun: 0, blankRun: 0, ok: {}, done: { 3: 'hit' } }; });
+    out.hpw = { hit: FB.hit, seen10: FB.hpw && FB.hpw.seen10, done3: FB.hpw && FB.hpw.done[3] };
     // 5. the Charge's own screen after its burst; the lock's turn
     { const RT = T.RT(), l1 = RT.findIndex(x => x.fb14 === 1 && x.fb14role === 'lever'), l2 = RT.findIndex(x => x.fb14 === 2 && x.fb14role === 'lever'), l4 = RT.findIndex(x => x.fb14 === 4 && x.fb14role === 'lever');
       X.reset(); T.setStep(l1); const now = performance.now(); FB.lastBurst = { turn: 1, t: now - 60 };
@@ -82,6 +86,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   check(r.lightNo.how === 'light' && r.lightNo.light && r.lightNo.trigTurn === 2, '3. light fits, no match: \'light\' (refine next), the turn kept (' + r.lightNo.trigTurn + ')');
   check(r.own.step === r.own.l1 && r.own.ev.includes('fb14OwnClose') && !r.own.ev.includes('fb14ConfirmBeforeLock') && r.own.pT === 0, '5. Cloud Nine\'s screen closing 60 ms after T1\'s burst: the Charge\'s own, no confirm, the route stays ' + JSON.stringify(r.own.ev));
   check(r.noHide.a.step === r.noHide.l1 && r.noHide.a.ev.includes('fb14CloseNoHide') && !r.noHide.a.ev.includes('fb14ConfirmBeforeLock') && r.noHide.b.ev.includes('fb14ConfirmBeforeLock') && r.noHide.s.includes('fb14ConfirmBeforeLock') && !r.noHide.s.includes('fb14CloseNoHide'), '5. a Final Bowser Mario screen closing with the status bar up (a submenu from the wheel): not a confirm; with the bar hiding: a confirm; Do Nothing\'s screen (the bar stays up): a confirm at once ' + JSON.stringify(r.noHide));
+  check(r.hpw.hit === null && r.hpw.seen10 === true && r.hpw.done3 === 'hit', '7. a lock clearing T3\'s hit keeps the HP watch\'s 10 HP seen (T4\'s wave hit is read) ' + JSON.stringify(r.hpw));
   check(r.waitChg.none === 'charge' && r.waitChg.ev.includes('fb14WaitCharge') && !r.waitChg.beeps, '6. T2\'s Do Nothing step before T2\'s Charge: no plan, waiting for the Charge ' + JSON.stringify(r.waitChg));
   check(!r.own.late && !r.own.otherTurn, '5. 4 s after the burst, or another turn\'s step: a confirm as before');
   check(r.turnScreen.turn === 2 && r.turnScreen.kept && r.turnUser.turn === 4 && !r.turnUser.kept, '5. the route moved by the page during the read: the lock keeps the burst\'s T2 (' + JSON.stringify(r.turnScreen) + '); by the runner: their T4 (' + JSON.stringify(r.turnUser) + ')');
