@@ -47,7 +47,7 @@ const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000;
 const FB14_MISSW = 0.01;     // v86: a state whose Bowser hit Mario on a turn the bar showed a miss (the HP read can be wrong: not 0)
 const FB14_HIDE = { jelly: 2, peach: 2 }, FB14_JSHIFTS = [[-1, 0.25], [0, 0.5], [1, 0.25]];
 var FB14 = { on: false };
-function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null }); }
+function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null }); }
 fb14Reset();
 /* ---- the random numbers (fast, no arrays) ---- */
 let FBV = 0;
@@ -163,7 +163,7 @@ function fb14Prior(res, contra) {
   return { d: +d.toFixed(3), ratio: +(+ratio).toFixed(2), close: !!close, contra: !!contra };
 }
 function fb14Lock(res) {
-  const tL0 = performance.now(), H = res.fb1 && res.fb1.hyps, stp = fb14Step();
+  const tL0 = performance.now(), H = res.fb1 && res.fb1.hyps, stp = fb14Step(), trig0 = [FB14.trigTurn, FB14.trigStep];
   // v91 (A 153.4 s): the runner moved the route while the rays were read: the turn is theirs
   const turn = stp && FB14.trigStep != null && routeStep !== FB14.trigStep ? stp.fb14 : FB14.trigTurn || (stp ? stp.fb14 : 1); FB14.trigTurn = null; FB14.trigStep = null;
   if (!H || !H.hy.length) { FB14.why = 'no hypotheses from the rays'; fb14Show(); return; }
@@ -214,20 +214,27 @@ function fb14Lock(res) {
   const J = res.joint && res.joint.keep && res.joint.keep.size ? res.joint : null;
   // v87: a T2 / T4 Charge held for the narrowed search (fb14ChgCands): the carried states get it now, at the shifts whose
   // stream drew these very rays (all of FB14_CHGD when none did)
-  let held = null; const N14 = typeof CHG !== 'undefined' ? CHG.narrow14 : null;
+  let held = null, mkHeld = null, heldPre = false; const N14 = typeof CHG !== 'undefined' ? CHG.narrow14 : null;
   if (!first && FB14.pendChg && N14 && N14.M === FB14.pendChg.M) {
     const pc = FB14.pendChg, a = H.a >>> 0; N14.used = true; FB14.pendChg = null;
     const ds = new Set(); for (const [x, set] of N14.dmap) if ((fbAdv(x) >>> 0) === a) for (const d of set) ds.add(d);
     const dsel = ds.size ? FB14_CHGD.filter(([d]) => ds.has(d)) : FB14_CHGD;
-    held = [];
-    for (const S of FB14.states) for (const [d, wd] of dsel) { const F = pc.M + d - S.l; if (S.f > F + 13) continue; const T = fbClone(S); T.w = S.w * wd; T.mk = pc.M + d; fbInputEv(T, 'chg', F, pc.turn); held.push(T); }
-    if (pc.turn === 4) held = fb14WaveSplit(held);
-    slog('fb14Held', { turn: pc.turn, M: pc.M, d: dsel.map(x => x[0]), states: held.length });
+    // v92: with the burst's precompute only the states whose stream drew these rays at that shift are held (the rest
+    // cannot match: 60000 held states took 1.6 s to check on D T2); every one again if none of those matches
+    const Pp = N14.pre && N14.pre.ref === FB14.states && N14.pre.n === FB14.states.length && N14.pre.i >= N14.pre.n ? N14.pre : null;
+    mkHeld = filt => { let h = [];
+      FB14.states.forEach((S, i) => { for (const [d, wd] of dsel) { const F = pc.M + d - S.l; if (S.f > F + 13) continue;
+        if (filt) { const k = filt.ds.indexOf(d), j = i * filt.ds.length + k; if (!filt.ok[j] || (fbAdv(filt.xs[j]) >>> 0) !== a) continue; }
+        const T = fbClone(S); T.w = S.w * wd; T.mk = pc.M + d; fbInputEv(T, 'chg', F, pc.turn); h.push(T); } });
+      if (pc.turn === 4) h = fb14WaveSplit(h);
+      slog('fb14Held', { turn: pc.turn, M: pc.M, d: dsel.map(x => x[0]), states: h.length, pre: !!filt }); return h; };
+    held = mkHeld(Pp); heldPre = !!Pp;
   }
   let keep = null, how = 'fresh', fresh = [];
-  const carriedL = held || FB14.states;
+  let carriedL = held || FB14.states;
   if (!first && carriedL.length) {      // the carried states: those that drew these very rays
-    const a = H.a >>> 0, match = [];
+    const a = H.a >>> 0; let match = [];
+    const matchAll = () => {
     // v87: the seed on the frame after the rays only (v86 also asked for the coin's phase: the game's state was among the
     // fits with its coin 11 frames off, and the first v87 build dropped it and planned T2 at 99.85% on a frame Bowser hit)
     const ends = new Set(H.hy.map(h => String(h.s48 >>> 0)));
@@ -243,7 +250,10 @@ function fb14Lock(res) {
       if ((fbAdv(x) >>> 0) !== a) continue;
       fbRun(T, m + 61); if (!ends.has(String(T.s >>> 0))) continue;
       match.push(T);       // (v87: the matched states keep their coin history)
-    }
+    } };
+    matchAll();
+    if (!match.length && heldPre) { held = carriedL = mkHeld(null); heldPre = false; match = []; matchAll(); }     // v92: the prefilter's fallback
+    if (window.__fb14verifyHeld && heldPre) { const m0 = match; held = carriedL = mkHeld(null); match = []; matchAll(); slog('fb14HeldVerify', { pre: m0.length, all: match.length, same: m0.length === match.length }); }   // (diagnostic: tests)
     if (match.length) { keep = match; how = 'carried';
       // v87: the clock follows the Charge frame the matched states vote for, weighed by the coin so far, and only when
       // 60%+ of that weight agrees
@@ -256,6 +266,9 @@ function fb14Lock(res) {
     if (!match.length && held) FB14.states = fb14Cap(held);
   }
   const tL1 = performance.now();
+  // v92: the light fits of a narrowed read (end seeds only) cannot build fresh states: the placement / joint refine
+  // (fb14Refine) fetches the whole list and locks again; the turn is decided then, as before this call
+  if (!keep && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14LightNoMatch', { turn, M, ms: Math.round(tL1 - tL0) }); return 'light'; }
   if (!keep) { fresh = buildFresh(); keep = fresh; }
   const sum = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum; S.lw = 1; S.err = 0; });
   // the menu's coin before the Charge weighs the fits now (fbBackShines), before any are dropped for the cap: with the
@@ -371,7 +384,16 @@ function fb14WaveSplit(L) {
  * Charge's input is held meanwhile (fb14Held), so the states have not run past it when the narrowed lock lands. */
 function fb14ChgCands() {
   const pc = FB14.pendChg; if (!pc || !FB14.on || !FB14.states.length || typeof CHG === 'undefined') return null;
-  const dmap = new Map(), ds = FB14_CHGD.map(x => x[0]).sort((a, b) => a - b);
+  const dmap = new Map(), ds = FB14_CHGD.map(x => x[0]).sort((a, b) => a - b), P = FB14.pre, tc = performance.now();
+  if (P && P.M === pc.M && P.ref === FB14.states && P.n === FB14.states.length) {      // v92: built during the burst
+    while (P.i < P.n) { const S = P.ref[P.i], B = fbClone(S), nd = P.ds.length;       // (the rest of it, if the burst was short)
+      for (let k = 0; k < nd; k++) { const m = pc.M + P.ds[k] - S.l; if (B.f > m + 13) continue; fbRun(B, m + 13); let x = B.s; for (let j = fbBolts(m + 13, B.ph); j; j--) x = fbRi(x, 359); P.xs[P.i * nd + k] = x >>> 0; P.ok[P.i * nd + k] = 1; }
+      P.i++; }
+    for (let i = 0, nd = P.ds.length; i < P.n * nd; i++) if (P.ok[i]) { const x = P.xs[i]; let st = dmap.get(x); if (!st) dmap.set(x, st = new Set()); st.add(P.ds[i % nd]); }
+    CHG.narrow14 = { M: pc.M, turn: pc.turn, done: false, n: dmap.size, dmap, pre: P };
+    slog('fb14ChgCands', { M: pc.M, turn: pc.turn, states: FB14.states.length, cands: dmap.size, pre: { ms: Math.round(P.ms), wall: P.wall != null ? P.wall : null, here: Math.round(performance.now() - tc) } });
+    return dmap.size ? [...dmap.keys()] : null;
+  }
   for (const S of FB14.states) {
     const B = fbClone(S);       // (no Charge in the state yet: one stream for every shift)
     for (const d of ds) { const m = pc.M + d - S.l; if (B.f > m + 13) continue; fbRun(B, m + 13); let x = B.s; for (let i = fbBolts(m + 13, B.ph); i; i--) x = fbRi(x, 359); x >>>= 0; let st = dmap.get(x); if (!st) dmap.set(x, st = new Set()); st.add(d); }
@@ -736,6 +758,25 @@ function fb14Trigger() {
   // (applied once the pictures of the rays are captured: tripling thousands of states at the trigger stalled the page's
   // thread and dropped half the rays' pictures in the end-to-end run)
   FB14.M[turn] = M; FB14.pendChg = { M, turn };
+  fb14PreCands();
+}
+/* v92 (D T2: trigger -> plan 6.6 s, the runner confirms 5.2-5.9 s after the bar hide): the carried candidates are built
+ * while the burst's pictures are still coming (in slices of FB14_PRESLICE states, so no picture is late), not after the
+ * maps; each state's seed before A's base draw is kept per shift (the held states are then only those whose stream drew
+ * the locked rays). Used by fb14ChgCands when the states have not changed since. */
+const FB14_PRESLICE = 400;
+function fb14PreCands() {
+  const pc = FB14.pendChg; FB14.pre = null; if (!pc || !FB14.on || !FB14.states.length) return;
+  const L = FB14.states, ds = FB14_CHGD.map(x => x[0]).sort((a, b) => a - b), nd = ds.length, xs = new Uint32Array(L.length * nd), ok = new Uint8Array(L.length * nd);
+  const P = FB14.pre = { M: pc.M, turn: pc.turn, ref: L, n: L.length, ds, xs, ok, i: 0, done: false, t0: performance.now(), ms: 0 };
+  const slice = () => {
+    if (FB14.pre !== P) return; const ta = performance.now();
+    for (const e = Math.min(P.n, P.i + FB14_PRESLICE); P.i < e; P.i++) { const S = L[P.i], B = fbClone(S);
+      for (let k = 0; k < nd; k++) { const m = pc.M + ds[k] - S.l; if (B.f > m + 13) continue; fbRun(B, m + 13); let x = B.s; for (let j = fbBolts(m + 13, B.ph); j; j--) x = fbRi(x, 359); xs[P.i * nd + k] = x >>> 0; ok[P.i * nd + k] = 1; } }
+    P.ms += performance.now() - ta;
+    if (P.i < P.n) setTimeout(slice, 0); else { P.done = true; P.wall = Math.round(performance.now() - P.t0); }
+  };
+  setTimeout(slice, 0);
 }
 /* the FB2 profile (T6) arms on any bar hide: not during T4's Bowser turn and T5's Peach Beam turn (the wave and the beam
  * flash the arena), only from the T6 menu on: 20 s after the Peach Beam confirm (its turn takes 22 s+), or 45 s after
@@ -862,6 +903,9 @@ async function fb14Refine1(res, G) {
       CHG.info.placementShift = best;
       out = Object.assign({}, res, { fb1: Object.assign({}, res.fb1, { hyps: r[0] }) }); out.trigT = res.trigT;
     }
+    // v92: a narrowed (carried) read sent only the fits' end seeds (fb1h light: 0.6 s, not 4 s); its rays matched none of
+    // the carried states, so the fresh fits need the whole list now
+    if (out.fb1 && out.fb1.hyps && out.fb1.hyps.light) { const r = await one(maps, [{ type: 'fb1h', s0: top.seed, tol: FB14_NTOL, max: 20000 }]); out = Object.assign({}, out, { fb1: Object.assign({}, out.fb1, { hyps: r[0] }) }); }
     out.maps0 = maps; out.joint = await fb14Joint(out, maps, one).catch(e => { slog('fb14JointError', { msg: String(e && e.message || e) }); return null; });
     return out;
   } catch (e) { slog('fb14PlacementError', { msg: String(e && e.message || e) }); return res; }
@@ -880,10 +924,10 @@ async function fb1Stage2(W, call, top, times, t3, narrow) {
     const same = all.filter((o, i) => i > 0 && near.has(o.seed >>> 0)); all = [all[0]].concat(all.slice(1).filter(o => !near.has(o.seed >>> 0))); times.sameStream = same.length; }
   times.stage2 = Math.round(performance.now() - t3); const t4 = performance.now();
   // v87: on the carried stream (T2 / T4 narrowed) the fits are kept wider: the carried states pick among them
-  const hy = all.length ? await call(W[0], { type: 'fb1h', s0: all[0].seed, tol: narrow ? FB14_NTOL : FB14_TOL, max: narrow ? 20000 : 4000 }, 'fb1h') : null;
+  const hy = all.length ? await call(W[0], { type: 'fb1h', s0: all[0].seed, tol: narrow ? FB14_NTOL : FB14_TOL, max: narrow ? 20000 : 4000, light: narrow && !window.__fb14full }, 'fb1h') : null;
   times.hyps = Math.round(performance.now() - t4);
   return { top: all.slice(0, 5), fb1: { hyps: hy, times } };
 }
-window.__fb14 = { FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
+window.__fb14 = { FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests

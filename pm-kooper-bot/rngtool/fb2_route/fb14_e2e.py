@@ -19,6 +19,7 @@ Env: START=4 begins at the build's T4 menu; STOP_ON_HIT=1 stops after a turn whe
 LATEMS (default 25) drops a picture later than that; WAIT frames on each lever screen (default 400).
 Run from /tmp/claude-0/pm/bot1: DISPLAY=:93 M64P_GFX=... M64P_DATA=... PYTHONPATH=. python3 fb14_e2e.py BUILD SEEDHEX OUT URLBASE [TURNS=4] [T6=1]"""
 import sys, os, json, subprocess, random, struct, shutil, glob
+from PIL import ImageGrab
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from route import *
 from route_build import TURNS
@@ -36,6 +37,11 @@ def ncap(n):
     return c
 
 
+def grab(d, n):
+    """v92: the screen grabbed in-process (PIL, 0.02 s a picture; ImageMagick's import took 0.23 s), the same pixels"""
+    ImageGrab.grab(bbox=(80, 60, 720, 540), xdisplay=os.environ.get('DISPLAY')).save('%s/s%04d.png' % (d, n), compress_level=1)
+
+
 class Seg:
     """a rendered stretch: its screenshots (shot i = after step i of the stretch) and the seed before each step"""
     def __init__(self, r, d):
@@ -44,14 +50,14 @@ class Seg:
 
     def step(self, b=0, y=0, shot=True):
         self.s0.append(self.r.e.u32(SEED)); self.r.step(b, y); self.bs.append(bstate(self.r.e))
-        if shot: subprocess.run(['import', '-window', 'root', '-crop', '640x480+80+60', '+repage', '%s/s%04d.png' % (self.d, self.n)], check=True)
+        if shot: grab(self.d, self.n)
         self.n += 1
 
     def load(self, path, shot=True):
         """a savestate, and the frame the emulator runs on loading it (route.Run.load steps once): that frame is the
         stretch's step 0, with its picture, so the video and the frame count have no gap where a stretch begins"""
         e = self.r.e; e.load(path); self.s0.append(e.u32(SEED)); e.step(0, 0, 0, 2); self.bs.append(bstate(e))
-        if shot: subprocess.run(['import', '-window', 'root', '-crop', '640x480+80+60', '+repage', '%s/s%04d.png' % (self.d, self.n)], check=True)
+        if shot: grab(self.d, self.n)
         self.n += 1
 
     def idle(self, k, shot=True):
@@ -77,6 +83,10 @@ def mario_items(t):
     r = Run.__new__(Run)
     items = (r.moves(mv['wheel']) + [(A, 0, 20)] + r.moves(mv['sub']) + [(A, 0, 15)])
     return items, pa
+
+
+FAST = os.environ.get('FAST') == '1'      # v92: the "+3" popup closed at 78-86 (the earliest is 77): the partner's screen ~5.5 s after the hide
+                                           # (faster menu inputs were eaten: the hand stayed on the first move)
 
 
 def partner_items(pa):
@@ -114,48 +124,140 @@ def run_page(urlbase, out, manifest, tag):
     return res
 
 
+# v92: the runner's timing (RUNNER=runner: the confirm on the beeps when the plan is up within DL seconds of the
+# Charge's bar hide, else at DL unplanned; RUNNER=patient: up to 12 s for the beeps or a "No edge"). Console: the runner
+# confirms 5.2-5.9 s after the hide when no beep comes (v91, clips A-D).
+RUNNER = os.environ.get('RUNNER', '')
+DL = float(os.environ.get('DL', '12' if RUNNER == 'patient' else '5.5'))
+REACT = 15                                  # frames from a "No edge" on the screen to the runner's confirm (patient)
+
+
+def runner_press(res, nbefore, M, R0, GM1, G, t):
+    """the stretch step the runner confirms on, and why. Page times -> capture frames (60 fps from res t0, VCLOCK) ->
+    the stretch's game steps (ncap's inverse); the hide = Mario's confirm step M + 1 (the HUD goes with the action)"""
+    t0 = res.get('t0') or 0
+    step_of = lambda tt: ((tt - t0) * 60 / 1000 - nbefore + 2) * 29.97 / 60
+    H = M + 1; Dl = H + int(round(DL * 29.97))
+    evs = res.get('events', [])
+    plans = sorted([dict(E=step_of(p['t']), T=GM1 + p['target'] - G, p=p) for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None], key=lambda x: x['E'])
+    noedge = [step_of(e['t']) for e in evs if e.get('ev') == 'fb14NoEdge' and e.get('turn') == t]
+    trig = [step_of(e['t']) for e in evs if e.get('ev') == 'chargeTrigger' and step_of(e['t']) >= 0]
+    lock = [step_of(e['t']) for e in evs if e.get('ev') == 'chargeLock' and step_of(e['t']) >= 0]
+    info = dict(hide=H, lock_s=round((lock[0] - H) / 29.97, 2) if lock else None, trig_s=round((trig[0] - H) / 29.97, 2) if trig else None,
+                plan_s=round((plans[0]['E'] - H) / 29.97, 2) if plans else None, beep_s=round((plans[0]['T'] - H) / 29.97, 2) if plans else None,
+                nplans=len(plans), noedge=len(noedge), noedge_s=round((noedge[0] - H) / 29.97, 2) if noedge else None)
+    first = next((x for x in plans if x['E'] <= Dl and x['E'] < x['T']), None)
+    if first:
+        # follow the beeps: the plan up at the press (a replan before the target moves it; a "No edge" after it cancels)
+        cur = first
+        for x in plans:
+            if x['E'] > cur['E'] and x['E'] < cur['T'] and x['E'] < x['T']: cur = x
+        cancel = [e for e in noedge if cur['E'] < e < cur['T']]
+        if not cancel:
+            info.update(planned=True, beep_before_dl=cur['T'] <= Dl, press_s=round((cur['T'] - H) / 29.97, 2))
+            return cur['T'], info
+        info['cancelled'] = True
+    P = Dl
+    if RUNNER == 'patient':
+        ne = [e for e in noedge if e <= Dl]
+        if ne: P = int(ne[0]) + REACT
+    P = max(P, R0 + 1)
+    info.update(planned=False, beep_before_dl=False, press_s=round((P - H) / 29.97, 2))
+    return int(P), info
+
+
+def find_hit(r, Y, d, pa, ok, maxk=40):
+    """FORCE_HIT: the nearest confirm delay to d where Bowser hits (from Y, no shots); None if every one misses"""
+    for k in range(1, maxk):
+        for dd in (d + k, d - k):
+            if dd < 0 or dd >= WAIT: continue
+            tmp = Seg(r, '/dev/shm/fb2r/fh'); tmp.load(Y, False); tmp.idle(dd, False); play_after_confirm(tmp, pa, False)
+            if not ok(outcome(r)): return dd
+    return None
+
+
+def black_frame(out, like):
+    """one black picture the size of a capture frame (the screen between attempts: the HUD bar gone)"""
+    f = os.path.join(out, 'black.jpg')
+    if not os.path.exists(f): subprocess.run(['convert', like, '-fill', 'black', '-colorize', '100', f], check=True)
+    return f
+
+
 if __name__ == '__main__':
     build, seed, out, urlbase = sys.argv[1], int(sys.argv[2], 16), os.path.abspath(sys.argv[3]), sys.argv[4]
     turns = int(sys.argv[5]) if len(sys.argv) > 5 else 4; do_t6 = (sys.argv[6] if len(sys.argv) > 6 else '1') == '1'
     start = int(os.environ.get('START', '1'))      # START=4: from the build's T4 menu (the page starts on T4's step)
-    rel = os.path.relpath(out, os.environ.get('SERVE_ROOT', os.path.dirname(out)))
+    SERVE = os.environ.get('SERVE_ROOT', os.path.dirname(out)); rel = os.path.relpath(out, SERVE)
     rng = random.Random(seed); os.makedirs(out, exist_ok=True)
     r = Run('e2e', log=False)
     r.load(build + '/t%d_menu.st' % start); r.seed(seed)            # DIAGNOSTIC: gRandSeed at that menu (setup only)
     X = os.path.join(out, 'x1.st'); r.e.save(X)
-    report = dict(seed='%08x' % seed, turns=[]); frames = []; G = 0; GM1 = None; refM = refS = None; truth = []   # truth: the seed before every global step
-    for t in range(start, turns + 1):
+    report = dict(seed='%08x' % seed, runner=RUNNER or 'first-plan', dl=DL if RUNNER else None, turns=[]); frames = []; G = 0; GM1 = None; refM = refS = None; truth = []   # truth: the seed before every global step
+    # v92 retries: ATTEMPTS=n attempts; attempt a plays T1..ATT_TURNS[a] (default all), then a gap of GAP seconds (default
+    # 40-80) with no HUD bar on the screen while the game runs on in the battle (the console's RNG runs on across a retry,
+    # v91: 75-89 steps a second), then the phase-2 start state again with the seed the game had at the gap's end
+    # (DIAGNOSTIC write: a savestate would reset the stream, the console does not). FORCE_HIT=a.t,...: on those turns the
+    # confirm goes to the nearest frame where Bowser hits. FINAL=1: one more page run over everything (the last turn's
+    # Bowser turn: the T4 hit's "Route off", the trackers' last word).
+    ATT = int(os.environ.get('ATTEMPTS', '1')); ATT_TURNS = [int(x) for x in os.environ.get('ATT_TURNS', '').split(',') if x]
+    FORCE = set(os.environ.get('FORCE_HIT', '').split(',')) - {''}
+    MHP = int(os.environ.get('MARIO_HP', '5'))          # v86: the build's Mario HP (MARIO_HP=10: the runner's T1-T4, route_build.py)
+    dead = False
+    for att in range(1, ATT + 1):
+      if att > 1:
+        gap = float(os.environ.get('GAP', '0') or 0) or rng.uniform(40, 80); gN = int(gap * 29.97)
+        r.load(X)
+        for i in range(gN): r.step(0)
+        sc = r.e.u32(SEED); r.load(build + '/t%d_menu.st' % start); r.seed(sc)   # DIAGNOSTIC: the stream continues (console retry)
+        X = os.path.join(out, 'x1_a%d.st' % att); r.e.save(X)
+        bf = black_frame(out, os.path.join(SERVE, frames[-1])); frames = frames + [os.path.relpath(bf, SERVE)] * int(gap * 60)
+        G += gN + 1; GM1 = None; dead = False
+        report.setdefault('gaps', []).append(dict(after_attempt=att - 1, s=round(gap, 1), steps=gN, seed='%08x' % sc))
+      last = ATT_TURNS[att - 1] if att - 1 < len(ATT_TURNS) else turns
+      for t in range(start, last + 1):
         items, pa = mario_items(t)
         sa = Seg(r, os.path.join(out, 't%da' % t)); sa.load(X)
+        hp0 = r.e.s8(PLAYER_DATA + 2); sh0 = [r.e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10)].count(149)
         pre = rng.randint(40, 80); sa.idle(pre)
         sa.seq(items); M = sa.n; sa.step(A)                         # Mario's confirm on step M of the stretch
         if t == start: GM1 = G + M
-        K = rng.randint(78, 100) if t != 3 else -1
+        K = (rng.randint(78, 86) if FAST else rng.randint(78, 100)) if t != 3 else -1
         while bstate(r.e) != 14 and sa.n - M < 600: sa.step(A if (K >= 0 and sa.n - M == K) else 0)
         sa.idle(20); sa.seq(partner_items(pa)); R0 = sa.n
         Y = os.path.join(out, 'y%d.st' % t); r.e.save(Y)
         sa.idle(WAIT)
         if pa == 'cloud_nine' and refM is None: refM = ('a', t, R0 + 10)
         if pa != 'cloud_nine' and refS is None: refS = ('a', t, R0 + 10)
-        jpg = capsim(sa.d, sa.n, os.path.join(out, 't%da_cap' % t), seed + t)
+        jpg = capsim(sa.d, sa.n, os.path.join(out, 't%da_cap' % t), seed + t + 100 * att)
         segA = ['%s/t%da_cap_j/%s' % (rel, t, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')))
         if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
             man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0)
         # the reference screens: capture frames of those game frames (2 per game frame)
         for nm, ref in (('refM', refM), ('refS', refS)):
-            if ref and ref[1] == t: man[nm] = len(frames) + ncap(ref[2])
+            if ref and ref[1] == t and ('ref_' + nm) not in report: man[nm] = len(frames) + ncap(ref[2])
             elif ref: man[nm] = report['ref_' + nm]
         for nm in ('refM', 'refS'):
             if nm in man: report['ref_' + nm] = man[nm]
-        res = run_page(urlbase, out, man, 't%d' % t)
+        res = run_page(urlbase, out, man, 'a%dt%d' % (att, t))
         plans = [p for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None]
-        tgt = plans[0]['target'] if plans else None      # the first beeps are the ones pressed
-        d = (GM1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm
-        blind = d is None or d < 0 or d >= WAIT
-        if blind: d = WAIT // 2
-        row = dict(turn=t, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind,
-                   page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('charge')][-30:]))
+        ok = lambda o, tt: o['hp'] == hp0 and o['shroom'] == sh0 and o['menu'] and (tt != 4 or o['wave'])
+        rinfo = None
+        if RUNNER:
+            P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
+            blind = not rinfo['planned']
+            if d >= WAIT: d = WAIT - 1
+        else:
+            tgt = plans[0]['target'] if plans else None      # the first beeps are the ones pressed
+            d = (GM1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm
+            blind = d is None or d < 0 or d >= WAIT
+            if blind: d = WAIT // 2
+        forced = None
+        if '%d.%d' % (att, t) in FORCE:
+            dh = find_hit(r, Y, d, pa, lambda o: ok(o, t))
+            if dh is not None: forced = dict(d_was=d, d=dh); d = dh
+        row = dict(attempt=att, turn=t, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
+                   page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
         # the neighbours: from Y, confirm at d - 1 and d + 1 (no shots)
         nb = {}
         for dd in (-1, 1):
@@ -164,19 +266,27 @@ if __name__ == '__main__':
         play_after_confirm(sb, pa, True); oc = outcome(r)
         nxt = os.path.join(out, 'x%d.st' % (t + 1)); r.e.save(nxt); X = nxt
         row.update(outcome=oc, minus1=nb[-1], plus1=nb[1], s0_rays0_true='%08x' % sa.s0[M + 13] if t != 3 else None)
-        MHP = int(os.environ.get('MARIO_HP', '5'))          # v86: the build's Mario HP (MARIO_HP=10: the runner's T1-T4, route_build.py)
-        # v87: at 10 HP a hit kills Mario and the Life Shroom revives him to 10: a miss keeps the Shroom; T4: the wave came
-        ok = lambda o, tt: o['hp'] == MHP and o['shroom'] >= 1 and (tt != 4 or o['wave'])
+        # v87: at 10 HP a hit kills Mario and the Life Shroom revives him to 10; v92: a miss keeps the HP and the Shrooms of
+        # the turn's start (a revived Mario has none left); T4: the wave came
         row.update(miss=ok(oc, t), miss_m1=ok(nb[-1], t), miss_p1=ok(nb[1], t))
-        print(json.dumps({k: v for k, v in row.items() if k != 'page'}), flush=True)
+        errs = res.get('pageErrors') or []; nodec = [e for e in res.get('events', []) if e.get('ev') == 'fb14NoDecision']
+        row.update(errors=len(errs), nodecision=len(nodec))
+        print(json.dumps({k: v for k, v in row.items() if k not in ('page', 'plan')}), flush=True)
         report['turns'].append(row)
-        if not row['miss'] and os.environ.get('STOP_ON_HIT'): print('Bowser hit: the route is off (Peach heals Mario); stopping', flush=True); do_t6 = False; break
         # the actual stretch: segment a up to the confirm, then segment b
-        jb = capsim(sb.d, sb.n, os.path.join(out, 't%db_cap' % t), seed + 10 + t)
+        jb = capsim(sb.d, sb.n, os.path.join(out, 't%db_cap' % t), seed + 10 + t + 100 * att)
         na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
         frames = frames + segA[:na] + ['%s/t%db_cap_j/%s' % (rel, t, f) for f in jb]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
         json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
+        json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
+        if not oc['menu']: print('Mario is down (no Life Shroom left): the attempt ends', flush=True); dead = True; break
+        if not row['miss'] and os.environ.get('STOP_ON_HIT'): print('Bowser hit: the route is off (Peach heals Mario); stopping', flush=True); do_t6 = False; break
+    if os.environ.get('FINAL') == '1':
+        res = run_page(urlbase, out, dict(frames=frames, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), refM=report.get('ref_refM'), refS=report.get('ref_refS'), waitMs=3000), 'final')
+        report['final'] = dict(panels=res.get('panels'), errors=res.get('pageErrors'), step=res.get('step'),
+                               events=[e for e in res.get('events', []) if e.get('ev') in ('fb14NewAttempt', 'fb14StepToT1', 'fb14StepByBurst', 'fb14StepByLock', 'fb14Hit', 'fb14HitCleared', 'fb14NoDecision', 'fb14NoEdge', 'fb14Plan', 'chargeLock', 'chargeNoLock', 'fb14Confirm', 'fb14Jelly', 'step', 'fbStreamNote', 'chargeStream')])
+        print(json.dumps(dict(final_panels=res.get('panels'), errors=res.get('pageErrors'))), flush=True)
         json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
     if do_t6:
         # T5 and the T6 Charge up to just before the earliest popup A (+77): the frames are the same whatever K is

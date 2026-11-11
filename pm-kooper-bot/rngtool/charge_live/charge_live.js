@@ -487,10 +487,11 @@ onmessage = async e => {
         const XB = new Uint8Array(X.memory.buffer, X.xbPtr(), 60), XA = new Uint8Array(X.memory.buffer, X.xaPtr(), 60), PT = new Uint8Array(X.memory.buffer, X.patPtr() + p * 52, 52);
         for (let n2 = 0; n2 < 60; n2++) { XB[n2] = n2 < 48 ? PT[n2] : 0; XA[n2] = A[n2 % 20]; }
         X.fb1end(a, q, 48); const E = new Uint32Array(X.memory.buffer, X.endPtr(), 3), esc = new Float32Array(E.buffer, E.byteOffset + 8, 1)[0];
+        if (m.light) return { p, q, br, sc, s48: E[0] >>> 0, nc48: E[1], esc };     // v92: the carried check needs only the end seeds
         const na = X.fb1alts(p, q, br, Math.max(1, best * m.tol - (best - sc)), 600), AL = new Uint8Array(X.memory.buffer, X.altPtr(), na * 20), AS = new Float32Array(X.memory.buffer, X.altScPtr(), na), alts = [], altSc = [];
         for (let i = 0; i < na; i++) { alts.push(Array.from(AL.subarray(i * 20, i * 20 + 20))); altSc.push(AS[i]); }
         return { p, q, br, sc, aura: A, alts, altSc, s48: E[0] >>> 0, nc48: E[1], esc }; });
-      postMessage({ type: 'fb1h', a, v, best, n: out.length, hy });
+      postMessage({ type: 'fb1h', a, v, best, n: out.length, hy, light: !!m.light });
     } else if (m.type === 'cscore') {     // fb14_live.js fb14Joint: each aura pattern's best score over the given fits
       const XA = new Uint8Array(X.memory.buffer, X.xaPtr(), 60), n = m.cands.length / 20, out = new Float32Array(n);
       for (let i = 0; i < n; i++) { for (let j = 0; j < 20; j++) XA[j] = m.cands[i * 20 + j]; let b = -1e30; for (const [p, q, br] of m.hyps) { const x = X.fb1cscore(m.a >>> 0, p, q, br); if (x > b) b = x; } out[i] = b; }
