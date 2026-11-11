@@ -132,15 +132,22 @@ DL = float(os.environ.get('DL', '12' if RUNNER == 'patient' else '5.5'))
 REACT = 15                                  # frames from a "No edge" on the screen to the runner's confirm (patient)
 
 
-def runner_press(res, nbefore, M, R0, GM1, G, t):
+def runner_press(res, nbefore, M, R0, GM1, G, t, GMS=None):
+    GMS = GMS or {}
     """the stretch step the runner confirms on, and why. Page times -> capture frames (60 fps from res t0, VCLOCK) ->
     the stretch's game steps (ncap's inverse); the hide = Mario's confirm step M + 1 (the HUD goes with the action)"""
     t0 = res.get('t0') or 0
     step_of = lambda tt: ((tt - t0) * 60 / 1000 - nbefore + 2) * 29.97 / 60
     H = M + 1; Dl = H + int(round(DL * 29.97))
     evs = res.get('events', [])
-    # the beep's own time (tPress): the page's clock restarts at a fresh lock after a hit, so its frames are not T1-based then
-    plans = sorted([dict(E=step_of(p['t']), T=int(round(step_of(p['tPress']))) if p.get('tPress') is not None else GM1 + p['target'] - G, p=p) for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None], key=lambda x: x['E'])
+    # the plan's target frame on the page's clock: clock frame 0 is the Mario confirm of the turn whose lock started the clock
+    # (T1's, or after a hit the next fresh lock's: fb14Lock M 0). (v92 first used the beep's time tPress: that is when to
+    # press, ~2 frames ahead of the frame the confirm lands on, and pressed 2 frames early.)
+    zero = [(e['t'], e.get('turn')) for e in evs if e.get('ev') == 'fb14Lock' and e.get('M') == 0]
+    def origin(tp):
+        z = [k for (tt, k) in zero if tt <= tp]
+        return GMS.get(z[-1], GM1) if z else GM1
+    plans = sorted([dict(E=step_of(p['t']), T=origin(p['t']) + p['target'] - G, p=p) for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None], key=lambda x: x['E'])
     noedge = [step_of(e['t']) for e in evs if e.get('ev') == 'fb14NoEdge' and e.get('turn') == t]
     trig = [step_of(e['t']) for e in evs if e.get('ev') == 'chargeTrigger' and step_of(e['t']) >= 0]
     lock = [step_of(e['t']) for e in evs if e.get('ev') == 'chargeLock' and step_of(e['t']) >= 0]
@@ -224,7 +231,8 @@ if __name__ == '__main__':
         hp0 = r.e.s8(PLAYER_DATA + 2); sh0 = [r.e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10)].count(149)
         pre = rng.randint(40, 80); sa.idle(pre)
         sa.seq(items); M = sa.n; sa.step(A)                         # Mario's confirm on step M of the stretch
-        if t == start: GM1 = G + M
+        if t == start: GM1 = G + M; GMS = {}
+        GMS[t] = G + M                                          # (each turn's Mario confirm: a fresh lock's clock frame 0)
         K = (rng.randint(78, 86) if FAST else rng.randint(78, 100)) if t != 3 else -1
         while bstate(r.e) != 14 and sa.n - M < 600: sa.step(A if (K >= 0 and sa.n - M == K) else 0)
         sa.idle(20); sa.seq(partner_items(pa)); R0 = sa.n
@@ -248,7 +256,7 @@ if __name__ == '__main__':
         ok = lambda o, tt: o['hp'] == hp0 and o['shroom'] == sh0 and o['menu'] and (tt != 4 or o['wave'])
         rinfo = None
         if RUNNER:
-            P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
+            P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t, GMS); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
             blind = not rinfo['planned']
             d = max(0, min(d, WAIT - 1))
         else:
