@@ -228,7 +228,7 @@ async function chgReplay(cap, opts) {
   const cands = cap.cands ? Array.from(new Uint32Array(chgUnB64(cap.cands).buffer)) : null;
   return new Promise(resolve => {
     Object.assign(CHG, { prof: P, trig, frames: F, Gfix, menu: null, taps: [], pres: [], tEnd: performance.now(), early: null });
-    CHG.replay = { resolve, fb14: !!opts.fb14, maxAlts: opts.maxAlts, clock: !!opts.clock, cands, stream: opts.stream ? { seed: parseInt(opts.stream, 16) >>> 0 } : null, streamOnly: !!opts.streamOnly, attempts: [], t0: performance.now() };   // opts.stream (v89): the earlier lock's seed (hex)
+    CHG.replay = { resolve, fb14: !!opts.fb14, maxAlts: opts.maxAlts, clock: !!opts.clock, cands, stream: opts.stream ? { seed: parseInt(opts.stream, 16) >>> 0, hi: opts.streamHi || undefined } : null, streamOnly: !!opts.streamOnly, attempts: [], t0: performance.now() };   // opts.stream (v89): the earlier lock's seed (hex)
     if (P.early && !cands) { CHG.state = 'capture'; CHG.early = { t: performance.now() }; chgEarly(); }   // FB2: stage 1 from the early maps, as live
     CHG.state = 'maps'; chgSolve();
   });

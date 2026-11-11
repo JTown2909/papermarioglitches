@@ -1,0 +1,127 @@
+{
+ "note": "v91: Final Bowser console logs of 2026-11-10 evening (page v90). Numbers only: LCG steps between the locks, the page times of the stream notes and the next Charge triggers, the clip sync offsets, the bar gaps, the attempts as read from the clips.",
+ "logs": {
+  "A": "032af46e-pm-rng-log-1794354200682.json",
+  "B": "a53781d5-pm-rng-log-1794354394390.json",
+  "C": "28b4ae32-pm-rng-log-1794354802349.json",
+  "D": "8576a774-pm-rng-log-1794355083614.json",
+  "E": "fbf04824-pm-rng-log-1794355583359.json",
+  "F": "1de38253-pm-rng-log-1794355788026.json"
+ },
+ "sync": {
+  "A": 141.94,
+  "B": 257.009,
+  "C": 690.77
+ },
+ "streams": [
+  {
+   "from": "d381a138",
+   "to": "3452fd2f",
+   "steps": 2443,
+   "noteT": 157744,
+   "trigT": 176123,
+   "what": "attempt 2 T1 -> T2"
+  },
+  {
+   "from": "3452fd2f",
+   "to": "7a74319c",
+   "steps": 7409,
+   "noteT": 185023,
+   "trigT": 259840,
+   "what": "attempt 2 T2 -> attempt 3 T1 (a retry)"
+  },
+  {
+   "from": "7a74319c",
+   "to": "d51d0cda",
+   "steps": 2442,
+   "noteT": 266142,
+   "trigT": 291357,
+   "what": "attempt 3 T1 -> T2"
+  },
+  {
+   "from": "53fdf26f",
+   "to": "80dbfc2c",
+   "steps": 3745,
+   "noteT": 729358,
+   "trigT": 779296,
+   "what": "C T2 -> T4"
+  },
+  {
+   "from": "80dbfc2c",
+   "to": "ac4bf7b0",
+   "steps": 15516,
+   "noteT": 784458,
+   "trigT": 992275,
+   "what": "C T4 -> D T1 (a retry; v90 dropped the stream at the runner's click)"
+  },
+  {
+   "from": "ac4bf7b0",
+   "to": "adce13ad",
+   "steps": 1365,
+   "noteT": 1000949,
+   "trigT": 1014107,
+   "what": "D T1 -> T2"
+  },
+  {
+   "from": "adce13ad",
+   "to": "c1e8c368",
+   "steps": 3315,
+   "noteT": 1020569,
+   "trigT": 1060830,
+   "what": "D T2 -> T4"
+  }
+ ],
+ "notStream": {
+  "from": "5aad8f13",
+  "to": "d381a138",
+  "noteT": 79291,
+  "trigT": 144574,
+  "within": 30000
+ },
+ "barGaps": {
+  "betweenAttempts": [
+   45349,
+   44000,
+   75732
+  ],
+  "inFight": [
+   8620,
+   4650,
+   3880,
+   9400
+  ]
+ },
+ "caps": {
+  "B": {
+   "t1att3": 3
+  },
+  "A": {
+   "t1att2": 1
+  },
+  "D": {
+   "t1": 9,
+   "t2": 10
+  },
+  "C": {
+   "t1": 7,
+   "t4": 8
+  }
+ },
+ "pressRace": {
+  "E": {
+   "plan": 243,
+   "planT": 1507730,
+   "hideAt": 1510504,
+   "F": 246,
+   "replan": 337,
+   "replanT": 1510780
+  },
+  "F": {
+   "plan": 237,
+   "planT": 1668900,
+   "F": 237,
+   "replan": 300,
+   "replanT": 1671800
+  }
+ }
+}

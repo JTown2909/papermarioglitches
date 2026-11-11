@@ -565,22 +565,22 @@ if (window.__chgDebug) {
     let res;
     let cands = CHG.replay ? CHG.replay.cands : !E && chgP().id === 'fb2' && typeof fb14T6Cands === 'function' ? fb14T6Cands() : !E && chgP().id === 'fb1' && typeof fb14ChgCands === 'function' ? fb14ChgCands() : null;   // v87: T2 / T4 on the carried stream too
     // v89: no carried stream: the window after this attempt's last Charge lock (fb14_live.js fbStreamCands), on its own threshold
-    const SW = !E && chgP().id === 'fb1' && typeof fbStreamCands === 'function' ? (CHG.replay ? CHG.replay.stream : fbStreamOk() ? FB14.stream : null) : null;
+    const SW = !E && chgP().id === 'fb1' && typeof fbStreamCands === 'function' ? (CHG.replay ? CHG.replay.stream : typeof fbStreamWin === 'function' ? fbStreamWin() : fbStreamOk() ? FB14.stream : null) : null;   // v91: the window scaled with the time since the kept lock
     if (CHG.rec && cands) CHG.rec.cands = cands;
-    if (CHG.rec && SW) CHG.rec.stream = { seed: (SW.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: FBS_HI };
+    if (CHG.rec && SW) CHG.rec.stream = { seed: (SW.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: SW.hi || FBS_HI };
     const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };
     // the window's search: the pictures as placed, then one frame later / earlier (on console the whole Charge read one
     // frame off on both noise reads of 2026-11-09: README v89); null when it does not clear FBS_MIN / FBS_RATIO
     const streamTry = async () => {
       const rOf = r => { const T = r.top; if (!T[0]) return 0; const N0 = near(T[0].seed), b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0)); return T[0].sc / (b ? b.sc : 1); };
       const wc = fbStreamCands(SW), t0s = performance.now(); let res0 = null, rat = 0, sh = 0; const tries = [];
-      for (const d of [0, -1, 1]) { if (d && typeof fbShiftG !== 'function') break;
+      for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
         const r2 = await chgSearch(d ? chgMaps(fbShiftG(G, d), cen, CHG_N) : maps, { cands: wc, stream: true }), q = rOf(r2);
         tries.push({ d, best: r2.top[0] && Math.round(r2.top[0].sc), ratio: +q.toFixed(2), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) });
         if (r2.top[0] && (!res0 || r2.top[0].sc > res0.top[0].sc)) { res0 = r2; rat = q; sh = d; }
         if (r2.top[0] && r2.top[0].sc >= FBS_MIN && q >= FBS_RATIO) break; }
       const ok = res0 && res0.top[0].sc >= FBS_MIN && rat >= FBS_RATIO;
-      CHG.info.stream = { from: (SW.seed >>> 0).toString(16).padStart(8, '0'), ms: Math.round(performance.now() - t0s), locked: !!ok, tries };
+      CHG.info.stream = { from: (SW.seed >>> 0).toString(16).padStart(8, '0'), hi: SW.hi || FBS_HI, ms: Math.round(performance.now() - t0s), locked: !!ok, tries };
       if (!CHG.replay) slog('chargeStream', CHG.info.stream);
       if (!ok) return null;
       const N0 = near(res0.top[0].seed); res0.top = [res0.top[0]].concat(res0.top.slice(1).filter(x => !N0.has(x.seed >>> 0)));

@@ -1641,11 +1641,11 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- rendering ---------- */
-function setText(h, d) { $('headline').textContent = h; $('detail').textContent = d; }
+function setText(h, d) { $('headline').textContent = h; $('detail').textContent = d; const w = /^WAIT/.test(h); $('headline').style.background = w ? '#c62828' : ''; $('headline').style.color = w ? '#fff' : ''; $('headline').style.padding = w ? '6px 10px' : ''; $('headline').style.borderRadius = w ? '6px' : ''; }
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v90';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v91';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -1660,7 +1660,8 @@ function render() {
   $('plan').disabled = !st.lock && !zw.on;
   chip('p-watch', nSh ? 'on' : ''); chip('p-lock', st.lock ? 'ok' : (st.cands && st.cands.length > 1 ? 'on' : (st.msg ? 'err' : ''))); chip('p-time', st.plan ? 'ok' : '');
   if (st.searching) {}
-  else if (st.msg) setText(/^(No |Time Out is done|The seed is being|FB2)/.test(st.msg) ? 'No beeps this time' : segLabel + 'Check your taps', st.msg);
+  else if (st.msg && /^WAIT/.test(st.msg)) setText('WAIT: reading the seed, no beeps yet', st.msg);      // v91: the Final Bowser wait was headed "Check your taps"
+  else if (st.msg) setText(/^(No |Time Out is done|The seed is being|FB2|Route off|Beeps stopped|T\d: )/.test(st.msg) ? 'No beeps this time' : segLabel + 'Check your taps', st.msg);
   else if (st.plan) { const P = st.plan, typ = P.type && WTYPE[P.type] ? 'Window ' + WTYPE[P.type].name + ': ' : '';
     setText(P.again ? 'Still on the target screen: next window planned' : P.switched ? 'A sooner window came up: press A on the last beep' : 'Press A on the last beep (' + (P.beeps || nBeeps()) + ' beeps)',
       typ + (P.mix ? (P.mix.zw ? P.mix.groups + ' possible RNG states are left (carried from the Charge or the walk);' : P.mix.groups + ' Spiny Flip outcomes are still possible;') + ' ' + ppText(P.mix, P.prof, true) + ' A shine in this menu replans if it rules the frame out.'

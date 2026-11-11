@@ -1,3 +1,86 @@
+# Time Out Timer v91: Final Bowser retries, the silent "hit", the stream across attempts, the replan race (Nov 10 evening)
+
+Console logs of 2026-11-10 evening (page v90): A 032af46e (clip 18-42-33), B a53781d5 (18-44-28; holds A), C 28b4ae32
+(18-51-42), D 8576a774 (18-56-41), E fbf04824 (19-05-11), F 1de38253 (19-07-52). Each log holds the ones before it. Clips
+synced by the HUD bar's showings (A page = clip + 141.94 s, B + 257.009, C + 690.77, every showing within 10 ms). No picture
+is committed (`fixtures/console_1110b.json` holds numbers only). The emulator was not run for this version.
+
+## What happened (the clips)
+- **The runner retried phase 2 again and again, and the page never saw a new attempt.** FP tells the turns apart on the
+  HUD (Super Charge and Cloud Nine 4 FP each: 15 -> 11 -> 7 -> 3). A: attempt 1 (T1 Charge 70.3 s, Cloud Nine 77.6, hit) ended
+  with the bar gone 45 s; attempt 2's T1 Charge (144.6 s, FP 15) was taken as T2 (the route was on T1's Cloud Nine; v90's
+  new-attempt rule needs 120 s between Charges), the runner clicked T1 (153.4 s), Cloud Nine 150.0, Bowser's claw for 15:
+  Mario died, Life Shroom. T2: Charge 176.1 s (taken as **T4**: the burst rule jumped from T2's step), Do Nothing 184.2,
+  fire breath, Mario at 0 again; T3 Jelly 214.1. B: attempt 3 starts at 258.1 s (FP 15/15, bar gone 44 s): T1 Charge 259.8,
+  Cloud Nine 265.06 (clip 8.05 s; the page saw the hide at 266.13), hit, Life Shroom; T2 Charge 291.4, Do Nothing 298.9; T3
+  Jelly; T4 Charge ~320, Do Nothing 326.3, **the wave hit Mario (HP 6)**, then a second Charge (332.1, taken as the Peach
+  Beam), death, Life Shroom, the Peach Beam: "got hit by wave and continued anyways". C: T1 Charge at 693.0 read with the T6
+  profile (the route was still on T7 from the last attempt; bar gone 75.7 s before), Cloud Nine 698.2, claw, death; the
+  runner clicked T1 (701.0); the T2 Charge (724.6, FP 7 -> 3) was taken as T1, the runner clicked T2 after the lock (729.4).
+  D: the runner confirms Cloud Nine 5.2-5.9 s after the Charge's bar hide in every clip (A 5.9, B 5.7, C 5.7, D 5.25).
+- **The locks are true.** One RNG stream: d381a138 -> 3452fd2f 2443 steps (A, T1 -> T2), -> 7a74319c 7409 (across the retry
+  to attempt 3), -> d51d0cda 2442; 53fdf26f -> 80dbfc2c 3745 (C), -> ac4bf7b0 15516 (across the retry to D), -> adce13ad 1365,
+  -> c1e8c368 3315. The game's RNG runs on across a retry at 75-89 steps a second. **5aad8f13 -> d381a138 is not on one stream**
+  (2.1e9 steps); 5aad8f13 (A attempt 1, 6782 / 2.37 at the -1 shift, placement 6782 against 4216 / 4834) has no second read
+  in its attempt to confirm it, so which side broke (a wrong lock, or a stream reset between attempts 1 and 2) is not
+  decided; d381a138 is confirmed by four later locks.
+
+## Root causes and fixes (`charge_live/fb14_live.js` unless named)
+1. **No plan after a lock (B T2, E T2, F T2 / T3 / T4, D T4): an earlier hit, never cleared.** `fb14HpWatch` sets FB14.hit on
+   a hit, and every later fb14Plan returned "hit" without a log line; only `fb14Reset` cleared it, and no attempt reset ran
+   (cause 2). Stream and carried locks were hit alike (the common gate). Now any lock clears a T1-T3 hit (`fb14HitCleared`:
+   a lock after the Life Shroom revive is this fight's seed), the "hit" no-edge is logged once, and a watchdog logs
+   `fb14NoDecision` and plans when a lock has neither a plan nor a logged no-edge 0.5 s after the partner's menu can be up.
+2. **Attempts.** The bar comes back after FB14_GAPNEW 35 s gone on a Final Bowser step (between attempts 44-76 s; in a fight
+   at most 9.4 s in these clips, ~25 s with a revive) = a new attempt (`fb14NewAttempt` why "bar gone"): the route to T1's
+   Charge (the reader arms with the T1 profile, C's 693 s read), the attempt's confirms, hit and clock dropped. The runner
+   setting T1's Charge from a later turn is a new attempt too (B 249.3 s); a read in flight then is T1's (A 153.4 s), and a T1
+   lock on the Charge step moves to Cloud Nine's step. The RNG stream is kept across attempts (only a boots change drops it).
+3. **Turn tracking.** A Charge on T2's step with no T2 confirm and no Jelly since T2's burst stays T2 (`fb14BurstSameTurn`;
+   A 176.1 s went to T4). The lock takes the turn the runner set while the rays were read. After T4: the HP watch covers T4;
+   a hit there puts the route off ("Route off: T4's wave hit Mario ... no Final Bowser lever from this attempt"), no Peach
+   Beam is taken from a later bar hide and no T1-T4 lever is planned. The turns are not tracked further (the route is off);
+   the next attempt's T1 Charge starts again.
+4. **The Cloud Nine confirm lost to the lock (B 266.1 s).** The stale pT[1] of the old attempt blocked `fb14CloudNineByBar`
+   (cause 2). And the lock's work held the thread 1.5 s, so the hide was seen 1.07 s late: a hide seen after a gap between
+   pictures now spreads its confirm shifts back over the gap (`fb14GapShifts`, at most 40 frames). Confirms seen before the
+   lock were already queued (`fb14ConfirmBeforeLock`, applied by `fb14Lock`).
+5. **The stream window scales** (`fbStreamHi`): 1.3 x 100 steps a second since the kept lock + 2500, at least 9000, at most
+   30000 (beyond, ~3.5 min: the full search). It reaches every pair above (C -> D 15516 in 207.8 s: window 29776; v90's 9000
+   missed it and the runner's click had dropped the stream, so D's T1 waited 8.1 s on the full search; on the window it locks
+   in 3.2 s). The window tries as placed and -1 only (none of 14 console fb1 reads was +1): 2 s less when it misses.
+   **False locks on the widest window:** 14 wrong windows of 30000 seeds over the session's 7 fb1 reads (each as placed and
+   -1): 0 locks, best ratio 1.16 (the lock needs 1.5). A's attempt-2 T1 on the window after 5aad8f13: no lock (1.04).
+6. **Hysteresis (C T2: 13 s at doubt 0.47-0.78, three plans and three cancels).** After "No edge" a plan needs the doubt
+   under 0.40; a running plan holds to 0.55; one steady "No edge yet" message (no percentage), logged on change.
+   C's lock was true (80dbfc2c on its stream 3745 steps later), so the doubt came from the weighting, not a wrong seed:
+   the fresh T2 states (the runner's click came after the lock, which built them as T1's) carry no T1 attack history
+   (`fbVars`: Bowser's claw on T1 unknown), and T1's real Cloud Nine and death are not in them. Not fixed (below).
+7. **The replan race (E 1510.8 s, F 1671.8 s).** A press is measured against the plan that was up at the press
+   (`FB14.plans`; F's Cloud Nine landed on the first plan's 237, logged -63 against the 300 replan); no replan or cancel while
+   the bar has been gone under 0.6 s (a confirm being read); no plan once the turn's confirm is in (`fb14PlanAfterConfirm`).
+8. **The wait.** The Final Bowser "WAIT, searching…" was headed "Check your taps": now the headline reads "WAIT: reading the
+   seed, no beeps yet" on red. The stream lock's status says "locked on the RNG stream, n steps after the last lock".
+9. **Speed (D T2, carried: trigger -> plan 6.6 s).** Measured: maps 1.76 s after the trigger, carried candidates 0.37 s, the
+   narrowed read 3.0 s (20 candidates; replayed here 4.5-4.8 s), `fb14Held` + `fb14Check` 1.6 s, plan 0.1 s. v91 stops cloning
+   the 60000 held states a second time in the check and logs the lock's own ms (`fb14Lock` ms.check / ms.build). The
+   narrowed read itself is not faster (below).
+
+## Tests
+New `test_console_1110b.js` (in `run_suite.sh`): the streams and the window; the gap shifts; attempts by the bar gap
+(three retries, the T7 step) and not by in-fight gaps; the clicks; A's T2 burst; the hit logged, route off after T4, the
+hysteresis, the WAIT headline; E / F's press against the plan up at the press, no plan after the confirm, the watchdog;
+with the logs, the stream replays (B attempt 3 T1, D T1 across the retry, D T2), A's wrong window, 14 wrong 30000-seed
+windows, D T2's narrowed read. Version checks to v91.
+
+## Not done
+- C's T2 doubt: the fresh states of a turn after an unread one lack its attack history and inputs; a fresh lock on T2-T4
+  should marginalise over Bowser's earlier attacks. Not built: the hysteresis only keeps the message steady.
+- The narrowed carried read (3 s for 20 candidates) and `fb14Check` (1.6 s) are not restructured: building the candidates
+  during the burst and a lighter check would bring D's T2 under 3 s; only the double clone is gone.
+- E T1's beep timing (the press 1-3 frames after a 243-245 window) was not checked on the clip's audio.
+- Whether 5aad8f13 or the stream broke between A's attempts 1 and 2.
+
 # Time Out Timer v90: the console session of Nov 10 (Jr. Troopa T3 / T5, the Strategies reading, Final Bowser's lever and T2 Charge, the arena back-move)
 
 Console logs of 2026-11-10 (page v89): 86e76da9 (Duplighosts, clip 15-20-24), 1c4d37ef and f485687d (Ultra Jr. Troopa, clips
