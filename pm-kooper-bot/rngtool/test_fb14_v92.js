@@ -73,7 +73,8 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
         // Lakilester's Do Nothing (cat S) leaves the bar up: its close is a confirm at once
         X.reset(); T.setStep(l2); FB.M = { 2: 0 }; V.hudGone = 0; const n5 = T.SLOG.length; T.screenClosed(t1 + 2000); out.noHide.s = T.SLOG.slice(n5).map(e => e.ev); V.present = false; V.hudGone = 0; }
       // 6. a Charge turn's lever before its Charge: no plan (e2e 5eed0fb2: T2 beeped during Bowser's T1 attack)
-      { setup(); FB.M = { 1: 0 }; T.setStep(l2); const n4 = T.SLOG.length; X.plan(); const ev = T.SLOG.slice(n4).map(e => e.ev); out.waitChg = { none: FB.plan && FB.plan.none, ev, beeps: ev.includes('fb14Plan') }; }
+      { setup(); FB.M = { 1: 0 }; T.setStep(l2); const n4 = T.SLOG.length; X.plan(); const ev = T.SLOG.slice(n4).map(e => e.ev); out.waitChg = { none: FB.plan && FB.plan.none, ev, beeps: ev.includes('fb14Plan') };
+        setup(); FB.M = { 1: 0, 2: 300 }; T.setStep(RT.findIndex(x => x.fb14 === 3 && x.fb14role === 'lever')); const n6 = T.SLOG.length; X.plan(); out.waitChg.t3 = { none: FB.plan && FB.plan.none, ev: T.SLOG.slice(n6).map(e => e.ev) }; }
       out.turnScreen = await lockTurn(false); out.turnUser = await lockTurn(true); }
     return out;
   }, { L, seeds });
@@ -87,7 +88,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   check(r.own.step === r.own.l1 && r.own.ev.includes('fb14OwnClose') && !r.own.ev.includes('fb14ConfirmBeforeLock') && r.own.pT === 0, '5. Cloud Nine\'s screen closing 60 ms after T1\'s burst: the Charge\'s own, no confirm, the route stays ' + JSON.stringify(r.own.ev));
   check(r.noHide.a.step === r.noHide.l1 && r.noHide.a.ev.includes('fb14CloseNoHide') && !r.noHide.a.ev.includes('fb14ConfirmBeforeLock') && r.noHide.b.ev.includes('fb14ConfirmBeforeLock') && r.noHide.s.includes('fb14ConfirmBeforeLock') && !r.noHide.s.includes('fb14CloseNoHide'), '5. a Final Bowser Mario screen closing with the status bar up (a submenu from the wheel): not a confirm; with the bar hiding: a confirm; Do Nothing\'s screen (the bar stays up): a confirm at once ' + JSON.stringify(r.noHide));
   check(r.hpw.hit === null && r.hpw.seen10 === true && r.hpw.done3 === 'hit', '7. a lock clearing T3\'s hit keeps the HP watch\'s 10 HP seen (T4\'s wave hit is read) ' + JSON.stringify(r.hpw));
-  check(r.waitChg.none === 'charge' && r.waitChg.ev.includes('fb14WaitCharge') && !r.waitChg.beeps, '6. T2\'s Do Nothing step before T2\'s Charge: no plan, waiting for the Charge ' + JSON.stringify(r.waitChg));
+  check(r.waitChg.none === 'charge' && r.waitChg.ev.includes('fb14WaitCharge') && !r.waitChg.beeps && r.waitChg.t3.none === 'charge' && r.waitChg.t3.ev.includes('fb14WaitCharge'), '6. T2\'s Do Nothing step before T2\'s Charge, T3\'s before its Jelly: no plan, waiting ' + JSON.stringify(r.waitChg));
   check(!r.own.late && !r.own.otherTurn, '5. 4 s after the burst, or another turn\'s step: a confirm as before');
   check(r.turnScreen.turn === 2 && r.turnScreen.kept && r.turnUser.turn === 4 && !r.turnUser.kept, '5. the route moved by the page during the read: the lock keeps the burst\'s T2 (' + JSON.stringify(r.turnScreen) + '); by the runner: their T4 (' + JSON.stringify(r.turnUser) + ')');
   if (!fs.existsSync(DLOG)) console.log('skip 4: log D is not in ' + LD);

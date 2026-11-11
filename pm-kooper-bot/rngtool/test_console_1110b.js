@@ -91,7 +91,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
     const tObs = FB.t0 + (237 + 2 + 1) * 33.367; X.confirm(tObs, RT[l1]); const c = X.slogTail(30).filter(e => e.ev === 'fb14Confirm').pop(); out.conf = c && { planned: c.planned, err: c.err };
     X.plan(); out.after = X.slogTail(5).some(e => e.ev === 'fb14PlanAfterConfirm') && !(FB.plan && FB.plan.target);
     // the watchdog: a lock on T2's step, no decision within 0.5 s (B / E / F: an old hit kept every plan silent)
-    T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever')); X.reset(); Object.assign(FB, { on: true, t0: performance.now() - 60000, rate: 33.367, states: [], hit: 2, decide: { t: performance.now() - 800, turn: 3 } });   // (v92: T3, no Charge to wait for)
+    T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever')); X.reset(); Object.assign(FB, { on: true, t0: performance.now() - 60000, rate: 33.367, states: [], hit: 2, M: { 3: 0 }, decide: { t: performance.now() - 800, turn: 3 } });   // (v92: T3 after its Jelly)
     X.frame(performance.now(), true); out.dog = X.slogTail(20).filter(e => e.ev === 'fb14NoDecision' || e.ev === 'fb14NoEdge').map(e => e.ev + ':' + (e.why || ''));
     return out; });
   check(r7.conf && r7.conf.planned === 237 && Math.abs(r7.conf.err) < 4, '7. a press during a replan is measured against the plan up at the press (F: target 237, v90 logged -63 against 300): ' + JSON.stringify(r7.conf));

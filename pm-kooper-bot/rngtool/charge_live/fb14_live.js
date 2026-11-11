@@ -490,7 +490,7 @@ function fb14Frame(t, present) {
   // v91 (logs B, E, F: a stream / carried lock, then no plan and no "No edge" for 3-25 s: an earlier attempt's or turn's
   // hit kept every plan at "hit" without a word): a lock with no decision 0.5 s after the partner's menu can be up
   { const D = FB14.decide, s = fb14Step(); if (D && s && s.fb14role === 'lever' && !V.wasOn && performance.now() - D.t > 500 && !(FB14.pT && FB14.pT[s.fb14] != null)) {
-    const M = FB14.M[s.fb14]; if (M == null && s.chg) { FB14.decide = null; fb14Plan(); }     // v92: this turn's Charge not seen yet: the plan waits for it (fb14WaitCharge), a decision
+    const M = FB14.M[s.fb14]; if (M == null && (s.chg || s.fb14 === 3)) { FB14.decide = null; fb14Plan(); }     // v92: this turn's Charge not seen yet: the plan waits for it (fb14WaitCharge), a decision
     else if (M == null || fbPic(performance.now()) >= M + 90) { slog('fb14NoDecision', { turn: s.fb14, lockTurn: D.turn, on: FB14.on, hit: FB14.hit, plan: !!st.plan, doubt: +(FB14.doubt || 0).toFixed(3) }); FB14.decide = null; fb14Plan(); } } }
 }
 /* v82 (logs 1794169517521 and 1794170840652, clips 15-24-14 / 15-46-32): Bowser's fire hit Mario after the lever (T2 of
@@ -635,9 +635,10 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (cAt == null && FB14.pT && FB14.pT[turn] != null) { if (FB14.afterConf !== turn) { FB14.afterConf = turn; slog('fb14PlanAfterConfirm', { turn }); } cancelBeeps(); return true; }
   if (!FB14.on && cAt == null && (['capture', 'maps', 'search'].includes(CHG.state) || FB14.refining)) { st.msg = 'WAIT, searching… The Charge rays are being read (about 3-5 s after the Charge; console Cloud Nine confirms came 4 s after it). Wait on ' + (turn === 1 ? 'Cloud Nine\'s target (hand on Mario)' : 'Lakilester\'s Do Nothing') + ': the beeps, or "No edge", come as soon as the seed is read.'; FB14.plan = { none: 'reading', turn }; fb14Show(); render(); return true; }
   if (!FB14.on) { st.msg = 'No Final Bowser lock: ' + fb14BlindText(turn) + '.'; FB14.plan = { none: 'no lock', turn }; fb14Show(); if (cAt == null) render(); return true; }
-  // v92 (e2e 5eed0fb2: T2's Do Nothing beeped during Bowser's T1 attack, 25 s before T2's Charge, at 95%): a lever turn
+  // v92 (e2e 5eed0fb2: T2's Do Nothing beeped during Bowser's T1 attack, 25 s before T2's Charge, at 95%; e2e 9e3779b9 /
+  // 1234abcd: fb14NoDecision on T3 before its Jelly): a lever turn (T3: its Jelly)
   // with a Charge is planned only once that Charge was seen (its frame is in the states); before it the beeps could only be wrong
-  if (stp.chg && FB14.M[turn] == null && cAt == null) { if (FB14.waitChg !== turn) { FB14.waitChg = turn; slog('fb14WaitCharge', { turn }); } st.msg = 'T' + turn + ': waiting for this turn\'s Super Charge (its rays are read, then the beeps or "No edge").'; FB14.plan = { none: 'charge', turn }; cancelBeeps(); fb14Show(); render(); return true; }
+  if ((stp.chg || turn === 3) && FB14.M[turn] == null && cAt == null) { if (FB14.waitChg !== turn) { FB14.waitChg = turn; slog('fb14WaitCharge', { turn }); } st.msg = 'T' + turn + ': waiting for this turn\'s ' + (turn === 3 ? 'Jammin\' Jelly' : 'Super Charge (its rays are read') + ', then the beeps or "No edge"' + (turn === 3 ? '.' : ').'); FB14.plan = { none: 'charge', turn }; cancelBeeps(); fb14Show(); render(); return true; }
   if (FB14.pendChg && cAt == null) { st.msg = 'WAIT, searching… this turn\'s Charge rays are being read. Wait on ' + (turn === 1 ? 'Cloud Nine\'s target (hand on Mario)' : 'Lakilester\'s Do Nothing') + '.'; FB14.plan = { none: 'reading', turn }; fb14Show(); render(); return true; }
   const now = performance.now(), h = cAt != null ? cAt : fb14Horizon(now); fb14Advance(h);
   const Wg = (window.__fb14WeighTest || fb14Weigh)(h); FB14.doubt = Wg.doubt;     // (__fb14WeighTest: tests only, v91 hysteresis)
