@@ -139,7 +139,8 @@ def runner_press(res, nbefore, M, R0, GM1, G, t):
     step_of = lambda tt: ((tt - t0) * 60 / 1000 - nbefore + 2) * 29.97 / 60
     H = M + 1; Dl = H + int(round(DL * 29.97))
     evs = res.get('events', [])
-    plans = sorted([dict(E=step_of(p['t']), T=GM1 + p['target'] - G, p=p) for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None], key=lambda x: x['E'])
+    # the beep's own time (tPress): the page's clock restarts at a fresh lock after a hit, so its frames are not T1-based then
+    plans = sorted([dict(E=step_of(p['t']), T=int(round(step_of(p['tPress']))) if p.get('tPress') is not None else GM1 + p['target'] - G, p=p) for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None], key=lambda x: x['E'])
     noedge = [step_of(e['t']) for e in evs if e.get('ev') == 'fb14NoEdge' and e.get('turn') == t]
     trig = [step_of(e['t']) for e in evs if e.get('ev') == 'chargeTrigger' and step_of(e['t']) >= 0]
     lock = [step_of(e['t']) for e in evs if e.get('ev') == 'chargeLock' and step_of(e['t']) >= 0]
