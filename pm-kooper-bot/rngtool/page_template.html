@@ -2042,9 +2042,10 @@ function screenClosed(t) {
   // v92 (e2e 5eed0fb2: the saved Mario screen matched Mario's and Lakilester's action wheels at 0.92, and the wheel
   // "closed" when a submenu opened: the route went on to Cloud Nine / T2 before the Charge / Cloud Nine; console v86
   // saw it too): on the Final Bowser steps a close counts only when the status bar hides with it, as a confirm does
-  // (a submenu leaves it up)
+  // (a submenu leaves it up). Only the Mario screens (the Charge, Cloud Nine): Lakilester's Do Nothing leaves the bar up
+  // with its message (e2e 1234abcd T2: the Do Nothing confirm was dropped, the carry died)
   const z = isRoute() && RT()[routeStep];
-  if (z && (z.cat === 'B' || z.fb14) && V.present) V.closePend = { t, step: routeStep, fb14: !!z.fb14 && z.cat !== 'B' };
+  if (z && (z.cat === 'B' || (z.fb14 && z.cat === 'M')) && V.present) V.closePend = { t, step: routeStep, fb14: !!z.fb14 && z.cat === 'M' };
   else { V.lastClose = t; checkPress(t); }
 }
 function closeTick(t, on) {

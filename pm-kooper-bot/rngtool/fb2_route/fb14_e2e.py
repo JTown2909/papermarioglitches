@@ -217,7 +217,8 @@ if __name__ == '__main__':
       last = ATT_TURNS[att - 1] if att - 1 < len(ATT_TURNS) else turns
       for t in range(start, last + 1):
         items, pa = mario_items(t)
-        sa = Seg(r, os.path.join(out, 't%da' % t)); sa.load(X)
+        tg = 'a%dt%d' % (att, t)       # v92: per attempt (a retry's renders must not overwrite the earlier attempt's pictures)
+        sa = Seg(r, os.path.join(out, tg + 'a')); sa.load(X)
         hp0 = r.e.s8(PLAYER_DATA + 2); sh0 = [r.e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10)].count(149)
         pre = rng.randint(40, 80); sa.idle(pre)
         sa.seq(items); M = sa.n; sa.step(A)                         # Mario's confirm on step M of the stretch
@@ -229,8 +230,8 @@ if __name__ == '__main__':
         sa.idle(WAIT)
         if pa == 'cloud_nine' and refM is None: refM = ('a', t, R0 + 10)
         if pa != 'cloud_nine' and refS is None: refS = ('a', t, R0 + 10)
-        jpg = capsim(sa.d, sa.n, os.path.join(out, 't%da_cap' % t), seed + t + 100 * att)
-        segA = ['%s/t%da_cap_j/%s' % (rel, t, f) for f in jpg]
+        jpg = capsim(sa.d, sa.n, os.path.join(out, tg + 'a_cap'), seed + t + 100 * att)
+        segA = ['%s/%sa_cap_j/%s' % (rel, tg, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')))
         if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
             man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0)
@@ -263,7 +264,7 @@ if __name__ == '__main__':
         nb = {}
         for dd in (-1, 1):
             tmp = Seg(r, os.path.join(out, 'tmp')); tmp.load(Y, False); tmp.idle(d + dd, False); play_after_confirm(tmp, pa, False); nb[dd] = outcome(r)
-        sb = Seg(r, os.path.join(out, 't%db' % t)); sb.load(Y, False); sb.idle(d, False); sb.n = 0
+        sb = Seg(r, os.path.join(out, tg + 'b')); sb.load(Y, False); sb.idle(d, False); sb.n = 0
         play_after_confirm(sb, pa, True); oc = outcome(r)
         nxt = os.path.join(out, 'x%d.st' % (t + 1)); r.e.save(nxt); X = nxt
         row.update(outcome=oc, minus1=nb[-1], plus1=nb[1], s0_rays0_true='%08x' % sa.s0[M + 13] if t != 3 else None)
@@ -275,9 +276,9 @@ if __name__ == '__main__':
         print(json.dumps({k: v for k, v in row.items() if k not in ('page', 'plan')}), flush=True)
         report['turns'].append(row)
         # the actual stretch: segment a up to the confirm, then segment b
-        jb = capsim(sb.d, sb.n, os.path.join(out, 't%db_cap' % t), seed + 10 + t + 100 * att)
+        jb = capsim(sb.d, sb.n, os.path.join(out, tg + 'b_cap'), seed + 10 + t + 100 * att)
         na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
-        frames = frames + segA[:na] + ['%s/t%db_cap_j/%s' % (rel, t, f) for f in jb]
+        frames = frames + segA[:na] + ['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
         json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
         json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
