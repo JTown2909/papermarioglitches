@@ -1,3 +1,102 @@
+# Time Out Timer v92: Final Bowser end to end with the runner's timing, retries, the carried read made fast (Nov 11)
+
+The page tested end to end in the emulator (JP, Ultra Final Bowser phase 2 T1-T4, Mario at 10 HP with the Jelly and a Life
+Shroom, GUARD=1, VCLOCK=1, one job at a time on an idle machine) as a stand-in for the runner. `fb2_route/fb14_e2e.py`
+gained the runner's timing, retries and forced hits; every bug found is fixed with a test (`test_fb14_v92.js`, in
+`run_suite.sh`). No picture is committed.
+
+## The harness (`fb2_route/fb14_e2e.py`)
+- **RUNNER=runner**: the confirm on the beeps when the plan is up within DL = 5.5 s of the Charge's bar hide (or before
+  the partner's screen is up at all: T3's Jelly), else at 5.5 s unplanned (the console clips: 5.2-5.9 s with no beep).
+  **RUNNER=patient**: up to 12 s for the beeps, or 0.5 s after a "No edge". A plan made before the turn's Charge, or
+  cancelled by a "No edge" before its target, is not followed. FAST=1: the "+3" popup closed at 78-86 so the partner's
+  screen is up ~5.5 s after the hide (faster menu inputs were eaten by the game: the hand stayed on the first move).
+- **ATTEMPTS / ATT_TURNS / GAP**: an attempt abandoned after its turns, a gap of 40-80 s with no HUD bar on the screen
+  while the game runs on in the battle, then the phase-2 start state with the seed the game had at the gap's end
+  (DIAGNOSTIC write). **FORCE_HIT=a.t**: that turn's confirm on the nearest frame where Bowser hits. **FINAL=1**: one
+  more page run over everything (the last turn's Bowser turn). Per-attempt render names.
+- Screens grabbed in-process (PIL, 0.02 s a picture, the same pixels as ImageMagick's 0.23 s `import`).
+
+## What the console retry is
+The clips (fb1844, fb1851, fb1856, fb1905, fb1907) each start at the phase-2 T1 menu (HP 10/10, FP 15/15, the Life
+Shroom and Jelly back) and end inside the fight; the retry itself is never on a clip. The logs show what happens between:
+Mario's death (B: after T3's Jelly, no Life Shroom left), then 44-76 s with no HUD bar and no coin shine at all, then the
+phase-2 menu again. A savestate would put the RNG back; the stream runs on across every retry at 75-89 LCG steps a second
+(v91), the in-battle rate. So the battle is restarted in game (the runner's practice setup), not loaded: the harness keeps
+the emulator running through the gap and writes the seed it reached into the reloaded phase-2 state.
+
+## Bugs found and fixed (each with a check in `test_fb14_v92.js` unless named)
+1. **T1 mis-tracked by the action wheel** (5eed0fb2): the saved Mario screen matched Mario's and Lakilester's action wheels
+   (score 0.915 against 0.92 with the hysteresis), its "close" (a submenu opening) moved the route to Cloud Nine before the
+   Charge; the Charge's own screen then closed 0.06 s after the burst and was taken as Cloud Nine's confirm; the route went
+   to T2 and T1's lock was read as T2's (the v91 "the runner moved the route" rule took the page's own move). Now a cat M
+   Final Bowser close counts only with the status bar hiding (`fb14CloseNoHide`; Do Nothing leaves the bar up, so cat S
+   is exempt: a first version dropped T2's Do Nothing confirm), a lever close within 2.5 s of its turn's burst is the
+   Charge's own (`fb14OwnClose`), and a lock takes the route's turn only after the runner's own click (`userStep`).
+2. **No T2 plan after T1's hit** (5eed0fb2): the stream lock's fresh fits took the Life Shroom revive's shines into the
+   menu-coin window (the bar up 18 s) and all died (`fb14AllOut`). Rebuilt without the menu coin (`fb14MenuCoinDropped`).
+3. **Beeps before the turn's Charge** (5eed0fb2: T2's Do Nothing at 95% during Bowser's T1 attack; T3 before its Jelly):
+   no plan until the turn's Charge / Jelly is seen (`fb14WaitCharge`), the watchdog counts that wait as a decision (it
+   logged false `fb14NoDecision` on T3).
+4. **T4's wave hit never read** (5eed0fb2 attempt 2): the T4 lock landed after T4's confirm and cleared T3's hit with a new
+   HP watch that never saw the 10 HP before an open turn: no "Route off", the Peach Beam taken. The watch keeps what it saw.
+5. Harness: renders of a retry overwrote the earlier attempt's (the page could not decode its reference screen); stdin of
+   the queue eaten by the jobs; the runner's press frame (see "Not done").
+
+## Speed (the carried T2 / T4 read)
+v91 (log D T2, console): trigger -> maps 1.76 s, carried candidates 0.37 s, narrowed read 3.0 s (replayed here 4.3-4.8 s,
+the structured fits 4.0-4.7 s of it), `fb14Held` + `fb14Check` 1.6 s, plan 0.1 s: 6.6 s. v92:
+- the narrowed read sends only the fits' end seeds (fb1h `light`; the full list is fetched by the refine when no carried
+  state matches): D T2 replayed 1.1-1.2 s (fits 0.6-0.8 s), adce13ad as before;
+- the carried candidates are built in slices during the burst (`fb14PreCands`), the held states are only those whose
+  stream drew the locked rays (D-like T2: 4594 of 52950; `fb14HeldVerify` found the same matches as on all of them);
+- a stream lock skips the +-1 placement re-read (T2 after a hit, replay: trigger -> plan 9.1 s -> 6.1 s).
+In the emulator runs (loaded page, the feed running): carried T2 / T4 trigger -> candidates 1.8-2.4 s, -> lock 3.9-4.7 s,
+-> plan 4.2-5.1 s, i.e. 4.7-5.6 s after the bar hide (the narrowed read 2.8 s there, its worker start 0.9 s of it). Not yet
+the 3-4 s asked; the stream path (T1 of a retry, T2 after a hit) plans 6-7 s after the hide, after the runner's 5.5 s.
+
+## End to end (RUNNER=runner, DL 5.5 s; GUARD=1, MARIO_HP=10)
+Lock / plan times from the bar hide. "miss" = Bowser missed (T4: the wave came and missed) with the confirm one frame
+early / on the press / one late.
+| run | seed | turn | lock s | plan s | planned | beep < 5.5 s | press s | miss -1 / 0 / +1 |
+|---|---|---|---|---|---|---|---|---|
+| r_9e | 9e3779b9 | a1 T1 | 10.13 | 13.61 | no | no | 5.87 | n / n / Y |
+| r_9e | 9e3779b9 | a1 T2 | 7.58 | 7.73 | no | no | 5.51 | Y / Y / n |
+| r_9e | 9e3779b9 | a1 T3 | None | - | yes | no | 8.31 | n / Y / Y |
+| r_9e | 9e3779b9 | a1 T4 | 5.21 | 5.63 | no | no | 5.51 | n / n / n |
+| r_12 | 1234abcd | a1 T1 | 6.98 | 9.86 | no | no | 5.74 | n / n / Y |
+| r_12 | 1234abcd | a1 T2 | 7.16 | 7.55 | no | no | 5.51 | Y / n / n |
+| r_12 | 1234abcd | a1 T3 | None | - | no | no | 22.02 | n / n / n |
+| r_2b | 2b7e1516 | a1 T1 | 10.56 | 14.63 | no | no | 5.84 | Y / Y / n |
+| r_2b | 2b7e1516 | a1 T2 | 5.66 | 10.81 | no | no | 5.51 | n / n / n |
+| r_2b | 2b7e1516 | a1 T3 | None | - | no | no | 7.14 | Y / Y / n |
+| r_2b | 2b7e1516 | a1 T4 | None | - | no | no | 5.51 | n / Y / Y |
+| r_0b | 0badc0de | a1 T1 | 8.1 | 11.13 | no | no | 5.94 | n / n / n |
+| r_0b | 0badc0de | a1 T2 | None | - | no | no | 22.02 | Y / Y / Y |
+| r_0b | 0badc0de | a1 T3 | None | - | no | no | 5.97 | Y / Y / n |
+| r_0b | 0badc0de | a1 T4 | None | - | no | no | 22.02 | n / n / n |
+| retry2 | 5eed0fb2 | a1 T1 (forced hit) | 8.91 | 12.3 | no | no | 5.67 | Y / n / Y |
+| retry2 | 5eed0fb2 | a1 T2 | 7.58 | 7.65 | no | no | 5.51 | Y / n / n |
+| retry2 | 5eed0fb2 | a2 T1 | 6.18 | 6.53 | no | no | 5.77 | Y / Y / n |
+| retry2 | 5eed0fb2 | a2 T2 | 5.18 | 5.26 | yes | no | 6.84 | n / n / Y |
+| retry2 | 5eed0fb2 | a2 T3 | None | - | no | no | 7.14 | Y / Y / Y |
+| retry2 | 5eed0fb2 | a2 T4 (forced hit) | 7.65 | - | no | no | 5.51 | n / n / n |
+
+Patient runner (12 s), 1234abcd (run alongside another job, timing loaded): T1 lock 6.7 s, plan 9.4 s, planned, missed (+-1
+hit); T2 carried, plan 5.6 s, planned, missed +-1; T3 / T4 had no plan (the part-2 rule dropped T2's Do Nothing confirm,
+since fixed).
+
+Retries (5eed0fb2, attempt 1 T1 forced hit, gap 75 s, attempt 2): the new attempt was found ("bar gone"), the route went to
+T1, attempt 2's T1 locked on the stream window after attempt 1's T2 lock, T2 locked carried and planned at 5.3 s.
+
+## Not done
+- **13579bdf and the patient runs were not completed** (time); the patient model ran once, before the Do Nothing fix.
+- The press frame of the runner runs: r_9e, r_12, r_2b, r_0b and retry2 pressed planned beeps on the beep's time
+  (`tPress`), which is ~2 frames ahead of the frame the page plans (retry2 a2 T2: planned 99.9%, pressed 2 frames
+  early, hit; +1 missed). The harness now presses on the planned frame from the right clock origin; those rows' planned
+  outcomes are not the page's. Unplanned rows are unaffected.
+- 2b7e1516 T2 (carried lock 5.7 s, plan 10.8 s) and T3 / T4 (no lock), 0badc0de T2 / T4 (no lock after T1's hit) are not
+  analysed. The carried read at 3-4 s from the hide is not reached in the emulator.
 # Time Out Timer v91: Final Bowser retries, the silent "hit", the stream across attempts, the replan race (Nov 10 evening)
 
 Console logs of 2026-11-10 evening (page v90): A 032af46e (clip 18-42-33), B a53781d5 (18-44-28; holds A), C 28b4ae32
