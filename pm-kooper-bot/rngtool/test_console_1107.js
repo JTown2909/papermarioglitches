@@ -133,7 +133,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
         const S0 = F.fbClone(truth); S0.ev.push({ k: 'chg', f: OFF + 13 }, { k: 'chg', f: OFF + 16 }); S0.ev.sort((a, b) => a.f - b.f);
         const S1 = F.fbClone(S0); S1.l = 1; S0.w = 0.75; S1.w = 0.25; S0.lw = S1.lw = 1; S0.from = S1.from = S0.f;
         T.setStep(lever); X.on = true; X.states = [S0, S1]; X.taps = []; X.vis = []; X.visFrom = null; X.bg = 0; X.bgFrom = 0; X.rate = rate; X.gone = false; X.allOutLogged = false;
-        X.t0 = performance.now() - (OFF + 220) * rate; X.lastT = null; T.st.plan = null;
+        X.t0 = performance.now() - (OFF + 220) * rate; X.lastT = null; T.st.plan = null; X.M = { 2: OFF };   // (v92: T2's Charge seen)
         const n0 = T.SLOG.length; F.plan(); const P = T.st.plan; if (!P) { out.runs.push({ none: true, msg: T.st.msg }); continue; }
         const pNow = [];
         while (performance.now() < P.tPress - 50) { await new Promise(r => setTimeout(r, 250)); F.tick(performance.now()); if (P.mix.pNow != null) pNow.push(P.mix.pNow); }
@@ -143,7 +143,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
       }
       function cancelBeepsSafe() { try { T.st.plan = null; } catch (e) {} }
       // a carry with every state ruled out: dropped, plain message, the next Charge locks afresh
-      T.setStep(lever); X.on = true; X.t0 = performance.now() - 2000 * rate; X.states = []; X.gone = true; T.st.plan = null; F.plan();
+      T.setStep(lever); X.on = true; X.t0 = performance.now() - 2000 * rate; X.states = []; X.gone = true; X.M = { 2: 0 }; T.st.plan = null; F.plan();
       out.gone = { msg: T.st.msg || '', on: X.on, t0: X.t0 };
       return out;
     }, { L: fx[0], presses: [-2.34, -2.98, -1.77, -1.31, -0.81, 1.94, 0.40, -1.07] });

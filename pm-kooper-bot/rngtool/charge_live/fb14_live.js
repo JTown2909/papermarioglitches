@@ -179,7 +179,7 @@ function fb14Lock(res) {
   FB14.t0 = trigT - (M + 16) * fbRate();            // the burst fixes the clock again (drift)
   const seen = new Set(); const hadCarry = !first && FB14.states.length > 0;
   // the menu's coin before the Charge: back to 1 s after the bar came up for that menu (at most 15 s)
-  const menuF = FB14.menuT != null ? Math.min(M, Math.max(M - 450, Math.ceil(fbPic(FB14.menuT) + 30))) : M;
+  let menuF = FB14.menuT != null ? Math.min(M, Math.max(M - 450, Math.ceil(fbPic(FB14.menuT) + 30))) : M;
   const back0 = (x0, F0, q, c, pa) => { const r = fbBackShines(x0, F0, q, c, pa, menuF); return { ok: r.ok, sh: r.sh.sort((a, b) => a - b), from: Math.min(menuF, F0) }; };
   // v87: the fresh fits are built only when no carried state drew these rays (about 1 s on the page's thread)
   const buildFresh = () => {
@@ -279,7 +279,13 @@ function fb14Lock(res) {
   // weights all equal an even sample would lose the true one (T2 render: 1605 fits x their lightning phases x 2 lags)
   if (window.__fb14dbg) { const T = window.__fb14truth; window.__fb14dbg.push({ pre: true, turn, M, n: keep.length, truth: T ? keep.filter(S => S.s === T.s && (T.nc == null || S.nc === T.nc)).map(S => ({ c: Array.from(S.c).join(''), ph: S.ph, l: S.l, w: S.w, sh: S.sh })) : null }); }
   FB14.states = keep; let n0 = keep.length;
-  if (how === 'fresh' && keep.length > 1) { const Wg = fb14Weigh(M + 61); if (Wg.list.length) keep = Wg.list; }
+  if (how === 'fresh' && keep.length > 1) { let Wg = fb14Weigh(M + 61);
+    // v92 (e2e 5eed0fb2 T2 after T1's hit: the bar stayed up through Bowser's attack and the Life Shroom, 18 s; the
+    // menu's coin window took in the revive's shines, which no menu draw explains, and every fit died: no T2 plan): when
+    // the menu's coin leaves no fit, the fits are built again without it (the coin after the Charge still weighs them)
+    if (!Wg.list.length && menuF < M) { slog('fb14MenuCoinDropped', { turn, M, menuF, fits: keep.length }); menuF = M; seen.clear(); FB14.gone = false; FB14.allOutLogged = false;
+      keep = buildFresh(); const sum2 = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum2; S.lw = 1; S.err = 0; }); FB14.states = keep; n0 = keep.length; Wg = fb14Weigh(M + 61); }
+    if (Wg.list.length) keep = Wg.list; }
   keep.sort((x, y) => y.w * y.lw - x.w * x.lw);
   if (keep.length > FB14_MAXH) { const top = keep[0].w * keep[0].lw, eq = keep.filter(S => S.w * S.lw >= top * 0.999);
     keep = eq.length >= FB14_MAXH ? eq.filter((S, i) => i % Math.ceil(eq.length / FB14_MAXH) === 0) : keep.slice(0, FB14_MAXH); }
@@ -482,7 +488,8 @@ function fb14Frame(t, present) {
   // v91 (logs B, E, F: a stream / carried lock, then no plan and no "No edge" for 3-25 s: an earlier attempt's or turn's
   // hit kept every plan at "hit" without a word): a lock with no decision 0.5 s after the partner's menu can be up
   { const D = FB14.decide, s = fb14Step(); if (D && s && s.fb14role === 'lever' && !V.wasOn && performance.now() - D.t > 500 && !(FB14.pT && FB14.pT[s.fb14] != null)) {
-    const M = FB14.M[s.fb14]; if (M == null || fbPic(performance.now()) >= M + 90) { slog('fb14NoDecision', { turn: s.fb14, lockTurn: D.turn, on: FB14.on, hit: FB14.hit, plan: !!st.plan, doubt: +(FB14.doubt || 0).toFixed(3) }); FB14.decide = null; fb14Plan(); } } }
+    const M = FB14.M[s.fb14]; if (M == null && s.chg) { FB14.decide = null; fb14Plan(); }     // v92: this turn's Charge not seen yet: the plan waits for it (fb14WaitCharge), a decision
+    else if (M == null || fbPic(performance.now()) >= M + 90) { slog('fb14NoDecision', { turn: s.fb14, lockTurn: D.turn, on: FB14.on, hit: FB14.hit, plan: !!st.plan, doubt: +(FB14.doubt || 0).toFixed(3) }); FB14.decide = null; fb14Plan(); } } }
 }
 /* v82 (logs 1794169517521 and 1794170840652, clips 15-24-14 / 15-46-32): Bowser's fire hit Mario after the lever (T2 of
  * the first, T1 of the second), HP 10 -> 0 and the Life Shroom. Neither the hit nor the revive is modelled, and the revive
@@ -626,6 +633,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (cAt == null && FB14.pT && FB14.pT[turn] != null) { if (FB14.afterConf !== turn) { FB14.afterConf = turn; slog('fb14PlanAfterConfirm', { turn }); } cancelBeeps(); return true; }
   if (!FB14.on && cAt == null && (['capture', 'maps', 'search'].includes(CHG.state) || FB14.refining)) { st.msg = 'WAIT, searching… The Charge rays are being read (about 3-5 s after the Charge; console Cloud Nine confirms came 4 s after it). Wait on ' + (turn === 1 ? 'Cloud Nine\'s target (hand on Mario)' : 'Lakilester\'s Do Nothing') + ': the beeps, or "No edge", come as soon as the seed is read.'; FB14.plan = { none: 'reading', turn }; fb14Show(); render(); return true; }
   if (!FB14.on) { st.msg = 'No Final Bowser lock: ' + fb14BlindText(turn) + '.'; FB14.plan = { none: 'no lock', turn }; fb14Show(); if (cAt == null) render(); return true; }
+  // v92 (e2e 5eed0fb2: T2's Do Nothing beeped during Bowser's T1 attack, 25 s before T2's Charge, at 95%): a lever turn
+  // with a Charge is planned only once that Charge was seen (its frame is in the states); before it the beeps could only be wrong
+  if (stp.chg && FB14.M[turn] == null && cAt == null) { if (FB14.waitChg !== turn) { FB14.waitChg = turn; slog('fb14WaitCharge', { turn }); } st.msg = 'T' + turn + ': waiting for this turn\'s Super Charge (its rays are read, then the beeps or "No edge").'; FB14.plan = { none: 'charge', turn }; cancelBeeps(); fb14Show(); render(); return true; }
   if (FB14.pendChg && cAt == null) { st.msg = 'WAIT, searching… this turn\'s Charge rays are being read. Wait on ' + (turn === 1 ? 'Cloud Nine\'s target (hand on Mario)' : 'Lakilester\'s Do Nothing') + '.'; FB14.plan = { none: 'reading', turn }; fb14Show(); render(); return true; }
   const now = performance.now(), h = cAt != null ? cAt : fb14Horizon(now); fb14Advance(h);
   const Wg = (window.__fb14WeighTest || fb14Weigh)(h); FB14.doubt = Wg.doubt;     // (__fb14WeighTest: tests only, v91 hysteresis)
@@ -906,6 +916,11 @@ async function fb14Refine1(res, G) {
       w.postMessage({ type: 'init', mod: chgSearch.mod, S: maps.S, C: maps.C, N: CHG_N, ND: CHG_ND, K: 16, pat: fb2Patterns().bytes });
     });
     const t0 = performance.now(), sc = { 0: top.sc }, alt = {};
+    // v92 (e2e 5eed0fb2 T2 on the stream: trigger -> plan 9 s, 2.8 s of it this re-read): a stream lock chose its placement
+    // in the window's own search (as placed, then one frame early: no console read was late), so it is not re-read here
+    if (res.stream) { slog('fb14Placement', { kept: res.stream.shift || 0, skipped: 'stream' }); res.placeScores = sc; const maps = chgMaps(G, CHG.cen, CHG_N); let out = res;
+      if (out.fb1 && out.fb1.hyps && out.fb1.hyps.light) { const r = await one(maps, [{ type: 'fb1h', s0: top.seed, tol: FB14_NTOL, max: 20000 }]); out = Object.assign({}, out, { fb1: Object.assign({}, out.fb1, { hyps: r[0] }) }); }
+      out.maps0 = maps; out.joint = await fb14Joint(out, maps, one).catch(e => { slog('fb14JointError', { msg: String(e && e.message || e) }); return null; }); return out; }
     for (const d of [-1, 1]) { const M = chgMaps(shifted(d), CHG.cen, CHG_N); alt[d] = M; const r = await one(M, [{ type: 'fb1', seeds: [top.seed], v: null }]); sc[d] = r[0].out[0].sc; }
     let best = 0; for (const d of [-1, 1]) if (sc[d] > sc[best] * 1.03) best = d;
     slog('fb14Placement', { scores: { '-1': Math.round(sc[-1]), 0: Math.round(sc[0]), '+1': Math.round(sc[1]) }, kept: best, ms: Math.round(performance.now() - t0) });
