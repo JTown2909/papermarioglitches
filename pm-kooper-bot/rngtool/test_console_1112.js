@@ -11,7 +11,7 @@
  * usage: node test_console_1112.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v99/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1112.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
 const fwd = s => (Math.imul(s, 0x5D588B65) + 1) >>> 0;
@@ -31,7 +31,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(F => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v90', JSON.stringify(F)); } catch (e) {} }, FIX.leverStoreV90);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v98', 'page version v98');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v99', 'page version v99');
   // ---- 2. the learned correction
   const r2 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, out = { old: T.leverBias('fb14'), n0: T.leverList('fb14').length };
     for (let i = 0; i < 8; i++) T.leverAdd('fb14', -3.6); out.after = T.leverBias('fb14'); out.n = T.leverList('fb14').length; X.reset(); X.FB14.t0 = 1000; X.FB14.rate = 33.367; out.pt = X.pressT(900);

@@ -1,0 +1,103 @@
+{
+ "note": "v99: numbers only from console logs (no picture). 441170cf: page v98, T6 of the newest attempt.",
+ "441170cf_t6": {
+  "settings": {
+   "zwedge": "0.4",
+   "zwwin": "1",
+   "vlag": "50",
+   "off": "-5",
+   "beeps": "3",
+   "gapms": "500",
+   "lead": "1.5"
+  },
+  "events": [
+   {
+    "t": 168497,
+    "ev": "barHide",
+    "at": 168487,
+    "upMs": 9350
+   },
+   {
+    "t": 168971,
+    "ev": "chargeTrigger",
+    "base": 81.3,
+    "m": 91.3
+   },
+   {
+    "t": 170752,
+    "ev": "fb14T6Cands",
+    "M6": 2752,
+    "groups": 1,
+    "cands": 882
+   },
+   {
+    "t": 171035,
+    "ev": "fb2Seen",
+    "k": 76,
+    "how": "popup"
+   },
+   {
+    "t": 171177,
+    "ev": "chargeNarrow",
+    "cands": 882,
+    "ms": 430,
+    "locked": true,
+    "shift": 0
+   },
+   {
+    "t": 171180,
+    "ev": "fb2Lock",
+    "pairs": 3,
+    "hyps": 9,
+    "states": 3,
+    "kSeen": 76
+   },
+   {
+    "t": 171202,
+    "ev": "fb2PlanP",
+    "k": 132,
+    "p": 0.5856481481481486,
+    "pp": 0.6018518518518525,
+    "win": 1,
+    "blind": 0.3,
+    "kFirst": 130,
+    "W": 30,
+    "bias": -0.51,
+    "lever": "nothing",
+    "ms": 21,
+    "states": 27,
+    "tPress": 172540.50202477098
+   },
+   {
+    "t": 171225,
+    "ev": "beepsCancelled",
+    "n": 3
+   },
+   {
+    "t": 224319,
+    "ev": "fb2Confirm",
+    "c": 1673.15,
+    "planned": 132,
+    "err": 1541.15
+   },
+   {
+    "t": 224320,
+    "ev": "fb2StepByConfirm",
+    "from": 14,
+    "to": 15
+   },
+   {
+    "t": 224359,
+    "ev": "fb2P",
+    "c": 1673.15,
+    "pLucky": 0.133,
+    "atk": {
+     "claw": 0.31898148148148076,
+     "fire": 0.34990740740740656,
+     "slam": 0.33111111111111036
+    },
+    "planned": 132
+   }
+  ]
+ }
+}

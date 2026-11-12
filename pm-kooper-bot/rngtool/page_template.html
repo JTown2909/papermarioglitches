@@ -1465,6 +1465,7 @@ const FB2_WAIT_LOCKED = 'WAIT on the Strategies screen: T6 is locked and the Do 
 function fb2WaitArm() { const s = isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_k' || (typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null)) return; st.msg = FB2_WAIT; slog('fb2WaitShown', { step: routeStep }); render(); }
 function makePlan() {
   if (typeof fb14Plan === 'function' && fb14Plan()) return;     // Final Bowser T1-T4 (fb14_live.js)
+  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k' && FB2.on && FB2.pObs == null && FB2.plan && FB2.plan.lost && !st.plan) { slog('fb2Replan', { why: 'plan lost', from: FB2.plan.k }); fb2PlanP(); if (!st.plan && !(FB2.plan && FB2.plan.none) && !st.msg) { st.msg = 'No edge: the T6 Do Nothing plan was lost and no new one fits. Do Nothing whenever you like (Close Call about 30%).'; render(); } return; }     // v99: a T6 plan cancelled from outside is made again (beeps or an explicit No edge)
   if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (!(FB2.plan && FB2.plan.k != null)) st.msg = FB2.on ? (FB2.plan && FB2.plan.none ? 'No edge: ' + FB2.plan.none + '. Do Nothing whenever you like (Close Call about 30%).' : FB2_WAIT_LOCKED) : FB2_WAIT; render(); return; }     // v93: T6's own step (v97: the Do Nothing lever)
   if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (FB2.t7) fb2PlanT7(); else { st.msg = FB2.plan && FB2.pObs == null ? 'FB2: waiting for the T6 Do Nothing confirm (the page reads its frame from the Strategies box closing).' : 'No edge: no FB2 states to plan with. Press Power Bounce normally.'; render(); } return; }
   if (st.hwDone && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'Time Out is done for this attempt. The route stays on the Hallway until the next Charge (a retry) or Final Bowser\'s arena.'; render(); return; }
@@ -1651,6 +1652,18 @@ function maybeSwitchPlan() {
 }
 setInterval(maybeSwitchPlan, 250);
 function cancelPlan() { cancelBeeps(); st.plan = null; render(); }
+/* the step's screen gone for over 1 s with a plan whose press is still ahead: the plan is off (the runner left the screen).
+ * v82: an early plan (made before its screen showed) stays until the screen has been seen and gone. v99 (log 441170cf T6,
+ * 171.20 s: fb2PlanP's beeps cancelled 0.02 s after the plan, silently): the T6 plan is made on the Charge's lock, before
+ * Lakilester's Strategies screen opens (the popup closes on k 76, the menu on k 93), and was not marked early, so the
+ * screen "lost" since the Charge cancelled it on the next picture. Logged now (planScreenLost). */
+function planScreenLost(t, now) {
+  now = now != null ? now : performance.now(); const P = st.plan;
+  if (!P || !(t - V.lostSince > 1000) || !(P.tPress > now) || (P.early && !((V.onAt || 0) > P.tMade))) return false;
+  slog('planScreenLost', { prof: P.prof || null, target: P.target, lostMs: Math.round(t - V.lostSince), seenSince: (V.onAt || 0) > P.tMade });
+  if (P.prof === 'fb2' && typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null) FB2.plan.lost = true;
+  cancelPlan(); return true;
+}
 function reset() { stopWorkers(); cancelBeeps(); zw.on = false; chgReset(); Object.assign(WALK, { start: null, vis: 0, lastT: null, last: null }); Object.assign(st, { segs: [{ taps: [] }], chain: [], carry: null, carry0: null, wtorch: null, wtry: null, rcarry: null, wcarry: null, wbase: null, wcarryPending: null, turnEv: [], hyp: null, carryOk: 0, inputs: [], needResync: false, cands: null, lock: null, prevLock: null, searching: false, clock: null, plan: null, msg: null, note: null, example: true }); render(); }
 $('shine').addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
 $('dl-log').onclick = downloadLog; $('find').onclick = find; $('gap').onclick = newSegment; $('plan').onclick = makePlan; $('undo').onclick = undo; $('reset').onclick = () => { reset(); if (typeof arenaReset === 'function') arenaReset(); };
@@ -1668,7 +1681,7 @@ function setText(h, d) { $('headline').textContent = h; $('detail').textContent 
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v98';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v99';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2046,7 +2059,7 @@ function onFrame(t) {
     V.onFor = on ? (V.onFor || 0) + (t - (V.lastT || t)) : 0; V.lastT = t;
     V.wasOn = on;
     if (on) { V.onAt = t; V.lostSince = 0; if (!V.matchSince) V.matchSince = t; if (t - V.matchSince > 300) autoPlan(); }
-    else { V.matchSince = 0; if (!V.lostSince) V.lostSince = t; if (t - V.lostSince > 1000 && st.plan && st.plan.tPress > performance.now() && !(st.plan.early && !((V.onAt || 0) > st.plan.tMade))) cancelPlan(); }   // v82: an early plan (made before its screen showed) stays until the screen has been seen and gone
+    else { V.matchSince = 0; if (!V.lostSince) V.lostSince = t; planScreenLost(t); }
   }
   // readouts and preview (throttled)
   if (V.frames % 10 === 0 && st.lock && !st.plan && !st.searching) render();   // keep the 'no beeps yet' match % current
@@ -2435,6 +2448,7 @@ const pressMaybeIn = P => !!(P && V.hudGone && V.hudGone > (P.tMade || 0) && V.h
 function autoPlan() {
   if (typeof fb14Step === 'function' && fb14Step() && fb14Step().fb14role === 'lever') { if (st.plan && performance.now() < st.plan.tPress + 600) return; if (st.planTry && performance.now() - st.planTry < 500) return; st.planTry = performance.now(); makePlan(); return; }
   if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (st.plan && performance.now() < st.plan.tPress + 600) return; makePlan(); return; }
+  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (st.plan && performance.now() < st.plan.tPress + 600) return; if (st.planTry && performance.now() - st.planTry < 500) return; st.planTry = performance.now(); makePlan(); return; }     // v99: T6 on its screen: the plan, a lost plan made again, or the No edge / WAIT text
   // a seed search from shines (the turn-2 menu's coin can start a chain search) must not hold up the zero-wait plan: it
   // needs no search (live log 1793757328924, last attempt: the search started on the 2nd shine of the turn-2 menu and the
   // target screen stood 8 s without beeps)
@@ -2462,7 +2476,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, makePlan: () => makePlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },
