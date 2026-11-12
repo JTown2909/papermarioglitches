@@ -1,3 +1,75 @@
+# Time Out Timer v93: the Final Bowser Do Nothing reading on console, the T4 carry, T6's own step (Nov 12)
+
+Console logs of 2026-11-12 (page v92): 00700c7e (attempt 1, clip 04-35-03, page = clip + 57.013 s) and a87486a0 (holds it, then
+attempt 2 with T6; clip 04-38-17, page = clip + 250.296 s), synced by every HUD bar showing. No picture is committed
+(`fixtures/console_1112.json` holds numbers only). The emulator was not run for this version (see "Not done").
+
+## What happened
+| attempt / turn | plan | read (err) | outcome |
+|---|---|---|---|
+| 1 T1 Cloud Nine | 345, 1 frame, pp 0.805, doubt 0.29 | 343.55 (-1.45), bar | hit |
+| 1 T2 Do Nothing | 206, 1 frame, pp 0.90 (stream lock 2.5) | 202.46 (-3.54) | **missed** |
+| 1 T3 Do Nothing | 632, 1 frame, pp 0.96 (carried) | 628.24 (-3.76) | **missed** |
+| 1 T4 | none: carried check 16 of 1388, all 16 ruled out by the coin (`fb14AllOut` h 930), `fb14CarryGone` | - | runner confirmed blind |
+| 2 T1 Cloud Nine | 207-208, pp 0.77, doubt 0.05 (stream lock 2.27) | 208.94 (+0.94), bar: outside the window | hit |
+| 2 T2 Do Nothing | 200, 1 frame, pp 0.95 (stream lock 2.6) | 198.97 (-1.03) | hit |
+| 2 T4 Do Nothing | 197-198, pp 0.92 (stream lock 3.04) | 195.98 (-1.02) | the wave came, Mario guarded ("Nice"), HP 10/10: missed |
+| 2 T6 | the T6 Charge locked on the carried candidates (1768, ratio 4.15) 2.17 s after the trigger | popup closed on k 75, 0.14 s **before** the lock | no popup beep |
+
+- **The locks are true.** 755a3f96 (1 T1, fresh 2.46) -> cf2a8425 (1 T2) 2747 steps -> b3d77d29 (1 T4, narrowed) 1772 ->
+  8c117f00 (2 T1) 12807; every later lock of attempt 2 on the stream. So **T1's hit (attempt 1) was not a wrong seed**: an 80%
+  plan on a one-frame window, the press read 1.45 early (and see below: the console reading is not in step with the model).
+- **The Do Nothing readings.** The clip: the A on the input display -> the Strategies panel faint 7, grey 9, gone 11 vblanks
+  later on both T2 and T3 (Jr. Troopa's clips: the same 7 / 9 / 11), and the page closes the panel on the grey picture as in
+  Jr. Troopa, where STRAT_VAN 2.2 fits the outcomes. Cloud Nine's bar hides 11 vblanks after its A. In the emulator (v87 e2e
+  9e3779b9) the page read the harness's confirms 0.03 / 0.25 / 0.2 frame late. So the panel reading itself is the same as
+  Jr. Troopa's; what is off is the reading against the frames the model planned (the console Charge clock, or the model).
+  The offsets x (true = reading + x) each outcome allows on the plans' windows: 1 T2 3.04..4.03, 1 T3 3.26..4.25, 2 T2 not
+  0.53..1.53, 2 T4 0.52..2.51. **No constant x fits all four** (attempt 1 says ~3.6, attempt 2 says 0.5-2.5), so the offset is
+  not pinned and v93 does not move the reading or the beeps. The runner's errors against the beeps (-3.5, -3.8, -1.0, -1.0) do
+  not tell which side is off either (on Jr. Troopa he is -0.6). Also the T6 popup was seen on k 75 where the emulator's
+  earliest is 77: the console Charge clocks may run ~2 frames late, the same sign as attempt 1's x.
+- **The learned lever correction was live:** the runner's browser held the four presses -3.54, -3.76, -1.03, -1.02 (v90 store),
+  n = 4, so from 2 T4's press on the beeps came **1.17 frames later**, away from the presses that won.
+- **T4 (attempt 1): why the carry died (most likely; not replayed).** The T2 and T3 Do Nothings went into the states on -2..+2 of the readings; the frames
+  the outcomes need (+3..+4) were not there, so the true state carried only the 1% "missed while the model says hit" weight
+  twice and was cut by the cap (12000). The T4 rays then matched 16 wrong states, the coin ruled them all out at once, and
+  `fb14CarryGone` ended it with no fresh lock: the narrowed read had locked (the T4 seed is on the T2 lock's stream, 1772 steps).
+- **Attempt 2 T1's second plan** (target 273 at 259.67 s): the plan's beeps had played; the page's plan loop asked again 0.34 s
+  after the bar hid on Cloud Nine's confirm and 0.03 s before that hide was taken as the confirm.
+- **T6: no beep.** v92's route went from T4's Do Nothing to the T7 Power Bounce step, whose pre held the T6 Charge; nothing
+  told the runner to hold the +3 popup, and he closed it at once (k 75). The read itself worked (the carried T6 candidates).
+
+## Fixes
+1. **No learned Final Bowser correction** (`page_template.html` `LEVER_LEARN`): the presses are kept in a new store
+   (`tot-fb14press-v93`; the v90 store with its +1.17 is not read) and the correction is 0 until the readings are verified
+   against outcomes. The beeps are on v85's frame again.
+2. **The Do Nothing confirm goes into the carried states on -2 .. +5** of the reading (`FB14_SHIFTS_S`, weights peaking at
+   +3 / +4; Cloud Nine and the Charges as before), so the true state stays in the carry whichever offset holds; the coin and
+   the outcome (`fb14Missed`) pick it.
+3. **A carry the coin already rules out is no carry** (`fb14CarryWeak`): the lock goes on as a fresh one on the same rays (the
+   narrowed read's refine fetches the whole fit list on the last lock's stream; the menu coin dropped if no fit survives it,
+   v92), with the turn's inputs replayed. T4 always ends in a plan or a logged "No edge" (the v91 watchdog).
+4. **No plan while the bar is gone on a lever step** (`fb14PlanHeld`, 1.2 s): a confirm being read.
+5. **T6 has its own route step** (`turn: 'fb2_k'`, the T6 Charge as its pre, read with the fb2 profile): after T4's Do Nothing
+   the route is on "Super Charge, then HOLD its +3 popup: close it on the beep"; the popup closing moves it to T7's Power Bounce
+   (`fb2StepByPopup`). The new-attempt and arena rules take the T6 step like the T7 one.
+
+## Tests
+New `test_console_1112.js` (in `run_suite.sh`): the outcome table (no constant offset; every outcome inside -2..+5; v92's
+-2..+2 left out attempt 1's wins), the streams, the v90 store not read and new presses moving nothing, the 8 Do Nothing shifts
+(Cloud Nine still 5), the plan held after the hide, T6's step (order, fb2 profile, the hold message, the popup -> T7).
+Changed: `test_press_lever.js` 3 and `test_fb14_v86.js` 5 (the Final Bowser lever learns nothing), version checks to v93.
+
+## Not done
+- **The offset is not pinned.** It needs the model's per-frame shares around each press (replaying the T2 / T3 / T4 locks
+  into states) and an emulator run that reads a console-like capture (fb14_e2e.py with the runner pressing off the planned
+  frame by known amounts). Until then the beeps are where v92 put them without the learned correction.
+- The FB2 read fixes asked for (v88 / v89's vblank placement, centre, +-1 whole-shift re-reads and the stream prior on the fb2
+  profile) are not made: the T6 read of a87486a0 locked on the carried candidates (ratio 4.15); the noise reads of a53781d5 /
+  4bc65351 were not replayed. The stream window after the T4 lock would need ~10000+ steps for T5 alone (FB14_T5).
+- The T6 -> T7 flow was not run end to end in the emulator; whether the lock comes early enough for a beep inside the popup
+  window (k 77-136) when the runner holds the popup is untested on console (a87486a0: lock at about k 83).
 # Time Out Timer v92: Final Bowser end to end with the runner's timing, retries, the carried read made fast (Nov 11)
 
 The page tested end to end in the emulator (JP, Ultra Final Bowser phase 2 T1-T4, Mario at 10 HP with the Jelly and a Life
