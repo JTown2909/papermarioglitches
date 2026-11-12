@@ -11,6 +11,8 @@
  * frames later (Body Slam / Claw / Fire Breath); then the T7 menu, and the Power Bounce rolls from the target-screen A
  * (d): stars d + 45 + 27k, rolls d + 71 + 27k (powerbounce/fb2model.py, first hit 15). Same-frame order: bolts, script
  * draws, coin, step.
+ * v97: on the runner's route (T4's wave blocked) Lakilester is up on T6 and his Do Nothing is the lever (fb2PlanP /
+ * fb2Confirm / fb2SetP below; Bowser's AI on P + 13); the popup plan (fb2PlanK / fb2SetK) is kept for tests only.
  * 1. Lock -> plan K: the frame in the rest of the popup window that is best over the kept states (press 25/50/25 over
  *    -1/0/+1), with the T7 bounce windows as tie-breaker; 3 beeps 0.3 s apart, the last on the press.
  * 2. The popup closing (first picture without it = K + 2; the status bar comes back on K + 5) gives the K that happened.
@@ -22,7 +24,7 @@ const FB2_DELTA = { slam: 52, claw: 62, fire: 55 }, FB2_MENU = { slam: 101, claw
 const FB2_LAGS = [[0, 0.75], [1, 0.25]], FB2_BEEPS = 3, FB2_GAP = 300, FB2_DMG0 = 15, FB2_HP = 80, FB2_MAXH = 4000;
 const FB2_TH = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 60 / 100); t.push(c); } return t; })();
 var FB2 = { on: false };      // var: charge_live.js calls fb2Reset (via chgReset) before this file has run
-function fb2Reset() { if (!FB2) return; Object.assign(FB2, { rate: typeof chgRate === 'function' && typeof consoleRate === 'function' ? chgRate() : null, on: false, hyps: null, plan: null, kObs: null, kSeen: null, kHow: null, t7: null, popup: null, why: null, taps: [], vis: [], visFrom: null }); fb2Show(); }
+function fb2Reset() { if (!FB2) return; Object.assign(FB2, { rate: typeof chgRate === 'function' && typeof consoleRate === 'function' ? chgRate() : null, on: false, hyps: null, plan: null, plans: [], pObs: null, kObs: null, kSeen: null, kHow: null, t7: null, popup: null, why: null, taps: [], vis: [], visFrom: null }); fb2Show(); }
 const fb2nb = (f, p1, p2) => (FB2_P130.includes((f + p1) % 130) ? 1 : 0) + (FB2_P220.includes((f + p2) % 220) ? 1 : 0);
 /* the window patterns (bolt counts on rays frames 0..47 = confirm + 13..60) and the phase pairs behind each */
 function fb2Patterns() {
@@ -43,19 +45,25 @@ function fb2Frame1(S, f, ph) {      // the idle draws of frame f: bolts, coin, s
 }
 function fb2Idle(S, f0, f1, ph) { for (let f = f0; f < f1; f++) fb2Frame1(S, f, ph); }
 /* Bowser's T6 turn from state S at the start of frame E = K + 40: { lucky, atk, T, menu, S (start of frame T + 1) } */
-function fb2AI(S0, E, ph, slamOk, clawOk) {
+/* v97 (fb2_route/t6dn_log.py, the runner's T6 "Charge; Do Nothing - Close Call": T4's wave blocked, so Lakilester is not
+ * KO'd): Lakilester's Do Nothing confirm on frame P is the lever, Bowser's AI on E = P + 13 (as on T2-T4), the Close Call
+ * test FB2_DNDELTA after it, the T7 menu FB2_DNMENU after the test. The popup A draws nothing and moves no draw once P is
+ * fixed (the same seed at P for K = 77 / 100 / 130 / none). */
+const FB2_DNAI = 13, FB2_PMIN = 130, FB2_DNDELTA = { slam: 52, claw: 55, fire: 55 }, FB2_DNMENU = { slam: 101, claw: 134, fire: 134 };
+function fb2AI(S0, E, ph, slamOk, clawOk, dn) {
+  const DL = dn ? FB2_DNDELTA : FB2_DELTA, MN = dn ? FB2_DNMENU : FB2_MENU;
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null };
   for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
   S.s = R.randInt(S.s, 100)[0]; let r = R.randInt(S.s, 80); S.s = r[0]; let atk;
   if (r[1] < 20 && slamOk) atk = 'slam'; else { r = R.randInt(S.s, 60); S.s = r[0]; atk = r[1] < 20 && clawOk ? 'claw' : 'fire'; }
   if (E === S.nc) { const c = R.randInt(S.s, 100); S.s = c[0]; S.nc += c[1] >= 70 ? 48 : 24; if (S.coins) S.coins.push([E, c[1] >= 70]); }
   S.s = R.adv(S.s);
-  const T = E + FB2_DELTA[atk]; fb2Idle(S, E + 1, T, ph);
+  const T = E + DL[atk]; fb2Idle(S, E + 1, T, ph);
   for (let i = fb2nb(T, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
   const cc = R.randInt(S.s, 100); S.s = cc[0];
   if (T === S.nc) { const c = R.randInt(S.s, 100); S.s = c[0]; S.nc += c[1] >= 70 ? 48 : 24; if (S.coins) S.coins.push([T, c[1] >= 70]); }
   S.s = R.adv(S.s);
-  return { lucky: cc[1] < 30, cc: cc[1], atk, T, menu: T + FB2_MENU[atk], S };
+  return { lucky: cc[1] < 30, cc: cc[1], atk, T, menu: T + MN[atk], S };
 }
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
  * 7th ends the fight at 80 HP: 15 + 14 + ... + 9 = 84) */
@@ -100,9 +108,65 @@ function fb2Lock(res) {
   const wsum = H.length; H.forEach(h => { h.w = 1 / wsum; });
   const Hk = H.length > FB2_MAXH ? H.filter((h, i) => i % Math.ceil(H.length / FB2_MAXH) === 0) : H;   // too many: an even sample
   Hk.forEach(h => { h.w = 1 / Hk.length; });
-  Object.assign(FB2, { on: true, hyps: Hk, pairs: hy.pairs.length, best: hy.best, kObs: null, plan: null, t7: null, taps: [], vis: [], visFrom: null, tLock: performance.now() });
+  Object.assign(FB2, { on: true, hyps: Hk, pairs: hy.pairs.length, best: hy.best, kObs: null, plan: null, plans: [], t7: null, taps: [], vis: [], visFrom: null, tLock: performance.now() });
   slog('fb2Lock', { pairs: hy.pairs.length, hyps: H.length, states: new Set(H.map(h => h.s + ':' + h.nc)).size, kSeen: FB2.kSeen });
-  if (FB2.kSeen != null) { FB2.plan = { none: 'the lock came after the popup closed' }; if (FB2.kSeen >= 0) fb2SetK(FB2.kSeen, FB2.kHow, FB2.kFrom); } else fb2PlanK();
+  // v97: the lever is Lakilester's Do Nothing (the popup A plays no part): a confirm seen before the lock is applied now
+  if (FB2.pObs != null) { FB2.plan = { none: 'the lock came after the Do Nothing confirm' }; fb2SetP(FB2.pObs); } else fb2PlanP();
+}
+/* ---- v97: the T6 lever, Lakilester's Do Nothing (fb2_route/t6dn_log.py) ----
+ * The press is read as T2-T4's Do Nothing (fb14_live.js): the Strategies box closing, FB14_VAN.S minus v94's +3.4
+ * (fb14Van('S')), the beeps moved by the learned per-lever correction (fb14Bias, the same store: the same lever and
+ * runner), the confirm carried on FB14_SHIFTS_S. Game frame = clock frame - console lag (FB2_LAGS), as the popup was. */
+const fb2Bias = () => (typeof fb14Bias === 'function' ? fb14Bias() : 0);
+const fb2DnPressT = k => fb2PressT(k) + fb2Bias() * fb2Rate();
+function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
+  const t0 = performance.now(), H = FB2.hyps, F = fb2Flags(), now = performance.now(), bias = fb2Bias();
+  const kFirst = kAt != null ? kAt : Math.max(FB2_PMIN, Math.ceil(fb2Pic(now + num('vlag')) + (FB2_BEEPS - 1) * FB2_GAP / fb2Rate() + 0.15 * 1000 / fb2Rate() + 2 + Math.max(0, -bias)));
+  const W = Math.max(10, Math.round(Math.max(1, num('zwwin')) * 1000 / fb2Rate())), P0 = kFirst - 4, P1 = kFirst + W + 4, rows = [];
+  for (const h of H) for (const [so, co, wf] of F) {
+    const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, P0 + FB2_DNAI, h.ph);
+    const L = new Uint8Array(P1 - P0 + 1);
+    for (let P = P0; P <= P1; P++) { const r = fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); L[P - P0] = r.lucky ? 1 : 0; fb2Frame1(S, P + FB2_DNAI, h.ph); }
+    rows.push({ h, w: h.w * wf, L });
+  }
+  const luck = (row, P) => row.L[Math.max(0, Math.min(P1 - P0, P - P0))];
+  const tot = rows.reduce((a, r) => a + r.w, 0);
+  const pcc = k => { let v = 0; for (const r of rows) for (const [l, wl] of FB2_LAGS) for (const [d, q] of PRESS_ERR) v += r.w * wl * q * luck(r, k + d - l); return v / tot; };
+  const ppk = k => { let v = 0; for (const r of rows) for (const [l, wl] of FB2_LAGS) v += r.w * wl * luck(r, k - l); return v / tot; };
+  const a = kFirst - 1, b = kFirst + W + 1, sh = []; for (let k = a; k <= b; k++) sh.push(k >= kFirst && k <= kFirst + W ? ppk(k) : 0);
+  const pk = ppPick(sh, null, a, b, kFirst, W, pcc, 'safe3');
+  let k = pk.target; if (k == null || !(k >= kFirst)) { k = kFirst; for (let x = kFirst; x <= kFirst + W; x++) if (pcc(x) > pcc(k)) k = x; }
+  const pl = { k, p: pcc(k), pp: ppk(k), win: pk.ok ? pk.run.length : 0, blind: 0.3, kFirst, W, bias: +bias.toFixed(2), lever: 'nothing', ms: Math.round(performance.now() - t0), states: rows.length };
+  pl.tPress = fb2DnPressT(k);
+  // the edge rule (zwedge), as every plan: a Close Call share under it is no plan (Do Nothing whenever you like)
+  if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no Do Nothing frame gives Close Call for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind: 0.3, kFirst, pp: pl.pp, p: pl.p, lever: 'nothing' }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; slog('fb2PlanP', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), kFirst }); fb2Show(); return nl; }
+  if (kAt != null) return pl;
+  cancelBeeps(); for (let i = 0; i < FB2_BEEPS; i++) beepAt(pl.tPress - (FB2_BEEPS - 1 - i) * FB2_GAP, i === FB2_BEEPS - 1 ? 1320 : 880, i === FB2_BEEPS - 1 ? 0.12 : 0.06);
+  FB2.plan = pl; FB2.plans = (FB2.plans || []).concat([Object.assign({ tMade: now }, pl)]); slog('fb2PlanP', pl);
+  st.msg = null; st.plan = { tMade: now, w: { start: k, end: k, length: 1 }, target: k, tPress: pl.tPress, tLast: CHG.trig.t, rate: fb2Rate(), carried: true, from: kFirst, to: kFirst + W, first: 0, prof: 'fb2', tab: [], tab4: null, mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
+  fb2Show(); if (typeof render === 'function') render(); return pl;
+}
+/* the Do Nothing confirm (the Strategies box closing on T6's step): its frame into the states, the press into the learned
+ * correction, the route on to T7 */
+function fb2Confirm(tObs) {
+  if (!CHG.trig) { slog('fb2ConfirmNoTrig', { at: Math.round(tObs) }); return; }
+  const c = fb2Pic(tObs) - (typeof fb14Van === 'function' ? fb14Van('S') : -1.4), P = FB2.plan && FB2.plan.k != null ? FB2.plan : null;
+  slog('fb2Confirm', { c: +c.toFixed(2), planned: P ? P.k : null, err: P ? +(c - P.k).toFixed(2) : null });
+  if (P && Math.abs(c - P.k) <= 5 && typeof fb14PressAdd === 'function') { const L = fb14PressAdd(c - P.k - (P.bias || 0)); slog('fb2PressBias', { n: L.length, bias: +fb2Bias().toFixed(2) }); }
+  FB2.pObs = c; cancelBeeps(); if (st.plan && st.plan.prof === 'fb2') st.plan = null;
+  if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex(x => x.turn === 'fb2_pb'); if (i >= 0) { slog('fb2StepByConfirm', { from: routeStep, to: i }); setStep(i); } }
+  if (FB2.on) fb2SetP(c);
+}
+function fb2SetP(c) {
+  const F = fb2Flags(), out = [], shifts = typeof FB14_SHIFTS_S !== 'undefined' ? FB14_SHIFTS_S : [[0, 1]], F0 = Math.round(c);
+  for (const h of FB2.hyps) for (const [l, wl] of FB2_LAGS) for (const [d, wd] of shifts) for (const [so, co, wf] of F) {
+    const P = F0 + d - l, S = { s: h.s, nc: h.nc, coins: [] }; fb2Idle(S, 61, P + FB2_DNAI, h.ph);
+    const a = fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l, P, a, w: h.w * wl * wd * wf });
+  }
+  const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + (o.a.lucky ? o.w : 0), 0) / tot;
+  const atk = {}; out.forEach(o => { atk[o.a.atk] = (atk[o.a.atk] || 0) + o.w / tot; });
+  FB2.t7 = { states: out.filter(o => o.a.lucky), pLucky: luck, atk };
+  slog('fb2P', { c: +c.toFixed(2), pLucky: +luck.toFixed(3), atk, planned: FB2.plan && FB2.plan.k }); fb2Show();
 }
 /* the K plan: lucky per hypothesis x flags for every logic K, then the best time frame k in the rest of the window */
 function fb2PlanK(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
@@ -168,9 +232,9 @@ function fb2Frame(t, present) {
   if (!present && FB2.visFrom != null) { FB2.vis.push([FB2.visFrom, fb2Pic(t) - 4]); FB2.visFrom = null; }
 }
 function fb2SeenK(k, how, k0) {
-  // v93: the popup closed on T6's own step: the route goes on to T7's Power Bounce
-  if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex(x => x.turn === 'fb2_pb'); if (i >= 0) { slog('fb2StepByPopup', { from: routeStep, to: i }); setStep(i); } }
-  FB2.kHow = how; FB2.kFrom = k0 != null ? k0 : k; slog('fb2Seen', { k, how }); if (k == null) { FB2.kSeen = -1; FB2.why = 'the popup and the bar were not seen: no K'; return; } FB2.kSeen = k; if (FB2.on) fb2SetK(k, how, FB2.kFrom); }
+  // v97: the popup A is no lever on the runner's route (Lakilester's Do Nothing is, fb2Confirm): its closing is logged and
+  // starts the coin watch only; the route stays on T6 until the Do Nothing confirm (v93-v96 moved it to T7 here)
+  FB2.kHow = how; FB2.kFrom = k0 != null ? k0 : k; slog('fb2Seen', { k, how }); if (k == null) { FB2.kSeen = -1; return; } FB2.kSeen = k; }
 function fb2Tap(t) { if (CHG.trig && FB2.kSeen != null && FB2.kSeen >= 0) FB2.taps.push(fb2Pic(t) - 4.8); }      // the flash shows ~4.8 frames after the draw
 function fb2SetK(k, how, k0) {      // the popup A on frame k (k0..k when pictures were dropped around the closing)
   FB2.kObs = k; FB2.kHow = how; const F = fb2Flags(), out = [], ks = []; for (let x = Math.min(k, k0 != null ? k0 : k); x <= k; x++) ks.push(x);
@@ -249,9 +313,9 @@ function fb2Show() {
   if (!FB2.on) { el.innerHTML = '<b>FB2 T6 → T7:</b> ' + (FB2.why ? FB2.why : 'waiting for the T6 Super Charge lock'); return; }
   const P = FB2.plan, T = FB2.t7, pc = x => Math.round(100 * x) + '%';
   el.innerHTML = '<b>FB2 T6 → T7</b> (' + FB2.hyps.length + ' RNG states after the rays)' +
-    '<br>Popup A: ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; a blind press is ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + '), Close Call and 7 bounces ' + pc(P.p7 || 0) + ' (no press: ' + pc(P.blind) + ')') +
-    (FB2.kObs != null ? '<br>Seen: popup A on +' + FB2.kObs + (FB2.kHow === 'bar' ? ' (from the bar)' : '') + '; Close Call ' + pc(T.pLucky) + '; Bowser ' + Object.entries(T.atk).map(([a, w]) => a + ' ' + pc(w)).join(', ') : '') +
+    '<br>Do Nothing (Lakilester): ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; blind about ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + ')') +
+    (FB2.pObs != null && T ? '<br>Seen: Do Nothing on +' + FB2.pObs.toFixed(1) + '; Close Call ' + pc(T.pLucky) + '; Bowser ' + Object.entries(T.atk).map(([a, w]) => a + ' ' + pc(w)).join(', ') : '') +
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
-window.__fb2 = { FB2, seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
+window.__fb2 = { FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests

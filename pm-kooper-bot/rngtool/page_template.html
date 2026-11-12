@@ -486,7 +486,7 @@ const ENDGAME = [
     // v93 (runner, log a87486a0: "there is no turn 6 close call trigger"): T6 has its own step. On v92 the route went from
     // T4's Do Nothing straight to the T7 Power Bounce step (its pre held the T6 Charge); nothing told the runner to hold the
     // "+3" popup, which he closed on k 75 at once, 0.14 s before the T6 lock: no popup beep could be made
-    { text: 'T6: Charge; Do Nothing - Close Call', steps: [{ label: 'Super Charge, then HOLD the +3 popup — WAIT for the beep: close it on the beep → Close Call (Close Call equipped; no beep by 4 s after the Charge: close it anyway)', cat: 'M', turn: 'fb2_k', pre: [{ cat: 'M', id: 'fb2_charge' }] }] },
+    { text: 'T6: Charge; Do Nothing - Close Call', steps: [{ label: 'Super Charge (its rays lock the seed; close its +3 popup whenever you like), then Lakilester: Do Nothing on the beep → Close Call', cat: 'S', turn: 'fb2_k', pre: [{ cat: 'M', id: 'fb2_charge' }] }] },
     { text: 'T7: Bounce x7', steps: [{ label: 'Power Bounce → 7 on the beep', cat: 'B', turn: 'fb2_pb' }] } ] } ];
 /* Jr. Troopa on the Charge-lock route (jr_charge/README.md, charge_live/jr_live.js; the route panel's default, Settings key
  * jrroute): Mario's T1 Super Charge locks the seed from its rays (profile jr) and the tracker carries it through every
@@ -1457,16 +1457,16 @@ function zwTick(now) {
 /*@include charge_live/jr_live.js*/
 /*@include charge_live/fb14_live.js*/
 /*@include charge_live/hwcc_live.js*/
-/* v96 (logs 906bfb29 and 0dfd444d: the +3 popup closed on k 77, its earliest frame, both times, 0.3 s before the T6 lock): the
- * HOLD is the headline from the moment the T6 step arms (after T4's Do Nothing, before the Charge), red and large, until the
- * popup beep is planned or the page says to close it */
-const FB2_HOLD = 'HOLD the +3 popup after the Charge: do NOT press A until the beep. The beep comes 3-4 s after the Charge (the rays are read first); no beep by 4 s: close it anyway. Close Call must be equipped (without it there is no dodge and no T7 plan).';
-const FB2_HOLD_LOCKED = 'HOLD the +3 popup: T6 is locked and the popup beep is being planned. Do NOT press A yet.';
-function fb2HoldArm() { const s = isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_k' || (typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null)) return; st.msg = FB2_HOLD; slog('fb2HoldShown', { step: routeStep }); render(); }
+/* v97 (the runner: "Charge; Do Nothing - Close Call"; he "didn't identify the right turn on 6"): the T6 lever is Lakilester's
+ * Do Nothing, not the +3 popup (v93-v96 told him to HOLD the popup). From the step arming the headline says to wait on the
+ * Strategies screen for the beep; the popup closes whenever (fb2_route/t6dn_log.py: it moves no draw) */
+const FB2_WAIT = 'WAIT on Lakilester\'s Strategies screen (Do Nothing) for the beep: the T6 Charge\'s rays are read first (3-4 s). Close the +3 popup whenever you like. No beep by 6 s: Do Nothing anyway (Close Call about 30%).';
+const FB2_WAIT_LOCKED = 'WAIT on the Strategies screen: T6 is locked and the Do Nothing beep is being planned.';
+function fb2WaitArm() { const s = isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_k' || (typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null)) return; st.msg = FB2_WAIT; slog('fb2WaitShown', { step: routeStep }); render(); }
 function makePlan() {
   if (typeof fb14Plan === 'function' && fb14Plan()) return;     // Final Bowser T1-T4 (fb14_live.js)
-  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (!(FB2.plan && FB2.plan.k != null)) st.msg = FB2.on ? (FB2.plan && FB2.plan.none ? 'No popup beep: ' + FB2.plan.none + '. Close the +3 popup now (Close Call about 30%).' : FB2_HOLD_LOCKED) : FB2_HOLD; render(); return; }     // v93: T6's own step
-  if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (FB2.t7) fb2PlanT7(); else { st.msg = FB2.plan && !FB2.kObs ? 'FB2: waiting for the T6 popup A (the page reads the frame from the popup closing).' : 'No edge: no FB2 states to plan with. Press Power Bounce normally.'; render(); } return; }
+  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (!(FB2.plan && FB2.plan.k != null)) st.msg = FB2.on ? (FB2.plan && FB2.plan.none ? 'No edge: ' + FB2.plan.none + '. Do Nothing whenever you like (Close Call about 30%).' : FB2_WAIT_LOCKED) : FB2_WAIT; render(); return; }     // v93: T6's own step (v97: the Do Nothing lever)
+  if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (FB2.t7) fb2PlanT7(); else { st.msg = FB2.plan && FB2.pObs == null ? 'FB2: waiting for the T6 Do Nothing confirm (the page reads its frame from the Strategies box closing).' : 'No edge: no FB2 states to plan with. Press Power Bounce normally.'; render(); } return; }
   if (st.hwDone && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'Time Out is done for this attempt. The route stays on the Hallway until the next Charge (a retry) or Final Bowser\'s arena.'; render(); return; }
   if (typeof HWHP !== 'undefined' && HWHP.died && PROF().id === 'timeout' && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'No edge: Mario was hit on Hallway T1 and a Life Shroom revived him; the page does not follow the revive. Press Time Out normally (31%).'; render(); return; }
   { const s = isRoute() && RT()[routeStep];     // v84: a Normal Boots turn the page cannot model yet: say so, never a guessed beep
@@ -1668,7 +1668,7 @@ function setText(h, d) { $('headline').textContent = h; $('detail').textContent 
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v96';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v97';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -1684,7 +1684,6 @@ function render() {
   chip('p-watch', nSh ? 'on' : ''); chip('p-lock', st.lock ? 'ok' : (st.cands && st.cands.length > 1 ? 'on' : (st.msg ? 'err' : ''))); chip('p-time', st.plan ? 'ok' : '');
   if (st.searching) {}
   else if (st.msg && /^WAIT/.test(st.msg)) setText('WAIT: reading the seed, no beeps yet', st.msg);      // v91: the Final Bowser wait was headed "Check your taps"
-  else if (st.msg && /^HOLD/.test(st.msg)) setText('HOLD THE +3 POPUP — WAIT FOR THE BEEP', st.msg);      // v96: T6, from the step arming
   else if (st.msg) setText(/^(No |Time Out is done|The seed is being|FB2|Route off|Beeps stopped|T\d: )/.test(st.msg) ? 'No beeps this time' : segLabel + 'Check your taps', st.msg);
   else if (st.plan) { const P = st.plan, typ = P.type && WTYPE[P.type] ? 'Window ' + WTYPE[P.type].name + ': ' : '';
     setText(P.again ? 'Still on the target screen: next window planned' : P.switched ? 'A sooner window came up: press A on the last beep' : 'Press A on the last beep (' + (P.beeps || nBeeps()) + ' beeps)',
@@ -2130,7 +2129,7 @@ function applyProfile() {
 function setStep(i) {
   slog('step', { to: i }); const was = routeStep; st.hwDone = false; if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
   if (RT()[was] && /^Hallway Bowser/.test(RT()[was].t || '') && !/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '') && routeStep > was) st.hwLeft = { at: performance.now(), hides: 0 };
-  else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); if (routeStep !== was) fb2HoldArm(); }
+  else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); if (routeStep !== was) fb2WaitArm(); }
 // v92: the runner's own route moves (a click, the buttons, the keys) are told from the page's (a screen, a burst): a Final
 // Bowser read takes the runner's turn only (fb14Lock)
 function userStep(i) { st.userStepT = performance.now(); slog('userStep', { from: routeStep, to: i }); setStep(i); }
@@ -2309,6 +2308,7 @@ const presses = (function () { try { return JSON.parse(localStorage.getItem('tot
 function checkPress(tObs) {
   if (typeof fb14OwnClose === 'function' && isRoute() && fb14OwnClose(tObs, RT()[routeStep])) return;     // v92: the Charge's own screen, seen after its burst
   if (typeof fb14Confirm === 'function' && isRoute()) fb14Confirm(tObs, RT()[routeStep]);     // Final Bowser T1-T4: the lever's frame
+  if (typeof fb2Confirm === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { fb2Confirm(tObs); return; }     // v97: Final Bowser T6, Lakilester's Do Nothing
   if (typeof jrStepNow === 'function' && jrStepNow()) { slog('screenClosed', { at: Math.round(tObs), step: routeStep, jr: true }); jrScreenClosed(tObs); return; }   // v82: the press is measured at the confirm (jrPress)   // Jr. Troopa: the bar count moves the route
   { const z = isRoute() && RT()[routeStep];
     // the hide the Charge capture armed on is the Charge confirm itself (its pre was used up by an earlier hide, e.g. the

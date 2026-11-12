@@ -12,7 +12,7 @@
  * usage: node test_console_v96.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v96/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v97/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v96.json'), 'utf8'));
 const F95 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v95.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
@@ -48,7 +48,7 @@ const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(L => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v93', JSON.stringify(L)); } catch (e) {} }, L);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v96', 'page version v96');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v97', 'page version v97');
   const k = await p.evaluate(() => { const X = window.__fb14; return { bar: X.readX('M', 'bar'), S: X.readX('S'), unc: X.C9UNC, sh: X.C9SHIFTS.map(x => x[0]), drop: X.TICK_DROP, tol: X.ANCHOR_TOL }; });
   check(k.bar === 2.5 && k.S === 3.4, '2. FB14_READX: Cloud Nine\'s bar +2.5 (v94 +1.15), Do Nothing +3.4');
   check(JSON.stringify(k.unc) === '[[-1,0.2],[0,0.6],[1,0.2]]' && k.sh.join() === '-3,-2,-1,0,1,2,3', '2. the T1 share over -1 .. +1 (0.2 / 0.6 / 0.2; v95 -2 .. +3 even), the Cloud Nine confirm carried on -3 .. +3');
@@ -74,12 +74,14 @@ const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
   check(an.r2 === 205, '4. a replan keeps the anchored frame while it is within ' + k.tol + ' of the best (the runner keeps the beep he is counting on)');
   check(an.r3 === 236 && an.log.includes('fb14ReplanNear') && an.log.includes('fb14ReplanMoved'), '4. with nothing workable near it the plan moves (logged fb14ReplanMoved)');
   // ---- 5. T6
+  const T6LOG = t => t.logged;
   const t6 = await p.evaluate(() => { const T = window.__tot, RT = T.RT(), i = RT.findIndex(s => s.turn === 'fb2_k'), j = RT.findIndex(s => s.fb14 === 4 && s.fb14role === 'lever');
     T.setStep(j); T.st.msg = null; T.setStep(i); const h = document.getElementById('headline');
-    const out = { head: h.textContent, bg: h.style.background, fs: h.style.fontSize, blink: h.classList.contains('hold-blink'), msg: T.st.msg, logged: T.SLOG.some(e => e.ev === 'fb2HoldShown'), chg: T.CHG.state };
+    const out = { head: h.textContent, bg: h.style.background, fs: h.style.fontSize, blink: h.classList.contains('hold-blink'), msg: T.st.msg, logged: T.SLOG.some(e => e.ev === 'fb2WaitShown'), chg: T.CHG.state };
     T.makePlan(); out.head2 = h.textContent; T.setStep(j); out.after = h.classList.contains('hold-blink'); return out; });
-  check(/^HOLD THE \+3 POPUP/.test(t6.head) && /c62828|198, 40, 40/.test(t6.bg) && t6.fs === '1.9em' && t6.blink && t6.logged, '5. T6: the step arming (T4 -> T6, before any Charge: reader ' + t6.chg + ') shows "' + t6.head + '", red, 1.9em, blinking; logged fb2HoldShown');
-  check(/^HOLD/.test(t6.msg) && /do NOT press A until the beep/.test(t6.msg) && /^HOLD THE \+3 POPUP/.test(t6.head2), '5. the detail: "' + t6.msg.slice(0, 70) + '…", and the plan loop keeps it until the popup beep');
+  // v97: the T6 lever is Lakilester's Do Nothing; the HOLD headline is gone (the runner's turn 6)
+  check(/^WAIT/.test(t6.head) && /c62828|198, 40, 40/.test(t6.bg) && !t6.blink && T6LOG(t6), '5. T6 (v97): the step arming (T4 -> T6, before any Charge: reader ' + t6.chg + ') shows "' + t6.head + '", red, no blinking HOLD; logged fb2WaitShown');
+  check(/^WAIT on Lakilester's Strategies screen/.test(t6.msg) && !/HOLD/.test(t6.msg + t6.head2), '5. the detail: "' + t6.msg.slice(0, 70) + '…", and the plan loop keeps it until the Do Nothing beep');
   const T6 = FIX.t6_0dfd, s6 = T6.narrowMs - T6.stage.joint - T6.stage.stage2 - T6.stage.hyps;
   check(T6.tPopup < T6.tFb2Lock && T6.tFb2Lock - T6.tTrig === 2356 && s6 > 250, '5. 0dfd444d T6: the popup closed on k ' + T6.kSeen + ' at ' + (T6.tPopup - T6.tTrig) + ' ms after the trigger, the lock at ' + (T6.tFb2Lock - T6.tTrig) + ' ms; of the narrow\'s ' + T6.narrowMs + ' ms ' + s6 + ' are the workers starting (stage 2 ' + T6.stage.stage2 + '): a warm pool would land it ~0.3 s sooner, still after k 77');
   check(!errs.length, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 2).join(' | ') : ''));
