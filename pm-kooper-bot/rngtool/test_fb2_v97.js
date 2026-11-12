@@ -24,7 +24,7 @@ let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') +
   const L = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v96.json'), 'utf8')).leverStore;      // the runner's six Do Nothing presses (v96): the beeps 0.97 frame earlier
   await p.addInitScript(L => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '0', vlag: '0' })); localStorage.setItem('tot-fb14press-v93', JSON.stringify(L)); } catch (e) {} }, L);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v97', 'page version v97');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v98', 'page version v98');
   // ---- 1. the model against every run
   const m = await p.evaluate(R => { const F = window.__fb2; return R.map(r => { const a = F.ai(parseInt(r.s61, 16), r.nc61, r.phases[0], r.E, true, true); return { a, r }; }); }, FIX.runs);
   const okAtk = m.filter(x => x.a.atk === x.r.attack && x.a.cc === x.r.cc && x.a.T === x.r.T).length, okMenu = m.filter(x => x.r.menu != null).every(x => x.a.menu === x.r.menu);

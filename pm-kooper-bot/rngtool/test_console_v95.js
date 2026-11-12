@@ -31,7 +31,7 @@ const inWin = (c, x, a, b, ph) => { const F = Math.floor(c + x + (ph || 0) + 0.5
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v97', 'page version v97');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v98', 'page version v98');
   const k = await p.evaluate(() => ({ unc: window.__fb14.C9UNC.map(x => x[0]), sh: window.__fb14.C9SHIFTS.map(x => x[0]) }));
   check(k.unc.join() === '-1,0,1' && k.sh.join() === '-3,-2,-1,0,1,2,3', '1. (v96, Cloud Nine pinned: test_console_v96) the T1 share is averaged over the reading -1 .. +1, the Cloud Nine confirm carried on -3 .. +3 (v95: -2 .. +3, -3 .. +4)');
   // ---- 1. the replay

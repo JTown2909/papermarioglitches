@@ -1,3 +1,60 @@
+# Time Out Timer v98: Final Bowser T4's beeps hold, T3 never claims 100% and re-locks on the stream (Nov 12)
+
+Console attempts c6469b35 (page v96, clip 17-33-59: "turn 3 and 4 fail") and 7483f3b1 (page v97, clip 17-47-17: "mostly
+fails"). Numbers only in `fixtures/console_v98.json`; no picture committed.
+
+## 1. T4: the moving beep (both logs) — the sample, not the coin
+- c6469b35 T4: fresh stream lock 2.39, plan 207 (pp 0.81, doubt 0.003); 1.2 s later `beepsStopped` at 0.46, doubt 0.002; the
+  next plan 273, 66 frames later (the anchor could not hold 207: it was already behind the earliest beepable frame).
+- 7483f3b1 T4: lock 1.91, then 212, 318, 385, 394, 466, 537, 616, 687 in 16 s (three stopped by the tick at p 0.56 / 0.44 /
+  0.14 with doubt 0.01-0.04, the rest replaced before they played): no beep ever played, confirmed unplanned.
+- **Cause.** The plan and the tick scored on a 150-state sample taken as every k-th state by list position, unweighted, with
+  k from the list's length. One state cut by the coin moved k and swapped the whole sample; the plan's best-of-the-next-second
+  frame (picked on one sample's noise) then read 0.15-0.5 lower on the tick's sample. Replayed (7483f3b1's T4 capture through
+  the page): frame 212 reads 0.42-0.71 on such samples of one list, 0.50 on all 24000 states. Not the PlanHeld bar rule, not
+  the edge: the doubt never moved.
+- **Fix** (`fb14Sample`, `fb14Resample`): each state is in the sample by its own fixed draw (hashed once from its content)
+  with a chance proportional to its weight, and stands for weight / chance (Horvitz-Thompson): the heavy states are always in,
+  the sample is nested as states are cut, 300 states. The plan keeps its sample; the tick re-scores that sample with the
+  states' weights now (the ones the coin cut drop out), so only the coin can stop the beeps. On the replay frame 212 reads 0.495
+  on the plan's sample and 0.495 after 10% of the states are cut (v97's samples: 0.526 -> 0.487).
+
+## 2. T3
+- **c6469b35:** T1 planned 63%, pressed +1.69, missed; T2 carried, 96% (window 6), pressed +2.46, missed. After the Jelly the
+  first T3 weigh found no state (`fb14AllOut`, `fb14CarryGone`): the shines after T2's confirm (978.8, 1072.0, 1120.8 on the
+  clock) against the states' 1019 / 1091 / 1139. A replay of T1's capture carried onto T2's seed (118469 combinations of T1's
+  confirm, T2's Charge frame and the nuisance) has no state within the coin window for all three: the T1 shines already sit
+  3.4-5.1 frames after the states' (the window allows 4.5), 978.8 is 6.5 after the nearest.
+- **7483f3b1:** T1 64% (+0.32), T2 carried 94% (-0.55), both missed. T3 planned **1434 at 100%** (window 4, doubt 0) after
+  the Jelly; pressed -0.37 inside the window; **Bowser hit**.
+- **The emulator.** The page's model is exact from T2's confirm to T3's lever on every chain log (7 in the fixture), and on a
+  new one with the Jelly at the first Mario menu as on console (1234abcd, `chain_log.py` with the turn ended at the menu: T2's
+  Do Nothing -> Mario's menu 166 frames, the Jelly 275; exact over 2567 frames, tests 4 / 4). (A first try with 3-8 menu
+  frames had the game eat the menu inputs: Mario used another item on T2, not a model error.) On console the menu came ~140
+  frames after T2's Do Nothing and the Jelly 186-197. So the console difference between T2's confirm and T3's lever is **not
+  found**: the model replays the emulator, and the console shines sit later than the states by more than the window.
+- **What v98 does instead:** T3 is not trusted until that is pinned.
+  - `FB14_T3_FLOOR` 0.35: T3's plan and tick keep at least that share of the blind chance, so a T3 claim is at most ~82%
+    (never 100%; `test_fb14_plan.js` T3 claimed 0.816 against the model's 1.0).
+  - `fb14Relock3`: when the carry is gone or contradicted (doubt over the edge) on T3, the states of T2's lock (`FB14.snap2`,
+    the 1500 heaviest, on the stream from that lock) are taken again with T2's Do Nothing confirm at -4 .. +4 and the Jelly at
+    -2 .. +2, and the coin matched in a wider window (-3 .. +7 frames, `FB14_WIDE`): a coin-based re-lock on the stream,
+    planned under `FB14_T3_RELOCK` 0.45 (at most ~77%), logged `fb14Relock` / `fb14RelockNone`. Once per T2 lock; without it
+    the carry is dropped as before (the blind text, never silence).
+
+## 3. T6 (7483f3b1)
+The route went to T6's step at T4's unplanned confirm (201.3 s, `fb2WaitShown`). The Peach Beam's hide (207.65 s) set the
+T5 mark; the T6 Charge's bar hide at 229.29 s (21.6 s later, past the 20 s arming gate) logged **no trigger**, and the Do
+Nothing confirm at 239.6 s came with none (`fb2ConfirmNoTrig`): the T6 lever logic never ran. Why the reader did not trigger
+is not found in this version (the clip was not decoded; the carry had been dropped at T4, so the T6 read would have been a
+full search).
+
+## Tests
+New `test_console_v98.js` (in `run_suite.sh`): the two logs' T3 / T4 numbers; the sample (weighted, the heavy states always
+in, nested, the weights' sum, the tick's re-score); the T3 floor and the re-lock on a synthetic carry whose shines come 5.5
+frames late; with the page and the log, 7483f3b1's T4 replayed (the plan's sample before and after the coin cuts states).
+Changed: `test_fb14_plan.js` (T3 claimed under 0.83), version checks to v98.
+
 # Time Out Timer v97: the runner's route texts, pinned; Final Bowser T6's lever is Lakilester's Do Nothing (Nov 12)
 
 The runner: "stop changing what the route says … all turns should resemble what I put there", and on T6 he "didn't identify
