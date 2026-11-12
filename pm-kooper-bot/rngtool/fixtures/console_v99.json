@@ -99,5 +99,72 @@
     "planned": 132
    }
   ]
+ },
+ "7483f3b1_t6": {
+  "events": [
+   {
+    "t": 196863,
+    "ev": "fb14CarryGone",
+    "turn": 4
+   },
+   {
+    "t": 201262,
+    "ev": "fb14ConfirmBeforeLock",
+    "turn": 4
+   },
+   {
+    "t": 201262,
+    "ev": "screenClosed",
+    "at": 201254,
+    "step": 13
+   },
+   {
+    "t": 201262,
+    "ev": "step",
+    "to": 14
+   },
+   {
+    "t": 201263,
+    "ev": "fb2WaitShown",
+    "step": 14
+   },
+   {
+    "t": 207663,
+    "ev": "barHide",
+    "at": 207654,
+    "upMs": 31366
+   },
+   {
+    "t": 222177,
+    "ev": "coinBack",
+    "hiddenMs": 1900,
+    "taps": 12,
+    "locked": false,
+    "chain": 0,
+    "rcarry": false,
+    "cands": 106
+   },
+   {
+    "t": 229295,
+    "ev": "barHide",
+    "at": 229287,
+    "upMs": 8133
+   },
+   {
+    "t": 232959,
+    "ev": "coinBack",
+    "hiddenMs": 1633,
+    "taps": 2,
+    "locked": false,
+    "chain": 1,
+    "rcarry": false,
+    "cands": 1
+   },
+   {
+    "t": 239611,
+    "ev": "fb2ConfirmNoTrig",
+    "at": 239604
+   }
+  ]
  }
 }

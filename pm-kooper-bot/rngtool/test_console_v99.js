@@ -4,6 +4,9 @@
  *    off for over 1 s with a plan ahead: cancelPlan) took the T6 plan, made on the Charge's lock before Lakilester's
  *    Strategies screen opens, as a plan whose screen had gone. The T6 plan is early now (kept until its screen has been seen
  *    and gone), the rule logs (planScreenLost), and a T6 plan lost anyway is made again (beeps or an explicit No edge).
+ * 2. T6's Charge not triggered (7483f3b1, 229.29 s): T4's carry was gone (196.9 s), so the Peach Beam's hide (207.65 s) set
+ *    no T5 mark (fb14HideWatch returned without a carry, and did not run on T6's step), and fb14ArmOk held the FB2 reader for
+ *    T4's confirm + 45 s (246.3 s). The mark is set without a carry now.
  * usage: node test_console_v99.js   [PAGE=built standalone page] */
 const fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
@@ -50,6 +53,19 @@ ok(menuK < plan.kFirst && dk * 33.4 / 1000 > 1.8 && dk * 33.4 / 1000 < 2.0, '1. 
   ok(r.lost0 === true && r.lostFlag && r.re && r.ev.includes('planScreenLost') && r.ev.includes('fb2Replan'), '1. a T6 plan lost all the same (v98\'s not-early plan): logged planScreenLost, and made again (fb2Replan; ' + (r.re ? 'beeps' : r.reMsg) + ')');
   ok(r.lost2 === true, '1. after the Strategies screen was seen and gone 1 s, a plan still ahead is cancelled (as v82)');
   ok(r.noPlan && /^No edge/.test(r.noEdge || ''), '1. a lost T6 plan with no frame over Best chance: "' + (r.noEdge || '').slice(0, 70) + '…"');
+  // --- 2. 7483f3b1: the T5 mark without a carry, and the T6 Charge's hide armed
+  { const E2 = FIX['7483f3b1_t6'].events, g = n => E2.filter(e => e.ev === n), p4 = g('fb14ConfirmBeforeLock')[0].t, gone = g('fb14CarryGone')[0].t, hides = g('barHide');
+    ok(gone < p4 && hides.length === 2 && g('fb2ConfirmNoTrig').length === 1 && !g('chargeTrigger').length && !g('fb14Peach').length, '2. 7483f3b1: carry gone ' + (gone / 1000).toFixed(1) + ' s, T4 confirmed ' + (p4 / 1000).toFixed(1) + ' s (before a lock), Peach hide ' + (hides[0].at / 1000).toFixed(2) + ' s set no mark, the T6 Charge\'s hide ' + (hides[1].at / 1000).toFixed(2) + ' s no trigger');
+    const r2 = await p.evaluate(({ p4, h1, h2 }) => {
+      const T = window.__tot, X = window.__fb14, FB = X.FB14; X.reset(); T.setStep(T.RT().findIndex(s => s.turn === 'fb2_k'));
+      const base = performance.now() - 300000, at = x => base + x; FB.p4t = at(p4); FB.pT = { 4: at(p4) };
+      const v98 = X.armOk({ id: 'fb2' }, at(h2));
+      for (let x = p4 + 100; x < h1 + 600; x += 33.4) X.frame(at(x), x < h1);
+      return { v98, pb: FB.pb && Math.round(FB.pb.t - base), F: FB.pb ? FB.pb.F : 'none', arm: X.armOk({ id: 'fb2' }, at(h2)), armEarly: X.armOk({ id: 'fb2' }, at(h1 + 15000)) };
+    }, { p4, h1: hides[0].at, h2: hides[1].at });
+    ok(r2.v98 === false, '2. without the mark the T6 Charge\'s hide is held (T4\'s confirm + 45 s): v98\'s no trigger');
+    ok(r2.pb != null && Math.abs(r2.pb - hides[0].at) < 40 && r2.F === null, '2. the Peach Beam\'s hide sets the T5 mark with no carry (at ' + r2.pb + ', no frame)');
+    ok(r2.arm === true && r2.armEarly === false, '2. the T6 Charge\'s hide 21.6 s after it arms the reader (a hide 15 s after it does not)'); }
   ok(!errs.length, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
   await b.close();
   console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
