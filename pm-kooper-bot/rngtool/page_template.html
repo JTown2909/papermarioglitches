@@ -447,7 +447,8 @@ const JR = [
   { t: 'Jr T4', label: 'Bombette: Bomb', cat: 'K' }, { t: 'Jr T4', label: 'Maple Syrup → Close Call', cat: 'M', prof: 'jrcc_syrup' },
   { t: 'Jr T5', label: 'Super Charge', cat: 'M' }, { t: 'Jr T5', label: 'Bombette: do nothing → Close Call', cat: 'S', prof: 'jrcc_nothing' },
   { t: 'Jr T6', label: 'Power Bounce → 6+ bounces (5+ either side)', cat: 'K', prof: 'jrpb5' }, { t: 'Jr T6', label: 'Bombette: Bomb (only if 5 bounces)', cat: 'K', optional: true } ];
-// The endgame route exactly as the runner wrote it. One step per turn: the input that matters, which is the turn's
+// The endgame route exactly as the runner wrote it (v97: every turn text is pinned by test_route_texts.js; instructions go
+// in the step labels and the status line, never in the turn text). One step per turn: the input that matters, which is the turn's
 // last action, or the starred press when that comes first (Time Out, Bounce). The page only watches the next step's
 // target screen, so the turn's other inputs on a different screen are ignored by themselves. After Time Out every
 // Hallway input is on the same Bowser screen and nothing more is timed, so those turns have no step.
@@ -476,17 +477,17 @@ const ENDGAME = [
   // Lakilester's Do Nothing (T2-T4) on the beep make Bowser miss (T4: the Draining Shockwave, blocked); T2 and T4's Charges
   // lock it again and check the carried seed; the carry runs on to the Peach Beam and narrows the T6 Charge's search.
   { h: 'Final Bowser', turns: [
-    { text: 'T1: Charge; Cloud Nine (equip Close Call before the fight: T6 needs it)', steps: [{ label: 'Super Charge (hand on Mario): its rays lock the seed', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'charge' },
+    { text: 'T1: Charge; Cloud Nine', steps: [{ label: 'Super Charge (hand on Mario): its rays lock the seed (Close Call equipped before the fight: T6 needs it)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'charge' },
       { label: 'Cloud Nine on the beep (hand on Mario) → Bowser misses', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'lever' }] },
-    { text: 'T2: Charge (Lakilester: Do Nothing)', steps: [{ label: 'Do Nothing (Lakilester) on the beep → Bowser misses', cat: 'S', chg: 'fb1', fb14: 2, fb14role: 'lever' }] },
-    { text: 'T3: Jammin\' Jelly (Laki: Do Nothing)', steps: [{ label: 'Do Nothing on the beep → Bowser misses', cat: 'S', fb14: 3, fb14role: 'lever' }] },
-    { text: 'T4: Charge (Laki: Do Nothing) - block the wave', steps: [{ label: 'Do Nothing on the beep → the wave comes and misses Mario (block it; it may hit Laki)', cat: 'S', chg: 'fb1', fb14: 4, fb14role: 'lever' }] },
-    { text: 'T5: Peach Beam at Danger', steps: [] },
+    { text: 'T2: Charge; Do Nothing', steps: [{ label: 'Do Nothing (Lakilester) on the beep → Bowser misses', cat: 'S', chg: 'fb1', fb14: 2, fb14role: 'lever' }] },
+    { text: 'T3: Jammin\' Jelly; Do Nothing', steps: [{ label: 'Do Nothing on the beep → Bowser misses', cat: 'S', fb14: 3, fb14role: 'lever' }] },
+    { text: 'T4: Charge; Do Nothing - Block Wave', steps: [{ label: 'Do Nothing on the beep → the wave comes and misses Mario (block it; it may hit Laki)', cat: 'S', chg: 'fb1', fb14: 4, fb14role: 'lever' }] },
+    { text: 'T5: Peach Beam - Danger', steps: [] },
     // v93 (runner, log a87486a0: "there is no turn 6 close call trigger"): T6 has its own step. On v92 the route went from
     // T4's Do Nothing straight to the T7 Power Bounce step (its pre held the T6 Charge); nothing told the runner to hold the
     // "+3" popup, which he closed on k 75 at once, 0.14 s before the T6 lock: no popup beep could be made
-    { text: 'T6: Charge, then the popup A on the beep → Close Call (Close Call equipped)', steps: [{ label: 'Super Charge, then HOLD the +3 popup — WAIT for the beep: close it on the beep → Close Call (Close Call equipped; no beep by 4 s after the Charge: close it anyway)', cat: 'M', turn: 'fb2_k', pre: [{ cat: 'M', id: 'fb2_charge' }] }] },
-    { text: 'T7: Power Bounce x7', steps: [{ label: 'Power Bounce → 7 on the beep', cat: 'B', turn: 'fb2_pb' }] } ] } ];
+    { text: 'T6: Charge; Do Nothing - Close Call', steps: [{ label: 'Super Charge, then HOLD the +3 popup — WAIT for the beep: close it on the beep → Close Call (Close Call equipped; no beep by 4 s after the Charge: close it anyway)', cat: 'M', turn: 'fb2_k', pre: [{ cat: 'M', id: 'fb2_charge' }] }] },
+    { text: 'T7: Bounce x7', steps: [{ label: 'Power Bounce → 7 on the beep', cat: 'B', turn: 'fb2_pb' }] } ] } ];
 /* Jr. Troopa on the Charge-lock route (jr_charge/README.md, charge_live/jr_live.js; the route panel's default, Settings key
  * jrroute): Mario's T1 Super Charge locks the seed from its rays (profile jr) and the tracker carries it through every
  * confirm (read from the status bar hiding); the page beeps the four levers. jr = the confirm (JR_SEQ index) that ends
