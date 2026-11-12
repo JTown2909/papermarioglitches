@@ -1,3 +1,79 @@
+# Time Out Timer v94: the true press timing from the in-game input display, the Final Bowser lever readings, the fb1 clock anchor (Nov 12)
+
+Method: every clip of 11-09, 11-10 and 11-12 decoded frame by frame (60 fps): the overlay's A (top left), the practice ROM's
+own A (bottom, drawn by the game), the HUD bar and the Strategies panel, synced to the logs by the bar hides (every hide at
+one offset: b75b56e2 page = clip(19-28-16) + 1688355.5 ms, 4bc65351 = clip(20-17-50) + 1831550.3, 4080354f = clip(19-57-21)
++ 601938.3, the v90 / v93 offsets for the rest). No picture is committed (`fixtures/console_v94.json` holds numbers only).
+The emulator was not run.
+
+## 1. Which clips show both displays
+| clips | displays |
+|---|---|
+| 11-09 19-14-36, 19-17-03, 19-25-22, 19-28-16, 19-50-01, 19-57-21, 19-59-56, 20-11-18, 20-17-50 | **both** (practice ROM) |
+| 11-10 15-40-48 (8cc2055f) | in-game only (practice ROM) |
+| 11-12 04-35-03, 04-38-17 | overlay only |
+| the other 16 | neither |
+
+**The display offset:** the in-game A shows **8 vblanks after the overlay's** (67 isolated presses: median 8, mean 8.1, sd
+1.6, range 5-13); the release the same. The overlay is the earlier one (USB adapter straight to the capture; the game's
+picture goes through the N64's frame pipeline). The in-game A moves in whole game frames (even vblank steps).
+
+## 2. The true press against each reading (in-game display, vblanks)
+| from the in-game A to | vblanks | n |
+|---|---|---|
+| the Strategies panel close (the page's grey read), Final Bowser T2 / T3 / T4, Duplighosts, Jr. Troopa T5 | **2** | 8 of 8 |
+| a Charge's bar hide (every fight) | 4 | 29 |
+| Cloud Nine's bar hide | 6, 7, 6 | 3 |
+| Jr. Troopa's target-screen closes (Bomb / Syrup) | 8 | 5 |
+So the panel read is the same game frame on Final Bowser as on Jr. Troopa / Duplighosts, where v90's STRAT_VAN 2.2 fits the
+outcomes; Cloud Nine's bar comes **2.25 frames later** after the same press than the panel does (the page took both as
+"confirm + 2"). The Jr. Troopa / Bomb / Syrup / Hallway readings are not touched.
+**The practice ROM:** the 11-09 clips are on it (its display), 11-10 15-40-48 too; the Nov 12 clips show no in-game display.
+Overlay -> event on Nov 12 against the 11-09 Final Bowser clips: Charge hide 12.6 vs 13.4, panel close 9.8 vs 9.0, Cloud
+Nine hide 13 vs 14 vblanks (within the overlay's own spread); the frame time from the coin shines on 11-09 33.4286 ms against
+the page's 33.427. No extra lag measured from the ROM.
+
+## 3. Clock vs reading (Nov 12, both attempts)
+The page's frame 0 against the burst in the clip (the first vblank at the burst's 61 level): 17.0 frames on 00700c7e T2,
+a87486a0 T1 and T2, **18.0 on a87486a0 T4**. The page's own capture says the same: T4's trigger picture reads +6.2 above the
+base where frame 3 reads +9.8 (median of 26 console fb1 captures), and its level curve is the others' one picture later.
+**T4's clock was a frame early** (its trigger picture was the burst's frame 2, taken as frame 3; `trigN` only catches late
+ones). Fitted on all 31 console fb1 captures (the new pictures -1.5 .. +3.5 frames around the trigger, against that median
+curve): a87486a0 T4 -0.65 and 1de38253 T2 -0.9; the other 29 within -0.45 .. +0.45.
+With T4's frame moved, **one offset fits all four Do Nothing outcomes**: true = v92 reading + **3.26 .. 3.51** (00700c7e T2
+3.04-4.03, T3 3.26-4.25, a87486a0 T2 not 0.53-1.53, T4 now 1.52-3.51). On the trigger picture's clock nothing fits (v93).
+Which part is clock and which reading the outcomes cannot split (the in-game display says the panel is read on the same
+frame as Jr. Troopa's, so the Final Bowser constant is the clock / model side of the fb1 anchor), but the beeps settle what
+matters: the runner's overlay A came 2.2 / 2.9 / 3.7 / 3.7 frames after the beep's press time on 00700c7e T2 / T3 and
+a87486a0 T2 / T4, and on the beep he landed on the planned frame (attempt 1, both won); attempt 2 he pressed ~1 frame later
+(T2 read +2.4 on the new reading: Bowser hit; T4 +1.4 in a 2-frame window: Bowser missed). **The beeps are right; the
+reading was 3.4 frames short.** Cloud Nine: 3.4 - 2.25 = +1.15 (00700c7e T1 then reads 344.70 on a 345 window, an 80% plan
+that Bowser hit; a87486a0 T1 210.09 outside 207-208). 54c12cf2 T2 (897.86, window 896, hit) fits too.
+
+## Fixes
+1. **The Final Bowser lever readings** (`fb14_live.js` `FB14_READX`): a Do Nothing confirm reads 3.4 frames later, Cloud Nine
+   by its bar 1.15 (a Mario target screen as before), in the confirm, the late (pending) confirm and the replay onto a later
+   lock (`fb14Van`). The Do Nothing shifts are recentred, -3 .. +3 peaking at 0 (v93: -2 .. +5 peaking at +3 / +4).
+2. **The fb1 clock on the burst's frame 3** (`fb14TrigPhase`, `fb14TrigT`; `fb14Refine1` and the narrowed read): the capture's
+   new pictures are fitted against the console curve; at -0.5 or below the anchor moves a frame later (+0.5 and up: earlier).
+   Logged as `fb14TrigPhase`. The Charge read's own placement is not changed.
+3. The beeps (`fbPressT`), STRAT_VAN 2.2 (Jr. Troopa / Duplighosts), the Hallway and the fb2 (T6) clock are unchanged.
+
+## Tests
+New `test_console_v94.js` (in `run_suite.sh`): the display offset, the in-game delays, the practice-ROM comparison, the outcome
+table with and without T4's frame (3.26 .. 3.51, none on v93's clock), the four Do Nothing and two Cloud Nine readings on the
+page, the beeps unmoved, the phase fit on all 31 fb1 captures and the live anchor on a87486a0 T4's, Jr. Troopa / Duplighosts
+vanish 2.2. Changed: `test_console_1112.js` 3 (7 shifts), version checks to v94. Run on v94: test_console_v94, _1107, _1108,
+_1108b, _1109_fb, _1110, _1110b, _1112, test_fb14_model / _ai / _v86 / _chain / _v87 / _v92 / _plan, test_press_lever,
+test_jr_v87 / _plan / _restart, test_dup_plan, test_hw_hp, test_lock_badge, test_nb_route, test_nb_cc_page: all pass.
+
+## Not done
+- The offset is fitted on four Final Bowser outcomes (2 wins, 1 hit, 1 guard) and the fit is 0.25 frame wide; a session on
+  v94 checks it (the `fb14Confirm` err against the beeps should now sit near the runner's own -0.6 .. +1).
+- Why the fb1 clock is 3.4 frames off the model while Jr. Troopa's is not (the same Charge, the same trigger frame) is not
+  found: the emulator was not run on a console-like capture. The T6 popup seen at k 75 (emulator's earliest 77) points the
+  same way on the fb2 clock, which v94 does not touch.
+- The 11-10 evening clips (no display) were not read; their logs' plans were replans (err -43 .. -91), no constraint.
 # Time Out Timer v93: the Final Bowser Do Nothing reading on console, the T4 carry, T6's own step (Nov 12)
 
 Console logs of 2026-11-12 (page v92): 00700c7e (attempt 1, clip 04-35-03, page = clip + 57.013 s) and a87486a0 (holds it, then
