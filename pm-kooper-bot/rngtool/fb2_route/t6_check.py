@@ -27,7 +27,7 @@ def fit_phases(bolt_frames_seen, f0, f1):
 ok = collections.Counter(); bad = []
 SLAM_OK = '--slam' in sys.argv; CLAW_OK = '--noclaw' not in sys.argv
 for fn in [a for a in sys.argv[1:] if not a.startswith('--')]:
-    for run in json.load(open(fn)):
+    for run in [x for x in json.load(open(fn)) if not x.get('skip')]:
         rows = run['rows']; K = run['K']
         byf = {x['f']: x for x in rows}
         bolts = collections.Counter()
@@ -41,17 +41,18 @@ for fn in [a for a in sys.argv[1:] if not a.startswith('--')]:
             for nm, mx, v in replay(x):
                 if nm == 'evt': ev.setdefault('E', x['f']); ev.setdefault('evt', []).append((mx, v))
                 if nm.startswith('8027'): ev['T'] = x['f']; ev['cc'] = v
-        m = sim(byf[61]['s0'], 61, K, None, dict(bolts), coins[0], SLAM_OK, CLAW_OK)
+        EP = run['P'] + 13 if run.get('P') is not None else None      # v97: Do Nothing runs (t6dn_log.py)
+        m = sim(byf[61]['s0'], 61, K, None, dict(bolts), coins[0], SLAM_OK, CLAW_OK, E=EP)
         obs_atk = None
         vals = dict(ev.get('evt', []))
         if 80 in vals: obs_atk = 'slam' if (vals[80] < 20 and 60 not in vals) else ('claw' if (vals.get(60, 99) < 20 and CLAW_OK) else 'fire')
         lucky = ev.get('cc', 99) < 30
-        good = m['attack'] == obs_atk and m['cc'] == ev.get('cc') and (ev.get('T') - ev.get('E')) == DELTA.get(obs_atk) and (not lucky or run['menu'] - ev['T'] == MENU[obs_atk])
+        good = m['attack'] == obs_atk and m['cc'] == ev.get('cc') and (ev.get('T') - ev.get('E')) == (DNDELTA if EP else DELTA).get(obs_atk) and (not lucky or run['menu'] - ev['T'] == (DNMENU if EP else MENU)[obs_atk])
         line = '%s K %3d E %s atk %s/%s dT %s cc %s/%s lucky %s menu-T %s' % (run['seed'], K, ev.get('E'), obs_atk, m['attack'],
                ev.get('T', 0) - ev.get('E', 0), ev.get('cc'), m['cc'], lucky, run['menu'] - ev.get('T', 0))
         ok['ai+cc', good] += 1
         if not good: bad.append(line)
-        for pb in (run['pb'] if lucky else []):
+        for pb in (run['pb'] if lucky and not EP else []):     # v97: the Do Nothing runs' Power Bounce inputs did not reach the move (t6dn_log.py)
             # the Power Bounce runs start from the T7-menu state: their frame numbers count from the menu frame
             M = run.get('pbbase', run['menu']) + 1; d = pb['dconf'] + M      # Run.load steps one frame after the load
             prow = {x['f'] + M: x for x in pb['rows']}
@@ -64,7 +65,7 @@ for fn in [a for a in sys.argv[1:] if not a.startswith('--')]:
                 if f < d: continue
                 for nm, mx, v in replay(prow[f]):
                     if nm == 'pbroll': rolls.append((f - d, v))
-            mm = sim(byf[61]['s0'], 61, K, d, dict(allb), coins[0], SLAM_OK, CLAW_OK)
+            mm = sim(byf[61]['s0'], 61, K, d, dict(allb), coins[0], SLAM_OK, CLAW_OK, E=EP)
             g = mm['rolls'] == rolls
             ok['pb', g] += 1
             line += ' | d %d (menu+%d) rolls %s bounces %d model %d %s' % (d, pb['dconf'], [v for _, v in rolls], len(rolls) + 1, mm['bounces'], g)

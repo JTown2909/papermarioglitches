@@ -20,6 +20,10 @@ from fb2model import adv, rand_int, TH, nstars
 
 DELTA = {'slam': 52, 'claw': 62, 'fire': 55}      # target-test frame after the AI frame
 MENU = {'slam': 101, 'claw': 83, 'fire': 134}      # Lucky branch: T7 menu opens this many frames after the test
+# v97 (t6dn_log.py): Lakilester up on T6 (T4's wave blocked), Bowser's AI on his Do Nothing confirm + 13: the Claw's test
+# comes 55 frames after the AI (not 62) and its T7 menu 134 after the test, as Fire Breath's
+DNDELTA = {'slam': 52, 'claw': 55, 'fire': 55}
+DNMENU = {'slam': 101, 'claw': 134, 'fire': 134}
 KMIN, KMAX = 77, 137                                 # popup-dismiss window (A on confirm + K)
 P130 = (78, 83, 113, 118); P220 = (18, 78, 88, 178)
 
@@ -34,11 +38,16 @@ def bolt_frames(p130, p220, f0, f1):
     return out
 
 
-def sim(seed, f0, K, d, bolts, coin_next, slam_ok=True, claw_ok=True, dmg0=15, kmax=14, bowser_hp=None):
+def sim(seed, f0, K, d, bolts, coin_next, slam_ok=True, claw_ok=True, dmg0=15, kmax=14, bowser_hp=None, E=None):
     """seed = gRandSeed at the start of frame f0 (>= 61). bolts: {frame: count}. coin_next: frame of the next coin draw.
-    Returns dict(attack, cc, lucky, menu, rolls, bounces). d None -> stop after the Close Call."""
-    if K < KMIN or K > KMAX: K = KMAX                     # no press in the window: the popup closes by itself
-    s = seed; nc = coin_next; E = K + 40; atk = None; T = None; res = dict(attack=None, cc=None, lucky=None, menu=None,
+    Returns dict(attack, cc, lucky, menu, rolls, bounces). d None -> stop after the Close Call.
+    v97: E given = Bowser's AI frame itself (Lakilester not KO'd: his Do Nothing confirm P, E = P + 13; K then plays no part)."""
+    dn = E
+    if E is None:
+        if K < KMIN or K > KMAX: K = KMAX                 # no press in the window: the popup closes by itself
+        E = K + 40
+    DL, MN = (DELTA, MENU) if dn is None else (DNDELTA, DNMENU)
+    s = seed; nc = coin_next; atk = None; T = None; res = dict(attack=None, cc=None, lucky=None, menu=None,
                                                                             rolls=[], bounces=0)
     k = 0; hit = 0; dmg_total = 0
     end = (d + 71 + 27 * kmax) if d is not None else E + 70
@@ -49,9 +58,9 @@ def sim(seed, f0, K, d, bolts, coin_next, slam_ok=True, claw_ok=True, dmg0=15, k
             if v80 < 20 and slam_ok: atk = 'slam'
             else:
                 s, v60 = rand_int(s, 60); atk = 'claw' if (v60 < 20 and claw_ok) else 'fire'
-            res['attack'] = atk; T = E + DELTA[atk]
+            res['attack'] = atk; T = E + DL[atk]
         if T is not None and f == T:
-            s, v = rand_int(s, 100); res['cc'] = v; res['lucky'] = v < 30; res['menu'] = T + MENU[atk]
+            s, v = rand_int(s, 100); res['cc'] = v; res['lucky'] = v < 30; res['menu'] = T + MN[atk]
             if not res['lucky'] or d is None: return res
         if d is not None and res['lucky']:
             if f == d + 71 + 27 * k and k == hit - 1:
