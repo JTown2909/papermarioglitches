@@ -31,7 +31,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(F => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v90', JSON.stringify(F)); } catch (e) {} }, FIX.leverStoreV90);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v93', 'page version v93');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v94', 'page version v94');
   // ---- 2. the learned correction
   const r2 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, out = { old: T.leverBias('fb14'), n0: T.leverList('fb14').length };
     for (let i = 0; i < 8; i++) T.leverAdd('fb14', -3.6); out.after = T.leverBias('fb14'); out.n = T.leverList('fb14').length; X.reset(); X.FB14.t0 = 1000; X.FB14.rate = 33.367; out.pt = X.pressT(900);
@@ -45,7 +45,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
       const i = RT.findIndex(find); T.setStep(i); X.reset(); Object.assign(FB, { on: true, t0: performance.now() - 20000, rate: 33.367, states: [mk()], M: { 1: 0, 2: 0 } });
       X.confirm(FB.t0 + 300 * 33.367, RT[i]); const L = X.slogTail(10).filter(e => e.ev === 'fb14Input').pop(); out[k] = L ? L.states : null; }
     return out; });
-  check(r3.S === 8, '3. a Do Nothing confirm goes into the states on 8 frames (-2 .. +5): ' + r3.S);
+  check(r3.S === 7, '3. (v94) a Do Nothing confirm goes into the states on 7 frames (-3 .. +3 around the v94 reading, which is v93\'s + 3.4): ' + r3.S);
   check(r3.M === 5, '3. a Cloud Nine screen confirm on 5 (-2 .. +2) as before: ' + r3.M);
   // ---- 4. no plan while the bar is gone on a lever step
   const r4 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, FB = X.FB14, RT = T.RT(), i = RT.findIndex(s => s.fb14 === 1 && s.fb14role === 'lever');

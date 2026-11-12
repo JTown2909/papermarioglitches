@@ -840,7 +840,7 @@ function chgDecide() {
   if (CHG.res.fb1) { CHG.state = 'locked'; CHG.qs = []; if (CHG.res.fb1.times) CHG.info.stage = CHG.res.fb1.times; slog('chargeLock', Object.assign({ fb1: true, hyps: CHG.res.fb1.hyps ? CHG.res.fb1.hyps.n : 0 }, CHG.info)); chgRecEnd('lock');
     // v87: a lock on the carried stream (T2 / T4 narrowed) goes to the carried states at once; the placement and the joint
     // fit (5-7 s) only when none of them drew these rays
-    if (CHG.res.narrow14) { CHG.res.trigT = CHG.trig.t; const how = fb14Lock(CHG.res); if (how === 'carried') { if (typeof fb14AfterLock === 'function') fb14AfterLock(); chgShow(); return; } }
+    if (CHG.res.narrow14) { CHG.res.trigT = typeof fb14TrigT === 'function' ? fb14TrigT() : CHG.trig.t; const how = fb14Lock(CHG.res); if (how === 'carried') { if (typeof fb14AfterLock === 'function') fb14AfterLock(); chgShow(); return; } }
     fb14Refine(CHG.res, G).then(r => { fb14Lock(r); if (typeof fb14AfterLock === 'function') fb14AfterLock(); }); chgShow(); return; }
   // q hypotheses: every first-coin frame whose score is within CHG_QTOL of the best (late coins barely move the rays: v71
   // kept 0.5% and 6 at most, and on the Duplighost render 1234abcd the true q 42 was not among them), best first; the
