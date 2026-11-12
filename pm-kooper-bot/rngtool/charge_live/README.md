@@ -1,3 +1,93 @@
+# Time Out Timer v96: the Final Bowser lever timing pinned (Cloud Nine +2.5, Do Nothing +3.4), the runner late, no chasing replans, T6's HOLD (Nov 12)
+
+Every console Final Bowser attempt so far: 00700c7e / a87486a0 (v92), 906bfb29 / 1509e942 (v94), the new 0dfd444d (v95, clip
+16-05-14, "complete fail"), plus the 11-09 / 11-10 logs. Numbers only in `fixtures/console_v96.json`; the clips were decoded
+for the overlay A and the HUD bar only (no picture committed). The emulator was not run.
+
+## 1. The carry and stream method does not pin a lever
+`tools/fb14_carry_pin.js` replays a lock's capture through the page, puts each candidate lever frame into the states and keeps
+those that reach a later lock's seed (and, with that Charge replayed fresh, its rays' end seed).
+- **Cloud Nine, 906bfb29 T1** (the only Cloud Nine Bowser missed with a carried T2 lock; 54c12cf2 / 1de38253 are on v89 / v90
+  with no Cloud Nine read): T1's lock 7173067f -> T2's narrowed lock 8f17f0b0, 1677 steps. **All 21 frames 260-280** (Bowser
+  missing) reach both seeds from some T1 fit (86 states; T2's Charge at M +0 .. +2); 2 coin shines between T1 and T2 tell
+  nothing apart.
+- **Do Nothing, 906bfb29 T2 / T3 -> T4's lock 1576edf0:** T2 on 19 of 19 frames, T3 on 18 of 19, every Jelly frame.
+- **Why:** a Charge seed fixes only how many draws came before it. Cloud Nine's puffs and Bowser's AI / test draw the same number
+  of times on any frame (the frame changes their values, not their count), so a lever frame changes the T2 seed only where it
+  moves a draw across a coin draw or flips a branch, and some fit covers that. The other attempts had Bowser hit (not modelled)
+  or a fresh lock between (00700c7e T2 / T3 -> T4: the same count argument). So the carry gives no offset; the offsets below come
+  from the clips and the outcomes.
+
+## 2. The overlay A against the beeps (every Nov 12 clip)
+Each clip synced to its log by every bar hide (00700c7e 57013.0, a87486a0 250295.7, 906bfb29 117542.8, 1509e942 412891.7,
+0dfd444d 293297.3 ms). For each planned press: the overlay A's rise after the plan's tPress (vblanks) and the page's reading of
+the same press (v92 reading - target). The reading minus the lag (K, frames) does not depend on the clock (beep and reading use
+the same t0):
+| lever | presses | K (v92 reading err - lag / 2) |
+|---|---|---|
+| Do Nothing | 11 (00700c7e T2 / T3, a87486a0 T2 / T4, 906bfb29 T2-T4, 1509e942 T2 / T4, 0dfd444d T2 / T4) | -4.71 .. -5.74 on 10, -6.71 on one; mean -5.22 |
+| Cloud Nine (bar) | 3 with full beeps (00700c7e, 1509e942, 0dfd444d T1; 906bfb29's beeps were stopped 1 s before) | -4.70, -4.21, -4.21; mean -4.37 |
+
+The reading follows the press within a game frame (the panel closes on a game frame, the A is seen on a 60 Hz vblank). After
+the same press Cloud Nine's bar reads **0.85 frame later** than the panel. Both levers go through the same press chain (the same
+beep formula), so **x(Cloud Nine) = 3.4 - 0.85 = 2.55**.
+
+## 3. The pinned offsets
+- **Do Nothing +3.4 stays.** The 10 outcomes (8 of v95, then 0dfd444d T2 hit at +1.79 on a one-frame 227, and T4 at +1.37 on 198,
+  where the Peach Beam followed: the wave missed) give best 2.2-2.5, with 3.4 within 0.16 and nothing above 3.5 within 0.7.
+- **Cloud Nine by the bar: +2.5** (`FB14_READX.bar`; v94 +1.15). The six Cloud Nine outcomes (0dfd444d T1 added: 259.29, window
+  260-261, hit) leave nothing in -1.2 .. +2.15 and are best from +2.25 (v94's +1.15 is 100:1 against). With the Do Nothing offset
+  at most 3.55 the transfer above gives at most 2.7; Cloud Nine's floor 2.25 needs the Do Nothing offset 3.12 or more. So
+  **2.25 .. 2.65**, 2.5 inside. At +2.5 every planned Cloud Nine so far was pressed after its window (Bowser 5 hits, 1 miss: as
+  blind), which is the runner pressing late (below).
+- **T1 plans:** the share is averaged over -1 .. +1 (0.2 / 0.6 / 0.2; v95 -2 .. +3 even), so a 2-3 frame window plans with
+  confidence again; the confirm goes into the carry on -3 .. +3. The edge rule (zwedge) is unchanged: no beep under it.
+
+## 4. Is the runner late? Yes
+- His Do Nothing errors on the v94 / v95 readings: +1.94, +0.73, +1.48, +2.41, +1.79, +1.37 (mean +1.62). The overlay A came
+  6.7 vblanks (3.35 frames) after the beep on these attempts against 5.15 (2.58) on 00700c7e, the attempt that won: ~0.8 frame
+  later at the controller. The rest is the reading's one-frame grain (K).
+- If the offset were short instead (a runner on the beep: 3.4 - 1.6 = 1.8), 0dfd444d T2 (+1.79) would have been in its window
+  at 96%; the 10 outcomes put 1.8 at **14:1 against** 3.4's neighbourhood.
+- **The learned correction is on again** (`LEVER_LEARN.fb14`, the v93 store `tot-fb14press-v93`, which holds exactly these six
+  presses): shrunk n / (n + 4), at most 1.5 frames: **the beeps come 0.97 frame earlier** on his browser. If the true offset is
+  at the low end (2.3) that leaves him ~0.4 early, at 3.4 ~0.65 late; either is inside a frame.
+
+## 5. The T2 replans of 0dfd444d (205 -> 214 -> 227 in 0.7 s)
+The stream lock (2.7) planned 205 (pp 0.805). The coin then moved the weights: the tick re-scored 205 at 0.487 and replanned;
+a replan takes zwChoose's best of the next second from the earliest beepable frame, which had moved later (198), so 214
+(0.989). The next tick read 214 at 0.775, under the plan's pp - 0.15, and replanned again: 227 (0.964). The runner pressed 229.
+Fixes (`fb14_live.js`):
+- **The anchor** (`fb14Anchor`, `FB14.anchor`): the first plan after a lock sets the turn's frame. A replan keeps it while it works
+  (perfect press at the edge and within 0.1 of the best in reach); otherwise it takes the workable frame nearest to it (ties: the
+  earlier), not the best of the next second; with none near, it moves (`fb14ReplanMoved`). Logged `fb14ReplanNear`. A new lock
+  clears it.
+- **The tick** replans at a drop of 0.25 (`FB14_TICK_DROP`; was 0.15) or under the edge / doubt as before.
+On 0dfd444d's numbers the second replan does not happen (0.775 >= 0.989 - 0.25); the first one would take the workable frame
+nearest 205 (the live states were not replayed; the test checks the rule on that shape).
+
+## 6. T6
+- 0dfd444d: the T6 step armed at T4's confirm (380.7 s); trigger 409.53; candidates 411.30; the popup closed on **k 77** (its
+  earliest) at 411.62; the narrow (886 candidates) 580 ms, `fb2Lock` 411.88 (k ~87). The same as 906bfb29.
+- **The HOLD is the headline from the step arming** (`fb2HoldArm` on the step change, before the Charge): "HOLD THE +3 POPUP — WAIT
+  FOR THE BEEP", red, 1.9em, blinking (`.hold-blink`); the detail "do NOT press A until the beep …"; logged `fb2HoldShown`. The plan
+  loop keeps it until the popup beep is planned or the page says to close the popup.
+- **Faster lock: not done.** Of the narrow's 580 ms, stage 2 is 269, the joint 2, the hyps 11: ~300 ms are the workers starting
+  (WASM instantiate and the maps per worker). A pool started at the trigger would land the lock ~0.3 s sooner (k ~76-80): still
+  not before an A on k 77, so the runner holding the popup is what matters.
+
+## Tests
+New `test_console_v96.js` (in `run_suite.sh`): the carry counts, K per lever and the transfer (2.55), the Cloud Nine and the 10 Do
+Nothing likelihoods, the band 2.25 .. 2.7 with the page's 2.5, the runner (stored presses, overlay lag), the page's READX / C9UNC /
+C9SHIFTS, the learned correction on the six presses (-0.97), the replan anchor (212 not 227; kept while it works; moves when
+nothing is near), the tick's 0.25, the T6 HOLD headline at the step arming, the T6 timing. Changed: `test_console_v94.js` 3 (bar
++2.5), `test_console_v95.js` 1 (C9UNC / C9SHIFTS), `test_console_1112.js` 2, `test_press_lever.js` 3, `test_fb14_v86.js` 5 (the
+lever learns again), version checks to v96.
+
+## Not done
+- The Cloud Nine pin rests on 3 overlay presses with full beeps and the shared press chain; a session on v96 checks it (Cloud Nine
+  `fb14Confirm` err should sit with the Do Nothing ones after the correction).
+- The T6 worker pool (above); the emulator was not run on a console-like capture.
 # Time Out Timer v95: Cloud Nine's offset is not borne out (1509e942 T1), the edge rule on every plan, Close Call at T6 (Nov 12)
 
 Console logs of 2026-11-12 afternoon on v94: 906bfb29 (T1-T4 all missed, T6 / T7; clip 15-33-14) and 1509e942 (the next
