@@ -6,6 +6,9 @@ Save in the route states: Ultra Boots, badges S.Jump Charge (スーパーチャ�
 Power Rush, Close Call; Lakilester Super rank; items Jammin' Jelly, Life Shroom; Mario 10 max HP / 15 FP.
 
 ## Bottom line
+- **v97 (`t6dn_log.py`, ../charge_live/README.md v97):** on the runner's route T4's wave is blocked, so Lakilester is
+  not KO'd on T6 and his Do Nothing confirm P is the lever (Bowser's AI on P + 13; the popup A then moves no draw). The
+  popup-lever findings below hold only when Lakilester is KO'd.
 - **T6 -> T7: GO (emulator-verified model).** The lever after the T6 Charge-ray lock is **not** a partner input:
   Lakilester is KO'd from the T4 wave until T7. It is **the A that closes the "+3" popup after the Charge**, on any frame
   K = confirm+77 .. +136 (no press: it closes by itself, same as K = 137). Bowser's AI runs on K+40, the Close Call roll

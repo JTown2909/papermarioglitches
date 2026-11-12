@@ -1,3 +1,83 @@
+# Time Out Timer v97: the runner's route texts, pinned; Final Bowser T6's lever is Lakilester's Do Nothing (Nov 12)
+
+The runner: "stop changing what the route says … all turns should resemble what I put there", and on T6 he "didn't identify
+the right turn": the page told him to hold the +3 popup, while his lever is Lakilester's Do Nothing.
+
+## Rule: the route texts are the runner's
+Every turn text is pinned by `test_route_texts.js` (in `run_suite.sh`). A turn text never carries an instruction, a note or
+parentheses of the page's own: those go in the step label or the status / headline. A change to a pinned line needs the
+runner's new wording, quoted here.
+
+## 1. The route texts
+- **Final Bowser (Ultra Boots)**, now: T1 `Charge; Cloud Nine`, T2 `Charge; Do Nothing`, T3 `Jammin' Jelly; Do Nothing`,
+  T4 `Charge; Do Nothing - Block Wave`, T5 `Peach Beam - Danger`, T6 `Charge; Do Nothing - Close Call`, T7 `Bounce x7`.
+  T3-T6 are the runner's verbatim; T1, T2 and T7 follow the same style (to be confirmed with him). Removed from the turn texts:
+  "(equip Close Call before the fight: T6 needs it)" (now in T1's Charge step label), "(Close Call equipped)", the popup
+  wording and v96's "HOLD the +3 popup — WAIT for the beep".
+- **The other fights**, checked against git history since the specs: Duplighosts, Jr. Troopa (RTA and ENDGAME_JR) and the
+  Hallway are as the runner wrote them, with v87's removals on his request (Life Shroom, the Spiny Flip numbers) kept;
+  nothing else had been reworded. The Normal Boots route is v84's spec text (the spec file named in the task was not on disk;
+  the v84 commit is the record), with Final Bowser's phase 2 as v85 rerouted it on his "we can route around it, we just need
+  a high cap" (a route change, not a rewording: kept).
+
+## 2. T6: the measurement (`fb2_route/t6dn_log.py`, emulator, JP, debug core)
+Build: T1-T4 each on the first lever frame that makes Bowser miss, T4 guarded (A on P + 87: Lakilester blocks the wave and
+is not KO'd), T5 Peach Beam + Do Nothing, T6 menu at Danger. DIAGNOSTIC writes (setup only, labelled in the script): Mario
+HP 10 / Bowser HP 80 / gRandSeed at T1, gRandSeed at the T6 menu per seed, and (CURE=1) Mario's poison cleared at the T6 menu
+(build 1234abcd's T5 left Mario at 1 HP and poisoned, so a dodge died at the T7 turn start whatever T6 did).
+- **The popup plays no part.** The popup A (confirm + K) opens Lakilester's menu on K + 17; between the end of the rays (61)
+  and the Do Nothing confirm P the only draws are the bolts, the coin and the step, and the seed at a fixed P is the same for
+  K = 77, 100, 130 and no press (P 220: e260fa51, P 240: cd60d8f8). The Strategies inputs draw nothing.
+- **Bowser's AI on P + 13** on all 51 runs (as T2-T4): RandInt 100, 80, maybe 60 (the T6 attack choice as before).
+- **The Close Call test** (rand_int(100) < 30) 52 frames after the AI for Body Slam, **55 for Claw** (62 with Lakilester KO'd)
+  and 55 for Fire Breath; after a Close Call the T7 menu 101 (Body Slam) / 134 (Claw, Fire Breath) after the test, with only
+  bolts and the coin between (9 runs), so the T7 Power Bounce model (`fb2PB`) runs from the test as before.
+- `t6model.py` with the AI frame given (`E=`, `DNDELTA` / `DNMENU`) is exact on all runs (attack and roll, `t6_check.py`).
+  Numbers in `fixtures/fb2_t6dn.json`.
+
+## 3. T6 on the page (`fb2_live.js`)
+- The T6 Charge still locks (the fb2 profile, the stream prior / the carried candidates from T4 as before).
+- **`fb2PlanP`**: for every kept state, the Close Call on each Do Nothing frame P (AI on P + 13), over the next
+  max(1, Settings window) s from the earliest beepable frame (and not before confirm + 130); the perfect-press pick
+  (`ppPick`, safe3) with the console lag 0 / 1 and the press spread as the popup plan had; **the edge rule** (zwedge): under it
+  no beep ("No edge: … Do Nothing whenever you like"). The beeps are fb2's press time **plus T2-T4's learned per-lever
+  correction** (`fb14Bias`, the same store `tot-fb14press-v93`).
+- **`fb2Confirm`** (the Strategies box closing on T6's step, `checkPress`): read as T2-T4's Do Nothing, `fb14Van('S')`
+  (vanish 2 minus v94's +3.4); the press goes into the learned store; the frame into the states on `FB14_SHIFTS_S`
+  (`fb2SetP`); the route moves to T7. A lock that lands after the confirm applies it then.
+- **T7** is planned from the post-T6 states by `fb2PlanT7` as before: the edge rule, and Close Call assumed equipped (v95:
+  the hit share 1 - pLucky is background until the coin shows the dodge branch).
+- **Demoted:** the popup plan (`fb2PlanK` / `fb2SetK`) is not called live (kept for the old tests); the popup closing is
+  logged (`fb2Seen`) and starts the coin watch, and no longer moves the route. The HOLD headline and its texts are gone.
+- **The T6 step**: Lakilester's Strategies screen (cat S) with the T6 Charge as its pre; label "Super Charge (its rays lock
+  the seed; close its +3 popup whenever you like), then Lakilester: Do Nothing on the beep → Close Call". From the step
+  arming the headline is WAIT: "WAIT on Lakilester's Strategies screen (Do Nothing) for the beep …" (`fb2WaitArm`).
+
+## 4. The emulator check
+The page planned the Do Nothing from frame 157 on each seed's true state (seed after the rays, the next coin, the lightning
+phases from the log); the emulator then pressed Do Nothing on that frame:
+| seed | planned | Bowser | roll | |
+|---|---|---|---|---|
+| 0badc0de | +159 | Body Slam | 22 | Close Call |
+| 13579bdf | +163 | Fire Breath | 13 | Close Call |
+| deadbeef | +179 | Claw | 0 | Close Call |
+| 5eed0fb2 | +173 | Fire Breath | 19 | Close Call |
+(deadbeef and 5eed0fb2: their truth from a run on P 156, where Bowser hit.) The windows were one frame each on these seeds
+(the frame either side failed on 0badc0de's 160), so the shown "with your press spread" chance is the honest one.
+
+## Tests
+New `test_fb2_v97.js` (the model on the 51 runs, the popup independence, the plans, the learned correction, the reading,
+the edge rule, the confirm into the store / states / T7, the step and headline, no HOLD left, the four emulator checks) and
+`test_route_texts.js`. Changed: `test_console_1112.js` 5 (the WAIT message; the popup keeps T6), `test_console_v96.js` 5
+(the WAIT headline), `test_console_v95.js` 2/3 (the route text), the page paths of v94-v96 to `timeout_timer_v97`, version
+checks to v97.
+
+## Not done
+- The T7 Power Bounce was not re-run in the emulator with Lakilester up (the harness's menu inputs did not reach the move
+  after this T6); its model is v74's (48/48) from the test on, and the stretch test -> T7 menu was checked (bolts and coin only).
+- Not on console. The Do Nothing reading and offset are T2-T4's; whether the fb2 clock reads the T6 Do Nothing as fb1's
+  clock reads T2-T4's is not measured.
+- If the T4 wave is not blocked, Lakilester is KO'd on T6 and the popup is the lever again; v97 does not beep that case.
 # Time Out Timer v96: the Final Bowser lever timing pinned (Cloud Nine +2.5, Do Nothing +3.4), the runner late, no chasing replans, T6's HOLD (Nov 12)
 
 Every console Final Bowser attempt so far: 00700c7e / a87486a0 (v92), 906bfb29 / 1509e942 (v94), the new 0dfd444d (v95, clip
