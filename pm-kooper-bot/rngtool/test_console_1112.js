@@ -31,13 +31,13 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(F => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v90', JSON.stringify(F)); } catch (e) {} }, FIX.leverStoreV90);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v95', 'page version v95');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v96', 'page version v96');
   // ---- 2. the learned correction
   const r2 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, out = { old: T.leverBias('fb14'), n0: T.leverList('fb14').length };
     for (let i = 0; i < 8; i++) T.leverAdd('fb14', -3.6); out.after = T.leverBias('fb14'); out.n = T.leverList('fb14').length; X.reset(); X.FB14.t0 = 1000; X.FB14.rate = 33.367; out.pt = X.pressT(900);
     out.v85 = 1000 + (900 - 1.7 - 5) * 33.367 - 50; return out; });
   check(r2.old === 0 && r2.n0 === 0, '2. the v90 store (' + FIX.leverStoreV90.join(', ') + ': +1.17 on v92) is not read');
-  check(r2.after === 0 && r2.n === 8 && Math.abs(r2.pt - r2.v85) < 0.01, '2. 8 presses at -3.6 are kept (' + r2.n + ') and move nothing: the beep on v85\'s frame');
+  check(r2.after === 1.5 && r2.n === 8 && Math.abs((r2.pt - r2.v85) / 33.367 - 1.5) < 0.01, '2. v96: 8 presses at -3.6 are kept (' + r2.n + ') and learned again (README v96): the beep 1.5 frames later (at most 1.5)');
   // ---- 3. the Do Nothing shifts
   const r3 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, FB = X.FB14, RT = T.RT(), out = {};
     const mk = () => X.fbNew({ s: 1, nc: 0, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, rg: 0, w: 1, from: 0, sh: [], tag: 2 });

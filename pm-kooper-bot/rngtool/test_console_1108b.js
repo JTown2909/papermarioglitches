@@ -122,7 +122,7 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
       for (let i = 0; i < 24; i++) { t += 16.7; T.fb14Frame ? T.fb14Frame(t, false) : null; }
       const L = T.SLOG.slice(s0); return { has: !!T.fb14Frame, byBar: L.filter(e => e.ev === 'fb14CloudNineByBar').length, before: L.filter(e => e.ev === 'fb14ConfirmBeforeLock').length, pend: X.FB14.pend.map(x => ({ turn: x.turn, n: x.shifts && x.shifts.length })) };
     });
-    check(rb.byBar === 1 && rb.before === 1 && rb.pend.length === 1 && rb.pend[0].turn === 1 && rb.pend[0].n === 8, '4. T1\'s bar hide on the Cloud Nine step is its confirm, kept for the lock (' + JSON.stringify(rb) + ')');
+    check(rb.byBar === 1 && rb.before === 1 && rb.pend.length === 1 && rb.pend[0].turn === 1 && rb.pend[0].n === 7, '4. (v96: Cloud Nine carried on -3 .. +3) T1\'s bar hide on the Cloud Nine step is its confirm, kept for the lock (' + JSON.stringify(rb) + ')');
     const C = readLog(LOGC);
     if (!C) console.log('skip 4b: log C not present');
     else {

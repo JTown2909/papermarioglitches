@@ -100,7 +100,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     return { b0, t0, b1, b2, v85: 1000 + (900 - 1.7 + (+document.getElementById('s-off').value)) * 33.367 - (+document.getElementById('s-vlag').value) }; });
   // v90: no seeded correction (log 54c12cf2: the +2.37 put the T2 beep 2 frames late); 4+ presses, shrunk, at most 1.5 frames
   check(Math.abs(pb.b0) < 0.01 && Math.abs((pb.t0 - pb.v85) / 33.367) < 0.01, '5. v90: the lever beep starts on v85\'s frame (no seeded correction) ' + JSON.stringify(pb));
-  check(Math.abs(pb.b1) < 0.01 && Math.abs(pb.b2) < 0.01, '5. v93: the Final Bowser lever learns nothing: two presses and 8 more at +0.1 give ' + pb.b2.toFixed(3));
+  check(Math.abs(pb.b1) < 0.01 && Math.abs(pb.b2 + 0.1 * 8 / 12) < 0.01, '5. v96: the Final Bowser lever learns again (README v96): two presses move nothing, the last 8 at +0.1 give ' + pb.b2.toFixed(3));
   await p.close();
   // ---- 4. the Recover setting
   for (const [hp, want] of [['hi', [0]], ['lo', [1]], ['any', [0, 1]]]) {

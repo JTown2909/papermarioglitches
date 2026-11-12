@@ -120,6 +120,8 @@ details.menu[open] > summary { margin-bottom: 0; border-color: var(--muted); }
 details summary { cursor: pointer; font-family: var(--display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 details[open] summary { margin-bottom: 10px; }
 @media (prefers-reduced-motion: reduce) { #shine.flash { transition: none; } }
+@keyframes holdblink { 50% { background: #7f0000; } }
+.hold-blink { animation: holdblink 0.8s step-end infinite; }
 </style>
 
 <div class="layout">
@@ -383,7 +385,12 @@ const ZW_MAX_AHEAD = 10000;      // ms (zwPlan): the latest press a zero-wait pl
  * model planned on are not in step on console (README v93), and a correction learned from those errors (4 presses: +1.17 on
  * the runner's browser) would move the beeps later, away from the presses that won. The Final Bowser lever keeps its presses
  * (a new store) but learns nothing from them until its readings are verified against outcomes (LEVER_LEARN). */
-const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v93' }, LEVER_LEARN = { fb14: false }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
+/* v96 (README v96): the readings are now borne out against outcomes (10 Do Nothing outcomes: offsets under 2.15 ~14:1 against
+ * a runner on the beep, 3.4 within 0.2 of the best) and against the clip's overlay A (the reading minus the A's lag after the
+ * beep is one constant within a game frame on all 11 Do Nothing presses). The six presses in this store (906bfb29, 1509e942,
+ * 0dfd444d: +1.94 +0.73 +1.48 +2.41 +1.79 +1.37) are the runner pressing late, ~0.8 frame later after the beep than on the
+ * attempt that won (00700c7e). The learned correction is on again: -0.97 frame on that store (shrunk, at most 1.5). */
+const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v93' }, LEVER_LEARN = { fb14: true }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
 const leverKey = id => (id === 'fb14' ? 'fb14' : null);
 function leverList(k) { if (!LEVER_STORE[k]) return []; try { const L = JSON.parse(localStorage.getItem(LEVER_STORE[k]) || 'null'); if (Array.isArray(L) && L.length) return L.slice(-8); } catch (e) {} return (LEVER_PRESS0[k] || []).slice(); }
 function leverBias(k) { if (LEVER_LEARN[k] === false) return 0; const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * L.length / (L.length + 4))); }
@@ -1449,9 +1456,15 @@ function zwTick(now) {
 /*@include charge_live/jr_live.js*/
 /*@include charge_live/fb14_live.js*/
 /*@include charge_live/hwcc_live.js*/
+/* v96 (logs 906bfb29 and 0dfd444d: the +3 popup closed on k 77, its earliest frame, both times, 0.3 s before the T6 lock): the
+ * HOLD is the headline from the moment the T6 step arms (after T4's Do Nothing, before the Charge), red and large, until the
+ * popup beep is planned or the page says to close it */
+const FB2_HOLD = 'HOLD the +3 popup after the Charge: do NOT press A until the beep. The beep comes 3-4 s after the Charge (the rays are read first); no beep by 4 s: close it anyway. Close Call must be equipped (without it there is no dodge and no T7 plan).';
+const FB2_HOLD_LOCKED = 'HOLD the +3 popup: T6 is locked and the popup beep is being planned. Do NOT press A yet.';
+function fb2HoldArm() { const s = isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_k' || (typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null)) return; st.msg = FB2_HOLD; slog('fb2HoldShown', { step: routeStep }); render(); }
 function makePlan() {
   if (typeof fb14Plan === 'function' && fb14Plan()) return;     // Final Bowser T1-T4 (fb14_live.js)
-  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (!(FB2.plan && FB2.plan.k != null)) st.msg = FB2.on ? (FB2.plan && FB2.plan.none ? 'No popup beep: ' + FB2.plan.none + '. Close the +3 popup now (Close Call about 30%).' : 'FB2: T6 locked, the popup beep is being planned. HOLD the +3 popup — WAIT for the beep.') : 'T6: Super Charge, then HOLD the +3 popup — WAIT for the beep (do not press A while the rays are read): the beep comes 3-4 s after the Charge. No beep by 4 s: close it anyway. Close Call must be equipped (without it there is no dodge and no T7 plan).'; render(); return; }     // v93: T6's own step
+  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (!(FB2.plan && FB2.plan.k != null)) st.msg = FB2.on ? (FB2.plan && FB2.plan.none ? 'No popup beep: ' + FB2.plan.none + '. Close the +3 popup now (Close Call about 30%).' : FB2_HOLD_LOCKED) : FB2_HOLD; render(); return; }     // v93: T6's own step
   if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (FB2.t7) fb2PlanT7(); else { st.msg = FB2.plan && !FB2.kObs ? 'FB2: waiting for the T6 popup A (the page reads the frame from the popup closing).' : 'No edge: no FB2 states to plan with. Press Power Bounce normally.'; render(); } return; }
   if (st.hwDone && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'Time Out is done for this attempt. The route stays on the Hallway until the next Charge (a retry) or Final Bowser\'s arena.'; render(); return; }
   if (typeof HWHP !== 'undefined' && HWHP.died && PROF().id === 'timeout' && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'No edge: Mario was hit on Hallway T1 and a Life Shroom revived him; the page does not follow the revive. Press Time Out normally (31%).'; render(); return; }
@@ -1650,11 +1663,11 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- rendering ---------- */
-function setText(h, d) { $('headline').textContent = h; $('detail').textContent = d; const w = /^WAIT/.test(h); $('headline').style.background = w ? '#c62828' : ''; $('headline').style.color = w ? '#fff' : ''; $('headline').style.padding = w ? '6px 10px' : ''; $('headline').style.borderRadius = w ? '6px' : ''; }
+function setText(h, d) { $('headline').textContent = h; $('detail').textContent = d; const w = /^(WAIT|HOLD)/.test(h), hold = /^HOLD/.test(h); $('headline').style.background = w ? '#c62828' : ''; $('headline').style.color = w ? '#fff' : ''; $('headline').style.padding = w ? (hold ? '14px 12px' : '6px 10px') : ''; $('headline').style.borderRadius = w ? '6px' : ''; $('headline').style.fontSize = hold ? '1.9em' : ''; $('headline').classList.toggle('hold-blink', hold); }
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v95';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v96';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -1670,6 +1683,7 @@ function render() {
   chip('p-watch', nSh ? 'on' : ''); chip('p-lock', st.lock ? 'ok' : (st.cands && st.cands.length > 1 ? 'on' : (st.msg ? 'err' : ''))); chip('p-time', st.plan ? 'ok' : '');
   if (st.searching) {}
   else if (st.msg && /^WAIT/.test(st.msg)) setText('WAIT: reading the seed, no beeps yet', st.msg);      // v91: the Final Bowser wait was headed "Check your taps"
+  else if (st.msg && /^HOLD/.test(st.msg)) setText('HOLD THE +3 POPUP — WAIT FOR THE BEEP', st.msg);      // v96: T6, from the step arming
   else if (st.msg) setText(/^(No |Time Out is done|The seed is being|FB2|Route off|Beeps stopped|T\d: )/.test(st.msg) ? 'No beeps this time' : segLabel + 'Check your taps', st.msg);
   else if (st.plan) { const P = st.plan, typ = P.type && WTYPE[P.type] ? 'Window ' + WTYPE[P.type].name + ': ' : '';
     setText(P.again ? 'Still on the target screen: next window planned' : P.switched ? 'A sooner window came up: press A on the last beep' : 'Press A on the last beep (' + (P.beeps || nBeeps()) + ' beeps)',
@@ -2115,7 +2129,7 @@ function applyProfile() {
 function setStep(i) {
   slog('step', { to: i }); const was = routeStep; st.hwDone = false; if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
   if (RT()[was] && /^Hallway Bowser/.test(RT()[was].t || '') && !/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '') && routeStep > was) st.hwLeft = { at: performance.now(), hides: 0 };
-  else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); }
+  else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); if (routeStep !== was) fb2HoldArm(); }
 // v92: the runner's own route moves (a click, the buttons, the keys) are told from the page's (a screen, a burst): a Final
 // Bowser read takes the runner's turn only (fb14Lock)
 function userStep(i) { st.userStepT = performance.now(); slog('userStep', { from: routeStep, to: i }); setStep(i); }
