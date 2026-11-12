@@ -60,7 +60,9 @@ const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'fb14_lo
   console.log(JSON.stringify(res));
   // v95: T1 (Cloud Nine) plans on the share averaged over the unpinned offset (FB14_C9UNC): with the offset exactly as the
   // model has it (this test) a T1 plan lands less often (~0.73) than v94's exact-frame plan; the claim still matches
-  const bad = errs.length || Object.entries(res.per).some(([k, x]) => x.n && (x.model < (k === 'T1' ? 0.65 : 0.85) || Math.abs(x.claimed - x.model) > 0.12));
+  // v98: T3's claim keeps FB14_T3_FLOOR of the blind chance (at most ~0.82) until the T3 model is pinned on console: its claim
+  // is checked under 0.83 (never 100%), the model as before
+  const bad = errs.length || Object.entries(res.per).some(([k, x]) => x.n && (x.model < (k === 'T1' ? 0.65 : 0.85) || (k === 'T3' ? x.claimed > 0.83 : Math.abs(x.claimed - x.model) > 0.12)));
   console.log(bad ? 'FAIL' : 'PASS', ': per turn claimed / model', Object.entries(res.per).map(([k, v]) => k + ' ' + v.claimed + ' / ' + v.model + ' (' + v.n + ')').join(', '), '; all four', res.all4, errs.slice(0, 3).join(' '));
   await b.close(); process.exit(bad ? 1 : 0);
 })();

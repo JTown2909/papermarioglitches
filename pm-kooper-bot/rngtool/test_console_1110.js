@@ -44,7 +44,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     return out;
   });
   console.log(JSON.stringify(r));
-  check(r.version === 'v97', 'version v97');
+  check(r.version === 'v98', 'version v98');
   // 1. the outcome table
   const V = r.van.jrcc_nothing, d = V - 2;
   for (const x of FIX.strategies) {
