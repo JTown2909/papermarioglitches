@@ -1,3 +1,69 @@
+# Time Out Timer v95: Cloud Nine's offset is not borne out (1509e942 T1), the edge rule on every plan, Close Call at T6 (Nov 12)
+
+Console logs of 2026-11-12 afternoon on v94: 906bfb29 (T1-T4 all missed, T6 / T7; clip 15-33-14) and 1509e942 (the next
+attempt, "total fail"; clip 15-38-09). Numbers only in `fixtures/console_v95.json` (the T1 capture is read from the log at
+test time). The clips show no in-game input display (overlay only); the emulator was not run.
+
+## 1509e942 T1: a 97.6% plan, pressed inside, Bowser hit
+- **Not a wrong seed.** T1's fresh lock (436c26d0, ratio 1.94) lies **21792 LCG steps** on the stream of 906bfb29's T4 lock
+  (1576edf0, 240 s before: 91 steps/s, the console rate); a wrong seed lands within 30000 by chance ~1e-5. T2's stream lock
+  (7323ca31, 3.38) is 2657 after it, T4's 3014 after that.
+- **The doubt 0.041 was the stream prior**, not 0.42: `fb14Prior` finds the seed on the kept stream (`fbStreamSteps`, up to
+  30048 steps, no age limit) and starts at 0.05. Justified here (above). The replay of the capture gives the same seed and prior.
+- **The clock:** the capture's burst fits +0.2 (frame 3, no shift). But **v94's anchor never ran live**: `fb14TrigPhase`
+  read `CHG.frames`, which is emptied after the maps (and `CHG.F0` dropped before the lock): n 0 on every lock of both logs.
+  906bfb29 T4's capture fits -1.0 (its clock stayed a frame off; Bowser missed anyway). Fixed: the levels are kept (`CHG.Fm`).
+- **So it is the Cloud Nine offset.** Of the 5 planned Cloud Nines on console 4 were hit, where the plans (pp 0.73-0.98)
+  expected 0.93. On their windows the outcomes leave Cloud Nine's offset (true = v92 reading + x) anywhere **outside
+  -0.85 .. +2.15**; v94's +1.15 (= 3.4 - 2.25, from the display, not from Cloud Nine outcomes) is inside, ~20:1 against on
+  1509e942 T1 alone. x >= 2.15 fits all five as outside-window presses (4 hits, 1 miss at ~50% each); x < -1.2 too. Not
+  pinnable from these outcomes; it needs the T1 -> T2 carry on a Bowser-missed T1 (906bfb29: which Cloud Nine frame gives
+  T2's narrowed lock 8f17f0b0, 1677 steps on) - not done.
+- **v95 is conservative on T1** (`FB14_C9UNC`, `fb14ShareU`): the Cloud Nine share a plan sees is the mean over the reading's
+  -2 .. +3 frames (in the plan and in its re-score), so a plan needs a long run of frames to claim much; on the replayed lock
+  the best T1 plan reads 60% (window 6), not 97.6%. The Cloud Nine confirm goes into the carried states on -3 .. +4.
+- **T2:** 82%, window 188, read +2.41 late (190.41), Bowser hit: an outside-window press, consistent with 3.4.
+- **T4:** after two hits (Life Shroom), stream lock 2.47 at doubt 0.05: plan 249 (95.7%), the coin moved it (replan at 0.70) to
+  251, stopped at 0.28; a new plan 339 (91%, doubt 0.14), stopped as the doubt reached 0.68 (`carryDied`), the runner pressed
+  341. The replan / stop rules behaved as designed; the stream lock itself was probably off the hit path.
+
+## The Do Nothing offset (v94 +3.4) with 906bfb29's outcomes
+906bfb29 T2 / T3 / T4 missed with v94 readings +1.94 / +0.73 / +1.48 (v92 readings 992.54 / 1417.33 / 1816.08 on windows
+993-994 / 1420 / 1817-1820, pp 0.99+), 1509e942 T2 was hit (187.01, window 188). At +3.4 T2 and T3 fall outside their windows
+(misses at ~50% each: possible); T4 (phase -1) inside. Likelihood over all 8 Do Nothing outcomes (in the window the plan's
+share, outside the blind one): best 3.05 .. 3.55 (3.4 within 0.04 of the best); no refinement is supported (a band 1.55-2.2
+is ~0.6 lower). Kept at 3.4.
+
+## The edge rule on every plan (906bfb29 T7: p7 0, win 0, doubt 0.44, and the countdown played; the runner got 3)
+- `fb2PlanT7`: beeps only when the perfect-press 7 share (background as no 7) reaches Settings > Best chance (zwedge);
+  else "No edge, press normally", no countdown, a running fb2 plan dropped.
+- `fb2PlanK` (the T6 popup): the same on the Close Call share; else no popup beep ("close the +3 popup now").
+- `zwChoose` (Time Out, Duplighosts, Jr. Troopa, Hallway, Final Bowser T1-T4): the rule on a chosen window kind too
+  (it was on "best" only). fb14 / dup / jr / hw go through `zwChoose`; `hwHpCheck` and `mixPlan` already had it; the
+  single-seed coin plan is a known seed (no shares).
+
+## Close Call at T6 (the runner: not equipped on 906bfb29)
+- `1A5830.c:192`: `player_team_is_ability_active(target, ABILITY_CLOSE_CALL) && curHP < 6` is tested before
+  `rand_int(100) < 30`, so **without the badge there is no draw** (and no dodge).
+- The outcomes cannot tell "no badge" from "badge, roll 30+": both are a hit, and the hit branch after the test (animation,
+  T7 menu frames) is not modelled; the page reads only the HP tens digit (blank at Danger). So: the T7 states stay the dodge
+  branch, and **the other 1 - pLucky is background** in `fb2Prune` (906bfb29: 87%): the coin must show the dodge branch
+  before a T7 beep. And the route says it: T1 "(equip Close Call before the fight: T6 needs it)", T6 "(Close Call equipped)".
+
+## T6 timing (906bfb29)
+Trigger 209.123 s (confirm + 16); the rays end at +60 (210.594); maps 210.907 (313 ms); `fb14T6Cands` 882; the popup closed
+on k 77 (211.211, the earliest); the narrow took 608 ms (211.513), `fb2Lock` 211.526 = **k ~88**. The popup window is
+k 77-136 (to 213.13 s); with the 3 beeps (0.6 s) and lead the first beepable k is ~112: **24 frames of window left** when the
+runner holds the popup. The step now says "HOLD the +3 popup — WAIT for the beep". The narrow was not made faster.
+
+## Tests
+New `test_console_v95.js` (in `run_suite.sh`): the streams, the Cloud Nine outcomes and the excluded band, the Do Nothing
+likelihood, the T1 replay (seed, stream prior, the v95 plan not 97.6%, the anchor read after the maps), the T7 / popup edge
+rule (live: "No edge, press normally", no plan), the dodge-branch background, the route texts, zwChoose. Version checks to v95.
+
+## Not done
+- Cloud Nine's offset not pinned (above); the T1 plans stay conservative until it is.
+- The T6 narrow (608 ms on 882 candidates) not sped up; the hit branch of T6 -> T7 not modelled.
 # Time Out Timer v94: the true press timing from the in-game input display, the Final Bowser lever readings, the fb1 clock anchor (Nov 12)
 
 Method: every clip of 11-09, 11-10 and 11-12 decoded frame by frame (60 fps): the overlay's A (top left), the practice ROM's

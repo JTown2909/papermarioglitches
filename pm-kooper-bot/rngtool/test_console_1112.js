@@ -31,7 +31,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(F => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v90', JSON.stringify(F)); } catch (e) {} }, FIX.leverStoreV90);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v94', 'page version v94');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v95', 'page version v95');
   // ---- 2. the learned correction
   const r2 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, out = { old: T.leverBias('fb14'), n0: T.leverList('fb14').length };
     for (let i = 0; i < 8; i++) T.leverAdd('fb14', -3.6); out.after = T.leverBias('fb14'); out.n = T.leverList('fb14').length; X.reset(); X.FB14.t0 = 1000; X.FB14.rate = 33.367; out.pt = X.pressT(900);
