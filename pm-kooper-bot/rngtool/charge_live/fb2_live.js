@@ -144,6 +144,8 @@ function fb2PlanK(kAt) {      // kAt (tests): plan as if the earliest beepable f
     if (q.p7 == null) p7Of(q); c = Object.assign({}, q, { pp: ppk(pk.target), win: pk.run.length }); }
   const tPress = fb2PressT(c.k), pl = { k: c.k, p: c.p, pp: c.pp, win: c.win, p7: c.p7, blind, tPress, kFirst, ms: Math.round(performance.now() - t0), states: rows.length,
     alt: cand.slice(0, 5).map(x => [x.k, +x.p.toFixed(3)]) };
+  // v95: the edge rule (zwedge) on the popup beep too: a Close Call share under it is no plan (close the popup normally)
+  if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no popup frame gives Close Call for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind, kFirst, pp: pl.pp, p: pl.p }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; slog('fb2PlanK', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), p: +pl.p.toFixed(3), k: pl.k }); fb2Show(); return nl; }
   if (kAt != null) return pl;
   cancelBeeps(); for (let i = 0; i < FB2_BEEPS; i++) beepAt(tPress - (FB2_BEEPS - 1 - i) * FB2_GAP, i === FB2_BEEPS - 1 ? 1320 : 880, i === FB2_BEEPS - 1 ? 0.12 : 0.06);
   FB2.plan = pl; slog('fb2PlanK', FB2.plan); fb2Show(); return pl;
@@ -199,10 +201,15 @@ function fb2Prune(upto) {
     if (err > ZW_MAXERR) continue;
     const w = o.w * lw; out.push(Object.assign({}, o, { w, err })); mx = Math.max(mx, w);
   }
-  const nVis = vis.reduce((a, [x, y]) => a + (y - x), 0), keep = out.filter(o => o.w >= mx * ZW_CUT), sum = keep.reduce((a, o) => a + o.w, 0), bg = tot0 * ZW_BG0 / (1 - ZW_BG0) * Math.exp(-ZW_RHO * nVis);
+  const nVis = vis.reduce((a, [x, y]) => a + (y - x), 0), keep = out.filter(o => o.w >= mx * ZW_CUT), sum = keep.reduce((a, o) => a + o.w, 0), pL = T7.pLucky != null ? Math.max(1e-3, T7.pLucky) : 1, bg = tot0 * (ZW_BG0 / (1 - ZW_BG0) + (1 - pL) / pL) * Math.exp(-ZW_RHO * nVis);
   keep.doubt = keep.length ? bg / (bg + sum) : 1;
   return keep;
 }
+/* v95 (log 906bfb29: Close Call not equipped, popup closed on k 77 with pLucky 0.134, and the T7 plan went on with the 13%
+ * as if Mario had dodged): the T7 states are the dodge branch only. A hit (no roll when Close Call is not equipped:
+ * 1A5830.c:192 tests the badge before rand_int(100), so no draw; or a roll of 30+) is not modelled after the test (the hit
+ * animation and the T7 menu frames), so its share (1 - pLucky) is counted as background in fb2Prune: the coin must show the
+ * dodge branch before a T7 beep. */
 /* the T7 plan on the Power Bounce target screen (or at clock frame cScr in tests): the best target-A frame for 7+ */
 function fb2PlanT7(cScr) {
   if (!FB2.on || !FB2.t7) return false;
@@ -221,6 +228,16 @@ function fb2PlanT7(cScr) {
   let k = 0; for (let i = 1; i <= W; i++) if (s7[i] + 0.1 * s6[i] > s7[k] + 0.1 * s6[k] + 1e-12) k = i;
   const pk = ppPick(e7, e6, from - 1, from + W + 1, from, W, x => (s7[x - from] || 0) / tot, 'safe3'); if (pk.ok) k = pk.target - from;
   const d = from + k, dz = S.doubt || 0, plan = { d, p7: (1 - dz) * s7[k] / tot, p6: (1 - dz) * s6[k] / tot, pp7: (1 - dz) * e7[k + 1], pp6: (1 - dz) * e6[k + 1], win: pk.ok ? pk.run.length : 0, doubt: +dz.toFixed(3), states: S.length, tPress: fb2PressT(d) };   // the background's share counts as no 7 (blind 7 is ~7%)
+  // v95 (log 906bfb29 T7: p7 0, p6 0, win 0 at doubt 0.44 on 3 states, and the countdown played; the runner got 3): the
+  // page's edge rule as every other plan (zwChoose): beeps only when the perfect-press 7 share, the background counted as
+  // no 7, reaches Settings > Best chance (zwedge). Below it: "No edge", no countdown.
+  if (!(plan.pp7 >= num('zwedge'))) {
+    plan.none = 'edge'; FB2.t7.plan = plan; if (cScr != null) return plan;
+    const was = st.plan && st.plan.prof === 'fb2'; if (was || FB2.t7.edgeLogged !== d) { slog('fb2NoEdge', { why: 'edge', d, p7: +plan.p7.toFixed(3), pp7: +plan.pp7.toFixed(3), p6: +plan.p6.toFixed(3), win: plan.win, doubt: plan.doubt, states: plan.states }); FB2.t7.edgeLogged = d; }
+    if (was) st.plan = null; cancelBeeps();
+    st.msg = 'No edge, press normally: no target-A frame gives 7 bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, 6+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + '). Press Power Bounce normally.';
+    fb2Show(); render(); return true;
+  }
   FB2.t7.plan = plan;
   if (cScr != null) return plan;
   if (cScr == null) { cancelBeeps(); playBeeps(plan.tPress);
@@ -234,7 +251,7 @@ function fb2Show() {
   el.innerHTML = '<b>FB2 T6 → T7</b> (' + FB2.hyps.length + ' RNG states after the rays)' +
     '<br>Popup A: ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; a blind press is ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + '), Close Call and 7 bounces ' + pc(P.p7 || 0) + ' (no press: ' + pc(P.blind) + ')') +
     (FB2.kObs != null ? '<br>Seen: popup A on +' + FB2.kObs + (FB2.kHow === 'bar' ? ' (from the bar)' : '') + '; Close Call ' + pc(T.pLucky) + '; Bowser ' + Object.entries(T.atk).map(([a, w]) => a + ' ' + pc(w)).join(', ') : '') +
-    (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + T.plan.none + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
+    (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
 window.__fb2 = { FB2, seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
