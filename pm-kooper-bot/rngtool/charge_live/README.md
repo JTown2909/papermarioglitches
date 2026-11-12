@@ -49,6 +49,17 @@ Nothing confirm at 239.6 s came with none (`fb2ConfirmNoTrig`): the T6 lever log
 is not found in this version (the clip was not decoded; the carry had been dropped at T4, so the T6 read would have been a
 full search).
 
+## 4. The emulator check through T3 (`fb2_route/fb14_t3check.py`): not passed
+`fb14_t3check.py` reads `fb14_e2e.py` reports (RUNNER=patient GUARD=1 TRUTH=1, 3 turns) and passes when T3 is planned on
+carried or re-locked states with no claim over 0.83. Run on 1234abcd (build: the T1 menu at 10 HP, Bowser 80, written as
+route_build does):
+- v97 page: T1 did not lock (a no-lock read), T2 locked fresh 8.8 s after the hide, T3 planned at 1.0 on states the truth
+  trace does not contain, and replanned every ~2.4 s (the v97 sample loop of section 1); Bowser missed: **FAIL** (claim 1.0).
+- v98 page: T1 again no lock, T2's fresh lock came 8.2 s after the hide, its plan 12.2 s (after the patient runner's 12 s),
+  the unplanned press hit: the carry was off before T3: **FAIL** (T3 not reached with a carry).
+The T1 read failing on both runs is new on this machine's harness and is not analysed; 9e3779b9 / 2b7e1516 were not run.
+So the T1-T4 carry through T3 on three seeds is **not shown**.
+
 ## Tests
 New `test_console_v98.js` (in `run_suite.sh`): the two logs' T3 / T4 numbers; the sample (weighted, the heavy states always
 in, nested, the weights' sum, the tick's re-score); the T3 floor and the re-lock on a synthetic carry whose shines come 5.5
