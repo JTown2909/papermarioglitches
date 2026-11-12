@@ -1,0 +1,50 @@
+{
+"what": "v96: numbers only. The clips' overlay A (60 Hz vblanks after the plan's tPress, clip synced to the log by every HUD bar hide), the page's reading err of the same press (v92 reading - target, frames), the Final Bowser lever outcomes, the carry-and-stream counts (charge_live/tools/fb14_carry_pin.js on 906bfb29), 0dfd444d's T2 replans and T6 timing",
+"sync": { "00700c7e": 57013.0, "a87486a0": 250295.7, "906bfb29": 117542.8, "1509e942": 412891.7, "0dfd444d": 293297.3 },
+"presses": [
+  ["00700c7e T2", "S", 206, -3.54, 4.4, "full"],
+  ["00700c7e T3", "S", 632, -3.76, 5.9, "full"],
+  ["a87486a0 T2", "S", 200, -1.03, 7.4, "full"],
+  ["a87486a0 T4", "S", 197, -1.02, 7.4, "full"],
+  ["906bfb29 T2", "S", 994, -1.46, 8.5, "full"],
+  ["906bfb29 T3", "S", 1420, -2.67, 6.1, "full"],
+  ["906bfb29 T4", "S", 1818, -1.92, 5.6, "full"],
+  ["1509e942 T2", "S", 188, -0.99, 7.5, "full"],
+  ["1509e942 T4", "S", 339, -1.43, 7.6, "full"],
+  ["0dfd444d T2", "S", 227, -1.61, 6.2, "full"],
+  ["0dfd444d T4", "S", 198, -2.03, 5.4, "full"],
+  ["00700c7e T1", "bar", 345, -1.45, 6.5, "full"],
+  ["906bfb29 T1", "bar", 268, 1.26, 8.0, "stopped"],
+  ["1509e942 T1", "bar", 229, -0.61, 7.2, "full"],
+  ["0dfd444d T1", "bar", 260, -0.71, 7.0, "full"]
+],
+"pressesNote": "a87486a0 T1: no overlay A near the plan (its second plan, v93); 906bfb29 T1: the beeps were stopped 1 s before the press (beepsStopped p 0.628), so its lag is not on the beeps",
+"cloudNineOutcomes": [
+  ["00700c7e T1", 343.55, 345, 345, 0.805, "hit"],
+  ["a87486a0 T1", 208.94, 207, 208, 0.766, "hit"],
+  ["54c12cf2 T2", 896.71, 896, 896, 0.8, "hit"],
+  ["906bfb29 T1", 269.26, 268, 268, 0.725, "miss"],
+  ["1509e942 T1", 228.39, 228, 230, 0.976, "hit"],
+  ["0dfd444d T1", 259.29, 260, 261, 0.725, "hit"]
+],
+"doNothingNew": [
+  ["0dfd444d T2", 225.39, 227, 227, 0.964, "hit", 0],
+  ["0dfd444d T4", 195.97, 198, 198, 0.792, "miss", 0]
+],
+"carry906": {
+  "t1Seed": "7173067f", "t2Seed": "8f17f0b0", "t2Steps": 1677, "t1States": 1951, "t2FreshStates": 32,
+  "cnFramesTried": [260, 280], "cnFramesReaching": 21, "cnHitStates": 86, "t2ChargeD": [0, 2],
+  "dn": { "t2Tried": [166, 184], "t2Reaching": 19, "jellyTried": [361, 365], "jellyReaching": 5, "t3Tried": [590, 608], "t3Reaching": 18, "t4Seed": "1576edf0" },
+  "coinShinesBetweenT1T2": 2
+},
+"replans0dfd": [
+  { "t": 336095, "target": 205, "pp": 0.805, "from": 182 },
+  { "t": 336556, "replanFrom": 205, "p": 0.487 },
+  { "t": 336594, "target": 214, "pp": 0.989, "from": 198 },
+  { "t": 336805, "replanFrom": 214, "p": 0.775 },
+  { "t": 336844, "target": 227, "pp": 0.964, "from": 206 },
+  { "t": 339324, "confirm": 228.79, "err": 1.79, "outcome": "hit" }
+],
+"leverStore": [1.94, 0.73, 1.48, 2.41, 1.79, 1.37],
+"t6_0dfd": { "tTrig": 409528, "tCands": 411297, "tPopup": 411623, "kSeen": 77, "tNarrowDone": 411874, "tFb2Lock": 411884, "narrowMs": 580, "stage": { "joint": 2, "stage2": 269, "hyps": 11 }, "mapsMs": 153, "cands": 886, "tStepArmed": 380667 }
+}
