@@ -165,7 +165,10 @@ function fb2Frame(t, present) {
   if (present && FB2.visFrom == null) FB2.visFrom = fb2Pic(t) + 30;
   if (!present && FB2.visFrom != null) { FB2.vis.push([FB2.visFrom, fb2Pic(t) - 4]); FB2.visFrom = null; }
 }
-function fb2SeenK(k, how, k0) { FB2.kHow = how; FB2.kFrom = k0 != null ? k0 : k; slog('fb2Seen', { k, how }); if (k == null) { FB2.kSeen = -1; FB2.why = 'the popup and the bar were not seen: no K'; return; } FB2.kSeen = k; if (FB2.on) fb2SetK(k, how, FB2.kFrom); }
+function fb2SeenK(k, how, k0) {
+  // v93: the popup closed on T6's own step: the route goes on to T7's Power Bounce
+  if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex(x => x.turn === 'fb2_pb'); if (i >= 0) { slog('fb2StepByPopup', { from: routeStep, to: i }); setStep(i); } }
+  FB2.kHow = how; FB2.kFrom = k0 != null ? k0 : k; slog('fb2Seen', { k, how }); if (k == null) { FB2.kSeen = -1; FB2.why = 'the popup and the bar were not seen: no K'; return; } FB2.kSeen = k; if (FB2.on) fb2SetK(k, how, FB2.kFrom); }
 function fb2Tap(t) { if (CHG.trig && FB2.kSeen != null && FB2.kSeen >= 0) FB2.taps.push(fb2Pic(t) - 4.8); }      // the flash shows ~4.8 frames after the draw
 function fb2SetK(k, how, k0) {      // the popup A on frame k (k0..k when pictures were dropped around the closing)
   FB2.kObs = k; FB2.kHow = how; const F = fb2Flags(), out = [], ks = []; for (let x = Math.min(k, k0 != null ? k0 : k); x <= k; x++) ks.push(x);
@@ -234,4 +237,4 @@ function fb2Show() {
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + T.plan.none + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
-window.__fb2 = { FB2, planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
+window.__fb2 = { FB2, seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests

@@ -104,7 +104,7 @@ function chgEnabled() { const el = $('s-chg'); return !el || el.checked; }
 /* any Hallway Bowser step arms the Hallway Charge (the runner is often on T2 after a retry; a burst seen there sets the
  * route back to T1, chgFrame) */
 const chgHallStep = s => !!(s && s.t && /^Hallway Bowser/.test(s.t));
-function chgProfNow() { const s = isRoute() && RT()[routeStep]; if (!s) return null; if (s.nb) return (s.chg && CHG_PROF[s.chg]) || null;     /* v84: a Normal Boots step reads only its own chg (v85: the Duplighosts', Jr. Troopa's, Hallway T1's) */ if (chgHallStep(s)) return CHG_PROF.hw; if (s.chg && CHG_PROF[s.chg]) return CHG_PROF[s.chg]; for (const k in CHG_PROF) if (CHG_PROF[k].turn && CHG_PROF[k].turn === s.turn) return CHG_PROF[k]; return null; }
+function chgProfNow() { const s = isRoute() && RT()[routeStep]; if (!s) return null; if (s.nb) return (s.chg && CHG_PROF[s.chg]) || null;     /* v84: a Normal Boots step reads only its own chg (v85: the Duplighosts', Jr. Troopa's, Hallway T1's) */ if (chgHallStep(s)) return CHG_PROF.hw; if (s.turn === 'fb2_k') return CHG_PROF.fb2;     /* v93: T6's own step reads the T6 Charge too */ if (s.chg && CHG_PROF[s.chg]) return CHG_PROF[s.chg]; for (const k in CHG_PROF) if (CHG_PROF[k].turn && CHG_PROF[k].turn === s.turn) return CHG_PROF[k]; return null; }
 function chgStepActive() { return !!chgProfNow(); }
 /* Which arena the capture shows, read at a real bar hide (the menu just closed, battle camera): the band under the
  * battle floor (320-space y 165-190) is the dark bushes in the Hallway (luma 45-67 at all 43 bar hides of the 14
@@ -155,7 +155,7 @@ const ARENA_ORDER = { dup: 0, jr: 1, hw: 2, fb: 3 }, ARENA_MIN = { jr: 90000, hw
 const ARENA = { seen: {} };
 function arenaFightOf(i) {
   const s = RT()[i]; if (!s) return null;
-  if (s.chg === 'dup') return 'dup'; if (s.chg === 'jr' || s.jr != null) return 'jr'; if (s.fb14 || s.chg === 'fb1' || s.turn === CHG_PROF.fb2.turn) return 'fb';
+  if (s.chg === 'dup') return 'dup'; if (s.chg === 'jr' || s.jr != null) return 'jr'; if (s.fb14 || s.chg === 'fb1' || s.turn === CHG_PROF.fb2.turn || s.turn === 'fb2_k') return 'fb';
   if (/^Hallway Bowser/.test(s.t || '') || s.turn === 'hw_spiny' || s.chg === 'nbhw') return 'hw'; return null;
 }
 function arenaNote(i, t) { const f = arenaFightOf(i); if (f) ARENA.seen[f] = t != null ? t : performance.now(); }

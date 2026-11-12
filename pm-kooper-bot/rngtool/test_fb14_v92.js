@@ -26,7 +26,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   const b = await chromium.launch(), errs = [], p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame' })); } catch (e) {} });
   await p.goto(url);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v92', 'page version v92');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v93', 'page version v93');
   const r = await p.evaluate(async ({ L, seeds }) => {
     const T = window.__tot, X = window.__fb14, FB = X.FB14, rate = 33.367, T1 = L.turns[0], T2 = L.turns[1], M = T2.M, out = {};
     const sAt = f => seeds[f - L.f0] >>> 0;

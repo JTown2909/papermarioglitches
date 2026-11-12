@@ -378,10 +378,15 @@ const ZW_MAX_AHEAD = 10000;      // ms (zwPlan): the latest press a zero-wait pl
  * and Duplighost presses on the same Strategies screen are -0.6 on average against the beeps), and no outcome ever showed the
  * shifted beeps working. The correction starts at 0 (a new store: the browsers that kept the old presses start over), needs 4
  * presses on the beeps, is shrunk towards 0 (n / (n + 4) of the mean) and moves the beeps at most 1.5 frames. */
-const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v90' }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
+/* v93 (console logs 00700c7e / a87486a0, 2026-11-12): the Final Bowser Do Nothing readings against the plans were -3.54 and
+ * -3.76 with Bowser missing on one-frame windows, then -1.03 (hit) and -1.02 (the wave missed): the reading and the frames the
+ * model planned on are not in step on console (README v93), and a correction learned from those errors (4 presses: +1.17 on
+ * the runner's browser) would move the beeps later, away from the presses that won. The Final Bowser lever keeps its presses
+ * (a new store) but learns nothing from them until its readings are verified against outcomes (LEVER_LEARN). */
+const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v93' }, LEVER_LEARN = { fb14: false }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
 const leverKey = id => (id === 'fb14' ? 'fb14' : null);
 function leverList(k) { if (!LEVER_STORE[k]) return []; try { const L = JSON.parse(localStorage.getItem(LEVER_STORE[k]) || 'null'); if (Array.isArray(L) && L.length) return L.slice(-8); } catch (e) {} return (LEVER_PRESS0[k] || []).slice(); }
-function leverBias(k) { const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * L.length / (L.length + 4))); }
+function leverBias(k) { if (LEVER_LEARN[k] === false) return 0; const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * L.length / (L.length + 4))); }
 function leverAdd(k, e) { if (!LEVER_STORE[k]) return []; const L = leverList(k).concat([+e.toFixed(2)]).slice(-8); try { localStorage.setItem(LEVER_STORE[k], JSON.stringify(L)); } catch (x) {} return L; }
 // the earliest confirm frame (on a clock with frame 0 at tLast) whose press and every beep before it are still ahead
 function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) - tLast) / rate + 0.5 - num('off') - 1e-9); }
@@ -470,8 +475,11 @@ const ENDGAME = [
     { text: 'T3: Jammin\' Jelly (Laki: Do Nothing)', steps: [{ label: 'Do Nothing on the beep → Bowser misses', cat: 'S', fb14: 3, fb14role: 'lever' }] },
     { text: 'T4: Charge (Laki: Do Nothing) - block the wave', steps: [{ label: 'Do Nothing on the beep → the wave comes and misses Mario (block it; it may hit Laki)', cat: 'S', chg: 'fb1', fb14: 4, fb14role: 'lever' }] },
     { text: 'T5: Peach Beam at Danger', steps: [] },
-    { text: 'T6: Charge, then the popup A on the beep → Close Call', steps: [] },
-    { text: 'T7: Power Bounce x7', steps: [{ label: 'Power Bounce → 7 (T6: Super Charge, then close its +3 popup on the beep)', cat: 'B', turn: 'fb2_pb', pre: [{ cat: 'M', id: 'fb2_charge' }] }] } ] } ];
+    // v93 (runner, log a87486a0: "there is no turn 6 close call trigger"): T6 has its own step. On v92 the route went from
+    // T4's Do Nothing straight to the T7 Power Bounce step (its pre held the T6 Charge); nothing told the runner to hold the
+    // "+3" popup, which he closed on k 75 at once, 0.14 s before the T6 lock: no popup beep could be made
+    { text: 'T6: Charge, then the popup A on the beep → Close Call', steps: [{ label: 'Super Charge, then HOLD its +3 popup: close it on the beep → Close Call (no beep 4 s after the Charge: close it anyway)', cat: 'M', turn: 'fb2_k', pre: [{ cat: 'M', id: 'fb2_charge' }] }] },
+    { text: 'T7: Power Bounce x7', steps: [{ label: 'Power Bounce → 7 on the beep', cat: 'B', turn: 'fb2_pb' }] } ] } ];
 /* Jr. Troopa on the Charge-lock route (jr_charge/README.md, charge_live/jr_live.js; the route panel's default, Settings key
  * jrroute): Mario's T1 Super Charge locks the seed from its rays (profile jr) and the tracker carries it through every
  * confirm (read from the status bar hiding); the page beeps the four levers. jr = the confirm (JR_SEQ index) that ends
@@ -1443,6 +1451,7 @@ function zwTick(now) {
 /*@include charge_live/hwcc_live.js*/
 function makePlan() {
   if (typeof fb14Plan === 'function' && fb14Plan()) return;     // Final Bowser T1-T4 (fb14_live.js)
+  if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (!(FB2.plan && FB2.plan.k != null)) st.msg = FB2.on ? (FB2.plan && FB2.plan.none ? 'No popup beep: ' + FB2.plan.none + '. Close the +3 popup now (Close Call about 30%).' : 'FB2: T6 locked, the popup beep is being planned. Keep holding the +3 popup.') : 'T6: Super Charge, then HOLD the +3 popup (do not press A): the beep comes 3-4 s after the Charge, once its rays are read. No beep by 4 s: close it anyway.'; render(); return; }     // v93: T6's own step
   if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (FB2.t7) fb2PlanT7(); else { st.msg = FB2.plan && !FB2.kObs ? 'FB2: waiting for the T6 popup A (the page reads the frame from the popup closing).' : 'No edge: no FB2 states to plan with. Press Power Bounce normally.'; render(); } return; }
   if (st.hwDone && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'Time Out is done for this attempt. The route stays on the Hallway until the next Charge (a retry) or Final Bowser\'s arena.'; render(); return; }
   if (typeof HWHP !== 'undefined' && HWHP.died && PROF().id === 'timeout' && isRoute() && /^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) { st.msg = 'No edge: Mario was hit on Hallway T1 and a Life Shroom revived him; the page does not follow the revive. Press Time Out normally (31%).'; render(); return; }
@@ -1645,7 +1654,7 @@ function setText(h, d) { $('headline').textContent = h; $('detail').textContent 
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v92';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v93';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -1742,7 +1751,7 @@ function lockBadgeState() {
     if (cap) return { state: 'doubt', why: conf + ' · broad' };
     return { state: 'ok', why: conf };
   }
-  if (stp && stp.turn === 'fb2_pb' && typeof FB2 !== 'undefined') {
+  if (stp && (stp.turn === 'fb2_pb' || stp.turn === 'fb2_k') && typeof FB2 !== 'undefined') {
     const d2 = FB2.t7 && FB2.t7.plan && FB2.t7.plan.doubt != null ? FB2.t7.plan.doubt : null;     // v82: the T7 plan's doubt, once made
     if (FB2.on && FB2.hyps && FB2.hyps.length) return d2 != null ? { state: d2 >= 0.5 ? 'doubt' : 'ok', why: 'seed confidence ' + pc(1 - d2) } : { state: 'ok', why: 'T6 Charge lock · ' + FB2.hyps.length + ' states' };
     return { state: 'no', why: 'no T6 Charge lock' };
@@ -2438,7 +2447,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, makePlan: () => makePlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },

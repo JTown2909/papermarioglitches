@@ -24,7 +24,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v92', 'page version v92');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v93', 'page version v93');
   // ---- 1. the stream
   const X = await p.evaluate(() => window.__fb14.FBS());
   for (const S of FIX.streams) {

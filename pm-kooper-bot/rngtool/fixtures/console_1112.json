@@ -1,0 +1,24 @@
+{
+  "what": "Final Bowser console logs 00700c7e (attempt 1, clip 04-35-03, page = clip + 57.013 s) and a87486a0 (holds it; attempt 2, clip 04-38-17, page = clip + 250.296 s), page v92, 2026-11-12. Numbers only.",
+  "doNothing": [
+    { "log": "00700c7e", "turn": 2, "c": 202.46, "win": [206, 206], "target": 206, "pp": 0.903, "outcome": "miss" },
+    { "log": "00700c7e", "turn": 3, "c": 628.24, "win": [632, 632], "target": 632, "pp": 0.961, "outcome": "miss" },
+    { "log": "a87486a0", "turn": 2, "c": 198.97, "win": [200, 200], "target": 200, "pp": 0.951, "outcome": "hit" },
+    { "log": "a87486a0", "turn": 4, "c": 195.98, "win": [197, 198], "target": 197, "pp": 0.921, "outcome": "miss", "note": "the wave came, Mario guarded (Nice), HP 10/10 after (clip 86.6-90.2 s)" }
+  ],
+  "cloudNine": [
+    { "log": "00700c7e", "turn": 1, "c": 343.55, "win": [345, 345], "target": 345, "pp": 0.805, "outcome": "hit" },
+    { "log": "a87486a0", "turn": 1, "c": 208.94, "win": [207, 208], "target": 208, "pp": 0.766, "outcome": "hit" }
+  ],
+  "clipVblanks": { "aToStrategiesFaint": [7, 7], "aToStrategiesGrey": [9, 9], "aToStrategiesGone": [11, 11], "aToCloudNineBarHide": 11, "pageCloseOn": "grey" },
+  "emulatorReads": { "what": "v87 e2e 9e3779b9: the harness confirmed on the planned frame, the page read", "cn": [481, 481.03], "nothing": [[1396, 1396.25], [1939, 1939.2]] },
+  "streams": [
+    { "what": "00700c7e T1 -> T2 (T1's fresh lock confirmed)", "from": "755a3f96", "to": "cf2a8425", "steps": 2747 },
+    { "what": "00700c7e T2 -> T4 narrowed (carried) read", "from": "cf2a8425", "to": "b3d77d29", "steps": 1772 },
+    { "what": "attempt 1 T4 -> attempt 2 T1", "from": "b3d77d29", "to": "8c117f00", "steps": 12807 }
+  ],
+  "t4": { "carried": 1388, "matched": 16, "allOutH": 930, "M": 869 },
+  "replan": { "barGoneAt": 259329, "planAt": 259668, "confirmAt": 259695 },
+  "t6": { "trig": 363693, "popupSeenAt": 365724, "k": 75, "lockAt": 365865, "seed": "e161a941", "ratio": 4.15, "cands": 1768 },
+  "leverStoreV90": [-3.54, -3.76, -1.03, -1.02]
+}

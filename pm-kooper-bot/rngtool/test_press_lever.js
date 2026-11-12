@@ -40,7 +40,8 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   const v87 = A.map(a => a.err + 1), mean = v87.reduce((x, y) => x + y, 0) / v87.length;
   console.log('  Duplighost presses as v87 reads them: ' + v87.map(x => x.toFixed(2)).join(', ') + ' (mean ' + mean.toFixed(2) + ')');
   check(JSON.stringify(r.keys) === JSON.stringify([null, null, 'fb14', null, null, null, null, null]), '3. only Final Bowser\'s levers keep a learned correction ' + JSON.stringify(r.keys));
-  check(Math.abs(r.fb0) < 0.01 && Math.abs(r.fb3) < 0.01 && Math.abs(r.fb1 - 1.2) < 0.01 && Math.abs(r.fbMax - 1.5) < 0.01, '3. v90: Final Bowser starts at 0, 3 presses at -2.4 move nothing, the 4th gives +' + r.fb1.toFixed(2) + ' (shrunk 4 / 8), never past +1.5 (' + r.fbMax + ')');
+  // v93: the Final Bowser lever learns nothing (its console readings disagree with the outcomes by 1-4 frames, README v93)
+  check(Math.abs(r.fb0) < 0.01 && Math.abs(r.fb3) < 0.01 && Math.abs(r.fb1) < 0.01 && Math.abs(r.fbMax) < 0.01, '3. v93: Final Bowser keeps its presses but learns no correction: 0 after 3, 4 and 8+ presses at -2.4 (' + r.fb1 + ', ' + r.fbMax + ')');
   check(r.plan && r.plan.prof === 'dup3' && Math.abs(r.plan.dt) < 0.01, '3. a Duplighost plan beeps on the global offset alone (' + JSON.stringify(r.plan) + ')');
   check(!errs.length, 'no page errors ' + errs.slice(0, 3).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
