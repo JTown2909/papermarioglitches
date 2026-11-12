@@ -278,7 +278,7 @@ function chgFrame(t, present) {
         // browser dropped frame 3's pictures the first one above the menu is frame 4 (+12.5) or 5 (+19.4), and v69 took it
         // as frame 3 (or, at +19.4, did not trigger at all): every frame after it one or two off, no lock
         const d0 = m - base, cut = P.trigCut || [9.85, 15.95], n0 = P.trigN ? (d0 < cut[0] ? 3 : d0 < cut[1] ? 4 : 5) : 3;
-        CHG.state = 'capture'; CHG.trig = { t: t - (n0 - 3) * FRAME, tRaw: t, n: n0, base, i: CHG.ring.length - 1, d0, cut }; CHG.trig0 = Object.assign({}, CHG.trig); CHG.shapeBad = 0; if (P.id === 'fb2' && typeof fb2Reset === 'function') fb2Reset(); CHG.frames = CHG.ring.slice(); CHG.ring = []; slog('chargeTrigger', { base: +base.toFixed(1), m: +m.toFixed(1) }); arenaNote(routeStep, t); if (P.id === 'fb1' && typeof fb14Trigger === 'function') fb14Trigger(); }
+        CHG.state = 'capture'; CHG.trig = { t: t - (n0 - 3) * FRAME, tRaw: t, n: n0, base, i: CHG.ring.length - 1, d0, cut }; CHG.trig0 = Object.assign({}, CHG.trig); CHG.Fm = null; CHG.shapeBad = 0; if (P.id === 'fb2' && typeof fb2Reset === 'function') fb2Reset(); CHG.frames = CHG.ring.slice(); CHG.ring = []; slog('chargeTrigger', { base: +base.toFixed(1), m: +m.toFixed(1) }); arenaNote(routeStep, t); if (P.id === 'fb1' && typeof fb14Trigger === 'function') fb14Trigger(); }
     }
     return;
   }
@@ -559,7 +559,8 @@ if (window.__chgDebug) {
     if (sh.wide) CHG.info.marioWide = true;
     if (weak) { CHG.info.marioWeak = true; slog('chargeMarioWeak', { marioNcc: +sh.ncc.toFixed(2), scan: chgMarioScan() }); }
     if (E) { CHG.info.early = { mapsMs: E.mapsMs, startedBeforeRaysEndMs: Math.round(CHG.tEnd - E.t1) }; CHG.info.prof = chgP().id; }
-    CHG.F0 = CHG.frames; CHG.cen = cen; CHG.cen0 = cen; CHG.cenAlt = 0; CHG.alt = 0; CHG.forced = 0; CHG.ban = new Set(); CHG.attShift = 0; CHG.sweep = 0; CHG.gshift = 0; CHG.seenG = new Set([chgGKey(G)]);
+    CHG.F0 = CHG.frames; CHG.Fm = CHG.frames.map(f => ({ t: f.t, m: f.m, rep: f.rep }));   // v95: the burst levels for fb14TrigPhase (F0 is dropped before the lock)
+    CHG.cen = cen; CHG.cen0 = cen; CHG.cenAlt = 0; CHG.alt = 0; CHG.forced = 0; CHG.ban = new Set(); CHG.attShift = 0; CHG.sweep = 0; CHG.gshift = 0; CHG.seenG = new Set([chgGKey(G)]);
     if (!CHG.replay) chgRecStart();
     CHG.frames = []; CHG.G = G; CHG.state = 'search'; CHG.tSearch = E ? E.t1 : t1; chgShow();
     if (!CHG.replay) slog('chargeMaps', CHG.info);

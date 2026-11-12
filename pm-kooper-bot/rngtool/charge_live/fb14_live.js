@@ -626,6 +626,14 @@ function fb14Share(L, a, b, turn, kind) {
   return sh;
 }
 function fb14Sample(L, n) { if (L.length <= n) return L; const k = Math.ceil(L.length / n); return L.filter((S, i) => i % k === 0); }
+/* v95: the share the plan uses: Cloud Nine's (T1) averaged over the unpinned offset FB14_C9UNC (the press lands u frames
+ * from the frame the beeps aim at), the Do Nothing turns as they are */
+function fb14ShareU(L, a, b, turn) {
+  if (fb14Kind(turn) !== 'cn') return fb14Share(L, a, b, turn, 'nothing');
+  const lo = Math.min(...FB14_C9UNC.map(x => x[0])), hi = Math.max(...FB14_C9UNC.map(x => x[0])), raw = fb14Share(L, a + lo, b + hi, turn, 'cn'), out = new Float64Array(b - a + 1);
+  for (let F = a; F <= b; F++) { let v = 0; for (const [u, w] of FB14_C9UNC) v += w * raw[F + u - (a + lo)]; out[F - a] = v; }
+  return out;
+}
 function fb14Kind(turn) { return turn === 1 ? 'cn' : 'nothing'; }
 function fb14Blind(turn) { return FB14_BLIND[turn] || 0.5; }
 function fb14Goal(turn) { return turn === 4 ? 'the wave, and it misses Mario' : 'Bowser misses'; }
@@ -664,7 +672,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   let from = cAt != null ? Math.ceil(cAt + num('lead') * 1000 / rate + 1) : Math.max(h + 1, Math.ceil(fbPic(now) + 1));
   if (cAt == null) for (let i = 0; i < 600 && fbPressT(from) < earliestPress(now); i++) from++;
   const L = fb14Sample(Wg.list, 150), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
-  const t1 = performance.now(), share = fb14Share(L, from - D, from + W + X + D, turn, fb14Kind(turn)), ms = Math.round(performance.now() - t1);
+  const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + X + D, turn), ms = Math.round(performance.now() - t1);
   const prof = { id: 'fb14', share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
   const C = zwChoose(L, from, W, PD, prof, { d: Wg.doubt, b3: fb14Blind(turn), b4: 0 });
   if (C.none) { const pl = { none: C.none, turn, best: C.pp, spread: C.p }; FB14.plan = pl; if (cAt != null) return pl;
@@ -692,7 +700,7 @@ function fb14Tick(t) {
   // spread over -1..+1 only, while the plan's pressDist() reaches -4..+4 (the runner's spread, sd ~1.5): every re-score read
   // ~0.6 of the plan's 0.93 and replanned the same frame every 250 ms, so the beeps never played through. Same states sample
   // (150), same press spread.
-  fb14Advance(h); const Wg = fb14Weigh(h); FB14.doubt = Wg.doubt; const PDt = P.PD || PRESS_ERR, D = Math.max(...PDt.map(x => Math.abs(x[0]))), sh = fb14Share(fb14Sample(Wg.list, 150), P.target - D, P.target + D, P.fb14, fb14Kind(P.fb14));
+  fb14Advance(h); const Wg = fb14Weigh(h); FB14.doubt = Wg.doubt; const PDt = P.PD || PRESS_ERR, D = Math.max(...PDt.map(x => Math.abs(x[0]))), sh = fb14ShareU(fb14Sample(Wg.list, 150), P.target - D, P.target + D, P.fb14);
   let v = 0; for (const [d, q] of PDt) v += q * (sh[d + D] || 0);
   // v83: the plan is a perfect press: re-scored on the planned frame itself (the spread-weighted chance only logged)
   const pS = (1 - Wg.doubt) * v + Wg.doubt * fb14Blind(P.fb14), p = P.mix.pp != null ? (1 - Wg.doubt) * (sh[D] || 0) + Wg.doubt * fb14Blind(P.fb14) : pS; P.mix.pNow = +p.toFixed(3); P.mix.pSpreadNow = +pS.toFixed(3);
@@ -731,15 +739,25 @@ function fb14PhaseFit(pts) {      // pts: [frames from the trigger, level - base
   let best = null; for (let d = -1.5; d <= 1.5001; d += 0.05) { let e = 0; for (const [t, v] of P) e += (v - T(3 + t + d)) ** 2; if (!best || e < best.e) best = { d: +d.toFixed(2), e }; }
   return best.d;
 }
+/* v95 (logs 906bfb29 / 1509e942: every fb14TrigPhase read n 0): CHG.frames is emptied once the maps are made and CHG.F0
+ * dropped at the lock; the levels are kept in CHG.Fm (charge_live.js); v94 read CHG.frames only (its test filled CHG.frames by hand), so the anchor never ran live
+ * (906bfb29 T4's capture fits -1.0: its clock stayed a frame off). */
 function fb14TrigPhase() {
   const tr = CHG.trig, P = CHG.prof; if (!tr || !P || P.id !== 'fb1' || tr.base == null) return 0;
-  const pts = (CHG.frames || []).filter(f => f && !f.rep && Number.isFinite(f.m)).map(f => [(f.t - tr.t) / FRAME, f.m - tr.base]);
+  const pts = ((CHG.frames && CHG.frames.length ? CHG.frames : CHG.Fm) || []).filter(f => f && !f.rep && Number.isFinite(f.m)).map(f => [(f.t - tr.t) / FRAME, f.m - tr.base]);
   const d = fb14PhaseFit(pts); const shift = d == null ? 0 : d <= -0.5 ? -1 : d >= 0.5 ? 1 : 0;
   slog('fb14TrigPhase', { fit: d, shift, n: pts.length });
   return shift;
 }
 const fb14TrigT = () => CHG.trig ? CHG.trig.t - fb14TrigPhase() * FRAME : null;   // the frame-3 picture's time
-const FB14_C9AFTER = 2500, FB14_C9HIDE = 2, FB14_C9SHIFTS = [[-2, 0.1], [-1, 0.2], [0, 0.35], [1, 0.25], [2, 0.1]];
+/* v95 (log 1509e942 T1: a 97.6% Cloud Nine plan, read inside its window, and Bowser hit; on the true seed: T1's fresh lock
+ * lies 21792 steps on the stream of the attempt before, T2's stream lock 2657 after it): Cloud Nine's +1.15 is not borne out.
+ * Of the 5 planned Cloud Nines on console 4 were hit where the plans expected 0.9; on these windows the outcomes leave the
+ * offset anywhere outside -0.85 .. +2.15 (README v95). Until it is pinned: the T1 share is the mean over the offsets
+ * FB14_C9UNC frames from the reading (so a plan needs a long run of frames to claim much), and the Cloud Nine confirm goes into
+ * the carried states on -3 .. +4 (FB14_C9SHIFTS). */
+const FB14_C9UNC = [[-2, 1 / 6], [-1, 1 / 6], [0, 1 / 6], [1, 1 / 6], [2, 1 / 6], [3, 1 / 6]];
+const FB14_C9AFTER = 2500, FB14_C9HIDE = 2, FB14_C9SHIFTS = [[-3, 0.07], [-2, 0.1], [-1, 0.12], [0, 0.15], [1, 0.15], [2, 0.15], [3, 0.14], [4, 0.12]];
 /* v92 (e2e 5eed0fb2 T1: Mario's action wheel matched the saved Mario target screen, the screen "closed" when the submenu
  * opened and moved the route to Cloud Nine's step; the Charge's own target screen then closed 0.06 s after its burst and
  * was taken as Cloud Nine's confirm, the route went to T2 and T1's lock was read as T2's). A lever screen closing within
@@ -1007,5 +1025,6 @@ async function fb1Stage2(W, call, top, times, t3, narrow) {
   return { top: all.slice(0, 5), fb1: { hyps: hy, times } };
 }
 window.__fb14 = { FB14_READX, readX: (c, s) => fb14ReadX(c, s), van: (c, s) => fb14Van(c, s), phaseFit: pts => fb14PhaseFit(pts), trigPhase: () => fb14TrigPhase(), trigT: () => fb14TrigT(), SHIFTS_S: FB14_SHIFTS_S, FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), ownClose: (t, s) => fb14OwnClose(t, s), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
+  shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
