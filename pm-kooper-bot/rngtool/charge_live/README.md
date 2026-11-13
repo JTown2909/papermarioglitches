@@ -1,3 +1,92 @@
+# Time Out Timer v102: post-hit fresh locks do hold the truth (the trace was wrong); fresh locks capped until the coin confirms; T6's countdown; the skip box read as the panel (Nov 13)
+
+The user's top rule: "never beep a confident wrong answer". v101's e2e showed the fresh locks after a hit (1234abcd T1 hit, T2-T4)
+with no true state in the truth trace while they planned up to 1.0. Numbers only in `fixtures/e2e_v102.json` and
+`fixtures/console_v102.json`; no clip, frame or picture committed.
+
+## 1. Root cause: the truth trace, not the lock
+- `fb14IsTrue` (diagnostic) checks a state's seed against the game's at global step `S.f + S.l - off`, with `off` = -(T1's Mario
+  confirm step) for the whole run. After a hit the carry is dropped (`fb14CarryGone`: `t0` null) and the next lock is `first`:
+  **its clock restarts at frame 0 = its own turn's Mario confirm** (`fb14Lock` M 0). The trace kept T1's offset, so every post-hit
+  state was compared with the game's seed ~1000 frames away: "no true state" whatever the lock held. The harness's press side
+  already followed the new origin (`runner_press` GMS); the truth seeds did not.
+- **Fix (diagnostic only):** the harness passes each turn's Mario confirm (capture index, global step: `truthSeeds.zeros`), the
+  page test puts them on the page's time (`zt`) and a `first` lock takes the nearest (`fb14TruthZero`, logged). Measured on the
+  same kind of run: post-hit T2 locks hold 1590 / 3591 (1234abcd, full search) and 51 / 173 (2b7e1516, stream lock 2649 steps)
+  true states at the lock, and every post-hit plan had true states in its states (table).
+- The other suspects checked: the stream window starts at the last lock's seed + 500 (the hit / death / revive draws come after
+  that, inside the 500..9000+ window: the 2b7e1516 lock sat 2649 steps on); the ±1 shift re-reads and the "too few
+  observations" ideas are moot once the truth is in the set; a "none of these" mass already exists (the background doubt
+  `FB14.bg`: a full-search lock starts at its ratio-based prior, 0.38-0.42 here, a stream lock at ZW_BG0 0.05, both decaying only
+  with coin evidence).
+- Console (log fb0443, page v101): after T1's hit the T2 stream lock (d3adfb09, 2370 steps, doubt 0.05) planned 0.742 and Bowser
+  missed; **T4's Charge then matched 7910 of 8824 states carried from that lock**: the post-hit stream lock held the truth.
+
+## 2. A fresh lock's claim stays under 95% until the coin confirms it (`FB14_FRESH_D`, `fb14FreshOpen`)
+A fresh lock (no carried state drew its rays: T1, a lock after a hit, a dropped carry) rests on one Charge read. Until a coin
+shine after its rays (frame > M + 61) is seen, the plan's doubt is at least 0.1 (`fb14DoubtFloor`), so its claim is at most
+1 - 0.1 (1 - blind) = 0.9495 (T1 / T2), 0.939 (T4). Once a shine comes (`fb14FreshConfirmed`) the floor is lifted and a capped
+plan is made again by the tick (`fb14Refine`, `P.freshCap`). Carried locks are not touched (two reads on one stream). The
+console fb0443 T2 plan (made 0.3 s after its lock, before any coin) would have claimed 0.663 instead of 0.742. T1 skip plans
+(the HUD hidden through Cloud Nine: no coin before the message) claim ~0.03 less (2b7e1516: 0.656 at floor 0.1, doubt 0.036).
+
+## 3. Measured (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 FORCE_HIT=1.1, b13 rebuilt, page v102)
+FORCE_HIT now also moves T1's skip to the nearest skip frame where Bowser hits (`find_hit_skip`). Every plan of every page run
+(each turn's page run replays the attempt from the start, so a turn's plans are made again in the later runs):
+| plans | n | truth in the states | claimed pp | >= 95% | true states' share on the planned frame (mean, vs mean claim) |
+|---|---|---|---|---|---|
+| post-hit T2 fresh locks (1234abcd full search; 2b7e1516, 9e3779b9 stream locks) | 14 | **14 / 14** | 0.754-0.991 | 6 (all with truth) | 0.927 vs 0.878 (11 scored) |
+| T1 fresh locks (skip plans) | 9 | 9 / 9 | 0.602-0.711 | 0 | 0.803 vs 0.657 |
+| all plans >= 95% | 6 | **6 / 6** | 0.955-0.991 | 6 | 0.992 vs 0.972 (4 scored) |
+
+Turns pressed (T1 forced to a hit on all three seeds): post-hit T2 planned and pressed on 1234abcd (0.848, frame 360) and
+9e3779b9 (0.78, frame 203): **Bowser missed both**; 2b7e1516's T2 plan came 15 s after the hide (the patient runner had pressed
+blind at 12 s: missed). T3 / T4: the page runs that replay the attempt for T3 / T4 often did not re-lock T2 under load (the
+reads differ run to run), so T3 was blind (2 missed, 1 hit) and T4 unplanned (Mario down after the second hit). No pressed plan
+>= 95% failed; no plan >= 95% without the truth in its states. Calibration is conservative (true share above the claim): the
+claims hold the background doubt and the press spread.
+v101 (old trace): the same post-hit locks read "0 true states" on every plan.
+
+## 4. T6's countdown (console log fb0449, "the beeps seemed to glitch by speeding up on turn 6, then there was no display")
+- `fb2PlanP` beeped its own 3 beeps 300 ms apart and took the first frame ~0.8 s ahead: planned at 489.33 s for 490.94 s, the
+  countdown squeezed against the runner's 500 ms / lead 1.5 s. Now it uses the runner's countdown (`playBeeps`, the first frame
+  whose press leaves `earliestPress` ahead), as T1-T4 (fb14Plan) and T7 (fb2PlanT7) already did.
+- The frame passed with no Do Nothing read (he confirmed 8.6 s later, c 391.8): nothing was planned or shown again. Now a T6 plan
+  0.6 s past its press time with no confirm is made again (`fb2Replan` 'target passed': beeps on a later frame or "No edge").
+- fb0449's turns (numbers only): T1 skip pp 0.57, err +1.04, Bowser missed; T2 carried 0.99 missed; T3 0.82, err +2.06, hit;
+  T4 fresh lock after the hit pp 0.94, err -1.2, missed. (The popup lever `fb2PlanK`, off the route since v97, keeps its own beeps.)
+
+## 5. The skip box read as the panel (console skip clips fb0443 / fb0447 / fb0449)
+- The page sees the message box and the Strategies panel with the same delay (to 1 ms), and on console the box goes 2 game frames
+  after the in-game A icon, the panel 1 (VAN.K 3 - VAN.S 2): the emulator's "box 2.0 early against the panel's 0.72" does not carry
+  over. **`FB14_READX.K` 3.4** (v101 4.7), VAN.K 3 / Kon 0 kept. The skips' errors become +2.3 / +1.3 / -0.3 (the third inside its
+  420-422 window: Bowser missed, as planned); the page's k values were right. Box onset - bar hide 251-252.5 game frames (model 253).
+- A box onset read after dropped pictures (fb0449: ~1.5 frames late) brings the skip window's top end in by the frames of the gap
+  (`FB14.box.gap`, `fb14SkipWin`).
+- Not changed: on console the HUD bar hides ~7-8 game frames after the Cloud Nine menu A (the model's 2); the skip re-anchors on
+  the box, but it may matter for "Confirm Cloud Nine on the beep" (P + 332).
+
+## 6. The Press check row (the runner: "last frame seems to be stuck on 1.1")
+The Final Bowser confirms (T1-T4, the T1 skip, T6) never reached the Press check row, which kept an older fight's generic press.
+Each one on the beeps now shows there (`leverPressNote`: "Last press (Final Bowser T2, Do Nothing): 0.8 frames late", with that
+lever's own correction), and is not added to the generic presses (Calibrate / Beep offset).
+
+## Tests
+New `test_fb14_v102.js` (in `run_suite.sh`): the truth offset (`fb14TruthZero`), the fresh floor and its lifting, T3's floor kept,
+the harness / page hooks, K 3.4 and the onset gap, the e2e fixture (no >= 95% plan without true states; post-hit plans with the
+truth; calibration; no pressed >= 95% plan failed), the Press check row on the page, fb0449's T6 countdown and the replan after a
+passed frame. Version checks to v102 (test_fb14_v101 accepts v101+).
+Suite on this build (page built to both the default folder and `timeout_timer_v102`): all pass but the tests whose inputs are
+not in this container (test_torch_core, test_route_replay, test_session_plans, test_capture_replay) and test_hw_v77 (its pinned
+old builds), as before.
+
+## Not done
+- The b13 build rebuilt after the restarts does not lock 1234abcd's T1 (best 2604 / 1.0; v99-v101 locked it on the earlier b13):
+  not analysed. Page runs re-lock differently under load (1234abcd's T2 lock in its T2 run, none in its T3 run), so the T3 / T4
+  post-hit plans were rarely reached; FORCE_HIT=1.2 (a T4 fresh lock after a T2 hit) was started and lost to a container restart.
+- The cap's 0.1 is a policy floor, not fitted: with the truth in every measured fresh lock the data cannot fit a false-lock rate.
+- Not on console: K 3.4, the T6 countdown / replan, the fresh cap.
+
 # Time Out Timer v101: Final Bowser T1's lever is the A that skips Cloud Nine's message (Nov 13)
 
 The runner: skip Cloud Nine's message with A (faster) and make that A the T1 lever, beeped. Route texts unchanged (T1 stays
