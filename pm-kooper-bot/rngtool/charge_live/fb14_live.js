@@ -814,9 +814,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const rate = fbRate(); let W = Math.max(0, Math.round(num('zwwin') * 1000 / rate));
   let from = cAt != null ? Math.ceil(cAt + num('lead') * 1000 / rate + 1) : Math.max(h + 1, Math.ceil(fbPic(now) + 1));
   if (cAt == null) for (let i = 0; i < 600 && fbPressT(from) < earliestPress(now); i++) from++;
-  // v101: the skip's frames are the message's (P + 256 .. P + 313 of the box onset's P, else of Cloud Nine's reading): the
-  // whole window, one frame in from each end
-  if (skp) { const B0 = fb14SkipBase(); from = Math.max(from, B0 + FB14_SKIP.lo + 1); W = B0 + FB14_SKIP.hi - 1 - from;
+  // v101: the skip's frames are the message's (P + 258 .. P + 311 of the box onset's P, else of Cloud Nine's reading): the
+  // whole window, FB14_SKIP_M frames in from each end
+  if (skp) { const B0 = fb14SkipBase(); from = Math.max(from, B0 + FB14_SKIP.lo + FB14_SKIP_M); W = B0 + FB14_SKIP.hi - FB14_SKIP_M - from;
     if (W < 0) { const pl = { none: 'the message window is over', turn, sk: true }; FB14.plan = pl; if (cAt != null) return pl; st.msg = 'No edge: Cloud Nine\'s message window is over. ' + fb14BlindText(1)[0].toUpperCase() + fb14BlindText(1).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'skip window over' }); cancelBeeps(); fb14Show(); render(); return true; } }
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
   const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + X + D, turn), ms = Math.round(performance.now() - t1);
@@ -936,7 +936,10 @@ const FB14_SHIFTS_S = [[-3, 0.03], [-2, 0.06], [-1, 0.16], [0, 0.44], [1, 0.19],
  * (11 presses, -5.24), so with both levers on one press chain x = 3.4 - 0.87 = 2.53; the six Cloud Nine outcomes leave only
  * x >= 2.25 (or x < -1) and the Do Nothing outcomes cap 3.4 at ~3.5, so 2.25 .. 2.65. The carry (906bfb29 T1 -> T2's
  * narrowed lock) does not pin it: a Charge seed fixes the number of draws, and Cloud Nine on 20 of 21 frames 260-280 reaches it. */
-const FB14_READX = { S: 3.4, bar: 2.5, K: 3.4 };     // v101: K (the skip) from the emulator against the panel (README v101)
+/* v101: K, Cloud Nine's message box (its onset and the skip), transferred from the panel as v96 did the bar: in the emulator
+ * renders through the capture simulation and the page (fb14_e2e.py, SKIP=1) the box's readings sit 2.0 frames before the
+ * truth (raw, VAN.K 3 / Kon 0) where the panel's sit 0.72 before; the console's panel needs 3.4, so the box 3.4 + 2.0 - 0.72 */
+const FB14_READX = { S: 3.4, bar: 2.5, K: 4.7 };
 const fb14ReadX = (cat, src) => src === 'bar' ? FB14_READX.bar : (FB14_READX[cat] || 0);
 const fb14Van = (cat, src) => (FB14_VAN[cat] || 2) + num('pfix') - fb14ReadX(cat, src);
 /* v94: which burst frame the fb1 trigger picture is. The page takes it as frame 3; the console's levels (base-relative) by
@@ -1001,7 +1004,9 @@ function fb14Confirm(tObs, stp, shifts, src) {
  * y 84..103): the box is up when FB14_BOX.frac of the cells are its beige. Watched only in T1's skip phase window
  * (P + 200 .. P + 400). The onset gives P again (the box's own frame, to a frame); its first picture gone is the skip. */
 const FB14_BOX = { x0: 50, x1: 270, y0: 84, y1: 103, gw: 22, gh: 4, frac: 0.55, need: 2 };
-const FB14_SKSHIFTS = [[-2, 0.05], [-1, 0.2], [0, 0.5], [1, 0.2], [2, 0.05]], FB14_SKUNC = [[-1, 0.2], [0, 0.6], [1, 0.2]];
+// the skip into the carried states on the panel's -3 .. +3 (the same press chain, the offset transferred: not borne out on console);
+// the plan keeps FB14_SKIP_M frames off each end of the message (a transfer off by up to ~2.7 frames still lands inside)
+const FB14_SKSHIFTS = [[-3, 0.03], [-2, 0.06], [-1, 0.16], [0, 0.44], [1, 0.19], [2, 0.08], [3, 0.04]], FB14_SKUNC = [[-1, 0.2], [0, 0.6], [1, 0.2]], FB14_SKIP_M = 3;
 function fb14BoxBox() { const [SX, OX, SY, OY] = chgMap(), B = FB14_BOX; return { x: (OX + B.x0 * SX) / 1280, y: (OY + B.y0 * SY) / 720, w: (B.x1 - B.x0) * SX / 1280, h: (B.y1 - B.y0) * SY / 720 }; }
 const fbBoxPx = (g, i) => { const R = g[i], G = g[i + 1], B = g[i + 2]; return R > 140 && G > 128 && B > 95 && R - B > 8 && R - B < 85 && Math.abs(R - G) < 35; };
 function fb14BoxShare(g) { let n = 0; for (let i = 0; i < g.length; i += 4) if (fbBoxPx(g, i)) n++; return n / (g.length / 4); }
