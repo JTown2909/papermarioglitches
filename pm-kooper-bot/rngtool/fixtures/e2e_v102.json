@@ -1,0 +1,380 @@
+{
+"what": "v102 e2e (fb14_e2e.py SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 FORCE_HIT, b13 rebuilt): every plan of every page run (its lock fresh / carried, after a hit, the true states in its states n, claimed pp, the true states' share on its frame), and the turns pressed (Bowser missed = miss)",
+"plans": [
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 360,
+"pp": 0.848,
+"doubt": 0.243,
+"n": 34,
+"true_share": 1,
+"run": "h1_1234abcd"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 424,
+"pp": 0.754,
+"doubt": 0.318,
+"n": 16,
+"true_share": null,
+"run": "h1_1234abcd"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 488,
+"pp": 0.983,
+"doubt": 0.032,
+"n": 12,
+"true_share": null,
+"run": "h1_1234abcd"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 553,
+"pp": 0.99,
+"doubt": 0.019,
+"n": 16,
+"true_share": null,
+"run": "h1_1234abcd"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 478,
+"pp": 0.656,
+"doubt": 0.036,
+"n": 417,
+"true_share": 1,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 478,
+"pp": 0.65,
+"doubt": 0.034,
+"n": 746,
+"true_share": 0.87,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 530,
+"pp": 0.708,
+"doubt": 0.034,
+"n": 706,
+"true_share": 0.94,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 524,
+"pp": 0.911,
+"doubt": 0.176,
+"n": 2,
+"true_share": 1,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 591,
+"pp": 0.955,
+"doubt": 0.089,
+"n": 2,
+"true_share": 1,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 477,
+"pp": 0.675,
+"doubt": 0.037,
+"n": 1192,
+"true_share": 0.46,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 477,
+"pp": 0.626,
+"doubt": 0.033,
+"n": 532,
+"true_share": 0.56,
+"run": "h1_2b7e1516"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 509,
+"pp": 0.613,
+"doubt": 0.025,
+"n": 83,
+"true_share": 1,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 501,
+"pp": 0.602,
+"doubt": 0.457,
+"n": 77,
+"true_share": 0.4,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 203,
+"pp": 0.78,
+"doubt": 0.068,
+"n": 4095,
+"true_share": 0.82,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 311,
+"pp": 0.804,
+"doubt": 0.153,
+"n": 1076,
+"true_share": 0.9,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 377,
+"pp": 0.83,
+"doubt": 0.289,
+"n": 716,
+"true_share": 0.96,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 449,
+"pp": 0.971,
+"doubt": 0.025,
+"n": 2,
+"true_share": 1,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 517,
+"pp": 0.971,
+"doubt": 0.025,
+"n": 96,
+"true_share": 0.97,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 581,
+"pp": 0.991,
+"doubt": 0.016,
+"n": 6,
+"true_share": 1,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 507,
+"pp": 0.711,
+"doubt": 0.018,
+"n": 76,
+"true_share": 1,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 237,
+"pp": 0.825,
+"doubt": 0.074,
+"n": 3571,
+"true_share": 0.89,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 1,
+"how": "fresh",
+"posthit": false,
+"target": 503,
+"pp": 0.671,
+"doubt": 0.014,
+"n": 96,
+"true_share": 1,
+"run": "h1_9e3779b9"
+},
+{
+"turn": 2,
+"how": "fresh",
+"posthit": true,
+"target": 237,
+"pp": 0.772,
+"doubt": 0.089,
+"n": 4345,
+"true_share": 0.66,
+"run": "h1_9e3779b9"
+}
+],
+"turns": [
+{
+"run": "h1_1234abcd",
+"turn": 1,
+"forced": true,
+"planned": false,
+"pp": null,
+"miss": false,
+"miss_m1": true,
+"miss_p1": true
+},
+{
+"run": "h1_1234abcd",
+"turn": 2,
+"forced": false,
+"planned": true,
+"pp": 0.848,
+"miss": true,
+"miss_m1": false,
+"miss_p1": true
+},
+{
+"run": "h1_1234abcd",
+"turn": 3,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": true,
+"miss_m1": true,
+"miss_p1": true
+},
+{
+"run": "h1_2b7e1516",
+"turn": 1,
+"forced": true,
+"planned": true,
+"pp": 0.6555164843814897,
+"miss": false,
+"miss_m1": true,
+"miss_p1": true
+},
+{
+"run": "h1_2b7e1516",
+"turn": 2,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": true,
+"miss_m1": true,
+"miss_p1": false
+},
+{
+"run": "h1_2b7e1516",
+"turn": 3,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": false,
+"miss_m1": false,
+"miss_p1": false
+},
+{
+"run": "h1_2b7e1516",
+"turn": 4,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": false,
+"miss_m1": false,
+"miss_p1": false
+},
+{
+"run": "h1_9e3779b9",
+"turn": 1,
+"forced": true,
+"planned": true,
+"pp": 0.6129952964867149,
+"miss": false,
+"miss_m1": true,
+"miss_p1": false
+},
+{
+"run": "h1_9e3779b9",
+"turn": 2,
+"forced": false,
+"planned": true,
+"pp": 0.78,
+"miss": true,
+"miss_m1": true,
+"miss_p1": false
+},
+{
+"run": "h1_9e3779b9",
+"turn": 3,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": true,
+"miss_m1": false,
+"miss_p1": true
+},
+{
+"run": "h1_9e3779b9",
+"turn": 4,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": false,
+"miss_m1": false,
+"miss_p1": false
+},
+{
+"run": "h1_1234abcd",
+"turn": 4,
+"forced": false,
+"planned": false,
+"pp": null,
+"miss": false,
+"miss_m1": false,
+"miss_p1": false
+}
+]
+}
