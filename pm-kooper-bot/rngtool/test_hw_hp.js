@@ -12,7 +12,7 @@
 'use strict';
 const { chromium } = require('playwright');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || SP + '/timeout_timer_v102/timeout_timer_standalone.html', N = +(process.argv[3] || 24);
+const PAGE = process.argv[2] || SP + '/timeout_timer_v103/timeout_timer_standalone.html', N = +(process.argv[3] || 24);
 const R = require('./pmrng_core.js');
 let rs = 9191; const rnd = () => (rs = (Math.imul(rs, 1103515245) + 12345) >>> 0) / 4294967296;
 const pick = D => { let u = rnd(); for (const [v, w] of D) { if (u < w) return v; u -= w; } return D[D.length - 1][0]; };

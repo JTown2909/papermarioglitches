@@ -14,7 +14,7 @@
  * usage: node test_console_v99.js   [PAGE=built standalone page] */
 const fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.env.PAGE || SP + '/timeout_timer_v102/timeout_timer_standalone.html';
+const PAGE = process.env.PAGE || SP + '/timeout_timer_v103/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v99.json'), 'utf8'));
 const T6 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'fb2_t6dn.json'), 'utf8'));
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };

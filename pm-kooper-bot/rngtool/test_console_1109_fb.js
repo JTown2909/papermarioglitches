@@ -12,7 +12,7 @@
  * usage: node test_console_1109_fb.js   (PAGE=path to timeout_timer_standalone.html; serves on 127.0.0.1 only) */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path'), http = require('http');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.env.PAGE || SP + '/timeout_timer_v102/timeout_timer_standalone.html';
+const PAGE = process.env.PAGE || SP + '/timeout_timer_v103/timeout_timer_standalone.html';
 const LD = process.env.LOGS || '/tmp/claude-0/pm/logs1109';
 const LOGS = { b75b56e2: 'b75b56e2-pm-rng-log-1794270556695.json', c565d268: 'c565d268-pm-rng-log-1794273124474.json', '4bc65351': '4bc65351-pm-rng-log-1794273591960.json' };
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1109_fb.json'), 'utf8'));

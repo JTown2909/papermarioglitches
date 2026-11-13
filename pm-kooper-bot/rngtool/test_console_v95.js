@@ -8,7 +8,7 @@
  * usage: node test_console_v95.js [page]   (LOG1509=path to the 1509e942 log for part 1's replay) */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v102/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v103/timeout_timer_standalone.html';
 const LOG = process.env.LOG1509 || '/tmp/claude-0/pm/logs1112/1509e942-pm-rng-log-1794515986801.json';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v95.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };

@@ -11,7 +11,7 @@
  * usage: node test_console_1112.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v102/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v103/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1112.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
 const fwd = s => (Math.imul(s, 0x5D588B65) + 1) >>> 0;
