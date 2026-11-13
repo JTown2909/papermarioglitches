@@ -159,7 +159,7 @@ const fb14SkipBase = () => (FB14.box && FB14.box.P != null ? FB14.box.P : FB14.P
 /* the frames a skip plan may target: FB14_SKIP_M in from each end of the message; before the box is seen its P is Cloud Nine's
  * reading, which comes late when the T1 search loads the page (the runner now confirms Cloud Nine during it: e2e 9e3779b9
  * read +6, 1234abcd +3; the box onset read -1.5 .. -2 raw on both): the top end FB14_SKIP_LATE more in until the box shows */
-const FB14_SKIP_LATE = 6;
+const FB14_SKIP_LATE = 6, FB14_DNMIN = 176;
 function fb14SkipWin() { const b = FB14.box && FB14.box.P != null, B0 = fb14SkipBase(); return [B0 + FB14_SKIP.lo + FB14_SKIP_M, B0 + FB14_SKIP.hi - FB14_SKIP_M - (b ? 0 : FB14_SKIP_LATE)]; }
 const fb14CurLever = () => (fb14SkipPhase() ? 'fb14sk' : 'fb14');
 /* ---- the route: the Final Bowser steps (page_template.html ENDGAME) ---- */
@@ -821,6 +821,10 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const rate = fbRate(); let W = Math.max(0, Math.round(num('zwwin') * 1000 / rate));
   let from = cAt != null ? Math.ceil(cAt + num('lead') * 1000 / rate + 1) : Math.max(h + 1, Math.ceil(fbPic(now) + 1));
   if (cAt == null) for (let i = 0; i < 600 && fbPressT(from) < earliestPress(now); i++) from++;
+  // v101 (e2e 9e3779b9 T2: the carried lock in 3.5 s planned M + 166, 3 frames before the runner could be on Do Nothing; Bowser
+  // hit on M + 169): a Charge turn's Do Nothing is not planned before FB14_DNMIN after its Charge (the e2e's partner menus with
+  // the popup closed on + 78 .. + 100: the earliest confirm M + 157 .. + 174; console confirms with no beep 5.2-5.9 s after the hide)
+  if (!skp && stp.chg && FB14.M[turn] != null && from < FB14.M[turn] + FB14_DNMIN) { from = FB14.M[turn] + FB14_DNMIN; if (FB14.dnMinLog !== turn) { FB14.dnMinLog = turn; slog('fb14DnMin', { turn, from }); } }
   // v101: the skip's frames are the message's (P + 258 .. P + 311 of the box onset's P, else of Cloud Nine's reading): the
   // whole window, FB14_SKIP_M frames in from each end
   if (skp) { const [w0, w1] = fb14SkipWin(); from = Math.max(from, w0); W = w1 - from;
