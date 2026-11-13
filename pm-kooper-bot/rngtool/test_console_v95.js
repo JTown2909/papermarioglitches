@@ -8,7 +8,7 @@
  * usage: node test_console_v95.js [page]   (LOG1509=path to the 1509e942 log for part 1's replay) */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v101/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v102/timeout_timer_standalone.html';
 const LOG = process.env.LOG1509 || '/tmp/claude-0/pm/logs1112/1509e942-pm-rng-log-1794515986801.json';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v95.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
@@ -31,7 +31,7 @@ const inWin = (c, x, a, b, ph) => { const F = Math.floor(c + x + (ph || 0) + 0.5
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v101', 'page version v101');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v102', 'page version v102');
   const k = await p.evaluate(() => ({ unc: window.__fb14.C9UNC.map(x => x[0]), sh: window.__fb14.C9SHIFTS.map(x => x[0]) }));
   check(k.unc.join() === '-1,0,1' && k.sh.join() === '-3,-2,-1,0,1,2,3', '1. (v96, Cloud Nine pinned: test_console_v96) the T1 share is averaged over the reading -1 .. +1, the Cloud Nine confirm carried on -3 .. +3 (v95: -2 .. +3, -3 .. +4)');
   // ---- 1. the replay

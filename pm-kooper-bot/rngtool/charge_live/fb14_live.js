@@ -47,7 +47,7 @@ const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000;
 const FB14_MISSW = 0.01;     // v86: a state whose Bowser hit Mario on a turn the bar showed a miss (the HP read can be wrong: not 0)
 const FB14_HIDE = { jelly: 2, peach: 2 }, FB14_JSHIFTS = [[-1, 0.25], [0, 0.5], [1, 0.25]];
 var FB14 = { on: false };
-function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null }); }
+function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null }); }
 fb14Reset();
 /* ---- the random numbers (fast, no arrays) ---- */
 let FBV = 0;
@@ -320,7 +320,7 @@ function fb14Lock(res) {
   Object.assign(FB14, { on: true, why: null, turn, relock: null, wide: false, lockN: FB14.lockN + 1, plan: null, bg: d0.d / (1 - d0.d), bgFrom: Math.min(M + 61, menuF), how });
   FB14.doubt = d0.d; if (d0.d > ZW_BG0) slog('fb14Prior', d0);
   if (res.top && res.top[0]) fbStreamNote(res.top[0].seed, res.stream ? 'stream' : how || 'fresh');     // v89: the next Charge's window starts here
-  FB14.M[turn] = M;
+  FB14.M[turn] = M; FB14.fresh = how === 'fresh' ? { turn, F: M + 61 } : null;     // v102: an unconfirmed fresh lock (fb14DoubtFloor)
   if (res.joint && res.joint.cur) { res.joint.cur.M = M; FB14.charges = (FB14.charges || []).filter(c => c.M !== M).concat([res.joint.cur]).slice(-2); }
   // confirms the page saw before this lock landed (a slow lock): their frames from the clock the lock has just fixed
   // the inputs of this turn the page saw before this lock landed (a slow lock: the partner's confirm, T3's Jelly), onto
@@ -847,7 +847,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
     slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0 }); }
   if (C.none) { const pl = { none: C.none, turn, best: C.pp, spread: C.p }; FB14.plan = pl; if (cAt != null) return pl;
     st.msg = 'No edge: ' + Wg.list.length + ' possible states and no frame in the next ' + num('zwwin') + ' s works for enough of them with a perfect press (best ' + Math.round(100 * (C.pp || 0)) + '%). ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; slog('fb14NoEdge', { turn, best: C.pp, spread: C.p }); cancelBeeps(); fb14Show(); render(); return true; }
-  const pl = { turn, sk: skp || undefined, target: C.target, p: C.p, pp: C.pp, win: C.w.length, pStates: C.pStates, doubt: +Wg.doubt.toFixed(3), floor: dEff > Wg.doubt ? +dEff.toFixed(3) : undefined, relock: FB14.relock || undefined, states: Wg.list.length, ms, from, W, w: C.w, tPress: fbPressT(C.target), blind: fb14Blind(turn) };
+  const pl = { turn, sk: skp || undefined, target: C.target, p: C.p, pp: C.pp, win: C.w.length, pStates: C.pStates, doubt: +Wg.doubt.toFixed(3), floor: dEff > Wg.doubt ? +dEff.toFixed(3) : undefined, fresh: FB14.fresh ? true : undefined, relock: FB14.relock || undefined, states: Wg.list.length, ms, from, W, w: C.w, tPress: fbPressT(C.target), blind: fb14Blind(turn) };
   FB14.plan = pl; if (cAt != null) return pl;
   if (FB14.noEdge) FB14.noEdge[turn] = false;
   const prev = FB14.prevPlan, same = prev && prev.target === C.target && Math.abs(prev.tPress - pl.tPress) < 5;   // v76: a replan on the same frame keeps the beeps already scheduled
@@ -855,7 +855,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const tLast = FB14.t0 + (fb14Bias() - 1.2) * rate - num('vlag');      // pressTime(tLast, rate, F) = fbPressT(F)
   const a = C.a, tab = []; for (let F = from - 30; F <= from + W + 30; F++) tab.push(F >= a && F <= C.b ? C.share[F - a] >= 0.5 : false);
   st.plan = { tMade: now, w: C.w, target: C.target, tPress: pl.tPress, tLast, rate, carried: true, from, to: from + W, first: from - 30, prof: 'fb14', tab, tab4: null, type: C.type, beeps: nBeeps(),
-    mix: { p: C.p, pStates: C.pStates, pp: C.pp, ppStates: C.ppStates, win: C.w.length, doubt: pl.doubt, groups: Wg.list.length, zw: true, fb14: turn }, PD, zwAbs: C.target, fb14: turn, bias: fb14Bias(), sk: skp, lever: skp ? 'fb14sk' : 'fb14' };
+    mix: { p: C.p, pStates: C.pStates, pp: C.pp, ppStates: C.ppStates, win: C.w.length, doubt: pl.doubt, groups: Wg.list.length, zw: true, fb14: turn }, PD, zwAbs: C.target, fb14: turn, bias: fb14Bias(), sk: skp, lever: skp ? 'fb14sk' : 'fb14', freshCap: !!pl.fresh };
   Object.defineProperty(st.plan, 'L', { value: L, enumerable: false });      // v98: the tick re-scores this sample
   FB14.plans = (FB14.plans || []).concat([{ turn, target: C.target, tMade: now, tPress: pl.tPress, bias: fb14Bias(), sk: skp || undefined }]).slice(-20);
   st.msg = null; slog('fb14Plan', pl); fb14Show(); render(); return true;
@@ -875,7 +875,14 @@ const FB14_ANCHOR_TOL = 0.1, FB14_NSAMPLE = 300;
  * 100% T3 beep. */
 const FB14_T3_FLOOR = 0.35, FB14_T3_RELOCK = 0.45, FB14_SNAP = 1500, FB14_WIDE = [-3, 7];
 const FB14_RL_N = [[-4, 0.03], [-3, 0.06], [-2, 0.12], [-1, 0.18], [0, 0.22], [1, 0.18], [2, 0.12], [3, 0.06], [4, 0.03]], FB14_RL_J = [[-2, 0.1], [-1, 0.2], [0, 0.4], [1, 0.2], [2, 0.1]];
-function fb14DoubtFloor(turn, d) { return turn === 3 ? Math.max(d, FB14.relock === 3 ? FB14_T3_RELOCK : FB14_T3_FLOOR) : d; }
+/* v102 (the user: "never beep a confident wrong answer"): a fresh lock (no carried state drew its rays: T1, a lock after a hit
+ * or a dropped carry) rests on one Charge read alone until a coin shine after its rays is seen (the states that survive it
+ * explain it: an unexplained shine costs a state ZW_FALSE). Until then its doubt is at least FB14_FRESH_D, so its claim stays
+ * under 95% (1 - 0.1 x (1 - blind): T2 0.95, T4 0.94) and the plan is made again (fb14Refine, under FB14_UP) once the coin
+ * confirms it. A carried lock (two reads agreeing on one stream) is not capped. */
+const FB14_FRESH_D = 0.1;
+function fb14FreshOpen(h) { const Fr = FB14.fresh; if (!Fr) return false; const hh = h != null ? h : fb14Horizon(performance.now()); for (const t of FB14.taps) { const x = fbPic(t) - 4.8; if (x > Fr.F && x < hh) { FB14.fresh = null; slog('fb14FreshConfirmed', { turn: Fr.turn, F: Fr.F, shine: +x.toFixed(1) }); return false; } } return true; }
+function fb14DoubtFloor(turn, d) { if (fb14FreshOpen()) d = Math.max(d, FB14_FRESH_D); return turn === 3 ? Math.max(d, FB14.relock === 3 ? FB14_T3_RELOCK : FB14_T3_FLOOR) : d; }
 /* v98: T3 has no Charge to lock on. When the carry is gone or contradicted there (the coin), the states of T2's lock
  * (FB14.snap2: on the stream from that lock) are taken again with T2's Do Nothing confirm and T3's Jelly at wider shifts and
  * the coin matched in a wider window (FB14_WIDE): a coin-based re-lock on the stream, planned under FB14_T3_RELOCK, or the
@@ -927,7 +934,7 @@ function fb14Tick(t) {
   if (Wg.doubt < FB14_EDGE_OFF && p >= num('zwedge') && p >= (P.mix.pp != null ? P.mix.pp : P.mix.p) - FB14_TICK_DROP) {
     // v100: the states narrowed after the plan (the coin, Bowser's attack, a bolt): refine it while its beeps have not begun. The
     // replan keeps the anchored frame unless a frame FB14_ANCHOR_TOL better is in reach (fb14Anchor): no jumping
-    const now = performance.now(), narrowed = Wg.list.length < 0.9 * (P.mix.groups || 1e9) || Wg.doubt < (P.mix.doubt || 0) - 0.02;
+    const now = performance.now(), narrowed = Wg.list.length < 0.9 * (P.mix.groups || 1e9) || Wg.doubt < (P.mix.doubt || 0) - 0.02 || (P.freshCap && !FB14.fresh);     // v102: the fresh lock's cap lifted by the coin
     if (narrowed && (P.mix.pp || 0) < FB14_UP && P.tPress - (nBeeps() - 1) * num('gapms') > now + 300 && now - (P.upT || P.tMade) > 700) {
       slog('fb14Refine', { from: P.target, pp: +(P.mix.pp || 0).toFixed(3), pNow: +p.toFixed(3), states: Wg.list.length, was: P.mix.groups, doubt: +Wg.doubt.toFixed(3) });
       FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; if (st.plan) st.plan.upT = now; }
@@ -1171,7 +1178,7 @@ function fb14ArmOk(P, t) {
 function fb14CarryGone() {
   if (!FB14.on && FB14.t0 == null) return;
   slog('fb14CarryGone', { turn: (fb14Step() || {}).fb14 || null });
-  Object.assign(FB14, { on: false, t0: null, states: [], M: {}, P: {}, charges: [], gone: false, allOutLogged: false, why: 'the carried seed is gone (an off-route turn); the next Super Charge locks again' });
+  Object.assign(FB14, { on: false, t0: null, states: [], M: {}, P: {}, fresh: null, charges: [], gone: false, allOutLogged: false, why: 'the carried seed is gone (an off-route turn); the next Super Charge locks again' });
   if (typeof CHG !== 'undefined' && ['locked', 'nolock', 'failed'].includes(CHG.state)) chgReset();
 }
 /* v76: after a T1-T4 lock the reader arms again at once, so the next turn's Charge is read even when no target screen moved
@@ -1321,3 +1328,4 @@ window.__fb14 = { v100: { atkFrame: (t, p) => fbAtkFrame(t, p), atkDecide: k => 
   shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS, anchor: (C, from, W, turn, PD) => fb14Anchor(C, from, W, turn, PD), TICK_DROP: FB14_TICK_DROP, ANCHOR_TOL: FB14_ANCHOR_TOL,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
+window.__fb14.v102 = { truthZero: t => fb14TruthZero(t), freshOpen: h => fb14FreshOpen(h), FRESH_D: FB14_FRESH_D, isTrue: S => fb14IsTrue(S) };   // for tests (v102)

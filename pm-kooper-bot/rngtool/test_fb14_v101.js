@@ -80,7 +80,7 @@ const mk = (P, s) => { const S = F.fbNew({ s, nc: P + 400, f: P - 5, c: new Uint
   ok(/fb14sk: 'tot-fb14skip-v101'/.test(pg) && /LEVER_LEARN = \{ fb14: true, fb14sk: true \}/.test(pg), 'the skip\'s presses in their own store (tot-fb14skip-v101), learned like the Do Nothing lever');
   ok(/if \(!P \|\| P\.sk \|\|/.test(pg), 'a skip plan is not cancelled when the step\'s screen is gone (its screen is the message)');
   ok(/'T1: Charge; Cloud Nine'/.test(pg), 'the T1 turn text is unchanged');
-  ok(/const VERSION = 'v101'/.test(pg), 'page version v101'); }
+  ok(/const VERSION = 'v1(0[1-9]|[1-9]\d)'/.test(pg), 'page version v101 or later'); }
 { const E = path.join(__dirname, 'fixtures', 'e2e_v101.json');
   if (fs.existsSync(E)) { const R = JSON.parse(fs.readFileSync(E, 'utf8')); const all = [].concat(...R.runs.map(r => r.turns));
     const bad = all.filter(t => t.pp != null && t.pp >= 0.95 && !t.miss);

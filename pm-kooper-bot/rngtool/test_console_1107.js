@@ -117,7 +117,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
   check(r.list.lis.some(x => /^T1: Charge; Bombette Do Nothing/.test(x)) && r.list.lis.some(x => /^T1: Charge; Bomb$/.test(x)), 'each turn reads "Tn: actions" (v87: no step numbers)');
   check(/^T1: Charge; Bomb/.test(r.list.cur || ''), 'the current step\'s turn line is highlighted');
   check(!r.list.lis.some(x => /Life Shroom|Spiny Flip \[/.test(x)), 'v87: no Life Shroom and no Spiny Flip numbers in the route texts');
-  check(r.version === 'v101' && r.ver === 'v101', 'version v99 in the log and the header');
+  check(r.version === 'v102' && r.ver === 'v102', 'version v99 in the log and the header');
   check(r.title === 'Paper Mario Any% (No ACE) (RNG Manipulation)' && /RNG Manipulation/.test(r.h1), 'the page\'s new name in the title and header');
   await p.close();
   // 8. the Final Bowser plan / re-score
