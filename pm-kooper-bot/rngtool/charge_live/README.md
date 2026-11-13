@@ -1,3 +1,75 @@
+# Time Out Timer v104: a plan claims no more than every state still possible supports; v103's truth check took aliases (Nov 13)
+
+Goal (the user's top rule: never beep a confident wrong answer): v103's e2e found 3 of 25 plans at >= 95% whose kept states held
+no true state (2b7e1516 T2 1242; 9e3779b9 T2 after the hit 497 and 564). Numbers only in `fixtures/e2e_v104.json`.
+
+## 1. Artifact or real: both
+- **The truth check was weak (artifact).** `fb14IsTrue` compares a state's seed with the true seed on one frame. The seed only counts
+  the draws, so states with another coin timer or lightning phase share it on most frames: 1095 of 2b7e1516's carried states at once,
+  and the count of "true" kept states jumped 19 -> 3 -> 39 -> 0 -> 57 between re-plans of one turn. The new per-frame check
+  (`fb14IsTrueS`: the true seed on every frame of the next 90; `fb14TruthScore`, `fb14TruthWhy`, `fb14TruthDiv`, diagnostic, the
+  e2e only) finds **no state that follows the truth** in 2b7e1516's T1 lock (12000 states, best 66% of frames, off after 0-6
+  frames, at any clock shift -3 .. +3), its carried T2, or 9e3779b9's post-hit T2 lock (22 states, best 94% then <= 78%); only
+  9e3779b9's and 1234abcd's T1 / later locks held it (1-60 states). Of v103-logic's 19 plans >= 95% (before run below) the
+  one-frame check put the truth in 16, the per-frame one in 10. So "truth in / not in the kept states" said little either way.
+- **The confident wrong claims are real.** A new e2e mode (`fb14_e2e.py PLANCHECK=1`, diagnostic) presses *every* plan on its own
+  frame in the emulator from the turn's lever-screen state: what Bowser does there is the truth a claim is about. Before (v103
+  claims, `NOBROAD=1`): 40 plans, 19 >= 95%, 16 checkable, **2 had Bowser hit** (2b7e1516 T2 1034 at 0.995, carried, pressed by the
+  runner: hit; 9e3779b9 T2 564 at 1.0, the post-hit fresh lock).
+
+## 2. Root cause
+- The lock's states often do not contain the truth (above). The coin's soft weighting (a shine matched x15 against the background,
+  one read outside a state's -2 .. +4.5 window x0.02) then picks among states a frame or a coin check apart, and near-variant
+  wrong states match the coin's 24 / 48-frame cadence as well as the truth would. The kept set narrows (2b7e1516 T2: 1405 states
+  with <= 3 errors, 54 kept; 117 -> 48 -> 18 and back to 151 in v103's run) and the claim rises to 99-100% on whichever wrong
+  states the last shines favoured.
+- The doubt only counts "off the model" (the background, decaying with every quiet coin frame); states the coin merely
+  out-weighed (under `ZW_CUT` of the best) leave both the claim and the doubt, so a narrowed set reads doubt 0. Not the 300-state
+  sample (these sets were under 300), not a stale subset (each re-plan weighs `FB14.states` afresh), not the bolts (inert).
+- A fresh lock (one Charge read) lifted v102's cap on its first coin shine; 9e3779b9's post-hit lock (no true state) was
+  "confirmed" so and planned at 100% on frames Bowser hit (564; 469 in an after run without the next fix).
+
+## 3. Fix
+- `fb14Broad`: every plan's claim is also scored on all states the coin has not ruled out (`ZW_MAXERR` errors or fewer, by their
+  prior weight, the soft factors left out; the same doubt), and the plan claims the lower of the two (`broad` and `ppKept` are
+  logged in each plan). Narrowing never raises a claim above what every still-possible state supports; the frame is still the
+  kept states' (and the anchor's). A capped claim under the edge is no plan ("broad").
+- A fresh lock after T1 keeps `FB14_FRESH_D` until a later Charge locks carried (two reads on one stream); `FB14_FRESH_D` 0.12
+  (was 0.1: T2's cap 0.9495 showed as "95%"; now 0.939, T4 0.927). T1 as before (capped until its coin, under 95% anyway).
+
+## 4. Measured (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 PLANCHECK=1, T1-T4; miss = Bowser missed on the plan's frame)
+| run | plans | >= 95% | >= 95% with Bowser hitting | pressed >= 95% that failed | truth (per-frame) in >= 95% |
+|---|---|---|---|---|---|
+| before, first b13 (v103 claims, 3 seeds) | 40 | 19 | **2** (2b7e1516 T2 1034 0.995; 9e3779b9 T2 564 1.0) | **1** (2b7e1516 T2 1034) | 10 of 19 (v103's check: 16) |
+| after (broad only, first b13, run lost to a restart) | 41 | 8 | 1 (9e3779b9 T2 469, post-hit fresh lock: why the fresh floor) | 0 | - |
+| before, rebuilt b13 (v103 claims) | 14 | 4 | **2** (1234abcd T2 939 0.98, 1246 0.967) | **1** (1234abcd T2 939) | 0 of 4 |
+| after, rebuilt b13 (v104) + FORCE_HIT=1.1 (2b7e1516, first b13) | 11 | 1 (1234abcd T2 1310, past the render) | **0** | 0 | 0 of 1 |
+- After, the kept states alone claimed >= 95% on 1234abcd T2 993 (0.975 and 1.0) and 1246 (0.964); Bowser hit on all three; the
+  broad claim made them 0.55 / 0.48 / 0.52. The first-build after run (numbers in this README only): 2b7e1516's T2 1034 (0.995,
+  hit) became 0.51, 1262 (kept 1.0, hit) 0.86.
+- Legit >= 95% claims lost: before (first b13) 14 of the 16 checked >= 95% plans were right; their broad claims keep 5 of them
+  at >= 95% (2b7e1516 T2 1242 0.977, 1234abcd T4 1428 / 1496 / 1562 / 1634), the post-hit 9e3779b9 T2 ones (298-427, right by
+  luck: no true state) go under 95% with the fresh floor. A real drop, taken for the rule; see Not done.
+- The rebuilt b13 (the container restart lost the first) locks differently: 9e3779b9's T1 reads "No edge" (doubt 0.73) and its
+  post-hit T2 lock is dropped (no plans either way); 2b7e1516's T2 carry plans once (0.81, hit) in both runs.
+- FORCE_HIT=1.1 (2b7e1516, T1's skip moved to a hit): the post-hit fresh T2 lock planned 0.83 (prior doubt 0.34), pressed: Bowser missed.
+- T1 claims drop with the broad claim (2b7e1516 0.86 -> 0.60-0.66, the lock held no true state; 9e3779b9 0.67 -> 0.54).
+
+## Tests
+New `test_fb14_v104.js` (in `run_suite.sh`): the per-frame truth check against an alias; `fb14Broad` (falls to every possible
+state's share, with the doubt, left alone with nothing dropped, errors over `ZW_MAXERR` out, NOBROAD logs only, under the edge no
+plan); the e2e fixture (before / after, no after plan >= 95% with Bowser hitting, claims at most broad, no pressed >= 95% failed).
+`test_fb14_v103.js`: its e2e line now says the one-frame check takes aliases. Version checks and page tests' default build moved
+to v104. `test_fb14_page.js` takes `noBroad` from the manifest. Route texts unchanged.
+
+## Not done
+- Why the locks so often hold no state that follows the truth frame by frame (2b7e1516's T1: 0 of 12000; the `FB14_MAXH` cap at
+  14892 fits, the lag / phase grid or the clock?): the per-frame check (`fb14TruthScore`) is there to look with.
+- The broad claim also drops correct claims (before: 1234abcd T4 1363 0.997 -> broad 0.859, 9e3779b9 T4 524 1.0 -> 0.822):
+  the coin's weighting was right there (true states kept). Separating the two needs more checked plans than three seeds give.
+- Plans under 95% still beep (the edge is the user's setting): after the fix 2b7e1516 T2 1071 (0.81) and 1234abcd T2 993
+  (0.55) were pressed and Bowser hit.
+
 # Time Out Timer v103: the stage lightning decided (no random number moves a bolt); the bolt delay not pinned, so the bolts stay logged only (Nov 13)
 
 Goal: stronger T1 (Cloud Nine skip) plans from what shows between the T1 lock and the skip. Numbers only in

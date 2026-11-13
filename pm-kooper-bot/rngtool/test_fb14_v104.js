@@ -43,7 +43,7 @@ const mk = (s, nc, o) => F.fbNew(Object.assign({ s: s >>> 0, nc, f: 0, c: new Ui
 { const p = path.join(__dirname, 'fixtures', 'e2e_v104.json');
   if (!fs.existsSync(p)) ok(false, 'fixtures/e2e_v104.json missing');
   else { const E = JSON.parse(fs.readFileSync(p, 'utf8'));
-    for (const k of ['before', 'after']) { const P = E[k].plans, hi = P.filter(r => r.pp >= 0.95), wrong = hi.filter(r => r.miss === false);
+    for (const k of ['before_first_build', 'before', 'after']) { const P = E[k].plans, hi = P.filter(r => r.pp >= 0.95), wrong = hi.filter(r => r.miss === false);
       ok(hi.length === E[k].summary.hi && wrong.length === E[k].summary.hiWrong, k + ': ' + P.length + ' plans, ' + hi.length + ' >= 95%, of them Bowser hit on the frame: ' + wrong.length + ' (' + wrong.map(r => r.run + ' T' + r.turn + ' ' + r.target + ' ' + r.pp).join(', ') + ')'); }
     const A = E.after.plans; ok(A.filter(r => r.pp >= 0.95 && r.miss === false).length === 0, 'after: no plan >= 95% on which Bowser hits');
     ok(A.filter(r => r.pp >= 0.95).every(r => r.broad == null || r.pp <= r.broad + 1e-3), 'after: every claim at most its broad claim');
