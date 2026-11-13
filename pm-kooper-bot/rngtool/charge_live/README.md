@@ -1,3 +1,72 @@
+# Time Out Timer v99: Final Bowser T6's beeps kept, T6's Charge armed without a carry, the emulator check through T4, T3's lag measured (Nov 13)
+
+Console attempts 441170cf (page v98, clip 18-41-14: "almost had it, but it lost the seed on turn 6"; T1-T4 worked, T2 / T4
+carried at 100%, T3 82%) and 7483f3b1 (page v97). Numbers only in `fixtures/console_v99.json`; no picture committed.
+
+## 1. T6: the beeps cancelled 0.02 s after the plan (441170cf)
+- The T6 Charge locked on the 882 carried candidates (171.18 s, 3 states); `fb2PlanP` 171.20 s: Do Nothing on k 132, pp 0.60
+  (over Best chance 0.4: the edge rule passed), window 1, tPress 172.54; `beepsCancelled` (3) at 171.22; no plan or "No edge"
+  after it; Do Nothing confirmed 53 s later, unplanned.
+- **Cause: the page's screen-lost rule** (the step's target screen off for over 1 s with a plan whose press is ahead:
+  `cancelPlan`, silent). T6's step screen is Lakilester's Strategies screen; its plan is made on the Charge's lock, before
+  that screen opens, and the screen had been "lost" since the Charge: the next picture cancelled it. v82 exempts an early plan
+  (made before its screen showed) until the screen has been seen and gone; the fb2 plan was not marked early. Not the fb14
+  tick (it only touches fb14 plans), not v98's sample rescoring, not the edge rule, not the popup watch.
+- Then nothing replanned: `autoPlan` never reached `makePlan` on the T6 step, and `fb2PlanP`'s own "No edge" text was left to
+  `makePlan`.
+- **Fix:** the T6 plan is early (`st.plan.early`); the rule is `planScreenLost` and logs `planScreenLost`; a T6 plan lost all the
+  same is made again (`fb2Replan`: beeps, or "No edge" with its reason); `fb2PlanP` under the edge shows "No edge: …" at once;
+  `autoPlan` runs the T6 step (twice a second, as the other steps).
+- **The timing:** the popup closed on k 76, Lakilester's menu opens 17 frames later (k 93); k 132 is 56 frames (1.87 s) after the
+  popup and 39 after the menu. Its earliest frame 130 is `FB2_PMIN` (not the beep lead), so all three beeps (from k ~105) fall with
+  the Strategies screen up: consistent.
+
+## 2. T6's Charge not triggered (7483f3b1)
+T4's carry was gone (196.9 s, `fb14CarryGone`); T4 confirmed 201.3 s (before a lock, `FB14.p4t` set). The Peach Beam's hide
+(207.65 s) set **no T5 mark**: `fb14HideWatch` returned without a carry (`FB14.t0` null), and on T6's step with no carry
+`fb14Frame` returned before it. So `fb14ArmOk` held the FB2 reader to T4's confirm + 45 s (246.3 s) and the T6 Charge's hide at
+229.29 s (28 s after T4) armed nothing. **Fix:** the Peach Beam's hide marks T5 with or without a carry (`fb14Peach` logs
+`F: null, why: 'no carry'`); the T6 hide 21.6 s after it arms. (The clip was not decoded: the log's hides and the code path
+explain it.)
+
+## 3. The emulator harness: T1 locks; T1-T4 on three seeds
+- After the container restart the states were rebuilt (`make_states.sh`, BUILD=0) and a new T1 build (`b13`: Mario 10 HP,
+  Bowser 80, written as route_build does). On it **v98 and v99 both lock 1234abcd's T1** (ratio 2.64; v98's runs on `b12` read
+  best 1.02-1.08). The page did not regress; the `b12` build (gone with /dev/shm) cannot be compared. Mario stands 16.6 px /
+  5.8 units off the camera table on both builds (the page's centring handles it).
+- T1's plan still came just after the patient runner's 12 s: the search takes 6 s on this 4-core machine and the fresh lock's
+  placement check (-1 / +1 re-reads) ran its two workers one after the other (2.7-4.3 s). They run in parallel now (1.6 s).
+- `fb14_e2e.py` (RUNNER=patient GUARD=1 TRUTH=1, T1-T4), `fb14_t3check.py`: **PASS** on all three.
+| seed | T1 | T2 | T3 | T4 |
+|---|---|---|---|---|
+| 1234abcd | locked, plan after 12 s, blind: miss | 1204 (0.997): miss | 1771 (0.823): miss | 2327 (1.0): wave missed |
+| 9e3779b9 | locked, plan after 12 s, blind: miss | 1257 (1.0): miss | 1818 (0.823): miss | 2346 (1.0): wave missed |
+| 2b7e1516 | locked, plan after 12 s, blind: hit | fresh lock, 0.957: miss | 0.823: miss | 1.0: wave missed |
+  T3 was planned on carried states every time (no drop, no re-lock needed). T6 was not run.
+
+## 4. T3: console lag across the Jelly? Not found
+- Console: the bar hidden across the Jelly, as the page read the clips live (barHide -> coinBack): 4667 / 4633 / 4650 ms
+  (c6469b35 / 7483f3b1 / 441170cf) = 139.6 / 138.6 / 139.1 frames.
+- Emulator (`fb2_route/jelly_hud.py` on b13, the top HUD strip per game frame from the Jelly confirm): changes on +4, gone +8, back +144
+  (Lakilester's menu, battle state 14, on +154): hidden 136-140 frames.
+- So lag frames during the Jelly animation are at most ~3.6 and at least ~-1.4 frames, the same on all three attempts within a
+  frame: they cannot give v98's 3.4-6.5 frames, which also varied (and c6469b35's T1 shines were already 3.4-5.1 late before any
+  Jelly). The difference is not lag in the Jelly; not modelled. **The T3 floor stays** (`FB14_T3_FLOOR` 0.35).
+- 441170cf T3: planned 1463 (window 1462-1464, 82%), pressed 1461.09, Bowser missed (and T4's carried lock matched): one more
+  outcome outside the planned window that the floor's honesty covers.
+- Seen on the way: the emulator's HUD leaves on +4..+8 while `FB14_HIDE.jelly` is 2; not changed (the e2e T3 plans read the Jelly
+  from the same hide and missed every time).
+
+## Tests
+New `test_console_v99.js` (in `run_suite.sh`): 441170cf's T6 replayed on the page (the plan kept on the picture 23 ms after it;
+a lost T6 plan logged and made again; after its screen was seen and gone the rule acts; a lost plan under the edge says "No
+edge"); 7483f3b1's T5 mark and the T6 arming; the e2e numbers and the parallel placement; the Jelly HUD numbers and the floor.
+Version checks to v99; the page tests' default page paths to `timeout_timer_v99`.
+
+## Not done
+- T6 end to end in the emulator; the T6 read with no carry (a full FB2 search) on 7483f3b1's clip.
+- The clips were not decoded frame by frame for item 4 (the page's live bar readings were used); the page's coin-box detector on
+  the emulator's Jelly was not run (the HUD strip stands in for it).
 # Time Out Timer v98: Final Bowser T4's beeps hold, T3 never claims 100% and re-locks on the stream (Nov 12)
 
 Console attempts c6469b35 (page v96, clip 17-33-59: "turn 3 and 4 fail") and 7483f3b1 (page v97, clip 17-47-17: "mostly

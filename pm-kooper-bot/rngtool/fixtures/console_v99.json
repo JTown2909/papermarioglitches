@@ -166,5 +166,127 @@
     "at": 239604
    }
   ]
+ },
+ "t3_jelly": {
+  "note": "bar hidden across the Jelly: console = the page's live reading (barHide -> coinBack hiddenMs, logs); emulator = the top HUD strip on the screen per game frame from the Jelly confirm (jelly_hud.py, b13 build, 1234abcd)",
+  "console_hiddenMs": {
+   "c6469b35": 4667,
+   "7483f3b1": 4633,
+   "441170cf": 4650
+  },
+  "console_rate": 33.42,
+  "emu": {
+   "hud_first_change": 4,
+   "hud_gone": 8,
+   "hud_back": 144,
+   "menu_state14": 154
+  },
+  "shines_late_v98": [
+   3.4,
+   6.5
+  ],
+  "t3_441170cf": {
+   "target": 1463,
+   "w": [
+    1462,
+    1464
+   ],
+   "pp": 0.823,
+   "confirmF": 1461,
+   "c": 1461.09,
+   "bowserMissed": true
+  },
+  "t3_7483f3b1": {
+   "target": 1434,
+   "pp": 1.0,
+   "c": 1433.63,
+   "bowserMissed": false
+  }
+ },
+ "e2e_v99": {
+  "note": "fb14_e2e.py, RUNNER=patient GUARD=1 TRUTH=1, fresh build b13; miss = Bowser missed (T4: the wave) with the confirm on the frame pressed",
+  "1234abcd": [
+   {
+    "t": 1,
+    "planned": false,
+    "miss": true
+   },
+   {
+    "t": 2,
+    "target": 1204,
+    "pp": 0.997,
+    "miss": true
+   },
+   {
+    "t": 3,
+    "target": 1771,
+    "pp": 0.823,
+    "miss": true
+   },
+   {
+    "t": 4,
+    "target": 2327,
+    "pp": 1.0,
+    "miss": true
+   }
+  ],
+  "9e3779b9": [
+   {
+    "t": 1,
+    "planned": false,
+    "miss": true
+   },
+   {
+    "t": 2,
+    "target": 1257,
+    "pp": 1.0,
+    "miss": true
+   },
+   {
+    "t": 3,
+    "target": 1818,
+    "pp": 0.823,
+    "miss": true
+   },
+   {
+    "t": 4,
+    "target": 2346,
+    "pp": 1.0,
+    "miss": true
+   }
+  ],
+  "2b7e1516": [
+   {
+    "t": 1,
+    "planned": false,
+    "miss": false
+   },
+   {
+    "t": 2,
+    "target": 366,
+    "pp": 0.957,
+    "miss": true
+   },
+   {
+    "t": 3,
+    "target": 929,
+    "pp": 0.823,
+    "miss": true
+   },
+   {
+    "t": 4,
+    "target": 392,
+    "pp": 1.0,
+    "miss": true
+   }
+  ],
+  "placementMs": {
+   "v98_serial": [
+    2667,
+    4333,
+    3000
+   ],
+   "v99_parallel": 1633
+  }
  }
 }

@@ -7,6 +7,10 @@
  * 2. T6's Charge not triggered (7483f3b1, 229.29 s): T4's carry was gone (196.9 s), so the Peach Beam's hide (207.65 s) set
  *    no T5 mark (fb14HideWatch returned without a carry, and did not run on T6's step), and fb14ArmOk held the FB2 reader for
  *    T4's confirm + 45 s (246.3 s). The mark is set without a carry now.
+ * 3. The emulator harness (fb14_e2e, fresh build): T2-T4 planned and Bowser missing on three seeds; T1 locks again; the
+ *    placement re-read in parallel workers.
+ * 4. T3: the bar hidden across the Jelly on console against the emulator's HUD: no room for the 3.4-6.5 frame lag; the
+ *    T3 floor kept.
  * usage: node test_console_v99.js   [PAGE=built standalone page] */
 const fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
@@ -22,6 +26,20 @@ ok(conf.err > 1000, '1. no plan after it; Do Nothing confirmed ' + ((conf.t - pl
 // the timing: the popup closes on k 76, Lakilester's menu opens 17 frames later (t6dn_log.py); k 132 is the plan's frame
 const menuK = seen.k + 17, dk = plan.k - seen.k;
 ok(menuK < plan.kFirst && dk * 33.4 / 1000 > 1.8 && dk * 33.4 / 1000 < 2.0, '1. the plan\'s frame k ' + plan.k + ' is ' + dk + ' frames (' + (dk * 33.4 / 1000).toFixed(2) + ' s) after the popup closed and ' + (plan.k - menuK) + ' after the menu opened (k ' + menuK + '); its earliest frame ' + plan.kFirst + ' is FB2_PMIN, so the beeps (first one 2 gaps before) all fall with the Strategies screen up');
+// --- 3. the emulator harness ---
+{ const E = FIX.e2e_v99, sd = ['1234abcd', '9e3779b9', '2b7e1516'];
+  ok(sd.every(s => E[s].filter(t => t.t >= 2).every(t => t.miss && t.target != null)), '3. fb14_e2e on ' + sd.join(', ') + ': T2-T4 planned and Bowser missing (T4 the wave) on every one');
+  ok(sd.every(s => E[s].find(t => t.t === 3).pp <= 0.83), '3. T3 claims at most 0.823 (the floor)');
+  ok(E.placementMs.v99_parallel < Math.min(...E.placementMs.v98_serial), '3. T1 placement re-read ' + E.placementMs.v98_serial.join(' / ') + ' ms -> ' + E.placementMs.v99_parallel + ' ms');
+  const src = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8');
+  ok(/Promise\.all\(\[-1, 1\]\.map\(d => one\(alt\[d\]/.test(src), '3. the two shifted reads run in parallel workers'); }
+// --- 4. T3: lag across the Jelly ---
+{ const J = FIX.t3_jelly, hid = Object.values(J.console_hiddenMs).map(x => x / J.console_rate), lo = J.emu.hud_back - J.emu.hud_gone, hi = J.emu.hud_back - J.emu.hud_first_change;
+  const mx = Math.max(...hid), mn = Math.min(...hid), lagMax = mx - lo;
+  ok(mx - mn < 1.5, '4. console: the bar hidden across the Jelly ' + hid.map(x => x.toFixed(1)).join(' / ') + ' frames (three attempts, within ' + (mx - mn).toFixed(1) + ')');
+  ok(lagMax < J.shines_late_v98[1] && mn - hi < J.shines_late_v98[0], '4. emulator HUD gone ' + lo + '-' + hi + ' frames: lag in the Jelly at most ' + lagMax.toFixed(1) + ' frames (< v98\'s 6.5), at least ' + (mn - hi).toFixed(1) + ' (< 3.4): not the lag');
+  const t3 = J.t3_441170cf; ok(t3.bowserMissed && t3.confirmF < t3.w[0] && t3.pp <= 0.83, '4. 441170cf T3: ' + Math.round(100 * t3.pp) + '% plan ' + t3.target + ', pressed ' + t3.c + ' (outside ' + t3.w.join('-') + '), Bowser missed: a data point, the floor kept');
+  const src = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'); ok(/FB14_T3_FLOOR = 0\.35/.test(src), '4. FB14_T3_FLOOR 0.35 kept'); }
 (async () => {
   if (!fs.existsSync(PAGE)) { console.log('(page tests skipped: no PAGE)'); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0); }
   const { chromium } = require('playwright'), b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
