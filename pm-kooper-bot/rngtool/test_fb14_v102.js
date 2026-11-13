@@ -47,7 +47,7 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
 { const src = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'), e2e = fs.readFileSync(path.join(__dirname, 'fb2_route', 'fb14_e2e.py'), 'utf8'), pg = fs.readFileSync(path.join(__dirname, 'test_fb14_page.js'), 'utf8');
   ok(/FB14\.fresh = how === 'fresh'/.test(src) && /P\.freshCap && !FB14\.fresh/.test(src), 'fb14Lock marks a fresh lock; the tick makes a capped plan again once the coin lifts the cap');
   ok(/zeros=zeros/.test(e2e) && /find_hit_skip/.test(e2e) && /__fb14seeds\.zt/.test(pg), 'the harness: each turn\'s confirm for the trace (zeros, zt), FORCE_HIT on T1\'s skip');
-  const tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8'); ok(/VERSION = 'v102'/.test(tpl), 'page VERSION v102'); }
+  const tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8'); ok(/VERSION = 'v10[2-9]'/.test(tpl), 'page VERSION v102+'); }
 // 4. the e2e (fixtures/e2e_v102.json): every plan of every page run, its lock, the truth in its states, its claim
 { const E = path.join(__dirname, 'fixtures', 'e2e_v102.json');
   if (fs.existsSync(E)) { const R = JSON.parse(fs.readFileSync(E, 'utf8')), P = R.plans;
@@ -74,7 +74,7 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
     ok(/1\.1 frames late/.test(r.a), 'before: the row shows the stored generic press (1.1 late): ' + r.a.slice(0, 60));
     ok(/Last press \(Final Bowser T2, Do Nothing\): 0\.8 frames late/.test(r.b) && r.n === 2, 'a Final Bowser T2 press on the beeps: "' + r.b.slice(0, 70) + '", the generic presses untouched (' + r.n + ')');
     ok(/skips Cloud Nine's message\): 1\.3 frames early/.test(r.c), 'the T1 skip: ' + r.c.slice(0, 90));
-    ok(r.ver === 'v102', 'page version v102');
+    ok(/^v10[2-9]$/.test(r.ver), 'page version v102+');
     // 6. T6 (console log fb0449): the countdown is the runner's (3 beeps 500 ms apart, lead 1.5 s), and a passed frame is planned again
     const C = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v102.json'), 'utf8')), R6 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'fb2_t6dn.json'), 'utf8')).emulatorCheck[0];
     const p2 = await b.newPage(); await p2.addInitScript(st => { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(st)); }, Object.assign({ prof: 'endgame', boots: 'ultra' }, Object.fromEntries(Object.entries(C.settings).map(([k, v]) => [k, String(v)]))));

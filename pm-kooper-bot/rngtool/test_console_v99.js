@@ -45,7 +45,7 @@ ok(menuK < plan.kFirst && dk * 33.4 / 1000 > 1.8 && dk * 33.4 / 1000 < 2.0, '1. 
   const { chromium } = require('playwright'), b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50', zwedge: '0.4', zwwin: '1', boots: 'ultra' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v102', 'page version v102');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v103', 'page version v103');
   const r = await p.evaluate(({ L, R }) => {
     const T = window.__tot, F = window.__fb2, FB = F.FB2, V = T.V, S = T.SLOG, now = performance.now(), n0 = S.length;
     T.setStep(T.RT().findIndex(s => s.turn === 'fb2_k'));

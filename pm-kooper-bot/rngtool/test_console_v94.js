@@ -42,7 +42,7 @@ const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v102', 'page version v102');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v103', 'page version v103');
   // ---- 3. the readings
   const r3 = await p.evaluate(D => { const T = window.__tot, X = window.__fb14, FB = X.FB14, RT = T.RT(), out = { readS: X.readX('S'), readBar: X.readX('M', 'bar'), readM: X.readX('M'), vanS: X.van('S'), shifts: X.SHIFTS_S.map(x => x[0]) };
     const mk = () => X.fbNew({ s: 1, nc: 0, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, rg: 0, w: 1, from: 0, sh: [], tag: 2 });

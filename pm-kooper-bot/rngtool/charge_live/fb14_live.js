@@ -609,17 +609,26 @@ function fbAtkDecide(k) {
  * (320-space x 25..215, y 42..105; Bowser's head is right of it): violet grid points that were not violet in the running
  * baseline; an onset is 4+ new points after 6 quiet pictures. The clock frame of the draw is the onset's picture minus
  * FB14_BOLT_D (calibrated on the emulator, fb14BoltCal); null: logged only. */
-const FB14_BOLT = { x0: 25, x1: 215, y0: 42, y1: 105, gw: 64, gh: 21, on: 4, quiet: 6 }, FB14_BOLT_W = 0.05, FB14_BOLT_TOL = 2;
+const FB14_BOLT = { x0: 25, x1: 215, y0: 42, y1: 105, gw: 64, gh: 21, on: 4, quiet: 6, ev: 6, c9: 120 }, FB14_BOLT_W = 0.05, FB14_BOLT_TOL = 2;
 let FB14_BOLT_D = null;
+/* v103: what decides a bolt (pmdecomp battle/common/stage/area_kkj/kkj_02.inc.c, effects/lightning_bolt.c): the stage's two
+ * looping scripts, EVS_CirculatingBolts (waits 5, 30, 5, 90: the 130 loop) and EVS_RandomBolts (60, 10, 90, 60: the 220 loop),
+ * each bolt at a FIXED place of its loop. No random number decides when or where a bolt shows; its one rand_int(359) (the
+ * effect's unk_110) only sets the zigzag's phase. So an onset tells the states' phases and their lag after the rays (l), not
+ * the seed: a soft factor per onset (FB14_BOLT_SIG, a floor FB14_BOLT_FLOOR for a picture that was not a bolt), never a cut. */
+const FB14_BOLT_SIG = 0.4, FB14_BOLT_FLOOR = 0.15, FB14_BOLT_REACH = 3, FB14_BOLT_Q = 0.05;
 function fbBoltBox() { const [SX, OX, SY, OY] = chgMap(), B = FB14_BOLT; return { x: (OX + B.x0 * SX) / 1280, y: (OY + B.y0 * SY) / 720, w: (B.x1 - B.x0) * SX / 1280, h: (B.y1 - B.y0) * SY / 720 }; }
 function fbBoltFrame(t, present) {
   const W = FB14.boltW || (FB14.boltW = { base: null, quiet: 99 });
-  const busy = !present || (FB14.pT && [1, 2, 3, 4].some(j => FB14.pT[j] != null && t > FB14.pT[j] - 200 && !(FB14.atk && FB14.atk[j]))) || (FB14.lastBurst && t - FB14.lastBurst.t < 3000) || (typeof CHG !== 'undefined' && CHG.state === 'capture');
+  // v103: T1 in skip mode reads on from Cloud Nine's confirm to P + FB14_BOLT.c9 (the battle camera; Cloud Nine's own camera
+  // from ~P + 133 pans over the arena's violet frame and its action-command icons are blue: not read)
+  const c9 = fb14SkipMode() && FB14.pT && FB14.pT[1] != null && FB14.pT[2] == null && t < FB14.pT[1] + FB14_BOLT.c9 * fbRate();
+  const busy = !present || (FB14.pT && [1, 2, 3, 4].some(j => FB14.pT[j] != null && t > FB14.pT[j] - 200 && !(FB14.atk && FB14.atk[j]) && !(j === 1 && c9))) || (FB14.lastBurst && t - FB14.lastBurst.t < 3000) || (typeof CHG !== 'undefined' && CHG.state === 'capture');
   if (busy) { W.base = null; W.quiet = 0; return; }
   const g = window.__fbVisTest ? window.__fbVisTest('sky') : fbVisGrid(fbBoltBox(), FB14_BOLT.gw, FB14_BOLT.gh); if (!g) return;
   const n = g.length / 4; if (!W.base || W.base.length !== n) { W.base = new Float32Array(n); for (let i = 0, j = 0; i < g.length; i += 4, j++) W.base[j] = fbVio(g, i) ? 1 : 0; W.quiet = 0; return; }
   let nw = 0; for (let i = 0, j = 0; i < g.length; i += 4, j++) { const v = fbVio(g, i) ? 1 : 0; if (v && W.base[j] < 0.3) nw++; W.base[j] = 0.9 * W.base[j] + 0.1 * v; }
-  if (nw >= FB14_BOLT.on && W.quiet >= FB14_BOLT.quiet) { FB14.bolts.push(t); if (FB14.bolts.length > 200) FB14.bolts.shift(); slog('fb14Bolt', { at: Math.round(t), F: FB14.t0 != null ? +fbPic(t).toFixed(1) : null, n: nw }); }
+  if (nw >= FB14_BOLT.on && W.quiet >= FB14_BOLT.quiet) { if (nw >= FB14_BOLT.ev) FB14.bolts.push(t); if (FB14.bolts.length > 200) FB14.bolts.shift(); slog('fb14Bolt', { at: Math.round(t), F: FB14.t0 != null ? +fbPic(t).toFixed(1) : null, n: nw }); }
   W.quiet = nw < 2 ? W.quiet + 1 : 0;
 }
 const fbVio = (g, i) => { const R = g[i], G = g[i + 1], B = g[i + 2]; return B > 110 && B - G > 45 && R > 70 && B > R + 15; };
@@ -633,6 +642,16 @@ function fb14V100(S, h, bolts, cnt) {
     else if (a.cls && (o.atk === 'claw' || o.atk === 'slam') && o.atk !== a.cls) { f *= FB14_CLSW; cnt.cls++; } }
   if (bolts) { let miss = 0; for (const x of bolts) { if (x < S.from + S.l || x >= h) continue; let ok = false; for (let d = -FB14_BOLT_TOL; d <= FB14_BOLT_TOL && !ok; d++) if (fbBolts(Math.round(x) + d - S.l, S.ph)) ok = true; if (!ok) { f *= FB14_BOLT_W; miss++; } } if (miss) cnt.bolt++; }
   return f;
+}
+/* v103: one state's factor for the onsets (page frames of the draws: the onset's picture - FB14_BOLT_D): per onset after the
+ * state's rays, the nearest draw of its phases (on its own frames, lag l) within FB14_BOLT_REACH: floor + (1 - floor) x a
+ * Gaussian of the distance (sigma FB14_BOLT_SIG frames) */
+function fb14BoltLik(S, h, bolts, cnt) {
+  let f = 1, miss = 0;
+  for (const x of bolts) { if (x < S.from + S.l + 2 || x >= h) continue; const y = x - S.l, r0 = Math.round(y); let best = 99;
+    for (let d = r0 - FB14_BOLT_REACH; d <= r0 + FB14_BOLT_REACH; d++) if (fbBolts(d, S.ph)) best = Math.min(best, Math.abs(y - d));
+    const L = FB14_BOLT_FLOOR + (1 - FB14_BOLT_FLOOR) * Math.exp(-best * best / (2 * FB14_BOLT_SIG * FB14_BOLT_SIG)); f *= L; if (L < 0.5) miss++; }
+  if (miss && cnt) cnt.bolt++; return f;
 }
 /* v82 (log 1794170840652: the T1 lock landed, then nothing for 21 s): on a lever step the plan is made as soon as the turn's
  * lock is in, without waiting for the target screen (whose picture may never have been saved: no plan and no confirm on
@@ -695,7 +714,7 @@ function fb14Weigh(h, noV) {     // noV (v100): without the picture's evidence (
     for (const x of taps) if (sh.some(f => near(x, f))) lw *= Lm; else { lw *= Lf; err++; }
     for (const f of sh) if (f < h - 6 && vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= ZW_PMISS; err++; }
     if (FB14.missed) for (const k in FB14.missed) { const o = S.out[k]; if (o && (o.off || (o.v != null && !o.miss))) { lw *= FB14_MISSW; err++; } }   // v86: Bowser was seen to miss that turn
-    if (useV) lw *= fb14V100(S, h, bolts, cnt);     // v100: Bowser's attacks, the lightning
+    if (useV) lw *= fb14V100(S, h, null, cnt) * (bolts ? fb14BoltLik(S, h, bolts, cnt) : 1);     // v100: Bowser's attacks; v103: the lightning (soft)
     S.lw = lw; S.err = err; if (err > ZW_MAXERR) continue; out.push(S); mx = Math.max(mx, S.w * lw);
   }
   const keep = out.filter(S => S.w * S.lw >= mx * ZW_CUT), sum = keep.reduce((a, S) => a + S.w * S.lw, 0);
@@ -705,7 +724,7 @@ function fb14Weigh(h, noV) {     // noV (v100): without the picture's evidence (
   if (FB14.missed) for (const k in FB14.missed) bg *= fb14Blind(+k);     // v86: a state off the model would have missed as often as blind
   // v100: off the model, the attack seen is as likely as Bowser's own odds (fire about half; claw or slam a quarter each), a bolt
   // falls near a random phase's draw about a quarter of the time (counted at most 4 times)
-  if (useV) { for (const k in FB14.atk) { const a = FB14.atk[k]; if (a && a.fire != null) bg *= 0.5; if (a && a.cls) bg *= 0.5; } if (bolts) bg *= Math.pow(0.5, Math.min(4, bolts.filter(x => x < h).length)); }
+  if (useV) { for (const k in FB14.atk) { const a = FB14.atk[k]; if (a && a.fire != null) bg *= 0.5; if (a && a.cls) bg *= 0.5; } if (bolts) { const f0 = FB14.states.reduce((a, S) => Math.min(a, S.from + S.l + 2), 1e9); bg *= Math.pow(FB14_BOLT_FLOOR + (1 - FB14_BOLT_FLOOR) * FB14_BOLT_Q, bolts.filter(x => x >= f0 && x < h).length); } }
   return { list: keep, doubt: keep.length ? bg / (bg + sum) : 1, sum, cnt: useV ? cnt : null, kept: keep.length, n: FB14.states.length };
 }
 /* every state to the horizon (frames whose shines have had time to be read) */
@@ -1329,7 +1348,7 @@ async function fb1Stage2(W, call, top, times, t3, narrow) {
   times.hyps = Math.round(performance.now() - t4);
   return { top: all.slice(0, 5), fb1: { hyps: hy, times } };
 }
-window.__fb14 = { v100: { atkFrame: (t, p) => fbAtkFrame(t, p), atkDecide: k => fbAtkDecide(k), boltFrame: (t, p) => fbBoltFrame(t, p), V: (S, h, b, c) => fb14V100(S, h, b, c), setBoltD: d => { FB14_BOLT_D = d; }, boltD: () => FB14_BOLT_D, FIRE: FB14_FIRE, CLS: FB14_CLS, ATKW: FB14_ATKW, CLSW: FB14_CLSW, BOLT: FB14_BOLT, BOLT_W: FB14_BOLT_W, UP: FB14_UP, hasV: () => fb14HasV(), weigh0: h => fb14Weigh(h, true) }, FB14_READX, armOk: (P, t) => fb14ArmOk(P, t), shareRaw: (L, a, b, turn) => fb14ShareU(L, a, b, turn), stSample: (L, n) => fb14Sample(L, n), resample: (Ls, l) => fb14Resample(Ls, l), doubtFloor: (t, d) => fb14DoubtFloor(t, d), relock3: h => fb14Relock3(h), T3: { FLOOR: FB14_T3_FLOOR, RELOCK: FB14_T3_RELOCK, WIDE: FB14_WIDE, NSAMPLE: FB14_NSAMPLE }, readX: (c, s) => fb14ReadX(c, s), van: (c, s) => fb14Van(c, s), phaseFit: pts => fb14PhaseFit(pts), trigPhase: () => fb14TrigPhase(), trigT: () => fb14TrigT(), SHIFTS_S: FB14_SHIFTS_S, FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), ownClose: (t, s) => fb14OwnClose(t, s), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
+window.__fb14 = { v103: { boltLik: (S, h, b, c) => fb14BoltLik(S, h, b, c), SIG: FB14_BOLT_SIG, FLOOR: FB14_BOLT_FLOOR, Q: FB14_BOLT_Q, BOLT: FB14_BOLT }, v100: { atkFrame: (t, p) => fbAtkFrame(t, p), atkDecide: k => fbAtkDecide(k), boltFrame: (t, p) => fbBoltFrame(t, p), V: (S, h, b, c) => fb14V100(S, h, b, c), setBoltD: d => { FB14_BOLT_D = d; }, boltD: () => FB14_BOLT_D, FIRE: FB14_FIRE, CLS: FB14_CLS, ATKW: FB14_ATKW, CLSW: FB14_CLSW, BOLT: FB14_BOLT, BOLT_W: FB14_BOLT_W, UP: FB14_UP, hasV: () => fb14HasV(), weigh0: h => fb14Weigh(h, true) }, FB14_READX, armOk: (P, t) => fb14ArmOk(P, t), shareRaw: (L, a, b, turn) => fb14ShareU(L, a, b, turn), stSample: (L, n) => fb14Sample(L, n), resample: (Ls, l) => fb14Resample(Ls, l), doubtFloor: (t, d) => fb14DoubtFloor(t, d), relock3: h => fb14Relock3(h), T3: { FLOOR: FB14_T3_FLOOR, RELOCK: FB14_T3_RELOCK, WIDE: FB14_WIDE, NSAMPLE: FB14_NSAMPLE }, readX: (c, s) => fb14ReadX(c, s), van: (c, s) => fb14Van(c, s), phaseFit: pts => fb14PhaseFit(pts), trigPhase: () => fb14TrigPhase(), trigT: () => fb14TrigT(), SHIFTS_S: FB14_SHIFTS_S, FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), ownClose: (t, s) => fb14OwnClose(t, s), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
   v101: { SKIP: FB14_SKIP, BOX: FB14_BOX, VAN: FB14_VAN, win: () => fb14SkipWin(), LATE: FB14_SKIP_LATE, M: FB14_SKIP_M, SKSHIFTS: FB14_SKSHIFTS, SKUNC: FB14_SKUNC, skipMode: () => fb14SkipMode(), skipPhase: () => fb14SkipPhase(), skipBase: () => fb14SkipBase(), boxShare: g => fb14BoxShare(g), boxFrame: t => fb14BoxFrame(t), skipConfirm: t => fb14SkipConfirm(t), skipEv: (T, F, turn) => fbSkipEv(T, F, turn), leverId: () => fb14CurLever(), bias: id => fb14Bias(id), pressT: (F, id) => fbPressT(F, id) },
   shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS, anchor: (C, from, W, turn, PD) => fb14Anchor(C, from, W, turn, PD), TICK_DROP: FB14_TICK_DROP, ANCHOR_TOL: FB14_ANCHOR_TOL,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },

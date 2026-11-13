@@ -1,0 +1,47 @@
+{
+  "what": "v103: the stage lightning (Final Bowser, JP). Numbers only: no clip, frame or picture.",
+  "schedule": {
+    "source": "pmdecomp battle/common/stage/area_kkj/kkj_02.inc.c (EVS_CirculatingBolts, EVS_RandomBolts), effects/lightning_bolt.c",
+    "loops": [
+      {"period": 130, "script": "EVS_CirculatingBolts", "waits": [5, 30, 5, 90], "slots": [78, 83, 113, 118]},
+      {"period": 220, "script": "EVS_RandomBolts", "waits": [60, 10, 90, 60], "slots": [18, 78, 88, 178]}
+    ],
+    "rng": "one rand_int(359) per bolt (caller 0xE00BC194, lightning_bolt unk_110): the zigzag's phase only; place and time fixed"
+  },
+  "emulator_renders": {
+    "tool": "fb2_route/bolt_render.py (debug core, Glide64, b13 T1 menu: Charge, Cloud Nine W 20, its message to its own close, Bowser's turn, 300 frames of T2's menu)",
+    "seeds": ["2b7e1516", "9e3779b9"], "steps": 1581, "draws": 78, "phase_fits": [[60, 210]], "same_draw_frames_both_seeds": true,
+    "first_cn_camera_after_P": 133,
+    "reader_port_onsets_clean": {"where": "menus, P + 27, P + 127 (battle camera), two in Bowser's turn", "n": 10, "shots_after_draw": [3, 3, 3, 3, 3, 3, 3, 3, 3, 3]},
+    "reader_port_onsets_other": {"where": "the Charge burst, Cloud Nine's camera, the message box, Bowser's turn", "n": 12, "shots_after_latest_draw": [0, 19, 2, 26, 30, 6, 0, 18, 5, 0, 5, 39]},
+    "cn_false_onset": {"at_P": 203, "n": 26, "why": "Cloud Nine's camera pans up over the arena's violet frame (new violet rows y 40..66 across the width)"},
+    "cn_bolts_seen_outside_the_box": ["P+184", "P+244", "P+254", "P+259"]
+  },
+  "e2e_page_onsets": {
+    "what": "fb14Bolt events of the T1 page runs (fb14_e2e.py SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1, b13): the shot shown (capture json), steps after the latest draw (D_pic), and the page frame minus the true draw frame (pageD)",
+    "rows": [
+      {"run": "v103 m1 2b7e1516", "n": 12, "D_pic": 5, "pageD": 3.1},
+      {"run": "v103 m1 2b7e1516", "n": 4, "D_pic": 9, "pageD": 7.34},
+      {"run": "v102 9e3779b9", "n": 6, "D_pic": 8, "pageD": 7.53},
+      {"run": "v102 9e3779b9", "n": 7, "D_pic": 3, "pageD": 3.31},
+      {"run": "v103 m1 9e3779b9", "n": 6, "D_pic": 8, "pageD": 6.04},
+      {"run": "v103 m1 9e3779b9", "n": 4, "D_pic": 15, "pageD": 13.38},
+      {"run": "v103 m1 9e3779b9", "n": 5, "D_pic": 5, "pageD": 3.34},
+      {"run": "v103 m1 9e3779b9", "n": 7, "D_pic": 3, "pageD": 1.31}
+    ],
+    "page_clock_minus_true_frame": [-1.9, -1.7, 0.3],
+    "onsets_after_rays_to_skip_per_T1": [1, 2, 1]
+  },
+  "t1_truth_split": {
+    "what": "fb14TruthPlan of T1 skip plans: the true states' share on target-2..+2 per (P, lag)",
+    "v103 m1 2b7e1516": {"pp": 0.863, "lag0": [1, 0.61, 1, 0.73, 0.4], "lag1": [0.22, 0.55, 0.83, 0.56, 0.53], "bowser": "missed"},
+    "v103 m1 9e3779b9": {"pp": 0.667, "lag0": [0.09, 0.91, 0.83, 0, 1], "bowser": "hit"},
+    "v102 9e3779b9": {"pp": 0.613, "lag0": [0.94, 0.06, 1, 0.94, 0], "lag1": [0, 0.89, 0, 1, 0.6], "bowser": "hit"}
+  },
+  "console": {
+    "logs": ["fb0443", "fb0447", "fb0449"],
+    "fb14Bolt_with_F": [1170.5, 1188.4], "fb14Bolt_without_F": 4,
+    "note": "the three logs are one session's growing log (the same early events repeat); two onsets with a clock frame, no truth: D not measurable on console"
+  },
+  "puffs": {"source": "pmdecomp battle/partner/lakilester.c", "draws": "10 x (RandInt(40) - 20, RandInt(30) - 15) world offsets from Mario, one EFFECT_FLOATING_CLOUD_PUFF a frame on P + 200 .. 209", "used": false}
+}
