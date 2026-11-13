@@ -156,6 +156,11 @@ function fb14SkipPhase() {
   return FB14.skTestNow != null || FB14.t0 == null || fbPic(performance.now()) < fb14SkipBase() + FB14_SKIP.hi + 40;
 }
 const fb14SkipBase = () => (FB14.box && FB14.box.P != null ? FB14.box.P : FB14.P[1]);
+/* the frames a skip plan may target: FB14_SKIP_M in from each end of the message; before the box is seen its P is Cloud Nine's
+ * reading, which comes late when the T1 search loads the page (the runner now confirms Cloud Nine during it: e2e 9e3779b9
+ * read +6, 1234abcd +3; the box onset read -1.5 .. -2 raw on both): the top end FB14_SKIP_LATE more in until the box shows */
+const FB14_SKIP_LATE = 6;
+function fb14SkipWin() { const b = FB14.box && FB14.box.P != null, B0 = fb14SkipBase(); return [B0 + FB14_SKIP.lo + FB14_SKIP_M, B0 + FB14_SKIP.hi - FB14_SKIP_M - (b ? 0 : FB14_SKIP_LATE)]; }
 const fb14CurLever = () => (fb14SkipPhase() ? 'fb14sk' : 'fb14');
 /* ---- the route: the Final Bowser steps (page_template.html ENDGAME) ---- */
 const fb14Step = () => { const s = isRoute() && RT()[routeStep]; return s && s.fb14 ? s : null; };
@@ -405,7 +410,9 @@ function fbInputEv(T, kind, F, turn) {
  * speech blip on the one A. So the skip moves the AI one frame per frame across a 60-frame window: a lever. */
 const FB14_SKIP = { lo: 255, hi: 314, ai: 17, nat: 332 };
 function fbSkipEv(T, F, turn) {
-  if (T.p1 == null || F < T.p1 + FB14_SKIP.lo || F > T.p1 + FB14_SKIP.hi) return;      // before the box: ignored; after it closed: nothing to skip
+  // the window: the box's own onset once read (the same reading chain as the skip: a common offset cancels), else the state's P
+  const B = FB14.box && FB14.box.P != null ? FB14.box.P : T.p1;
+  if (B == null || F < B + FB14_SKIP.lo || F > B + FB14_SKIP.hi) return;      // before the box: ignored; after it closed: nothing to skip
   const i = T.ev.findIndex(e => e.k === 'ai' && e.turn === turn); if (i < 0) return;
   T.ev.splice(i, 1); fbEv(T, { k: 'ai', f: F + FB14_SKIP.ai, turn });
 }
@@ -816,13 +823,15 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (cAt == null) for (let i = 0; i < 600 && fbPressT(from) < earliestPress(now); i++) from++;
   // v101: the skip's frames are the message's (P + 258 .. P + 311 of the box onset's P, else of Cloud Nine's reading): the
   // whole window, FB14_SKIP_M frames in from each end
-  if (skp) { const B0 = fb14SkipBase(); from = Math.max(from, B0 + FB14_SKIP.lo + FB14_SKIP_M); W = B0 + FB14_SKIP.hi - FB14_SKIP_M - from;
+  if (skp) { const [w0, w1] = fb14SkipWin(); from = Math.max(from, w0); W = w1 - from;
     if (W < 0) { const pl = { none: 'the message window is over', turn, sk: true }; FB14.plan = pl; if (cAt != null) return pl; st.msg = 'No edge: Cloud Nine\'s message window is over. ' + fb14BlindText(1)[0].toUpperCase() + fb14BlindText(1).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'skip window over' }); cancelBeeps(); fb14Show(); render(); return true; } }
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
   const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + X + D, turn), ms = Math.round(performance.now() - t1);
   const prof = { id: 'fb14', share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
   const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 });
   if (EV0) fb14EvLog(turn, EV0, Wg, L0, C, from, W, X, D, PD);
+  // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame
+  if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); slog('fb14TruthPlan', { turn, target: C.target, n: Tl.length, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8) }); } else slog('fb14TruthPlan', { turn, target: C.target, n: 0 }); }
   if (cAt == null || window.__fb14ReplanTest) fb14Anchor(C, from, W, turn, PD);
   if (C.none) { const pl = { none: C.none, turn, best: C.pp, spread: C.p }; FB14.plan = pl; if (cAt != null) return pl;
     st.msg = 'No edge: ' + Wg.list.length + ' possible states and no frame in the next ' + num('zwwin') + ' s works for enough of them with a perfect press (best ' + Math.round(100 * (C.pp || 0)) + '%). ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; slog('fb14NoEdge', { turn, best: C.pp, spread: C.p }); cancelBeeps(); fb14Show(); render(); return true; }
@@ -1019,7 +1028,10 @@ function fb14BoxFrame(t) {
   if (!FB14.box) {
     if (up) { if (!W.run) W.t1 = t; W.run++; } else W.run = 0;
     if (W.run >= FB14_BOX.need) { const c = fbPic(W.t1) - (FB14_VAN.Kon + num('pfix') - FB14_READX.K); FB14.box = { t: W.t1, c: +c.toFixed(2), P: Math.round(c) - FB14_SKIP.lo, P1 }; W.seen = W.run;
-      slog('fb14BoxOn', { at: Math.round(W.t1), c: FB14.box.c, P: FB14.box.P, P1, frac: +fr.toFixed(2) }); }
+      slog('fb14BoxOn', { at: Math.round(W.t1), c: FB14.box.c, P: FB14.box.P, P1, frac: +fr.toFixed(2) });
+      // a skip plan made on Cloud Nine's reading whose frame is outside the box's own window: planned again
+      const SP = st.plan && st.plan.sk ? st.plan : null, w = fb14SkipWin();
+      if (SP && !SP.stopped && SP.tPress > performance.now() && (SP.target < w[0] || SP.target > w[1])) { slog('fb14SkipReplan', { from: SP.target, win: w }); cancelBeeps(); FB14.prevPlan = SP; st.plan = null; fb14Plan(); FB14.prevPlan = null; } }
     return;
   }
   if (up) { W.seen++; W.gone = null; W.off = 0; return; }
@@ -1289,7 +1301,7 @@ async function fb1Stage2(W, call, top, times, t3, narrow) {
   return { top: all.slice(0, 5), fb1: { hyps: hy, times } };
 }
 window.__fb14 = { v100: { atkFrame: (t, p) => fbAtkFrame(t, p), atkDecide: k => fbAtkDecide(k), boltFrame: (t, p) => fbBoltFrame(t, p), V: (S, h, b, c) => fb14V100(S, h, b, c), setBoltD: d => { FB14_BOLT_D = d; }, boltD: () => FB14_BOLT_D, FIRE: FB14_FIRE, CLS: FB14_CLS, ATKW: FB14_ATKW, CLSW: FB14_CLSW, BOLT: FB14_BOLT, BOLT_W: FB14_BOLT_W, UP: FB14_UP, hasV: () => fb14HasV(), weigh0: h => fb14Weigh(h, true) }, FB14_READX, armOk: (P, t) => fb14ArmOk(P, t), shareRaw: (L, a, b, turn) => fb14ShareU(L, a, b, turn), stSample: (L, n) => fb14Sample(L, n), resample: (Ls, l) => fb14Resample(Ls, l), doubtFloor: (t, d) => fb14DoubtFloor(t, d), relock3: h => fb14Relock3(h), T3: { FLOOR: FB14_T3_FLOOR, RELOCK: FB14_T3_RELOCK, WIDE: FB14_WIDE, NSAMPLE: FB14_NSAMPLE }, readX: (c, s) => fb14ReadX(c, s), van: (c, s) => fb14Van(c, s), phaseFit: pts => fb14PhaseFit(pts), trigPhase: () => fb14TrigPhase(), trigT: () => fb14TrigT(), SHIFTS_S: FB14_SHIFTS_S, FB14, FB14_DELTA, FB14_JELLY, FB14_MAXH, FB14_CHGD, cap: L => fb14Cap(L), held: () => fb14Held(), chgCands: () => fb14ChgCands(), preCands: () => fb14PreCands(), ownClose: (t, s) => fb14OwnClose(t, s), streamCands: S => fbStreamCands(S), streamSteps: (x, S) => fbStreamSteps(x, S), streamNote: (x, h) => fbStreamNote(x, h), slogTail: n => SLOG.slice(-n), frame: (t, pr) => fb14Frame(t, pr), chgState: v => { if (v != null) CHG.state = v; return CHG.state; }, msg: () => st.msg, FBS: () => ({ FBS_LO, FBS_HI, FBS_RATIO, FBS_MIN, FBS_HIMAX }), streamHi: (S, now) => fbStreamHi(S, now), streamWin: now => fbStreamWin(now), gapShifts: (b, g) => fb14GapShifts(b, g), gapCheck: (t, p) => fb14GapCheck(t, p), waveSplit: L => fb14WaveSplit(L), fbVars, trigger: () => fb14Trigger(), advance: h => fb14Advance(h), turnOver: k => fb14TurnOver(k), hpWatch: (t, pr) => fb14HpWatch(t, pr), fbStep, fbRun, fbClone, fbRi, fbAdv, plan: c => fb14Plan(c), weigh: h => fb14Weigh(h), input: (k, F, turn, sh) => fb14Input(k, F, turn, sh), lock: r => fb14Lock(r), reset: () => fb14Reset(), confirm: (t, s) => fb14Confirm(t, s), pic: t => fbPic(t), pressT: F => fbPressT(F), bias: () => fb14Bias(), pressAdd: e => fb14PressAdd(e), t6cands: () => fb14T6Cands(), peach: () => fb14Peach(), fbNew: o => fbNew(o),
-  v101: { SKIP: FB14_SKIP, BOX: FB14_BOX, VAN: FB14_VAN, SKSHIFTS: FB14_SKSHIFTS, SKUNC: FB14_SKUNC, skipMode: () => fb14SkipMode(), skipPhase: () => fb14SkipPhase(), skipBase: () => fb14SkipBase(), boxShare: g => fb14BoxShare(g), boxFrame: t => fb14BoxFrame(t), skipConfirm: t => fb14SkipConfirm(t), skipEv: (T, F, turn) => fbSkipEv(T, F, turn), leverId: () => fb14CurLever(), bias: id => fb14Bias(id), pressT: (F, id) => fbPressT(F, id) },
+  v101: { SKIP: FB14_SKIP, BOX: FB14_BOX, VAN: FB14_VAN, win: () => fb14SkipWin(), LATE: FB14_SKIP_LATE, M: FB14_SKIP_M, SKSHIFTS: FB14_SKSHIFTS, SKUNC: FB14_SKUNC, skipMode: () => fb14SkipMode(), skipPhase: () => fb14SkipPhase(), skipBase: () => fb14SkipBase(), boxShare: g => fb14BoxShare(g), boxFrame: t => fb14BoxFrame(t), skipConfirm: t => fb14SkipConfirm(t), skipEv: (T, F, turn) => fbSkipEv(T, F, turn), leverId: () => fb14CurLever(), bias: id => fb14Bias(id), pressT: (F, id) => fbPressT(F, id) },
   shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS, anchor: (C, from, W, turn, PD) => fb14Anchor(C, from, W, turn, PD), TICK_DROP: FB14_TICK_DROP, ANCHOR_TOL: FB14_ANCHOR_TOL,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests

@@ -1,0 +1,53 @@
+{
+"what": "v101 e2e (fb14_e2e.py SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1, b13, T1-T4): per turn the plan pressed (pp), its frame, Bowser missed (miss) on it / one early / one late",
+"runs": [
+{
+"seed": "1234abcd",
+"turns": [
+{
+"turn": 1,
+"lever": "skip",
+"pp": 0.784,
+"target": 463,
+"k": 270,
+"planned": true,
+"plan_s": 1.52,
+"miss": false,
+"miss_m1": true,
+"miss_p1": true,
+"P_true": 193
+},
+{
+"turn": 2,
+"lever": "do nothing",
+"pp": 0.918,
+"target": 213,
+"planned": true,
+"miss": true,
+"miss_m1": true,
+"miss_p1": true
+},
+{
+"turn": 3,
+"lever": "do nothing",
+"pp": 0.823,
+"target": 775,
+"planned": true,
+"miss": true,
+"miss_m1": true,
+"miss_p1": true
+},
+{
+"turn": 4,
+"lever": "do nothing",
+"pp": 0.999,
+"target": 320,
+"planned": true,
+"miss": true,
+"miss_m1": true,
+"miss_p1": false
+}
+]
+}
+]
+}
