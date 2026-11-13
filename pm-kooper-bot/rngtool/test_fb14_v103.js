@@ -5,7 +5,8 @@
  *    frames off the game, against the lag split (1 frame) the T1 plans need: FB14_BOLT_D stays null (logged only).
  * 3. The soft factor (fb14BoltLik) for when it is pinned: 1 on a draw, never under the floor per onset; the old hard cut unused.
  * 4. T1 in skip mode reads bolts from Cloud Nine's confirm to P + 120 (the battle camera); bar mode and later as before.
- * 5. The e2e (fixtures/e2e_v103.json): T1-T4 on three seeds, no >= 95% plan without the truth, no pressed >= 95% plan failed.
+ * 5. The e2e (fixtures/e2e_v103.json): T1-T4 on three seeds, the three >= 95% plans v103's one-frame truth check flagged, no
+ *    pressed >= 95% plan failed. (v104: that check takes aliases for the truth; the e2e by outcome is test_fb14_v104.js.)
  * usage: node test_fb14_v103.js */
 const fs = require('fs'), path = require('path');
 const src = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8');
@@ -52,7 +53,7 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
   if (!fs.existsSync(p)) ok(false, 'fixtures/e2e_v103.json missing');
   else { const E = JSON.parse(fs.readFileSync(p, 'utf8')), P = E.plans;
     const bad = P.filter(r => r.pp >= 0.95 && !r.truth), key = r => r.run + ' T' + r.turn + ' ' + r.target;
-    ok(bad.length === E.no_truth_95.length && bad.every(r => E.no_truth_95.includes(key(r))), 'e2e v103: ' + P.length + ' plans, ' + P.filter(r => r.pp >= 0.95).length + ' >= 95%; without the truth in its kept states: ' + bad.map(key).join(', ') + ' (re-plans after a passed frame; a known v102 behaviour, not the bolts: README v103 Not done)');
+    ok(bad.length === E.no_truth_95.length && bad.every(r => E.no_truth_95.includes(key(r))), 'e2e v103: ' + P.length + ' plans, ' + P.filter(r => r.pp >= 0.95).length + ' >= 95%; without the truth in its kept states: ' + bad.map(key).join(', ') + ' (v104: this one-frame check takes aliases for the truth, so it neither shows the truth in nor out; README v104, fixtures/e2e_v104.json)');
     ok(E.pressed.filter(r => r.pp >= 0.95).every(r => r.miss), 'no pressed plan >= 95% failed (' + E.pressed.filter(r => r.pp >= 0.95).length + ' pressed)');
     const t1 = P.filter(r => r.turn === 1); ok(t1.every(r => r.pp < 0.95), 'T1 fresh locks stay under the cap: ' + t1.map(r => r.pp).join(', ')); } }
 const tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8'); ok(/VERSION = 'v10[3-9]'/.test(tpl), 'page VERSION v103+');

@@ -922,7 +922,8 @@ const FB14_RL_N = [[-4, 0.03], [-3, 0.06], [-2, 0.12], [-1, 0.18], [0, 0.22], [1
  * explain it: an unexplained shine costs a state ZW_FALSE). Until then its doubt is at least FB14_FRESH_D, so its claim stays
  * under 95% (1 - 0.1 x (1 - blind): T2 0.95, T4 0.94) and the plan is made again (fb14Refine, under FB14_UP) once the coin
  * confirms it. A carried lock (two reads agreeing on one stream) is not capped. */
-const FB14_FRESH_D = 0.1;
+// v104: 0.12 (was 0.1: T2's cap 0.9495 shows as "95%" on the page; now 0.939, T4 0.927)
+const FB14_FRESH_D = 0.12;
 function fb14FreshOpen(h) { const Fr = FB14.fresh; if (!Fr) return false; const hh = h != null ? h : fb14Horizon(performance.now()); for (const t of FB14.taps) { const x = fbPic(t) - 4.8; if (x > Fr.F && x < hh) { FB14.fresh = null; slog('fb14FreshConfirmed', { turn: Fr.turn, F: Fr.F, shine: +x.toFixed(1) }); return false; } } return true; }
 /* v104 (e2e PLANCHECK, 9e3779b9 T2 after the hit: a fresh lock of 22 states, none of them the truth on the per-frame check,
  * the coin "confirmed" it on its first shine and it planned at 100% on a frame Bowser hit): one shine cannot tell the truth
