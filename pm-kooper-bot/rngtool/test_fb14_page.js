@@ -48,6 +48,8 @@ const fs = require('fs');
     T.setStep(T.RT().findIndex(s => s.fb14 === (M.turn || 1) && s.fb14role === (M.step || 'charge')));
     want(0); await bmp.get(0); for (let i = 1; i < Math.min(nf, 60); i++) await bmp.get(i);
     const lateMs = M.lateMs || 25, t0 = realNow() + 300, late = [], beeps = [], trace = [], slow = [];
+    // v102 (diagnostic): each turn's Mario confirm on the page's time, so a fresh lock's clock (frame 0 = its own turn's confirm) keeps the truth offset
+    if (window.__fb14seeds && M.truthSeeds.zeros) window.__fb14seeds.zt = M.truthSeeds.zeros.map(([c, g]) => [t0 + c * 1000 / 60, g]);
     for (let i = 0; i < nf; i++) {
       want(i); const im = await bmp.get(i); bmp.delete(i);
       const tf = t0 + i * 1000 / 60, w = tf - realNow(); if (w > 1) await new Promise(r => setTimeout(r, w)); else if (w < -lateMs) { late.push(i); im.close(); continue; }

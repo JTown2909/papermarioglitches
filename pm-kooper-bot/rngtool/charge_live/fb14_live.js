@@ -191,6 +191,7 @@ function fb14Lock(res) {
   FB14.menuT = CHG.menuSince || null;      // the bar up in Mario's menu before this Charge (charge_live.js chgFrame)
   const trigT = res.trigT != null ? res.trigT : CHG.trig.t;     // (the reader may have been reset for the next Charge meanwhile)
   if (first) { FB14.rate = rate; FB14.t0 = trigT - 16 * rate; }
+  if (first && window.__fb14seeds) fb14TruthZero(FB14.t0);     // (diagnostic: tests)
   const M = first ? 0 : Math.round((trigT - FB14.t0) / fbRate() - 16) + (res.joint && res.joint.dM ? res.joint.dM : 0);   // (fb14Joint: the frame the Charges' rays agree on)
   FB14.t0 = trigT - (M + 16) * fbRate();            // the burst fixes the clock again (drift)
   const seen = new Set(); const hadCarry = !first && FB14.states.length > 0;
@@ -486,6 +487,9 @@ function fb14Held() {
 }
 /* v87 (tests only: window.__fb14seeds = { off, s: [true seeds], ... }): whether the game's state is among the states */
 function fb14IsTrue(S) { const T = window.__fb14seeds; if (!T) return false; const i = S.f + S.l - T.off; return i >= 0 && i < T.s.length && (S.s >>> 0) === (T.s[i] >>> 0); }
+// v102 (tests only): a fresh lock restarts the clock on its own turn's Mario confirm; the truth offset follows (the harness's
+// zt: each turn's confirm on the page's time and its global step). v101's trace kept T1's offset after a hit: "no true state"
+function fb14TruthZero(t0) { const T = window.__fb14seeds; if (!T || !T.zt || !T.zt.length) return; let b = null; for (const z of T.zt) if (!b || Math.abs(z[0] - t0) < Math.abs(b[0] - t0)) b = z; if (Math.abs(b[0] - t0) > 3000) return; T.off = -b[1]; slog('fb14TruthZero', { off: T.off, dtMs: Math.round(b[0] - t0) }); }
 function fb14Truth(at) { if (!window.__fb14seeds) return; const L = FB14.states, n = L.filter(fb14IsTrue).length; let tot = 0, tw = 0; for (const S of L) { const v = S.w * (S.lw || 1); tot += v; if (fb14IsTrue(S)) tw += v; } slog('fb14Truth', { at, states: L.length, trueStates: n, trueShare: tot ? +(tw / tot).toFixed(4) : 0 }); fb14TruthPh(at); }
 /* ---- the coin: shines (clock frame of the draw) and the stretches the coin was watched ---- */
 // the coin is kept in page time (ms) and read on the clock when the states are weighed: a lock re-anchors the clock, and
@@ -836,10 +840,11 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   // are held inside the message's window (zwChoose lim)
   const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 }, undefined, skp ? { lo: from, hi: from + W } : undefined);
   if (EV0) fb14EvLog(turn, EV0, Wg, L0, C, from, W, X, D, PD);
-  // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame
-  if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
-    slog('fb14TruthPlan', { turn, target: C.target, n: Tl.length, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, n: 0 }); }
   if (cAt == null || window.__fb14ReplanTest) fb14Anchor(C, from, W, turn, PD);
+  // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame (v102: after the anchor,
+  // the frame the beeps aim at; pp the plan's claim there)
+  if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
+    slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0 }); }
   if (C.none) { const pl = { none: C.none, turn, best: C.pp, spread: C.p }; FB14.plan = pl; if (cAt != null) return pl;
     st.msg = 'No edge: ' + Wg.list.length + ' possible states and no frame in the next ' + num('zwwin') + ' s works for enough of them with a perfect press (best ' + Math.round(100 * (C.pp || 0)) + '%). ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; slog('fb14NoEdge', { turn, best: C.pp, spread: C.p }); cancelBeeps(); fb14Show(); render(); return true; }
   const pl = { turn, sk: skp || undefined, target: C.target, p: C.p, pp: C.pp, win: C.w.length, pStates: C.pStates, doubt: +Wg.doubt.toFixed(3), floor: dEff > Wg.doubt ? +dEff.toFixed(3) : undefined, relock: FB14.relock || undefined, states: Wg.list.length, ms, from, W, w: C.w, tPress: fbPressT(C.target), blind: fb14Blind(turn) };

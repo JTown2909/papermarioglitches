@@ -214,6 +214,16 @@ def find_hit(r, Y, d, pa, ok, maxk=40):
     return None
 
 
+def find_hit_skip(r, Y, d, kS, ok, maxk=40):
+    """v102 FORCE_HIT on T1's skip: the nearest skip offset to kS (Cloud Nine confirmed after d idle steps) where Bowser hits"""
+    for k in range(1, maxk):
+        for kk in (kS + k, kS - k):
+            if kk < 255 or kk > 314: continue
+            tmp = Seg(r, '/dev/shm/fb2r/fh'); tmp.load(Y, False); tmp.idle(d, False); play_after_confirm(tmp, 'cloud_nine', False, skip=kk)
+            if not ok(outcome(r)): return kk
+    return None
+
+
 def black_frame(out, like):
     """one black picture the size of a capture frame (the screen between attempts: the HUD bar gone)"""
     f = os.path.join(out, 'black.jpg')
@@ -240,7 +250,7 @@ if __name__ == '__main__':
     ATT = int(os.environ.get('ATTEMPTS', '1')); ATT_TURNS = [int(x) for x in os.environ.get('ATT_TURNS', '').split(',') if x]
     FORCE = set(os.environ.get('FORCE_HIT', '').split(',')) - {''}
     MHP = int(os.environ.get('MARIO_HP', '5'))          # v86: the build's Mario HP (MARIO_HP=10: the runner's T1-T4, route_build.py)
-    dead = False
+    dead = False; zeros = []
     for att in range(1, ATT + 1):
       if att > 1:
         gap = float(os.environ.get('GAP', '0') or 0) or rng.uniform(40, 80); gN = int(gap * 29.97)
@@ -275,8 +285,11 @@ if __name__ == '__main__':
         jpg = capsim(sa.d, sa.n, os.path.join(out, tg + 'a_cap'), seed + t + 100 * att)
         segA = ['%s/%sa_cap_j/%s' % (rel, tg, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
+        zeros = [z for z in zeros if z[0] < len(frames)] + [[len(frames) + ncap(M), G + M]]
         if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
-            man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0)
+            # v102: zeros = each turn's Mario confirm (capture index, global step): a fresh lock after a hit restarts the page's
+            # clock on its own turn's confirm, so the truth offset follows it (v101's trace kept T1's: post-hit "no true state")
+            man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0, zeros=zeros)
         # the reference screens: capture frames of those game frames (2 per game frame)
         for nm, ref in (('refM', refM), ('refS', refS)):
             if ref and ref[1] == t and ('ref_' + nm) not in report: man[nm] = len(frames) + ncap(ref[2])
@@ -302,6 +315,9 @@ if __name__ == '__main__':
         if '%d.%d' % (att, t) in FORCE and not skm:
             dh = find_hit(r, Y, d, pa, lambda o: ok(o, t))
             if dh is not None: forced = dict(d_was=d, d=dh); d = dh
+        elif '%d.%d' % (att, t) in FORCE:        # v102: T1's skip moved to the nearest skip frame where Bowser hits
+            kh = find_hit_skip(r, Y, d, kS, lambda o: ok(o, t))
+            if kh is not None: forced = dict(k_was=kS, k=kh); kS = kh
         row = dict(attempt=att, turn=t, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
                    skip=dict(k=kS, global_=G + R0 + 1 + d + kS, info=skinfo) if skm else None,
                    page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
