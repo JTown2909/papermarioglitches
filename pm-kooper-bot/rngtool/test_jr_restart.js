@@ -54,7 +54,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   const fits = (inputs, want) => inputs.length === want.length && inputs.every((x, i) => { const [k, t] = x.split(':').map(Number); return k === want[i][0] && t >= want[i][1] && t - want[i][1] < 40; });
   const ev = (name, f) => L.filter(e => e.ev === name && (!f || f(e)));
   const fights = ev('jrFight').map(e => e.at);
-  check(/^v(8[6-9]|9[0-9])/.test(r.version || ''), 'version v86.1 or later (' + r.version + ')');
+  check(/^v(8[6-9]|9[0-9]|1[0-9][0-9])/.test(r.version || ''), 'version v86.1 or later (' + r.version + ')');
   check(r.jrStep1 === 1, 'route step 1 is Jr. Troopa T1');
   // fight 1 (690-844 s): unchanged; T4 death, the T5 Charge (84 s of bar up after the death) anchored by its burst
   check(ev('jrOutcome', e => e.k === 7 && e.dodge === false).length === 1, 'fight 1: the T4 Maple Syrup Close Call read as a death');

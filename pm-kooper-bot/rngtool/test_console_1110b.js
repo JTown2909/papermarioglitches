@@ -85,11 +85,13 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   // ---- 7. logs E / F: the press against the plan up at the press, no plan after the confirm, the decision watchdog
   const r7 = await p.evaluate(() => {
     const T = window.__tot, X = window.__fb14, FB = X.FB14, RT = T.RT(), l1 = RT.findIndex(s => s.fb14 === 1 && s.fb14role === 'lever'), l2 = RT.findIndex(s => s.fb14 === 2), out = {};
+    document.getElementById('s-fbc9').value = 'bar';     // v101: the Cloud Nine press as T1's lever (Settings: Confirm Cloud Nine on the beep), as in these logs
     T.setStep(l1); X.reset(); const now = performance.now(); Object.assign(FB, { on: true, t0: now - 237 * 33.367 - 3000, rate: 33.367, states: [] });
     // E / F: plan 237 made 2.9 s before the press, the replan to 300 made after it
     FB.plans = [{ turn: 1, target: 237, tMade: now - 3000, tPress: now - 100, bias: 0 }, { turn: 1, target: 300, tMade: now + 50, tPress: now + 2000, bias: 0 }];
     const tObs = FB.t0 + (237 + 2 + 1) * 33.367; X.confirm(tObs, RT[l1]); const c = X.slogTail(30).filter(e => e.ev === 'fb14Confirm').pop(); out.conf = c && { planned: c.planned, err: c.err };
     X.plan(); out.after = X.slogTail(5).some(e => e.ev === 'fb14PlanAfterConfirm') && !(FB.plan && FB.plan.target);
+    document.getElementById('s-fbc9').value = 'skip';
     // the watchdog: a lock on T2's step, no decision within 0.5 s (B / E / F: an old hit kept every plan silent)
     T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever')); X.reset(); Object.assign(FB, { on: true, t0: performance.now() - 60000, rate: 33.367, states: [], hit: 2, M: { 3: 0 }, decide: { t: performance.now() - 800, turn: 3 } });   // (v92: T3 after its Jelly)
     X.frame(performance.now(), true); out.dog = X.slogTail(20).filter(e => e.ev === 'fb14NoDecision' || e.ev === 'fb14NoEdge').map(e => e.ev + ':' + (e.why || ''));

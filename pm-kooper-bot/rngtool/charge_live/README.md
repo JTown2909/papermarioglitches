@@ -82,6 +82,10 @@ the invariance), the model (the AI event moved, a skip outside the window ignore
 equal to each state's own skipped outcome, the -1 .. +1 average), the lever ids and per-lever beep correction, the setting
 restoring v100, the box cells and the onset / gone reading into the states, the page's setting / store / screen-lost exemption /
 route text / version, the e2e fixture (no >= 95% plan failed, every skip inside the window). Version checks to v101.
+`test_console_1110b.js` 7 runs with "Confirm Cloud Nine on the beep" (its log's lever; in skip mode a plan after Cloud Nine
+is the skip, by design); `test_jr_restart.js`'s version check accepts v1xx. Suite on this build: all pass but the tests whose
+inputs are not in this container (test_torch_core: bot1/data; test_route_replay / test_session_plans / test_capture_replay:
+uploads) and test_hw_v77 (its pinned v77 / v90 builds).
 
 ## Not done
 - **Not on console:** the skip's reading offset (`FB14_READX.K` 4.7) is transferred from the panel through the emulator; the
