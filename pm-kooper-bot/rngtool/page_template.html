@@ -225,6 +225,7 @@ details[open] summary { margin-bottom: 10px; }
         <label class="f">Seed search threads<input id="s-cpu" type="number" min="1" max="8" value="2"><small>Shine seed search; at most half your cores.</small></label>
         <label class="f">Charge lock search threads (0 = all cores but one)<input id="s-chgcpu" type="number" min="0" max="16" value="0"><small>Runs for a few seconds during turn 1.</small></label>
         <label class="f">Final Bowser: Bowser's HP entering phase 2<select id="s-fbhp"><option value="hi">75 or more (default)</option><option value="lo">74 or less</option><option value="any">not sure (both)</option></select><small>Ultra Boots T1-T4 with Mario at 10 HP: at 74 HP or less Bowser rolls for Recover first each turn (one more random number).</small></label>
+        <label class="f">Final Bowser T1: Confirm Cloud Nine on the beep<select id="s-fbc9"><option value="skip">no: Cloud Nine whenever, then A on the beep skips its message (default)</option><option value="bar">yes: Cloud Nine on the beep, its message plays out (v100)</option></select><small>v101: the A that skips Cloud Nine's message ("てきのこうげきが はずれやすくなったぞ!") moves Bowser's AI frame (skip + 17 frames, a 60-frame window): that A is the T1 lever. "Yes" keeps the old lever (the Cloud Nine press, no skip).</small></label>
         <label class="f">Final Bowser: Bowser's turn-5 attack<select id="s-fb2t5"><option value="any">not set (all three)</option><option value="fire">Fire Breath</option><option value="claw">Claw Swipe</option><option value="slam">Body Slam</option></select><small>A Body Slam or Claw on T5 rules it out on T6.</small></label>
       </div>
       <div class="row" style="margin-top:12px">
@@ -352,7 +353,7 @@ const FRAME = R.FRAME_MS;
 const $ = id => document.getElementById(id);
 
 /* ---------- settings ---------- */
-const SET = ['react', 'lag', 'off', 'min', 'lead', 'beeps', 'gapms', 'range', 'vlag', 'wthr', 'tmatch', 'cpu', 'zoom', 'voff', 'pfix', 'prof', 'chgsc', 'chgdx', 'chgdy', 'fb2t5', 'wtype', 'zwwin', 'zwlater', 'zwedge', 'chgcpu', 'crate', 'duproute', 'jrroute', 'dupgoal', 'boots', 'nbcc', 'fbhp'];
+const SET = ['react', 'lag', 'off', 'min', 'lead', 'beeps', 'gapms', 'range', 'vlag', 'wthr', 'tmatch', 'cpu', 'zoom', 'voff', 'pfix', 'prof', 'chgsc', 'chgdx', 'chgdy', 'fb2t5', 'wtype', 'zwwin', 'zwlater', 'zwedge', 'chgcpu', 'crate', 'duproute', 'jrroute', 'dupgoal', 'boots', 'nbcc', 'fbhp', 'fbc9'];
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('tot-settings') || '{}'); if (s.lead === '4' && !localStorage.getItem('tot-lead15')) { s.lead = '1.5'; localStorage.setItem('tot-lead15', '1'); } if (!localStorage.getItem('tot-beeps3')) { if (s.beeps === '4' || s.beeps === undefined) s.beeps = '3'; localStorage.setItem('tot-beeps3', '1'); } SET.forEach(k => { if (s[k] !== undefined && $('s-' + k)) { $('s-' + k).value = s[k]; if ($('s-' + k).tagName === 'SELECT' && $('s-' + k).selectedIndex < 0) $('s-' + k).selectedIndex = 0; } }); } catch (e) {} }
 function saveSettings() { try { const s = {}; SET.forEach(k => s[k] = $('s-' + k).value); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }
 const num = k => parseFloat($('s-' + k).value) || 0;
@@ -390,7 +391,9 @@ const ZW_MAX_AHEAD = 10000;      // ms (zwPlan): the latest press a zero-wait pl
  * beep is one constant within a game frame on all 11 Do Nothing presses). The six presses in this store (906bfb29, 1509e942,
  * 0dfd444d: +1.94 +0.73 +1.48 +2.41 +1.79 +1.37) are the runner pressing late, ~0.8 frame later after the beep than on the
  * attempt that won (00700c7e). The learned correction is on again: -0.97 frame on that store (shrunk, at most 1.5). */
-const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v93' }, LEVER_LEARN = { fb14: true }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
+/* v101: Final Bowser T1's skip A (Cloud Nine's message) is its own lever with its own store: a press against a box that closes is
+ * not a press against a panel, so the two corrections are learned apart (fb14_live.js fb14LeverId) */
+const LEVER_PRESS0 = {}, LEVER_STORE = { fb14: 'tot-fb14press-v93', fb14sk: 'tot-fb14skip-v101' }, LEVER_LEARN = { fb14: true, fb14sk: true }, LEVER_MIN_N = 4, LEVER_MAX = 1.5;
 const leverKey = id => (id === 'fb14' ? 'fb14' : null);
 function leverList(k) { if (!LEVER_STORE[k]) return []; try { const L = JSON.parse(localStorage.getItem(LEVER_STORE[k]) || 'null'); if (Array.isArray(L) && L.length) return L.slice(-8); } catch (e) {} return (LEVER_PRESS0[k] || []).slice(); }
 function leverBias(k) { if (LEVER_LEARN[k] === false) return 0; const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * L.length / (L.length + 4))); }
@@ -478,7 +481,7 @@ const ENDGAME = [
   // lock it again and check the carried seed; the carry runs on to the Peach Beam and narrows the T6 Charge's search.
   { h: 'Final Bowser', turns: [
     { text: 'T1: Charge; Cloud Nine', steps: [{ label: 'Super Charge (hand on Mario): its rays lock the seed (Close Call equipped before the fight: T6 needs it)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'charge' },
-      { label: 'Cloud Nine on the beep (hand on Mario) → Bowser misses', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'lever' }] },
+      { label: 'Cloud Nine (hand on Mario), then A on the beep to skip its message → Bowser misses (Settings: Confirm Cloud Nine on the beep for the old lever)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'lever' }] },
     { text: 'T2: Charge; Do Nothing', steps: [{ label: 'Do Nothing (Lakilester) on the beep → Bowser misses', cat: 'S', chg: 'fb1', fb14: 2, fb14role: 'lever' }] },
     { text: 'T3: Jammin\' Jelly; Do Nothing', steps: [{ label: 'Do Nothing on the beep → Bowser misses', cat: 'S', fb14: 3, fb14role: 'lever' }] },
     { text: 'T4: Charge; Do Nothing - Block Wave', steps: [{ label: 'Do Nothing on the beep → the wave comes and misses Mario (block it; it may hit Laki)', cat: 'S', chg: 'fb1', fb14: 4, fb14role: 'lever' }] },
@@ -1659,7 +1662,7 @@ function cancelPlan() { cancelBeeps(); st.plan = null; render(); }
  * screen "lost" since the Charge cancelled it on the next picture. Logged now (planScreenLost). */
 function planScreenLost(t, now) {
   now = now != null ? now : performance.now(); const P = st.plan;
-  if (!P || !(t - V.lostSince > 1000) || !(P.tPress > now) || (P.early && !((V.onAt || 0) > P.tMade))) return false;
+  if (!P || P.sk || !(t - V.lostSince > 1000) || !(P.tPress > now) || (P.early && !((V.onAt || 0) > P.tMade))) return false;     // v101: the skip plan's screen is Cloud Nine's message, not the step's
   slog('planScreenLost', { prof: P.prof || null, target: P.target, lostMs: Math.round(t - V.lostSince), seenSince: (V.onAt || 0) > P.tMade });
   if (P.prof === 'fb2' && typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null) FB2.plan.lost = true;
   cancelPlan(); return true;
@@ -1681,7 +1684,7 @@ function setText(h, d) { $('headline').textContent = h; $('detail').textContent 
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v100';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v101';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
