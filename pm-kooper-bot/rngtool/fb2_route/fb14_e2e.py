@@ -204,6 +204,34 @@ def runner_press(res, nbefore, M, R0, GM1, G, t, GMS=None):
     return int(P), info
 
 
+PLANCHECK = os.environ.get('PLANCHECK') == '1'
+
+
+def plan_check(r, Y, res, nbefore, R0, GM1, G, GMS, t, pa, ok, dC=None):
+    """v104 PLANCHECK=1 (diagnostic, the emulator's own outcome): every plan of turn t pressed on its own target frame from Y
+    (no shots): did Bowser miss there? (the truth a plan's claim is about, whatever states it kept)"""
+    evs = res.get('events', []); zero = [(e['t'], e.get('turn')) for e in evs if e.get('ev') == 'fb14Lock' and e.get('M') == 0]
+    def origin(tp):
+        z = [k for (tt, k) in zero if tt <= tp]
+        return GMS.get(z[-1], GM1) if z else GM1
+    out = []
+    for p in res.get('plans', []):
+        if p.get('turn') != t or p.get('target') is None: continue
+        T = origin(p['t']) + p['target'] - G; row = dict(target=p['target'], pp=p.get('pp'), states=p.get('states'), doubt=p.get('doubt'), sk=bool(p.get('sk')))
+        tmp = Seg(r, '/dev/shm/fb2r/fh'); tmp.load(Y, False)
+        if p.get('sk'):
+            if dC is None: continue
+            k = int(T - (R0 + dC))
+            if k < 255 or k > 314: row['out'] = 'window'; out.append(row); continue
+            tmp.idle(dC - 1, False); play_after_confirm(tmp, 'cloud_nine', False, skip=k)
+        else:
+            d = int(T - R0 - 1)
+            if d < 0 or d >= WAIT: row['out'] = 'window'; out.append(row); continue
+            tmp.idle(d, False); play_after_confirm(tmp, pa, False)
+        row['miss'] = ok(outcome(r)); out.append(row)
+    return out
+
+
 def find_hit(r, Y, d, pa, ok, maxk=40):
     """FORCE_HIT: the nearest confirm delay to d where Bowser hits (from Y, no shots); None if every one misses"""
     for k in range(1, maxk):
@@ -286,6 +314,7 @@ if __name__ == '__main__':
         segA = ['%s/%sa_cap_j/%s' % (rel, tg, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
         zeros = [z for z in zeros if z[0] < len(frames)] + [[len(frames) + ncap(M), G + M]]
+        if os.environ.get('NOBROAD') == '1': man['noBroad'] = True      # v104: the page claims as v103 did (fb14Broad logged only)
         if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
             # v102: zeros = each turn's Mario confirm (capture index, global step): a fresh lock after a hit restarts the page's
             # clock on its own turn's confirm, so the truth offset follows it (v101's trace kept T1's: post-hit "no true state")
@@ -321,6 +350,7 @@ if __name__ == '__main__':
         row = dict(attempt=att, turn=t, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
                    skip=dict(k=kS, global_=G + R0 + 1 + d + kS, info=skinfo) if skm else None,
                    page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
+        if PLANCHECK: row['plancheck'] = plan_check(r, Y, res, len(frames), R0, GM1, G, GMS, t, pa, lambda o: ok(o, t), dC if skm else None)
         # the neighbours: from Y, confirm at d - 1 and d + 1 (no shots)
         nb = {}
         for dd in (-1, 1):

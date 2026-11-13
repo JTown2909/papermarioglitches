@@ -31,6 +31,7 @@ const fs = require('fs');
     // v87 VCLOCK=1: the page's clock is the fed picture's time (performance.now overridden), so a busy page reads late
     // pictures at their own time instead of dropping them (LATEMS large): v86 / v87 runs dropped 1300-2900 pictures
     const realNow = performance.now.bind(performance); let vt = null; if (vclock) performance.now = () => (vt != null ? vt : realNow());
+    if (M.noBroad) window.__fb14NoBroad = true;     // v104 (e2e NOBROAD=1): the v103 claim, the broad one logged only
     if (verify) window.__fb14verifyHeld = true; if (M.truthSeeds) window.__fb14seeds = { off: M.truthSeeds.off, s: Uint32Array.from(M.truthSeeds.s, x => typeof x === 'string' ? parseInt(x, 16) : x) }; if (dbg) { window.__fb14dbg = []; window.__chgDebug = true; if (M.truth) window.__fb14truth = M.truth; if (M.truthAura) window.__fb14truthAura = M.truthAura; if (M.truthT6) window.__fb14truthT6 = parseInt(M.truthT6, 16); } document.getElementById('s-crate').value = crate; if (cpus) document.getElementById('s-chgcpu').value = cpus;
     if (t5) document.getElementById('s-fb2t5').value = t5;
     if (M.fbc9) document.getElementById('s-fbc9').value = M.fbc9;     // v101: 'bar' = the v100 T1 lever (Cloud Nine on the beep), default the skip

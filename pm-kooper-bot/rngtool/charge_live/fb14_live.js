@@ -487,10 +487,19 @@ function fb14Held() {
 }
 /* v87 (tests only: window.__fb14seeds = { off, s: [true seeds], ... }): whether the game's state is among the states */
 function fb14IsTrue(S) { const T = window.__fb14seeds; if (!T) return false; const i = S.f + S.l - T.off; return i >= 0 && i < T.s.length && (S.s >>> 0) === (T.s[i] >>> 0); }
+// v104 (diagnostic): the seed alone on one frame is shared by many states (1095 of the carried states at once in the e2e: the
+// same seed with another coin timer or lightning phase; the seed only counts the draws): a state is the truth when a copy of
+// it meets the true seed on every frame of the next 90 (as far as the trace reaches)
+function fb14TruthScore(S, dd) { const T = window.__fb14seeds, C = fbClone(S); let n = 0, m = 0, first = null;
+  while (C.f < S.f + 90) { const i = C.f + C.l - T.off + (dd || 0); if (i < 0 || i >= T.s.length) break; n++; if ((C.s >>> 0) === (T.s[i] >>> 0)) m++; else if (first == null) first = C.f - S.f; fbStep(C); } return { r: n ? m / n : 0, n, first, dd: dd || 0 }; }
+function fb14TruthScoreD(S) { let b = null; for (let dd = -3; dd <= 3; dd++) { const x = fb14TruthScore(S, dd); if (!b || x.r > b.r) b = x; } return b; }
+function fb14TruthTop(L) { const sc = (L.length > 1500 ? L.slice(0, 1500) : L).map(S => [fb14TruthScore(S, 0), S]).sort((a, b) => b[0].r - a[0].r); return sc.slice(0, 3).map(([x, S]) => [+x.r.toFixed(2), x.first, x.dd, S.l, S.p1, +(S.w * (S.lw || 1)).toExponential(1)]); }
+function fb14IsTrueS(S) { if (!fb14IsTrue(S)) return false; const T = window.__fb14seeds, C = fbClone(S);
+  while (C.f < S.f + 90) { fbStep(C); const i = C.f + C.l - T.off; if (i >= T.s.length) break; if ((C.s >>> 0) !== (T.s[i] >>> 0)) return false; } return true; }
 // v102 (tests only): a fresh lock restarts the clock on its own turn's Mario confirm; the truth offset follows (the harness's
 // zt: each turn's confirm on the page's time and its global step). v101's trace kept T1's offset after a hit: "no true state"
 function fb14TruthZero(t0) { const T = window.__fb14seeds; if (!T || !T.zt || !T.zt.length) return; let b = null; for (const z of T.zt) if (!b || Math.abs(z[0] - t0) < Math.abs(b[0] - t0)) b = z; if (Math.abs(b[0] - t0) > 3000) return; T.off = -b[1]; slog('fb14TruthZero', { off: T.off, dtMs: Math.round(b[0] - t0) }); }
-function fb14Truth(at) { if (!window.__fb14seeds) return; const L = FB14.states, n = L.filter(fb14IsTrue).length; let tot = 0, tw = 0; for (const S of L) { const v = S.w * (S.lw || 1); tot += v; if (fb14IsTrue(S)) tw += v; } slog('fb14Truth', { at, states: L.length, trueStates: n, trueShare: tot ? +(tw / tot).toFixed(4) : 0 }); fb14TruthPh(at); }
+function fb14Truth(at) { if (!window.__fb14seeds) return; const L = FB14.states, n = L.filter(fb14IsTrue).length; let tot = 0, tw = 0; for (const S of L) { const v = S.w * (S.lw || 1); tot += v; if (fb14IsTrue(S)) tw += v; } slog('fb14Truth', { at, states: L.length, trueStates: n, strict: L.filter(fb14IsTrueS).length, trueShare: tot ? +(tw / tot).toFixed(4) : 0 }); fb14TruthPh(at); }
 /* ---- the coin: shines (clock frame of the draw) and the stretches the coin was watched ---- */
 // the coin is kept in page time (ms) and read on the clock when the states are weighed: a lock re-anchors the clock, and
 // the shines of the menu the lock was searched in still count
@@ -633,6 +642,18 @@ function fbBoltFrame(t, present) {
 }
 const fbVio = (g, i) => { const R = g[i], G = g[i + 1], B = g[i + 2]; return B > 110 && B - G > 45 && R > 70 && B > R + 15; };
 // v100 (diagnostic, the e2e's truth trace only): the true states' lightning phases and lag, for fb14BoltCal
+// v104 (diagnostic, the e2e's truth trace only): why the true states are not in a plan's kept states: their best weight against
+// the kept maximum, their errors, and for the best of them the taps it does not explain and the shines it predicted unseen
+function fb14TruthWhy(at) { const C = FB14.wctx; if (!window.__fb14seeds || !C) return null; const Tl0 = FB14.states.filter(fb14IsTrue), Tl = Tl0.filter(fb14IsTrueS); if (!Tl.length) return { at, trueAll: 0, aliases: Tl0.length };
+  let b = null; for (const S of Tl) if (!b || S.w * S.lw > b.w * b.lw) b = S; const sh = b.sh.map(f => f + b.l), near = (x, f) => x - f >= C.nlo && x - f <= C.nhi, taps = C.tapF.filter(x => x < C.h && x >= b.from + b.l);
+  const fl = taps.filter(x => !sh.some(f => near(x, f))).map(x => +x.toFixed(1)), ms = sh.filter(f => f < C.h - 6 && C.vis.some(([a, z]) => f >= a && f <= z) && !taps.some(x => near(x, f)));
+  const ns = f => { let d = 1e9; for (const x of taps) if (Math.abs(x - f) < Math.abs(d)) d = x - f; return +d.toFixed(1); };
+  return { at, trueAll: Tl.length, best: +(b.w * b.lw / (C.mx || 1)).toExponential(2), err: b.err, l: b.l, p1: b.p1, falseTaps: fl.slice(-6), missed: ms.slice(-6).map(f => [f, ns(f), ((f - b.l + b.ph[0]) % 130 + 130) % 130, ((f - b.l + b.ph[1]) % 220 + 220) % 220, b.c[mod20(f - b.l)] || 0]), ph: b.ph, c: Array.from(b.c).join(''), shines: sh.filter(f => f > C.h - 200 && f < C.h).slice(-8), top: (() => { let k = null; for (const S of FB14.states) if (S.err <= ZW_MAXERR && (!k || S.w * S.lw > k.w * k.lw)) k = S; return k ? { l: k.l, p1: k.p1, err: k.err, shines: k.sh.map(f => f + k.l).filter(f => f > C.h - 200 && f < C.h).slice(-8) } : null; })(), taps: taps.filter(x => x > C.h - 200).map(x => +x.toFixed(1)).slice(-8), vis: C.vis.map(v => v.map(x => +x.toFixed(1))).slice(-4) }; }
+// v104 (diagnostic): no state holds the truth any more: run the last true state seen on, frame by frame, against the trace;
+// the frame it leaves the truth on (the model, not the coin, lost it) or none (the states lost it)
+function fb14TruthDiv(h) { const T = window.__fb14seeds, C = fbClone(FB14.tRef), f0 = C.f; let div = null;
+  while (C.f < h + 90) { const i = C.f + C.l - T.off; if (i >= T.s.length) break; if ((C.s >>> 0) !== (T.s[i] >>> 0)) { div = C.f + C.l; break; } fbStep(C); }
+  slog('fb14TruthDiv', { h, from: f0 + C.l, div, l: C.l, p1: C.p1, ev: C.ev.map(e => e.k + e.f).slice(0, 6), w: +(FB14.tRef.w || 0).toExponential(2) }); FB14.tRef = null; }
 function fb14TruthPh(at) { if (!window.__fb14seeds) return; const ph = new Set(); for (const S of FB14.states) if (fb14IsTrue(S)) ph.add(S.ph[0] + ',' + S.ph[1] + ',' + S.l); slog('fb14TruthPh', { at, ph: [...ph].slice(0, 8) }); }
 /* the v100 factors of one state (1: nothing against it), and per evidence the count of states it cut */
 function fb14V100(S, h, bolts, cnt) {
@@ -718,6 +739,7 @@ function fb14Weigh(h, noV) {     // noV (v100): without the picture's evidence (
     S.lw = lw; S.err = err; if (err > ZW_MAXERR) continue; out.push(S); mx = Math.max(mx, S.w * lw);
   }
   const keep = out.filter(S => S.w * S.lw >= mx * ZW_CUT), sum = keep.reduce((a, S) => a + S.w * S.lw, 0);
+  if (window.__fb14seeds) FB14.wctx = { vis, tapF, nlo, nhi, mx, h };     // (diagnostic: the truth trace, fb14TruthWhy)
   if (!keep.length && FB14.states.length && !FB14.allOutLogged) { FB14.allOutLogged = true; FB14.gone = true; slog('fb14AllOut', { h, taps: tapF.filter(x => x < h).map(x => +x.toFixed(1)).slice(-20), vis: vis.map(v => v.map(x => +x.toFixed(1))).slice(-8), sample: FB14.states.slice(0, 4).map(S => ({ f: S.f, l: S.l, from: S.from, sh: S.sh.slice(-12), err: S.err })) }); }
   let nVis = 0; for (const [a, b] of vis) nVis += Math.max(0, b - Math.max(a, FB14.bgFrom || 0));
   let bg = tot0 * FB14.bg * Math.exp(-ZW_RHO * nVis);
@@ -860,13 +882,14 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 }, undefined, skp ? { lo: from, hi: from + W } : undefined);
   if (EV0) fb14EvLog(turn, EV0, Wg, L0, C, from, W, X, D, PD);
   if (cAt == null || window.__fb14ReplanTest) fb14Anchor(C, from, W, turn, PD);
+  if (!window.__fb14WeighTest) fb14Broad(C, Wg, turn, dEff, PD);     // v104: the claim no higher than every state the coin has not ruled out supports
   // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame (v102: after the anchor,
   // the frame the beeps aim at; pp the plan's claim there)
-  if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
-    slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0 }); }
+  if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)), TlS = Tl.filter(fb14IsTrueS), nS = TlS.length, allS = FB14.states.filter(fb14IsTrueS), nAll = allS.length; if (allS.length) FB14.tRef = fbClone(allS[0]); else if (FB14.tRef) fb14TruthDiv(h); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
+    slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, nS, nAll, topK: fb14TruthTop(Wg.list), topA: fb14TruthTop(FB14.states), why: nS ? undefined : fb14TruthWhy(h), shS: nS ? Array.from(fb14Share(TlS, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2)) : undefined, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0, nS: 0, nAll, topA: fb14TruthTop(FB14.states), why: fb14TruthWhy(h) }); }
   if (C.none) { const pl = { none: C.none, turn, best: C.pp, spread: C.p }; FB14.plan = pl; if (cAt != null) return pl;
     st.msg = 'No edge: ' + Wg.list.length + ' possible states and no frame in the next ' + num('zwwin') + ' s works for enough of them with a perfect press (best ' + Math.round(100 * (C.pp || 0)) + '%). ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; slog('fb14NoEdge', { turn, best: C.pp, spread: C.p }); cancelBeeps(); fb14Show(); render(); return true; }
-  const pl = { turn, sk: skp || undefined, target: C.target, p: C.p, pp: C.pp, win: C.w.length, pStates: C.pStates, doubt: +Wg.doubt.toFixed(3), floor: dEff > Wg.doubt ? +dEff.toFixed(3) : undefined, fresh: FB14.fresh ? true : undefined, relock: FB14.relock || undefined, states: Wg.list.length, ms, from, W, w: C.w, tPress: fbPressT(C.target), blind: fb14Blind(turn) };
+  const pl = { turn, sk: skp || undefined, target: C.target, p: C.p, pp: C.pp, win: C.w.length, pStates: C.pStates, doubt: +Wg.doubt.toFixed(3), floor: dEff > Wg.doubt ? +dEff.toFixed(3) : undefined, fresh: FB14.fresh ? true : undefined, relock: FB14.relock || undefined, states: Wg.list.length, broad: C.broad, ms, from, W, w: C.w, tPress: fbPressT(C.target), blind: fb14Blind(turn) };
   FB14.plan = pl; if (cAt != null) return pl;
   if (FB14.noEdge) FB14.noEdge[turn] = false;
   const prev = FB14.prevPlan, same = prev && prev.target === C.target && Math.abs(prev.tPress - pl.tPress) < 5;   // v76: a replan on the same frame keeps the beeps already scheduled
@@ -920,6 +943,25 @@ function fb14Relock3(h) {
   FB14.states = W.list; FB14.relock = 3; FB14.bg = FB14_T3_RELOCK / (1 - FB14_T3_RELOCK); FB14.bgFrom = h; FB14.anchor = {};
   slog('fb14Relock', { turn: 3, from: S2.M, states: W.list.length, doubt: +W.doubt.toFixed(3), inputs: xs.map(x => x.kind + x.F) });
   return true;
+}
+/* v104 (e2e v103: 3 of 25 plans at 96-100% kept no true state; README v104): the coin's soft weighting (a matched shine x15, a
+ * shine read outside a state's -2 .. +4.5 window x0.02) picks among states whose shines come a frame or a coin check apart,
+ * and the e2e showed it picking wrong ones (2b7e1516 T2: 117 -> 48 -> 18 kept, then 151 again; 9e3779b9 T2 after the hit: 20
+ * -> 8): the claim then rose to 100% on the narrowed set while the doubt, which only counts "off the model", stayed 0. Now
+ * the claim is re-scored on every state the coin has not ruled out (ZW_MAXERR errors or fewer, by their prior weight, the
+ * coin's soft factors left out) and the plan claims the lower of the two: narrowing never raises a claim above what all the
+ * states still possible support. The target is the kept states' (the coin still picks the frame). */
+function fb14Broad(C, Wg, turn, d, PD) {
+  if (C.none || C.target == null) return C;
+  const B = FB14.states.filter(S => S.err <= ZW_MAXERR); if (B.length <= Wg.list.length) return C;
+  const L = fb14Sample(B.map(S => { const X = Object.create(S); X.lw = 1; return X; }), FB14_NSAMPLE), Dm = Math.max(...(PD || [[0, 1]]).map(x => Math.abs(x[0])));
+  const sh = fb14ShareU(L, C.target - Dm, C.target + Dm, turn), at0 = sh[Dm] || 0, bl = fb14Blind(turn); let v = 0; for (const [dd, q] of (PD || [[0, 1]])) v += q * (sh[dd + Dm] || 0);
+  const pp = (1 - d) * at0 + d * bl, p = (1 - d) * v + d * bl; C.broad = { states: B.length, kept: Wg.list.length, pp: +pp.toFixed(3), ppKept: +C.pp.toFixed(3) };
+  if (window.__fb14NoBroad) return C;     // (diagnostic: the e2e's before run, NOBROAD=1)
+  if (pp < C.pp - 1e-9) { slog('fb14Broad', { turn, target: C.target, pp: +C.pp.toFixed(3), broad: +pp.toFixed(3), states: B.length, kept: Wg.list.length }); C.pp = pp; C.ppStates = at0;
+    if (pp < num('zwedge')) C.none = 'broad'; }
+  if (p < C.p) { C.p = p; C.pStates = v; }
+  return C;
 }
 function fb14Anchor(C, from, W, turn, PD) {
   FB14.anchor = FB14.anchor || {}; const A = FB14.anchor[turn];
@@ -1353,4 +1395,5 @@ window.__fb14 = { v103: { boltLik: (S, h, b, c) => fb14BoltLik(S, h, b, c), SIG:
   shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS, anchor: (C, from, W, turn, PD) => fb14Anchor(C, from, W, turn, PD), TICK_DROP: FB14_TICK_DROP, ANCHOR_TOL: FB14_ANCHOR_TOL,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
+window.__fb14.v104 = { broad: (C, Wg, t, d, PD) => fb14Broad(C, Wg, t, d, PD), truthScore: (S, d) => fb14TruthScore(S, d), isTrueS: S => fb14IsTrueS(S) };
 window.__fb14.v102 = { truthZero: t => fb14TruthZero(t), freshOpen: h => fb14FreshOpen(h), FRESH_D: FB14_FRESH_D, isTrue: S => fb14IsTrue(S) };   // for tests (v102)
