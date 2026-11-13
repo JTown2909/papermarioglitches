@@ -32,6 +32,17 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
   X.taps.push(X.t0 + (140 + 4.8) * X.rate); ok(F.doubtFloor(2, 0.01) === 0.01 && X.fresh === null && logs('fb14FreshConfirmed').length === 1, 'a shine after the rays (frame 140) the states survived: the floor is lifted, logged');
   X.fresh = null; ok(F.doubtFloor(2, 0.002) === 0.002, 'a carried lock: no floor');
   F.reset(); ok(X.fresh === null, 'a new attempt clears it'); }
+// 2b. the skip's box reading (console skip clips fb0443 / fb0447 / fb0449): K as the panel's, the onset guarded against picture gaps
+{ const K1 = F.v101, P = 3000;
+  ok(F.FB14_READX.K === 3.4 && K1.VAN.K === 3 && K1.VAN.Kon === 0 && F.FB14_READX.S === 3.4, 'FB14_READX.K 3.4 (the panel\'s; v101 4.7), VAN.K 3 / Kon 0 kept');
+  const grid = up => { const g = new Uint8ClampedArray(K1.BOX.gw * K1.BOX.gh * 4); for (let j = 0; j < K1.BOX.gw * K1.BOX.gh; j++) g.set([...(up ? [200, 191, 164] : [28, 22, 50]), 255], j * 4); return g; };
+  const run = drop => { F.reset(); Object.assign(X, { on: true, t0: 0, rate: 33.367, taps: [], states: [], pT: { 1: 1 }, P: { 1: P }, M: { 1: P - 300 }, sk: null, box: null, boxW: null, skTestNow: 1 });
+    const onPic = P + K1.SKIP.lo + K1.VAN.Kon - F.FB14_READX.K;
+    for (let q = P + 230; q <= P + 262; q++) { const pic = q + 0.3; if (drop && pic > onPic - 4 && pic < onPic + 1) continue; window.__fbVisTest = () => grid(pic >= onPic); const t = pic * X.rate; X.lastT = t; K1.boxFrame(t); }
+    delete window.__fbVisTest; return { box: X.box, win: K1.win() }; };
+  const a = run(false), b = run(true);
+  ok(a.box && Math.abs(a.box.P - P) <= 1 && !a.box.gap && a.win[1] === a.box.P + K1.SKIP.hi - K1.M, 'every picture: the onset gives P (' + (a.box && a.box.P) + '), the window to P + ' + (a.win[1] - P));
+  ok(b.box && b.box.gap >= 3 && b.box.P >= a.box.P && b.win[1] <= a.win[1] - b.box.gap + (b.box.P - a.box.P) && b.win[1] <= P + K1.SKIP.hi - K1.M, 'pictures dropped before the onset (a gap of ' + (b.box && b.box.gap) + ' frames): the onset reads late (P ' + (b.box && b.box.P) + ') and the window\'s top end comes in by the gap (to P + ' + (b.win[1] - P) + ': still inside the true message)'); }
 // 3. the page and the harness
 { const src = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'), e2e = fs.readFileSync(path.join(__dirname, 'fb2_route', 'fb14_e2e.py'), 'utf8'), pg = fs.readFileSync(path.join(__dirname, 'test_fb14_page.js'), 'utf8');
   ok(/FB14\.fresh = how === 'fresh'/.test(src) && /P\.freshCap && !FB14\.fresh/.test(src), 'fb14Lock marks a fresh lock; the tick makes a capped plan again once the coin lifts the cap');

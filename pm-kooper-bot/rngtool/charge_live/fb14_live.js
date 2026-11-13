@@ -160,7 +160,7 @@ const fb14SkipBase = () => (FB14.box && FB14.box.P != null ? FB14.box.P : FB14.P
  * reading, which comes late when the T1 search loads the page (the runner now confirms Cloud Nine during it: e2e 9e3779b9
  * read +6, 1234abcd +3; the box onset read -1.5 .. -2 raw on both): the top end FB14_SKIP_LATE more in until the box shows */
 const FB14_SKIP_LATE = 6, FB14_DNMIN = 176;
-function fb14SkipWin() { const b = FB14.box && FB14.box.P != null, B0 = fb14SkipBase(); return [B0 + FB14_SKIP.lo + FB14_SKIP_M, B0 + FB14_SKIP.hi - FB14_SKIP_M - (b ? 0 : FB14_SKIP_LATE)]; }
+function fb14SkipWin() { const b = FB14.box && FB14.box.P != null, B0 = fb14SkipBase(); return [B0 + FB14_SKIP.lo + FB14_SKIP_M, B0 + FB14_SKIP.hi - FB14_SKIP_M - (b ? FB14.box.gap || 0 : FB14_SKIP_LATE)]; }
 const fb14CurLever = () => (fb14SkipPhase() ? 'fb14sk' : 'fb14');
 /* ---- the route: the Final Bowser steps (page_template.html ENDGAME) ---- */
 const fb14Step = () => { const s = isRoute() && RT()[routeStep]; return s && s.fb14 ? s : null; };
@@ -967,7 +967,10 @@ const FB14_SHIFTS_S = [[-3, 0.03], [-2, 0.06], [-1, 0.16], [0, 0.44], [1, 0.19],
 /* v101: K, Cloud Nine's message box (its onset and the skip), transferred from the panel as v96 did the bar: in the emulator
  * renders through the capture simulation and the page (fb14_e2e.py, SKIP=1) the box's readings sit 2.0 frames before the
  * truth (raw, VAN.K 3 / Kon 0) where the panel's sit 0.72 before; the console's panel needs 3.4, so the box 3.4 + 2.0 - 0.72 */
-const FB14_READX = { S: 3.4, bar: 2.5, K: 4.7 };
+/* v102 (console skip clips fb0443 / fb0447 / fb0449, frame by frame against the in-game A icon): the page sees the message box and the
+ * Strategies panel with the same delay (to 1 ms), and on console the box goes 2 game frames after the A icon, the panel 1 (VAN.K 3 -
+ * VAN.S 2): the emulator's "box 2.0 early against the panel's 0.72" does not carry over, so K is the panel's 3.4 (v101: 4.7) */
+const FB14_READX = { S: 3.4, bar: 2.5, K: 3.4 };
 const fb14ReadX = (cat, src) => src === 'bar' ? FB14_READX.bar : (FB14_READX[cat] || 0);
 const fb14Van = (cat, src) => (FB14_VAN[cat] || 2) + num('pfix') - fb14ReadX(cat, src);
 /* v94: which burst frame the fb1 trigger picture is. The page takes it as frame 3; the console's levels (base-relative) by
@@ -1049,9 +1052,12 @@ function fb14BoxFrame(t) {
   const fr = fb14BoxShare(g), up = fr >= FB14_BOX.frac, W = FB14.boxW || (FB14.boxW = { run: 0, off: 0, t1: null, gone: null, seen: 0, mx: 0 });
   W.mx = Math.max(W.mx, fr);
   if (!FB14.box) {
-    if (up) { if (!W.run) W.t1 = t; W.run++; } else W.run = 0;
-    if (W.run >= FB14_BOX.need) { const c = fbPic(W.t1) - (FB14_VAN.Kon + num('pfix') - FB14_READX.K); FB14.box = { t: W.t1, c: +c.toFixed(2), P: Math.round(c) - FB14_SKIP.lo, P1 }; W.seen = W.run;
-      slog('fb14BoxOn', { at: Math.round(W.t1), c: FB14.box.c, P: FB14.box.P, P1, frac: +fr.toFixed(2) });
+    // v102 (console fb0449: the onset read ~1.5 frames late after dropped pictures): the frames between the last picture without
+    // the box and its first picture are where it may have shown; the window's top end comes in by them (fb14SkipWin)
+    if (up) { if (!W.run) { W.t1 = t; W.gap1 = W.lastT != null ? Math.max(0, Math.min(10, Math.round((t - W.lastT) / fbRate()) - 1)) : 0; } W.run++; } else W.run = 0;
+    W.lastT = t;
+    if (W.run >= FB14_BOX.need) { const c = fbPic(W.t1) - (FB14_VAN.Kon + num('pfix') - FB14_READX.K); FB14.box = { t: W.t1, c: +c.toFixed(2), P: Math.round(c) - FB14_SKIP.lo, P1, gap: W.gap1 || 0 }; W.seen = W.run;
+      slog('fb14BoxOn', { at: Math.round(W.t1), c: FB14.box.c, P: FB14.box.P, P1, frac: +fr.toFixed(2), gap: FB14.box.gap || undefined });
       // a skip plan made on Cloud Nine's reading whose frame is outside the box's own window: planned again
       const SP = st.plan && st.plan.sk ? st.plan : null, w = fb14SkipWin();
       if (SP && !SP.stopped && SP.tPress > performance.now() && (SP.target < w[0] || SP.target > w[1])) { slog('fb14SkipReplan', { from: SP.target, win: w }); cancelBeeps(); FB14.prevPlan = SP; st.plan = null; fb14Plan(); FB14.prevPlan = null; } }
