@@ -121,7 +121,10 @@ const fb2Bias = () => (typeof fb14Bias === 'function' ? fb14Bias() : 0);
 const fb2DnPressT = k => fb2PressT(k) + fb2Bias() * fb2Rate();
 function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
   const t0 = performance.now(), H = FB2.hyps, F = fb2Flags(), now = performance.now(), bias = fb2Bias();
-  const kFirst = kAt != null ? kAt : Math.max(FB2_PMIN, Math.ceil(fb2Pic(now + num('vlag')) + (FB2_BEEPS - 1) * FB2_GAP / fb2Rate() + 0.15 * 1000 / fb2Rate() + 2 + Math.max(0, -bias)));
+  // v102 (console log fb0449 T6: planned 1.6 s ahead, its 3 beeps 300 ms apart: "the beeps seemed to glitch by speeding up"): the
+  // T6 countdown is the runner's own (Settings: Beeps, Beep spacing, Lead time; playBeeps, earliestPress), never squeezed: the
+  // first frame is the first whose press time leaves the whole countdown ahead, as T1-T4 and T7
+  let kFirst = kAt; if (kAt == null) { kFirst = Math.max(FB2_PMIN, Math.ceil(fb2Pic(now + num('vlag')))); for (let i = 0; i < 900 && fb2DnPressT(kFirst) < earliestPress(now); i++) kFirst++; }
   const W = Math.max(10, Math.round(Math.max(1, num('zwwin')) * 1000 / fb2Rate())), P0 = kFirst - 4, P1 = kFirst + W + 4, rows = [];
   for (const h of H) for (const [so, co, wf] of F) {
     const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, P0 + FB2_DNAI, h.ph);
@@ -141,7 +144,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   // the edge rule (zwedge), as every plan: a Close Call share under it is no plan (Do Nothing whenever you like)
   if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no Do Nothing frame gives Close Call for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind: 0.3, kFirst, pp: pl.pp, p: pl.p, lever: 'nothing' }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; if (st.plan && st.plan.prof === 'fb2') st.plan = null; st.msg = 'No edge: ' + nl.none + '. Do Nothing whenever you like (Close Call about 30%).'; slog('fb2PlanP', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), kFirst }); fb2Show(); if (typeof render === 'function') render(); return nl; }     // v99: the No edge text at once (v98 left it to makePlan, which the T6 step never reached)
   if (kAt != null) return pl;
-  cancelBeeps(); for (let i = 0; i < FB2_BEEPS; i++) beepAt(pl.tPress - (FB2_BEEPS - 1 - i) * FB2_GAP, i === FB2_BEEPS - 1 ? 1320 : 880, i === FB2_BEEPS - 1 ? 0.12 : 0.06);
+  cancelBeeps(); playBeeps(pl.tPress);
   FB2.plan = pl; FB2.plans = (FB2.plans || []).concat([Object.assign({ tMade: now }, pl)]); slog('fb2PlanP', pl);
   // v99: early (made on the lock, before the Strategies screen opens): the screen-lost rule (planScreenLost) waits for that
   st.msg = null; st.plan = { tMade: now, w: { start: k, end: k, length: 1 }, target: k, tPress: pl.tPress, tLast: CHG.trig.t, rate: fb2Rate(), carried: true, early: true, from: kFirst, to: kFirst + W, first: 0, prof: 'fb2', tab: [], tab4: null, mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };

@@ -64,6 +64,24 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
     ok(/Last press \(Final Bowser T2, Do Nothing\): 0\.8 frames late/.test(r.b) && r.n === 2, 'a Final Bowser T2 press on the beeps: "' + r.b.slice(0, 70) + '", the generic presses untouched (' + r.n + ')');
     ok(/skips Cloud Nine's message\): 1\.3 frames early/.test(r.c), 'the T1 skip: ' + r.c.slice(0, 90));
     ok(r.ver === 'v102', 'page version v102');
+    // 6. T6 (console log fb0449): the countdown is the runner's (3 beeps 500 ms apart, lead 1.5 s), and a passed frame is planned again
+    const C = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v102.json'), 'utf8')), R6 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'fb2_t6dn.json'), 'utf8')).emulatorCheck[0];
+    const p2 = await b.newPage(); await p2.addInitScript(st => { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(st)); }, Object.assign({ prof: 'endgame', boots: 'ultra' }, Object.fromEntries(Object.entries(C.settings).map(([k, v]) => [k, String(v)]))));
+    await p2.goto('file://' + PAGE);
+    const q = await p2.evaluate(({ L, R }) => {
+      const T = window.__tot, F = window.__fb2, FB = F.FB2, V = T.V, S = T.SLOG, now = performance.now(), n0 = S.length;
+      T.setStep(T.RT().findIndex(s => s.turn === 'fb2_k')); T.CHG.trig = { t: now - (L.fb2Lock - L.chargeTrigger) }; FB.rate = 33.367;
+      V.onAt = now - 30000; V.lostSince = now - 3000; FB.on = true; FB.pObs = null; FB.hyps = [{ s: parseInt(R.s61, 16) >>> 0, nc: R.nc61, ph: R.ph, w: 1 }];
+      const pl = F.planPAt(); const o = { lead: pl && pl.tPress != null ? pl.tPress - now : null, k: pl && pl.k, none: pl && pl.none, kFirst: pl && pl.kFirst, gap: +document.getElementById('s-gapms').value };
+      // the frame passes with no confirm read: the T6 step's planner makes it again (beeps on a later frame, or No edge)
+      const sh = FB.plan.tPress - performance.now() + 900; T.CHG.trig.t -= sh; FB.plan.tPress -= sh; if (T.st.plan) T.st.plan.tPress -= sh; T.st.planTry = 0; T.makePlan();     // (the clock 0.9 s past the beeped frame)
+      o.re = S.slice(n0).filter(e => e.ev === 'fb2Replan').map(e => e.why); o.k2 = FB.plan && FB.plan.k; o.none2 = FB.plan && FB.plan.none; o.msg = T.st.msg; o.plan2 = !!T.st.plan; o.lead2 = FB.plan && FB.plan.tPress != null ? FB.plan.tPress - performance.now() : null;
+      return o; }, { L: C.t6, R: R6 });
+    const need = (C.settings.beeps - 1) * C.settings.gapms;
+    ok(q.k != null && q.lead >= Math.max(C.settings.lead * 1000, need + 150) - 1, 'fb0449 T6: v101 beeped ' + ((C.t6.tPress - C.t6.planT) / 1000).toFixed(2) + ' s after the plan, 3 beeps ' + C.t6.gap_v101_ms + ' ms apart; now the plan (k ' + q.k + ') is ' + (q.lead / 1000).toFixed(2) + ' s ahead (lead ' + C.settings.lead + ' s), the beeps ' + q.gap + ' ms apart');
+    ok(q.re.includes('target passed') && ((q.plan2 && q.k2 > q.k && q.lead2 >= C.settings.lead * 1000 - 1) || (q.none2 && /No edge/.test(q.msg || ''))), 'the frame passed with no Do Nothing read: planned again (' + (q.plan2 ? 'k ' + q.k2 + ', ' + (q.lead2 / 1000).toFixed(2) + ' s ahead' : q.msg) + ')');
+    const f2s = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb2_live.js'), 'utf8'), pP = f2s.slice(f2s.indexOf('function fb2PlanP'), f2s.indexOf('function fb2Confirm'));
+    ok(!/FB2_GAP/.test(pP) && /playBeeps\(pl\.tPress\)/.test(pP) && /earliestPress\(now\)/.test(pP), 'fb2PlanP: the runner\'s countdown (playBeeps, earliestPress), not its own 300 ms beeps');
     await b.close(); }
   console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();
