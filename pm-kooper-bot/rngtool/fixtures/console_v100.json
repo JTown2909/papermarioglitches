@@ -1,0 +1,249 @@
+{
+ "note": "v100: Bowser's attack per Final Bowser turn on the console clips of Nov 12 (logs1112, clip time windows from each lever confirm to the next turn) and one emulator turn; the fire share is the max per 0.5 s of the 32x24 game-box share of orange (R>190, R-G>90, B<90); fireRunS the longest run of 0.5 s bins at >= 0.08; minC the min of an 8-picture mean x-centroid of Bowser's warm colours (R>150, G>90, R-B>70) on a turn with no hit. Truth from the clips by eye (fire, the slam landing on Mario, the claw a step off) and the T4 waves from the route. No picture.",
+ "attack": {
+  "turns": [
+   {
+    "log": "441170cf",
+    "clip": "fb1841",
+    "turn": 1,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.342,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "441170cf",
+    "clip": "fb1841",
+    "turn": 2,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.342,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "441170cf",
+    "clip": "fb1841",
+    "turn": 3,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.342,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "441170cf",
+    "clip": "fb1841",
+    "turn": 4,
+    "truth": "wave",
+    "hit": false,
+    "fireMax": 0.01,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "7483f3b1",
+    "clip": "fb1747",
+    "turn": 1,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.341,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "7483f3b1",
+    "clip": "fb1747",
+    "turn": 2,
+    "truth": "slam",
+    "hit": false,
+    "fireMax": 0.003,
+    "fireRunS": 0,
+    "minC": 0.2
+   },
+   {
+    "log": "7483f3b1",
+    "clip": "fb1747",
+    "turn": 3,
+    "truth": "nofire",
+    "hit": true,
+    "fireMax": 0.008,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "c6469b35",
+    "clip": "fb1733",
+    "turn": 1,
+    "truth": "slam",
+    "hit": false,
+    "fireMax": 0.003,
+    "fireRunS": 0,
+    "minC": 0.21
+   },
+   {
+    "log": "c6469b35",
+    "clip": "fb1733",
+    "turn": 2,
+    "truth": "claw",
+    "hit": false,
+    "fireMax": 0.016,
+    "fireRunS": 0,
+    "minC": 0.34
+   },
+   {
+    "log": "c6469b35",
+    "clip": "fb1733",
+    "turn": 3,
+    "truth": "fire",
+    "hit": true,
+    "fireMax": 0.677,
+    "fireRunS": 2.5,
+    "minC": null
+   },
+   {
+    "log": "1509e942",
+    "clip": "fb1533",
+    "turn": 1,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.341,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "1509e942",
+    "clip": "fb1533",
+    "turn": 2,
+    "truth": "claw",
+    "hit": false,
+    "fireMax": 0.005,
+    "fireRunS": 0,
+    "minC": 0.33
+   },
+   {
+    "log": "1509e942",
+    "clip": "fb1533",
+    "turn": 3,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.341,
+    "fireRunS": 2.0,
+    "minC": null
+   },
+   {
+    "log": "1509e942",
+    "clip": "fb1533",
+    "turn": 4,
+    "truth": "wave",
+    "hit": false,
+    "fireMax": 0.005,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "daf679b6",
+    "clip": "fb1644",
+    "turn": 1,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.342,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "daf679b6",
+    "clip": "fb1644",
+    "turn": 2,
+    "truth": "nofire",
+    "hit": true,
+    "fireMax": 0.004,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "daf679b6",
+    "clip": "fb1644",
+    "turn": 4,
+    "truth": "wave",
+    "hit": false,
+    "fireMax": 0.005,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "0dfd444d",
+    "clip": "fb1605",
+    "turn": 1,
+    "truth": "nofire",
+    "hit": true,
+    "fireMax": 0.016,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "0dfd444d",
+    "clip": "fb1605",
+    "turn": 2,
+    "truth": "nofire",
+    "hit": true,
+    "fireMax": 0.004,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "0dfd444d",
+    "clip": "fb1605",
+    "turn": 4,
+    "truth": "wave",
+    "hit": false,
+    "fireMax": 0.005,
+    "fireRunS": 0,
+    "minC": null
+   },
+   {
+    "log": "00700c7e",
+    "clip": "fb0435",
+    "turn": 1,
+    "truth": "fire",
+    "hit": true,
+    "fireMax": 0.685,
+    "fireRunS": 3.0,
+    "minC": null
+   },
+   {
+    "log": "00700c7e",
+    "clip": "fb0435",
+    "turn": 2,
+    "truth": "claw",
+    "hit": false,
+    "fireMax": 0.003,
+    "fireRunS": 0,
+    "minC": 0.32
+   },
+   {
+    "log": "00700c7e",
+    "clip": "fb0435",
+    "turn": 3,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.344,
+    "fireRunS": 2.5,
+    "minC": null
+   },
+   {
+    "log": "emulator 1234abcd (b13)",
+    "clip": null,
+    "turn": 1,
+    "truth": "fire",
+    "hit": false,
+    "fireMax": 0.335,
+    "fireRunS": 2.5,
+    "minC": null
+   }
+  ],
+  "noFireMax": 0.016,
+  "fireMin": 0.335
+ }
+}
