@@ -50,30 +50,78 @@
 ]
 },
 {
+"seed": "2b7e1516",
+"turns": [
+{
+"turn": 1,
+"lever": "skip",
+"pp": 0.722,
+"target": 522,
+"k": 306,
+"planned": true,
+"plan_s": 1.84,
+"miss": true,
+"miss_m1": true,
+"miss_p1": true,
+"P_true": 216
+},
+{
+"turn": 2,
+"lever": "do nothing",
+"pp": 0.977,
+"target": 1053,
+"planned": true,
+"miss": true,
+"miss_m1": true,
+"miss_p1": false
+},
+{
+"turn": 3,
+"lever": "do nothing",
+"pp": 0.817,
+"target": 1622,
+"planned": true,
+"miss": true,
+"miss_m1": false,
+"miss_p1": true
+},
+{
+"turn": 4,
+"lever": "do nothing",
+"pp": 1.0,
+"target": 2211,
+"planned": true,
+"miss": true,
+"miss_m1": true,
+"miss_p1": false
+}
+]
+},
+{
 "seed": "9e3779b9",
 "turns": [
 {
 "turn": 1,
 "lever": "skip",
-"pp": 0.768,
-"target": 488,
-"k": 271,
-"planned": true,
-"plan_s": 1.41,
-"miss": true,
-"miss_m1": true,
+"pp": null,
+"target": null,
+"k": 267,
+"planned": false,
+"plan_s": null,
+"miss": false,
+"miss_m1": false,
 "miss_p1": false,
 "P_true": 217
 },
 {
 "turn": 2,
 "lever": "do nothing",
-"pp": null,
-"target": null,
+"pp": 0.866,
+"target": 300,
 "planned": true,
-"miss": false,
-"miss_m1": false,
-"miss_p1": false
+"miss": true,
+"miss_m1": true,
+"miss_p1": true
 },
 {
 "turn": 3,
@@ -81,11 +129,84 @@
 "pp": null,
 "target": null,
 "planned": false,
-"miss": false,
-"miss_m1": true,
+"miss": true,
+"miss_m1": false,
 "miss_p1": true
+},
+{
+"turn": 4,
+"lever": "do nothing",
+"pp": 0.962,
+"target": 317,
+"planned": true,
+"miss": true,
+"miss_m1": true,
+"miss_p1": false
 }
 ]
 }
+],
+"earlier": {
+"note": "the same seeds on earlier v101 builds (T1 only, the skip pressed on the plan)",
+"1234abcd": [
+{
+"pp": 0.784,
+"k": 270,
+"miss": false
+},
+{
+"pp": 0.812,
+"k": 291,
+"miss": true
+}
+],
+"9e3779b9": [
+{
+"pp": 0.818,
+"k": 304,
+"miss": true
+},
+{
+"pp": 0.768,
+"k": 271,
+"miss": true
+}
 ]
+},
+"v100": {
+"1234abcd": [
+0.815,
+1.0,
+0.823,
+1.0
+],
+"9e3779b9": [
+0.949,
+1.0,
+0.823,
+1.0
+],
+"2b7e1516": [
+0.894,
+1.0,
+0.823,
+0.641
+],
+"note": "v100 README table (all Bowser missed)"
+},
+"readings": {
+"box_raw_err": [
+-2.0,
+-1.44,
+-1.46
+],
+"panel_raw_err_e2e": -0.72,
+"c9_reading_err": [
+-1,
+3,
+6,
+7,
+-1
+]
+}
 }

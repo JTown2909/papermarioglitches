@@ -51,6 +51,48 @@ committed.
   P matters to the AI seed only through a coin draw near the puffs (the draw count is the same), so the true-seed states kept
   their predictions with P off by 6 (9e3779b9: 0.99 at the planned frame, Bowser missed).
 
+## 3. End to end (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1, b13, T1-T4, page v101)
+The harness's runner confirms Cloud Nine 15-45 frames after its target shows (no beep), then skips the message on the page's
+skip plan (or blind on + 267); T2-T4 as before (the patient runner). Bowser missed = "miss".
+| seed | T1 (skip) | T2 | T3 | T4 |
+|---|---|---|---|---|
+| 1234abcd | 0.772, skip + 270: **hit** (+269 / +271 miss) | fresh stream lock after the hit: 0.913 miss | 0.823 miss | 1.0, the wave missed |
+| 2b7e1516 | 0.722, + 306 (planned again on the box onset): miss | 0.977 (carried) miss | 0.817 miss | 1.0, the wave missed |
+| 9e3779b9 | lock doubt 0.83: "No edge", blind skip + 267: hit | 0.866 miss | blind: miss | 0.962, the wave missed |
+Earlier v101 builds on the same seeds (T1 only): 1234abcd 0.784 + 270 hit, 0.812 + 291 miss; 9e3779b9 0.818 + 304 miss,
+0.768 + 271 miss (its true-seed states read 1.0 on the planned frame both times). **v100** (bar lever): T1 0.815 / 0.894 /
+0.949, all missed; T2-T4 as in the v100 table.
+- **Safety:** 4 plans claimed >= 95% (2b7e1516 T2, T4; 1234abcd T4; 9e3779b9 T4): Bowser missed on all; no beep without an
+  edge (9e3779b9 T1's weak lock said "No edge"). Over all v101 runs the T1 skip plans pressed claimed 0.72-0.82 and Bowser missed on
+  4 of 6 (expected ~4.7).
+- **T1's claims are lower than v100's** (0.72-0.82 against 0.82-0.95): the skip is planned right at the lock (the runner
+  confirms Cloud Nine during the search; the HUD and its coin are hidden through Cloud Nine's animation, so no evidence comes
+  in before the message), on the fresh lock's doubt (0.005-0.27), averaged over the reading's -1 .. +1. The window is a 60-frame
+  message, so the plan usually has a run of 1-2 frames; it is honest (true-seed share at the planned frame 0.68-1.0).
+- **Found by the e2e and fixed in v101:** zwChoose's "later" reach picked + 315 (past the message, a skip that does nothing:
+  now `lim` holds a skip plan inside the window); Cloud Nine read 3-7 frames late under the search (gap shifts); a T2 carried
+  lock in 3.5 s planned Do Nothing 3 frames before the runner could be on it (M + 166; Bowser hit): **a Charge turn's Do Nothing
+  is not planned before M + 176** (`FB14_DNMIN`; the e2e's earliest confirms M + 157 .. + 174, console 5.2-5.9 s after the hide).
+- In the emulator the box readings come ~+3 late (the console transfer above), so the box onset moves the window 3 frames late
+  and a plan near its low end is made again (2b7e1516: 475 -> 522); on console that is the intended correction.
+
+## Tests
+New `test_fb14_v101.js` (in `run_suite.sh`): the emulator scan (the window, AI = skip + 17, the values and edges per frame,
+the invariance), the model (the AI event moved, a skip outside the window ignored, the share flat outside and moving inside,
+equal to each state's own skipped outcome, the -1 .. +1 average), the lever ids and per-lever beep correction, the setting
+restoring v100, the box cells and the onset / gone reading into the states, the page's setting / store / screen-lost exemption /
+route text / version, the e2e fixture (no >= 95% plan failed, every skip inside the window). Version checks to v101.
+
+## Not done
+- **Not on console:** the skip's reading offset (`FB14_READX.K` 4.7) is transferred from the panel through the emulator; the
+  first console session should compare the skip's `fb14Confirm` err with the plans (the skip store learns the runner's own lag)
+  and check the box colour rule on the capture (`fb14BoxOn` frac). The message box's text / colour may differ on console
+  capture (only Glide64 renders were measured).
+- The T1 lock's quality (9e3779b9: doubt 0.83 on one run, 0.27 on another, 0.15 on the first) and T1's claim at the lock are
+  unchanged; waiting for coin evidence is not possible (the HUD is hidden through Cloud Nine).
+- After a hit (1234abcd T1) the T2-T4 fresh stream locks held no true state (truth trace) and still planned up to 1.0 (the
+  outcomes were misses): a v100 behaviour, not changed here.
+
 # Time Out Timer v100: Final Bowser reads Bowser's attack each turn; the lightning onsets logged; the plan refined as states narrow (Nov 13)
 
 The runner: "observe the coin after the charge to further lock the seed, or use Bowser's previous attack to help pinpoint
