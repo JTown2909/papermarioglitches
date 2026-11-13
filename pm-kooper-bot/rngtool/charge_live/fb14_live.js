@@ -1077,7 +1077,10 @@ async function fb14Refine1(res, G) {
     if (res.stream) { slog('fb14Placement', { kept: res.stream.shift || 0, skipped: 'stream' }); res.placeScores = sc; const maps = chgMaps(G, CHG.cen, CHG_N); let out = res;
       if (out.fb1 && out.fb1.hyps && out.fb1.hyps.light) { const r = await one(maps, [{ type: 'fb1h', s0: top.seed, tol: FB14_NTOL, max: 20000 }]); out = Object.assign({}, out, { fb1: Object.assign({}, out.fb1, { hyps: r[0] }) }); }
       out.maps0 = maps; out.joint = await fb14Joint(out, maps, one).catch(e => { slog('fb14JointError', { msg: String(e && e.message || e) }); return null; }); return out; }
-    for (const d of [-1, 1]) { const M = chgMaps(shifted(d), CHG.cen, CHG_N); alt[d] = M; const r = await one(M, [{ type: 'fb1', seeds: [top.seed], v: null }]); sc[d] = r[0].out[0].sc; }
+    // v99 (e2e 1234abcd T1 on this machine: the placement 3.05 s, the plan 0.1 s after the patient runner's 12 s): the two
+    // shifted reads in parallel workers
+    for (const d of [-1, 1]) alt[d] = chgMaps(shifted(d), CHG.cen, CHG_N);
+    const rs = await Promise.all([-1, 1].map(d => one(alt[d], [{ type: 'fb1', seeds: [top.seed], v: null }]))); [-1, 1].forEach((d, i) => { sc[d] = rs[i][0].out[0].sc; });
     let best = 0; for (const d of [-1, 1]) if (sc[d] > sc[best] * 1.03) best = d;
     slog('fb14Placement', { scores: { '-1': Math.round(sc[-1]), 0: Math.round(sc[0]), '+1': Math.round(sc[1]) }, kept: best, ms: Math.round(performance.now() - t0) });
     res.placeScores = sc;
