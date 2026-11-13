@@ -832,7 +832,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
   const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + X + D, turn), ms = Math.round(performance.now() - t1);
   const prof = { id: 'fb14', share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
-  const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 });
+  // v101 (e2e 2b7e1516 T1: zwChoose's "later" reach picked + 315, past the message: a skip that does nothing): a skip plan's frames
+  // are held inside the message's window (zwChoose lim)
+  const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 }, undefined, skp ? { lo: from, hi: from + W } : undefined);
   if (EV0) fb14EvLog(turn, EV0, Wg, L0, C, from, W, X, D, PD);
   // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame
   if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
