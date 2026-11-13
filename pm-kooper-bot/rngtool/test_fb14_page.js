@@ -33,6 +33,7 @@ const fs = require('fs');
     const realNow = performance.now.bind(performance); let vt = null; if (vclock) performance.now = () => (vt != null ? vt : realNow());
     if (verify) window.__fb14verifyHeld = true; if (M.truthSeeds) window.__fb14seeds = { off: M.truthSeeds.off, s: Uint32Array.from(M.truthSeeds.s, x => typeof x === 'string' ? parseInt(x, 16) : x) }; if (dbg) { window.__fb14dbg = []; window.__chgDebug = true; if (M.truth) window.__fb14truth = M.truth; if (M.truthAura) window.__fb14truthAura = M.truthAura; if (M.truthT6) window.__fb14truthT6 = parseInt(M.truthT6, 16); } document.getElementById('s-crate').value = crate; if (cpus) document.getElementById('s-chgcpu').value = cpus;
     if (t5) document.getElementById('s-fb2t5').value = t5;
+    if (M.fbc9) document.getElementById('s-fbc9').value = M.fbc9;     // v101: 'bar' = the v100 T1 lever (Cloud Nine on the beep), default the skip
     const BOX = { M: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 }, B: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 }, S: { x: 0.33, y: 0.317, w: 0.176, h: 0.1 } };
     const bmp = new Map(); let next = 0; const nf = M.frames.length;
     const want = i => { while (next < Math.min(nf, i + 90)) { const k = next++; bmp.set(k, fetch(base + '/' + M.frames[k]).then(r => r.blob()).then(x => createImageBitmap(x))); } };

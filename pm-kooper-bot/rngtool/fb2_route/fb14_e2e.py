@@ -94,15 +94,17 @@ def partner_items(pa):
     return [(0, UP, 10), (A, 0, 20), (0, DOWN, 10)]
 
 
-def play_after_confirm(seg, pa, shot, cap=4000):
-    """the confirm A, then (Cloud Nine) its three A presses, Bowser's turn to the next Mario menu"""
+def play_after_confirm(seg, pa, shot, cap=4000, skip=None):
+    """the confirm A, then (Cloud Nine) its three A presses, Bowser's turn to the next Mario menu. v101 skip: one A on the
+    confirm + skip (steps after the confirm's own step), Cloud Nine's message skip (cn_skip.py: + 255 .. + 314 moves Bowser's AI)"""
     seg.step(A, 0, shot); k0 = seg.n
+    sk = lambda k: skip is not None and k + 1 == skip
     if pa == 'cloud_nine':
         for i in range(259):
-            k = seg.n - k0; seg.step(A if k in (132, 152, 172) or (GUARD and k == 400) else 0, 0, shot)
+            k = seg.n - k0; seg.step(A if k in (132, 152, 172) or (GUARD and k == 400) or sk(k) else 0, 0, shot)
     n = 0
-    while bstate(seg.r.e) != 13 and n < cap:
-        k = seg.n - k0; seg.step(A if GUARD and ((pa == 'cloud_nine' and k == 400) or (pa != 'cloud_nine' and k == 87)) else 0, 0, shot); n += 1
+    while (bstate(seg.r.e) != 13 or (skip is not None and seg.n - k0 < skip + 2)) and n < cap:
+        k = seg.n - k0; seg.step(A if sk(k) or (GUARD and ((pa == 'cloud_nine' and k == 400) or (pa != 'cloud_nine' and k == 87))) else 0, 0, shot); n += 1
 
 
 def wave_now(r):
@@ -128,6 +130,32 @@ def run_page(urlbase, out, manifest, tag):
 # Charge's bar hide, else at DL unplanned; RUNNER=patient: up to 12 s for the beeps or a "No edge"). Console: the runner
 # confirms 5.2-5.9 s after the hide when no beep comes (v91, clips A-D).
 RUNNER = os.environ.get('RUNNER', '')
+# v101 SKIP=1: T1's lever is the A that skips Cloud Nine's message (the page's default; SKIP=0 the v100 lever, the page set to
+# "Confirm Cloud Nine on the beep"). The runner confirms Cloud Nine C9AT frames after its target shows (no beep for it), then
+# skips the message on the page's skip beeps, or BLINDSKIP frames after the confirm with none (the box shows on + 255)
+SKIP = os.environ.get('SKIP', '1') == '1'
+C9AT = os.environ.get('C9AT', '15,45'); BLINDSKIP = int(os.environ.get('BLINDSKIP', '267'))
+
+
+def skip_press(res, nbefore, c_step, GM1, G):
+    """v101: the stretch step offset (from the Cloud Nine confirm step c_step) the runner skips on: the page's skip plan up at
+    the press (made before its target; a later plan made before the target replaces it), else blind"""
+    t0 = res.get('t0') or 0
+    step_of = lambda tt: ((tt - t0) * 60 / 1000 - nbefore + 2) * 29.97 / 60
+    plans = sorted([dict(E=step_of(p['t']), T=GM1 + p['target'] - G, p=p) for p in res.get('plans', []) if p.get('turn') == 1 and p.get('sk') and p.get('target') is not None], key=lambda x: x['E'])
+    plans = [x for x in plans if x['E'] < x['T'] and x['E'] >= c_step]
+    noedge = [step_of(e['t']) for e in res.get('events', []) if e.get('ev') == 'fb14NoEdge' and e.get('turn') == 1 and step_of(e['t']) >= c_step]
+    info = dict(nplans=len(plans), plan_s=round((plans[0]['E'] - c_step) / 29.97, 2) if plans else None)
+    if plans:
+        cur = plans[0]
+        for x in plans:
+            if x['E'] > cur['E'] and x['E'] < cur['T']: cur = x
+        if not [e for e in noedge if cur['E'] < e < cur['T']]:
+            info.update(planned=True, pp=cur['p'].get('pp'), target=cur['p']['target'])
+            return int(cur['T'] - c_step), info
+        info['cancelled'] = True
+    info.update(planned=False)
+    return BLINDSKIP, info
 DL = float(os.environ.get('DL', '12' if RUNNER == 'patient' else '5.5'))
 REACT = 15                                  # frames from a "No edge" on the screen to the runner's confirm (patient)
 
@@ -237,12 +265,16 @@ if __name__ == '__main__':
         while bstate(r.e) != 14 and sa.n - M < 600: sa.step(A if (K >= 0 and sa.n - M == K) else 0)
         sa.idle(20); sa.seq(partner_items(pa)); R0 = sa.n
         Y = os.path.join(out, 'y%d.st' % t); r.e.save(Y)
-        sa.idle(WAIT)
+        skm = SKIP and pa == 'cloud_nine'
+        if skm:       # v101: Cloud Nine at once (no beep for it), its message left up to its own close (+ 315) in this render
+            lo, hi = [int(x) for x in C9AT.split(',')]; dC = rng.randint(lo, hi); sa.idle(dC); sa.step(A); kc = sa.n
+            while sa.n - kc < 330: k = sa.n - kc; sa.step(A if k in (132, 152, 172) else 0)
+        else: sa.idle(WAIT)
         if pa == 'cloud_nine' and refM is None: refM = ('a', t, R0 + 10)
         if pa != 'cloud_nine' and refS is None: refS = ('a', t, R0 + 10)
         jpg = capsim(sa.d, sa.n, os.path.join(out, tg + 'a_cap'), seed + t + 100 * att)
         segA = ['%s/%sa_cap_j/%s' % (rel, tg, f) for f in jpg]
-        man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')))
+        man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
         if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
             man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0)
         # the reference screens: capture frames of those game frames (2 per game frame)
@@ -254,8 +286,10 @@ if __name__ == '__main__':
         res = run_page(urlbase, out, man, 'a%dt%d' % (att, t))
         plans = [p for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None]
         ok = lambda o, tt: o['hp'] == hp0 and o['shroom'] == sh0 and o['menu'] and (tt != 4 or o['wave'])
-        rinfo = None
-        if RUNNER:
+        rinfo = None; skinfo = None; kS = None
+        if skm:
+            kS, skinfo = skip_press(res, len(frames), R0 + dC, GM1, G); d = dC - 1; blind = not skinfo['planned']; tgt = skinfo.get('target')
+        elif RUNNER:
             P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t, GMS); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
             blind = not rinfo['planned']
             d = max(0, min(d, WAIT - 1))
@@ -265,17 +299,21 @@ if __name__ == '__main__':
             blind = d is None or d < 0 or d >= WAIT
             if blind: d = WAIT // 2
         forced = None
-        if '%d.%d' % (att, t) in FORCE:
+        if '%d.%d' % (att, t) in FORCE and not skm:
             dh = find_hit(r, Y, d, pa, lambda o: ok(o, t))
             if dh is not None: forced = dict(d_was=d, d=dh); d = dh
         row = dict(attempt=att, turn=t, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
+                   skip=dict(k=kS, global_=G + R0 + 1 + d + kS, info=skinfo) if skm else None,
                    page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
         # the neighbours: from Y, confirm at d - 1 and d + 1 (no shots)
         nb = {}
         for dd in (-1, 1):
-            tmp = Seg(r, os.path.join(out, 'tmp')); tmp.load(Y, False); tmp.idle(d + dd, False); play_after_confirm(tmp, pa, False); nb[dd] = outcome(r)
+            tmp = Seg(r, os.path.join(out, 'tmp')); tmp.load(Y, False)
+            if skm: tmp.idle(d, False); play_after_confirm(tmp, pa, False, skip=kS + dd)     # v101: the skip one frame early / late
+            else: tmp.idle(d + dd, False); play_after_confirm(tmp, pa, False)
+            nb[dd] = outcome(r)
         sb = Seg(r, os.path.join(out, tg + 'b')); sb.load(Y, False); sb.idle(d, False); sb.n = 0
-        play_after_confirm(sb, pa, True); oc = outcome(r)
+        play_after_confirm(sb, pa, True, skip=kS if skm else None); oc = outcome(r)
         nxt = os.path.join(out, 'x%d.st' % (t + 1)); r.e.save(nxt); X = nxt
         row.update(outcome=oc, minus1=nb[-1], plus1=nb[1], s0_rays0_true='%08x' % sa.s0[M + 13] if t != 3 else None)
         # v87: at 10 HP a hit kills Mario and the Life Shroom revives him to 10; v92: a miss keeps the HP and the Shrooms of
