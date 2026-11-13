@@ -1,3 +1,56 @@
+# Time Out Timer v101: Final Bowser T1's lever is the A that skips Cloud Nine's message (Nov 13)
+
+The runner: skip Cloud Nine's message with A (faster) and make that A the T1 lever, beeped. Route texts unchanged (T1 stays
+"Charge; Cloud Nine"). Numbers only in `fixtures/cn_skip_v101.json` and `fixtures/e2e_v101.json`; no clip, frame or picture
+committed.
+
+## 1. The skip is a lever (emulator, `fb2_route/cn_skip.py`, debug core, b13 T1)
+- Cloud Nine's message ("てきのこうげきが はずれやすくなったぞ!", an opaque beige box 200,191,164 across the top, 320-space
+  x 47..272, y 82..105) shows from the Cloud Nine confirm P + 255 (the first render with it) and closes itself on P + 315
+  (last render + 317). It prints whole: no speech blip.
+- **One A on P + k, k = 255 .. 314, closes it and Bowser's AI draws on the A's frame + 17** (else on P + 332). Nothing else
+  draws between (aura, bolts, coin, step only); the one A adds no blip draw. An A on + 254 or earlier, or + 315 or later,
+  changes nothing. The box is gone from the render A + 3.
+- Same window on 9e3779b9 with Cloud Nine 30 frames later (W 60), without the three-chances presses, and with them moved
+  (120 / 140 / 160): the window is the confirm's.
+- Every skip frame gives another AI seed (LCG steps confirm -> AI 531 .. 639, about 1.8 a frame): the dodge test
+  value over the 60 frames: 1234abcd 43 values, misses on 30 / 60 frames; 9e3779b9 41 values, 35 / 60; miss / hit edges every
+  2-3 frames (no skip: claw 56 / fire 67). **A usable lever, window 60 frames (2.0 s), edges per frame.**
+- Draws between the skip and the AI: the frames' own (aura 16 per 20 frames, coin, bolts, step): 17 frames.
+
+## 2. The page (`fb14_live.js`)
+- **Settings > "Final Bowser T1: Confirm Cloud Nine on the beep"** (`s-fbc9`): "no" (default) = the skip is T1's lever; "yes"
+  = v100 exactly (Cloud Nine's press on the beep, read from the bar / screen, its message plays out). Kept with the settings.
+- **The model:** Cloud Nine's input keeps its puffs on P + 200 .. 209 and the AI on P + 332, and now records P (`S.p1`). A skip
+  input on F moves the turn's AI event to F + 17 when F is inside the message (`fbSkipEv`: P + 255 .. P + 314, P the box's own
+  onset once read, else the state's P); outside it nothing moves. `fb14Share(…, 'skip')` scores each skip frame from a state
+  stepped to F + 16; the plan's share averages the reading's -1 / 0 / +1 (0.2 / 0.6 / 0.2, `FB14_SKUNC`, as Cloud Nine's).
+- **The flow:** on T1's lever step in skip mode the page says "Cloud Nine now, no beep for it ... the beep says when to press A
+  to skip its message" and beeps nothing. Once Cloud Nine's confirm is in the states (read live, or applied when the lock lands
+  after it) the T1 plan is the skip (`fb14SkipTick`, whatever step the route shows: the screen's close moves it to T2's
+  Charge), over the message's frames P + 258 .. P + 311 (`FB14_SKIP_M` 3 in from each end; before the box shows the top end
+  another 6 in, `FB14_SKIP_LATE`). Everything else is the Do Nothing plan's: the edge rule (zwChoose, Best chance), the
+  hysteresis (`FB14_EDGE_ON / OFF`), the anchor (`fb14Anchor`), the tick's re-score / refine / stop, the beep times
+  (`fbPressT`). The skip plan is exempt from the step-screen-lost cancel (`planScreenLost`: its screen is the message).
+- **The press correction per lever:** the skip has its own store (`LEVER_STORE.fb14sk` = `tot-fb14skip-v101`, learned like the
+  Do Nothing lever: 4 presses, shrunk n / (n + 4), at most 1.5 frames); a skip plan's beeps use it (`fb14Bias('fb14sk')`), the
+  Do Nothing levers keep `tot-fb14press-v93`. The status shows both.
+- **Reading the message** (`fb14BoxFrame`): a 22 x 4 grid inside the box (320-space x 50..270, y 84..103); up when 55% of the
+  cells are its beige (R > 140, G > 128, B > 95, R - B 8..85, |R - G| < 35: a cell with ~30% text still counts). Watched only
+  in T1's skip phase, P + 200 .. P + 400. Two pictures up = the onset (`fb14BoxOn`, its P: the box's first picture is P + 255);
+  then two pictures gone = the skip (`fb14SkipConfirm`: `fb14Confirm` lever 'skip', err against the plan, the press into the
+  skip store, the skip into the states on the panel's -3 .. +3; a box that closed on its own reads + 315: nothing skipped).
+- **The reading offset** (`FB14_VAN.K` 3 / `Kon` 0, `FB14_READX.K` 4.7): through the e2e renders, the capture simulation and the
+  page, the box's onset / gone read 1.44 / 1.46 / 2.0 frames before the truth raw (three readings, two seeds) where the panel's
+  read 0.72 before; the console's panel needs +3.4 (v94 / v96), so the box gets 3.4 + 2.0 - 0.72 = 4.7, the transfer v96 made
+  for the bar (one press chain, one clock). Not borne out on console; the 3-frame window margin covers a transfer off by ~2.7.
+  In the emulator the skip therefore reads ~+2.7 late, as the e2e's Do Nothing does (+2.6 .. +2.7).
+- **Cloud Nine's own reading under load:** the runner now confirms Cloud Nine during the T1 search; the e2e read it 3-7 frames
+  late on two runs (pictures dropped by the busy page), -1 on the others. A screen-read Cloud Nine seen after a gap between
+  pictures spreads its shifts over the gap (`fb14GapShifts`, as the bar's hide); the box onset gives P again for the window.
+  P matters to the AI seed only through a coin draw near the puffs (the draw count is the same), so the true-seed states kept
+  their predictions with P off by 6 (9e3779b9: 0.99 at the planned frame, Bowser missed).
+
 # Time Out Timer v100: Final Bowser reads Bowser's attack each turn; the lightning onsets logged; the plan refined as states narrow (Nov 13)
 
 The runner: "observe the coin after the charge to further lock the seed, or use Bowser's previous attack to help pinpoint
