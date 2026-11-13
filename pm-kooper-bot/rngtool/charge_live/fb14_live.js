@@ -924,7 +924,11 @@ const FB14_RL_N = [[-4, 0.03], [-3, 0.06], [-2, 0.12], [-1, 0.18], [0, 0.22], [1
  * confirms it. A carried lock (two reads agreeing on one stream) is not capped. */
 const FB14_FRESH_D = 0.1;
 function fb14FreshOpen(h) { const Fr = FB14.fresh; if (!Fr) return false; const hh = h != null ? h : fb14Horizon(performance.now()); for (const t of FB14.taps) { const x = fbPic(t) - 4.8; if (x > Fr.F && x < hh) { FB14.fresh = null; slog('fb14FreshConfirmed', { turn: Fr.turn, F: Fr.F, shine: +x.toFixed(1) }); return false; } } return true; }
-function fb14DoubtFloor(turn, d) { if (fb14FreshOpen()) d = Math.max(d, FB14_FRESH_D); return turn === 3 ? Math.max(d, FB14.relock === 3 ? FB14_T3_RELOCK : FB14_T3_FLOOR) : d; }
+/* v104 (e2e PLANCHECK, 9e3779b9 T2 after the hit: a fresh lock of 22 states, none of them the truth on the per-frame check,
+ * the coin "confirmed" it on its first shine and it planned at 100% on a frame Bowser hit): one shine cannot tell the truth
+ * from a state a coin check apart. A fresh lock after T1 keeps FB14_FRESH_D until a later Charge locks carried (two reads on
+ * one stream); T1 as v102 (capped until the coin, its claims stay under 95% anyway). */
+function fb14DoubtFloor(turn, d) { if (fb14FreshOpen() || (turn > 1 && FB14.how === 'fresh')) d = Math.max(d, FB14_FRESH_D); return turn === 3 ? Math.max(d, FB14.relock === 3 ? FB14_T3_RELOCK : FB14_T3_FLOOR) : d; }
 /* v98: T3 has no Charge to lock on. When the carry is gone or contradicted there (the coin), the states of T2's lock
  * (FB14.snap2: on the stream from that lock) are taken again with T2's Do Nothing confirm and T3's Jelly at wider shifts and
  * the coin matched in a wider window (FB14_WIDE): a coin-based re-lock on the stream, planned under FB14_T3_RELOCK, or the
@@ -1395,5 +1399,5 @@ window.__fb14 = { v103: { boltLik: (S, h, b, c) => fb14BoltLik(S, h, b, c), SIG:
   shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS, anchor: (C, from, W, turn, PD) => fb14Anchor(C, from, W, turn, PD), TICK_DROP: FB14_TICK_DROP, ANCHOR_TOL: FB14_ANCHOR_TOL,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
-window.__fb14.v104 = { broad: (C, Wg, t, d, PD) => fb14Broad(C, Wg, t, d, PD), truthScore: (S, d) => fb14TruthScore(S, d), isTrueS: S => fb14IsTrueS(S) };
+window.__fb14.v104 = { broad: (C, Wg, t, d, PD) => fb14Broad(C, Wg, t, d, PD), blind: t => fb14Blind(t), truthScore: (S, d) => fb14TruthScore(S, d), isTrueS: S => fb14IsTrueS(S) };
 window.__fb14.v102 = { truthZero: t => fb14TruthZero(t), freshOpen: h => fb14FreshOpen(h), FRESH_D: FB14_FRESH_D, isTrue: S => fb14IsTrue(S) };   // for tests (v102)
