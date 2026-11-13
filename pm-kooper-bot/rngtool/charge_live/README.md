@@ -1,3 +1,73 @@
+# Time Out Timer v100: Final Bowser reads Bowser's attack each turn; the lightning onsets logged; the plan refined as states narrow (Nov 13)
+
+The runner: "observe the coin after the charge to further lock the seed, or use Bowser's previous attack to help pinpoint
+it". Numbers only in `fixtures/console_v100.json`; no clip, frame or picture committed.
+
+## 1. Bowser's attack, every turn (`fbAtkFrame`, `fbAtkDecide`, `fb14V100`)
+- **Fire breath:** the share of saturated orange (R > 190, R-G > 90, B < 90) on the page's 32x24 game box. On the Nov 12
+  console clips (23 Bowser turns, windows from each lever confirm to the next turn) every fire turn reads 0.34-0.69 for
+  2-3 s, every other turn at most 0.016; the emulator's T1 fire 0.335. Rule: 20 pictures at >= 0.08 = fire; >= 240
+  pictures watched under 0.05 = not fire; else unread. **24 / 24 right.**
+- **Claw or body slam** (a turn with no fire and no hit): the min of an 8-picture mean x-centroid of Bowser's warm colours.
+  The slam lands on Mario (17-47 T2 0.20, 17-33 T1 0.21), the claw stays a step off (15-33 T2 0.33, 17-33 T2 0.34, 04-35 T2
+  0.32); slam <= 0.24, claw >= 0.30, between unread. Not read on a hit turn (the death and the revive move the camera).
+  5 / 5 on console by eye; the emulator runs read 2 claws (2b7e1516 T1, 1234abcd T3) whose next plans held at 1.0 and missed.
+- **The wave / Lightning Blast / Star Rod / Recover** are not told apart from each other: at T4 "not fire" is what is read
+  (the 4 console T4 waves: 0.005-0.010).
+- **The cut:** in `fb14Weigh` a state whose AI picked another attack that turn keeps `FB14_ATKW` 0.003 (fire / not) or
+  `FB14_CLSW` 0.15 (claw / slam); off the model the attack is as likely as Bowser's odds (the background doubt x 0.5 each).
+  It applies to every carried state with that turn's attack (T1-T4; T4's is decided at the Peach Beam's hide, before the T6
+  bases are taken). After a hit the carry is dropped as before and the next lock is fresh (its states start after that
+  attack), so a hit turn's attack has nothing to cut; T5 / T6 attacks are not modelled.
+- **Logging:** `fb14Attack` per turn (fire, cls, pictures, fire run, minC); per plan `fb14Evidence`: the states each
+  evidence cut, the states kept and the doubt without / with the evidence, and the plan's chance without (`pp0`) / with it.
+
+## 2. The lightning: onsets read, not used
+`fbBoltFrame` reads violet points on the sky under the bar in the menus (no Bowser stretch, no Charge burst) and logs an onset
+(`fb14Bolt`) after 6 quiet pictures. The evidence (`fb14V100`: a state with no draw of its phases within 2 frames of a bolt
+keeps 0.05) is written and tested but **off**: `FB14_BOLT_D` (the onset's delay after the draw) is not calibrated. The e2e's
+truth trace (`fb14TruthPh`, diagnostic) shows the true seed carried by several phase pairs at the lock (9e3779b9: 8+), and the
+menus showed only 1-4 onsets per turn (Mario's menu camera shows little sky; on console the bolts land anywhere along a 359
+draw, many off screen). Calibrating needs the phases at a later truth point and more onsets; until then a wrong delay could
+only cut true states, so it stays logged only. **"Lightning phases from the picture: still not used."**
+
+## 3. The plan refined as the states narrow (`fb14Tick`, `fb14Refine`)
+A running plan under `FB14_UP` 0.95 whose states narrowed (10% fewer, or the doubt 0.02 lower) is made again before its first
+beep (at most every 0.7 s): `fb14Anchor` keeps the anchored frame unless a frame `FB14_ANCHOR_TOL` better is in reach, so
+the beeps do not jump. The bounded "wait for more evidence" option was not built.
+
+## 4. Other observables
+The popup close, Lakilester's menu timing, Mario's HP and the Peach Beam are already inputs (v86-v99); nothing new was added
+for them.
+
+## 5. The effect
+**Console replays** (`test_console_v100.js`: the Nov 12 logs' fb1 captures at their own page times, the log's coin and
+inputs, each turn's first plan made again without / with the clips' attacks): 22 plans, 12 with a frame. pp >= 0.95: 7 / 12
+before, 7 / 12 after (median 0.984 -> 0.985). The attacks cut many states (7483f3b1 T3 57 -> 27, 1509e942 T3 34 -> 19, T4 8
+-> 6, 7483f3b1 T2 114 -> 89) but those plans were already ~1.0 (T2 / T4 carried) or under the T3 floor; 7483f3b1 T2 0.94 ->
+0.935. Stream locks (T2 / T4 fresh) are not re-made by the replay (they show "edge" at frame 0).
+**Emulator** (`fb14_e2e.py` RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1, b13, T1-T4, three seeds, page v100):
+| seed | T1 | T2 (pp0 -> pp, states) | T3 | T4 |
+|---|---|---|---|---|
+| 9e3779b9 | 0.949 miss | 1.0 (0.978 -> 0.978, 73 -> 63; T1 fire) miss | 0.823 (339 -> 281) miss | 1.0 (368 -> 194) wave missed |
+| 2b7e1516 | 0.894 miss | 1.0 (0.97 -> 0.986, 312 -> 300; T1 claw) miss | 0.823 (1656 -> 1442) miss | fresh lock 0.641 (no cut) miss |
+| 1234abcd | 0.815 miss | 1.0 (0.976, 72 -> 64) miss | 0.823 (200 -> 84) miss | 1.0 (68 -> 30) wave missed |
+v99 on the same build: T1 0.74 / 1.0 / 0.93 (planned after the patient runner's 12 s: blind), T2 0.997 / 1.0 / 0.957, T3 0.823 x 3,
+T4 1.0 x 3. Turns >= 95%: v99 T2 3/3, T4 3/3; v100 T1 0/3 (0.949), T2 3/3, T3 0/3 (the floor), T4 2/3. T1 has no earlier attack
+to use; its plans came in time on these runs (not a v100 change: the machine load differed).
+**Safety:** all 12 e2e turns were pressed on the planned frame and Bowser missed every one (5 claims >= 95%); in the console
+replays no claim >= 95% falls on a frame Bowser hit. **T3 keeps `FB14_T3_FLOOR`** (the console T3 coin offset is still
+unexplained; nothing here makes T3 exact).
+
+## Tests
+New `test_fb14_v100.js` (the classifier on synthetic grids, the console calibration from the fixture, the cut counted per
+evidence with the doubt before / after, a fully contradicted carry over the edge, the bolt onsets and the bolt factor, the
+e2e fixture) and `test_console_v100.js` (the replays above), both in `run_suite.sh`. Version checks to v100.
+
+## Not done
+- The lightning evidence (calibration of `FB14_BOLT_D`); the wave / Lightning Blast told apart at T4; T5's attack for T6.
+- The bounded wait before the first beep; T6 end to end.
+
 # Time Out Timer v99: Final Bowser T6's beeps kept, T6's Charge armed without a carry, the emulator check through T4, T3's lag measured (Nov 13)
 
 Console attempts 441170cf (page v98, clip 18-41-14: "almost had it, but it lost the seed on turn 6"; T1-T4 worked, T2 / T4

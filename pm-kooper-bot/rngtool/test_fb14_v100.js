@@ -59,4 +59,9 @@ function turn(k, frames) { X.atk = {}; X.atkW = {}; X.hit = null; X.pT = { [k]: 
   const c2 = { fire: 0, cls: 0, bolt: 0 }; const f2 = V.V(S, 500, [drawF[0] + 9, 250.5 + 0.5], c2);
   ok(f1 === 1 && c1.bolt === 0, 'bolts at the state\'s draws (+-2 frames): kept (draws ' + drawF.slice(0, 4).join(', ') + ')');
   ok(f2 < V.BOLT_W + 1e-9 && c2.bolt === 1, 'bolts off its draws: ' + f2.toExponential(2)); }
+// 4. the emulator e2e (fixture): every planned turn missed; no claim >= 95% failed; T3 under its floor
+{ const E = FIX.e2e_v100.seeds, rows = []; for (const sd in E) E[sd].pp.forEach((pp, i) => rows.push({ sd, turn: i + 1, pp, miss: E[sd].miss[i] }));
+  ok(rows.every(r => r.pp < 0.95 || r.miss), 'e2e v100: ' + rows.length + ' planned turns, every claim >= 95% missed (' + rows.filter(r => r.pp >= 0.95).length + ')');
+  ok(rows.filter(r => r.turn === 3).every(r => r.pp < 0.83), 'e2e T3 at most ' + Math.max(...rows.filter(r => r.turn === 3).map(r => r.pp)));
+  ok(Object.values(E).every(x => x.ev[3][3] <= x.ev[3][2]), 'the attacks never add states (T4 ' + Object.values(E).map(x => x.ev[3][2] + ' -> ' + x.ev[3][3]).join(', ') + ')'); }
 console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
