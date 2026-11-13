@@ -1,3 +1,70 @@
+# Time Out Timer v103: the stage lightning decided (no random number moves a bolt); the bolt delay not pinned, so the bolts stay logged only (Nov 13)
+
+Goal: stronger T1 (Cloud Nine skip) plans from what shows between the T1 lock and the skip. Numbers only in
+`fixtures/bolt_v103.json` and `fixtures/e2e_v103.json`; no clip, frame or picture committed.
+
+## 1. What decides a bolt (pmdecomp `battle/common/stage/area_kkj/kkj_02.inc.c`, `effects/lightning_bolt.c`)
+- The arena runs two looping scripts: `EVS_CirculatingBolts` (waits 5 / 30 / 5 / 90: the 130 loop, `fbBolts` slots 78, 83, 113,
+  118) and `EVS_RandomBolts` (60 / 10 / 90 / 60: the 220 loop, slots 18, 78, 88, 178). Each slot is a bolt at a **fixed place**
+  (the "random" ones fall from y 190 behind the arena, the circulating ones run across at y ~0-40, back and front).
+- The one draw per bolt (caller 0xE00BC194, `rand_int(359)` into `unk_110`) only sets the zigzag's phase. **No random number
+  decides when or where a bolt shows**; an onset tells the states' phases and their lag after the rays (`S.l`), not the seed.
+- Emulator (`fb2_route/bolt_render.py`, debug core, Glide64, b13): 78 bolt draws over 1581 steps (T1 menu, Charge, Cloud Nine,
+  its message, Bowser's turn, T2's menu) fit one phase pair, the same frames on 2b7e1516 and 9e3779b9.
+
+## 2. The delay (`FB14_BOLT_D`): not pinned, so not enabled
+- Raw renders, a port of `fbBoltFrame` on the screenshots: 10 clean onsets, every one **3 shots after its draw** (menus, P + 27,
+  P + 127). Cloud Nine's own camera (from P + 133) gives false onsets (P + 203, 26 points: the camera pans over the arena's
+  violet frame; the action-command icons are blue) and its bolts mostly show above the sky box.
+- Through the capture simulation and the page (e2e T1 runs, onset picture -> capture json -> shot): 8 onsets **3-15 shots after
+  the latest draw** (5, 9, 8, 3, 8, 15, 5, 3; the S-Video blur hides a bolt's thin first frames), and the page clock itself sits
+  -1.9 .. +0.3 frames off the game between runs. Page D (onset frame - true draw frame): 1.3 .. 13.4.
+- What the T1 plans need is the lag after the rays: the true states split by lag 0 / 1 on the planned frame (9e3779b9 v102:
+  1.0 vs 0; 2b7e1516: 1.0 / 0.61 vs 0.83 / 0.55), a 1-frame question, against a reading spread of several frames, and 1-2
+  onsets per T1 between the rays and the skip. **The bolt evidence stays off** (`FB14_BOLT_D` null).
+- Console (fb0443 / fb0447 / fb0449, one session's growing log): 6 onsets, 2 with a clock frame (T6, 1170.5 / 1188.4), no truth:
+  nothing to measure the delay with.
+- Written for when it is pinned (inert now): T1 in skip mode reads bolts on from Cloud Nine's confirm to P + 120 (the battle
+  camera; `FB14_BOLT.c9`), onsets of 6+ points kept for evidence (`FB14_BOLT.ev`), and a **soft** factor per onset instead of
+  v100's cut (`fb14BoltLik`: floor 0.15 + 0.85 x a Gaussian of the distance to the state's nearest draw, sigma 0.4 frame; the
+  background doubt x (0.15 + 0.85 x 0.05) per onset): a picture that was not a bolt can never cut a state below the floor.
+
+## 3. The fresh-lock cap (v102 `FB14_FRESH_D`) is kept
+Bolts do not test the seed (section 1), and their reading is not pinned: they cannot confirm a fresh lock as a coin shine does.
+
+## 4. Other evidence between the T1 lock and the skip
+- Cloud Nine's puffs (pmdecomp `battle/partner/lakilester.c`): 10 `EFFECT_FLOATING_CLOUD_PUFF`, one a frame on P + 200 .. 209,
+  each at Mario + (RandInt(40) - 20, RandInt(30) - 15) world units: **their places depend on the seed** (a real seed check), but
+  reading them needs Cloud Nine's camera projection and a puff finder on the capture (white puffs on Lakilester's cloud): not
+  built, not used.
+- The message box and the HUD are not random.
+
+## 5. End to end (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1, b13, T1-T4, page v103: bolts logged only)
+| seed | T1 skip plans (pp; true share on the frame) | T1 | T2 | T3 | T4 |
+|---|---|---|---|---|---|
+| 2b7e1516 | 0.859-0.864 (0.62-0.98) | 0.86 missed | carried 0.804 (re-planned after passed frames) hit | blind hit | blind hit |
+| 9e3779b9 | 0.663-0.671 (0.24-0.99) | 0.666 hit | after the hit 1.0 missed | 0.734 missed | 1.0 missed |
+| 1234abcd | lock with the truth (1578 / 12000) but doubt 0.947: "No edge", blind skip | hit | after the hit 0.983 missed | 0.786 missed | carried 1.0 missed |
+T1 before (v102, same build): 0.602-0.711; v103 0.663-0.864 (no evidence change: run-to-run lock and skip-read spread).
+Truth in every T1 plan; no T1 plan >= 95% (fresh cap). **No pressed plan >= 95% failed** (4 pressed: all missed).
+**Found, not fixed:** 3 of the 25 plans >= 95% (58 plans in all) had no true state in their kept states (2b7e1516 T2 carried 1242: 1.0; 9e3779b9
+post-hit T2 497: 0.964, 564: 1.0, pressed, Bowser missed). All are re-plans after a passed frame (`fb14ReplanNear`): the kept
+set narrowed (2b7e1516: 117 -> 48 -> 18 states) and the next re-plan had the truth again (57 states): the true states fall
+under `ZW_CUT` for a while (coin / visibility windows) while the carried lock's doubt is 0. Not a bolt effect (the bolts are
+inert); a v102-era behaviour of the re-plan loop to look at next.
+- 1234abcd's T1: the rebuilt b13 locks with the truth in the states, but the prior doubt 0.296 (ratio 2.68) and the weigh leave
+  doubt 0.947 over 0.5, so "No edge" (no beep: safe). Not a page bug found; why the weigh drops most weight was not isolated.
+
+## Tests
+New `test_fb14_v103.js` (in `run_suite.sh`): the schedule (waits = `fbBolts` slots), the emulator fit, the delay spread (not
+pinned; `FB14_BOLT_D` null), the T1 lag split, the soft factor (1 on a draw, floor per onset), T1's Cloud Nine read window
+(skip mode only, to P + 120), the e2e fixture (the >= 95% plans without the truth listed, no pressed >= 95% plan failed, T1
+under the cap). Version checks moved to v103 (test_fb14_v102 accepts v102+). Route texts unchanged (`test_route_texts.js`).
+
+## Not done
+- `FB14_BOLT_D` (needs a reader that sees a bolt's first frame through S-Video, or many onsets with the console truth).
+- The puffs as a seed check; the >= 95% re-plans without the truth (section 5); 1234abcd's T1 doubt.
+
 # Time Out Timer v102: post-hit fresh locks do hold the truth (the trace was wrong); fresh locks capped until the coin confirms; T6's countdown; the skip box read as the panel (Nov 13)
 
 The user's top rule: "never beep a confident wrong answer". v101's e2e showed the fresh locks after a hit (1234abcd T1 hit, T2-T4)
