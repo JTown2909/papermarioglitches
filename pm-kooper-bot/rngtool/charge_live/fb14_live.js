@@ -511,7 +511,7 @@ function fb14GapCheck(t, present) {
   if (typeof CHG !== 'undefined' && !['search', 'maps', 'armed', 'capture', 'idle'].includes(CHG.state)) chgReset();
 }
 function fb14Frame(t, present) {
-  FB14.lastT = t; fb14GapCheck(t, present);
+  if (FB14.lastT !== t) { FB14.picPrev = FB14.lastT; } FB14.lastT = t; fb14GapCheck(t, present);
   if (FB14.pendChg && !['armed', 'capture'].includes(CHG.state) && !fb14Held()) { const { M, turn } = FB14.pendChg; FB14.pendChg = null; fb14Advance(Math.min(fb14Horizon(performance.now()), M + 10)); fb14Input('chg', M, turn, FB14_CHGD); if (window.__fb14seeds) fb14Truth('chg' + turn); }
   if (FB14.rearm && !FB14.refining && ['locked', 'nolock', 'failed'].includes(CHG.state)) { const n = fb14Step(); if (n && n.fb14 === FB14.rearm && n.chg === 'fb1') { slog('fb14ReaderRearmed', { turn: n.fb14 }); chgReset(); } FB14.rearm = null; }
   // v90 (log 8cc2055f): a T1 Charge that read no lock left the reader 'nolock' on the Cloud Nine step, so T2's Charge (its bar
@@ -998,6 +998,10 @@ function fb14Confirm(tObs, stp, shifts, src) {
   const turn = stp.fb14;
   if (stp.fb14role !== 'lever') return;
   if (turn === 4) FB14.p4t = tObs; FB14.pT = FB14.pT || {}; FB14.pT[turn] = tObs;
+  // v101 (e2e 1234abcd / 9e3779b9: Cloud Nine read 3-7 frames late): in skip mode the runner confirms Cloud Nine while the T1
+  // search loads the page and pictures are dropped; a screen-read Cloud Nine seen after a gap between pictures happened anywhere
+  // in it (as the bar's hide, fb14GapShifts)
+  if (turn === 1 && fb14SkipMode() && src !== 'bar' && !shifts) { const pv = FB14.lastT != null && FB14.lastT < tObs ? FB14.lastT : FB14.picPrev, gap = pv != null ? tObs - pv : 0; shifts = fb14GapShifts(FB14_SHIFTS, gap); if (shifts !== FB14_SHIFTS) slog('fb14C9Gap', { gapMs: Math.round(gap), shifts: shifts.length }); }
   if (FB14.t0 == null || !FB14.on) { FB14.pend = (FB14.pend || []).concat([{ tObs, turn, cat: stp.cat, shifts, src }]); slog('fb14ConfirmBeforeLock', { turn, src }); return; }   // the lock comes later: applied then
   const c = fbPic(tObs) - fb14Van(stp.cat, src), F = Math.round(c);
   FB14.P[turn] = F; if (turn === 4) FB14.p4t = tObs; const P0 = st.plan && st.plan.fb14 === turn && !st.plan.sk ? st.plan : null;

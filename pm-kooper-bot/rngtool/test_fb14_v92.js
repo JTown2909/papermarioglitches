@@ -15,7 +15,7 @@
  * usage: node test_fb14_v92.js [PAGE] */
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path'), http = require('http');
-const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v101/timeout_timer_standalone.html';
 const L = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'fb14_chain_logs.json'), 'utf8'))[0];
 const buf = Buffer.from(L.s0, 'base64'), seeds = Array.from({ length: L.n }, (_, i) => buf.readUInt32LE(4 * i));
 const LD = process.env.LOGS || '/tmp/claude-0/pm/logs1110', DLOG = path.join(LD, '8576a774-pm-rng-log-1794355083614.json');
