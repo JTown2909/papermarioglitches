@@ -1027,7 +1027,7 @@ function fb14Confirm(tObs, stp, shifts, src) {
   // v91 (logs E, F: the confirm logged at err -91 / -63 against a replan made after the press): the plan up at the press
   const Ph = (FB14.plans || []).filter(x => x.turn === turn && !x.sk && x.tMade <= tObs).pop(), P = Ph && (!P0 || P0.tMade > tObs) ? Object.assign({}, P0 || {}, { target: Ph.target, tMade: Ph.tMade, bias: Ph.bias, stopped: false }) : P0;
   slog('fb14Confirm', { turn, F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, src, lever: turn === 1 && fb14SkipMode() ? 'cloud nine (not the lever: the skip is)' : undefined });
-  if (P && !P.stopped && src !== 'bar' && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14'); slog('fb14PressBias', { n: L.length, bias: +fb14Bias().toFixed(2) }); }
+  if (P && !P.stopped && src !== 'bar' && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14'); slog('fb14PressBias', { n: L.length, bias: +fb14Bias().toFixed(2) }); if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T' + turn + ', ' + (turn === 1 ? 'Cloud Nine' : 'Do Nothing'), c - P.target, 'fb14'); }
   if (FB14.on) { const h = fb14Horizon(performance.now()); fb14Advance(Math.min(h, F - 3)); fb14Input(fb14Kind(turn), F, turn, shifts || (stp.cat === 'S' ? FB14_SHIFTS_S : FB14_SHIFTS), tObs, fb14Van(stp.cat, src)); }
   fb14Show();
 }
@@ -1067,7 +1067,7 @@ function fb14SkipConfirm(tObs) {
   const P = st.plan && st.plan.sk ? st.plan : (FB14.plans || []).filter(x => x.sk && x.tMade <= tObs).pop() || null;
   FB14.sk = F;
   slog('fb14Confirm', { turn: 1, lever: 'skip', F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, base: B0, k: F - B0, natural: nat || undefined, src: 'box' });
-  if (P && !P.stopped && !nat && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14sk'); slog('fb14PressBias', { lever: 'fb14sk', n: L.length, bias: +fb14Bias('fb14sk').toFixed(2) }); }
+  if (P && !P.stopped && !nat && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14sk'); slog('fb14PressBias', { lever: 'fb14sk', n: L.length, bias: +fb14Bias('fb14sk').toFixed(2) }); if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T1, the A that skips Cloud Nine\'s message', c - P.target, 'fb14sk'); }
   if (FB14.on) { fb14Advance(Math.min(fb14Horizon(performance.now()), F - 3)); fb14Input('skip', F, 1, FB14_SKSHIFTS, tObs, van); }
   if (st.plan && st.plan.sk) { if (st.plan.tPress > performance.now()) cancelBeeps(); st.plan = null; }
   fb14Show();

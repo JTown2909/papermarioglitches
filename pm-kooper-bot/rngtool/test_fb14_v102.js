@@ -48,4 +48,22 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
     ok(sc.length >= 5 && a >= m - 0.1, 'e2e calibration: mean claim ' + m.toFixed(3) + ', mean true-state share on the planned frame ' + a.toFixed(3) + ' (' + sc.length + ' plans)');
     const out = R.turns.filter(t => t.planned && t.pp >= 0.95 && !t.miss); ok(out.length === 0, 'e2e: no pressed plan of 95% or more failed (' + R.turns.filter(t => t.planned && t.pp >= 0.95).length + ' pressed)');
   } else ok(false, 'fixtures/e2e_v102.json missing'); }
-console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
+// 5. the Press check row (the runner: "last frame seems to be stuck on 1.1"): a Final Bowser lever press on the beeps shows there
+{ const pg = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'), f2 = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb2_live.js'), 'utf8');
+  ok((pg.match(/leverPressNote\(/g) || []).length === 2 && /leverPressNote\('Final Bowser T6, Do Nothing'/.test(f2), 'fb14Confirm (T1-T4), the T1 skip and fb2\'s T6 confirm report their press to the Press check row'); }
+(async () => {
+  const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v102/timeout_timer_standalone.html';
+  if (!fs.existsSync(PAGE)) { ok(false, 'page not built: ' + PAGE); } else {
+    const { chromium } = require('playwright'), b = await chromium.launch(), p = await b.newPage();
+    await p.addInitScript(() => localStorage.setItem('tot-presses', JSON.stringify([0.4, 1.1])));
+    await p.goto('file://' + PAGE);
+    const r = await p.evaluate(() => { const T = window.__tot, m = () => document.getElementById('press-msg').textContent; T.showPresses(); const a = m();
+      T.leverPressNote('Final Bowser T2, Do Nothing', 0.83, 'fb14'); const b2 = m(); const n = JSON.parse(localStorage.getItem('tot-presses') || '[]').length;
+      T.leverPressNote('Final Bowser T1, the A that skips Cloud Nine\'s message', -1.26, 'fb14sk'); return { a, b: b2, c: m(), n, ver: window.__tot.VERSION }; });
+    ok(/1\.1 frames late/.test(r.a), 'before: the row shows the stored generic press (1.1 late): ' + r.a.slice(0, 60));
+    ok(/Last press \(Final Bowser T2, Do Nothing\): 0\.8 frames late/.test(r.b) && r.n === 2, 'a Final Bowser T2 press on the beeps: "' + r.b.slice(0, 70) + '", the generic presses untouched (' + r.n + ')');
+    ok(/skips Cloud Nine's message\): 1\.3 frames early/.test(r.c), 'the T1 skip: ' + r.c.slice(0, 90));
+    ok(r.ver === 'v102', 'page version v102');
+    await b.close(); }
+  console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
+})();

@@ -2371,6 +2371,7 @@ function measurePress(tObs) {
   const onBeeps = Math.abs(err) <= 5;      // only presses made on the beeps calibrate the offsets (5 frames: the runner's live presses on the beeps were up to 3.3 off; the beeps are 15 frames apart)
   const lk = leverKey(PROF().id);      // v87: a lever with its own correction stays out of the global calibration (Beep offset)
   if (onBeeps && !lk) { presses.push(err); while (presses.length > 8) presses.shift(); }
+  st.lastGenT = performance.now();      // v102: the newer of this and a Final Bowser lever press is shown (leverPressNote)
   try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {}
   const inWin = f >= P.w.start && f <= P.w.end, works = R.works(P.seedBL, 0, f, 0, PROF()), likely = !works && nearWorking(P.seedBL, f, PROF()).length > 0;
   const g = f + (c >= f ? 1 : -1), edge = (g >= P.w.start && g <= P.w.end) !== inWin && Math.abs(c - f) > 0.5 - PRESS_EDGE;      // v90 (jrPress)
@@ -2384,11 +2385,21 @@ function measurePress(tObs) {
   if (stp && stp.turn && !unmodeledAfter(P.tLast) && !(P.mix && P.mix.zw && !onBeeps)) { if (near.length) addTurn(P.baseF + f, stp.turn, 'Carrying the seed through this turn.', null, near, 'press'); else { st.needResync = true; st.turnEv = []; } }
   showPresses();
 }
+function leverPressNote(label, err, id) {      // v102: a Final Bowser lever press on the beeps, for the Press check row
+  st.lastLever = { label, err, t: performance.now(), bias: typeof leverBias === 'function' ? leverBias(id) : 0 }; slog('leverPressNote', { label, err: +err.toFixed(2), lever: id });
+  try { showPresses(); } catch (e) {}
+}
 function showPresses() {
   const row = $('press-row'), P = st.plan && st.plan.measured;
   row.hidden = false;
   calPreview();
   if (V.pressNote) { $('press-msg').textContent = 'Press check: ' + V.pressNote; return; }
+  // v102 (the runner: "last frame seems to be stuck on 1.1"): the Final Bowser levers (fb14Confirm, the T1 skip, fb2's T6) never
+  // reached this row, which kept an older fight's press. Their last press on the beeps is shown here (not in the generic presses:
+  // each lever has its own correction)
+  const LL = st.lastLever;
+  if (LL && (st.lastGenT == null || LL.t > st.lastGenT)) { const e = LL.err, a = Math.round(Math.abs(e) * 10) / 10;
+    $('press-msg').textContent = 'Press check: Last press (' + LL.label + '): ' + (Math.abs(e) < 0.5 ? 'on time' : a + ' frames ' + (e > 0 ? 'late' : 'early')) + ' against the beeped frame. This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(LL.bias).toFixed(1) + ' frames ' + (LL.bias >= 0 ? 'later' : 'earlier') + ' (learned from its own presses).'; return; }
   if (!presses.length && !(P || st.lastPress)) { $('press-msg').textContent = 'Press check: after you confirm on the target screen (with the beeps running), this says how early or late you pressed, measured against the middle of the aimed frame.'; return; }
   const last = presses.length ? presses[presses.length - 1] : (P || st.lastPress || { err: 0 }).err, r = x => Math.round(x * 10) / 10;
   const avg = presses.length ? presses.reduce((a, b) => a + b, 0) / presses.length : 0;
@@ -2479,7 +2490,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },

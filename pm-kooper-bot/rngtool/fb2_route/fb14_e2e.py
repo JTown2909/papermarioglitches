@@ -340,7 +340,10 @@ if __name__ == '__main__':
         print(json.dumps({k: v for k, v in row.items() if k not in ('page', 'plan')}), flush=True)
         report['turns'].append(row)
         # the actual stretch: segment a up to the confirm, then segment b
-        jb = capsim(sb.d, sb.n, os.path.join(out, tg + 'b_cap'), seed + 10 + t + 100 * att)
+        endA = (t == last or not oc['menu']) and att == ATT and os.environ.get('FINAL') != '1'
+        # v102: the attempt's last Bowser turn is never fed to the page (no later turn, no FINAL run): not rendered to video
+        if endA and not os.environ.get('KEEP'): shutil.rmtree(sb.d, ignore_errors=True)
+        jb = [] if endA else capsim(sb.d, sb.n, os.path.join(out, tg + 'b_cap'), seed + 10 + t + 100 * att)
         na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
         frames = frames + segA[:na] + ['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
