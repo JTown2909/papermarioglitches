@@ -61,6 +61,8 @@ state's share, with the doubt, left alone with nothing dropped, errors over `ZW_
 plan); the e2e fixture (before / after, no after plan >= 95% with Bowser hitting, claims at most broad, no pressed >= 95% failed).
 `test_fb14_v103.js`: its e2e line now says the one-frame check takes aliases. Version checks and page tests' default build moved
 to v104. `test_fb14_page.js` takes `noBroad` from the manifest. Route texts unchanged.
+Full `run_suite.sh`: all pass but the known torch_core, hw_v77, route_replay, session_plans, capture_replay; test_maze_dup_page
+TORCH=1 hit its timeout (the known hang).
 
 ## Not done
 - Why the locks so often hold no state that follows the truth frame by frame (2b7e1516's T1: 0 of 12000; the `FB14_MAXH` cap at
