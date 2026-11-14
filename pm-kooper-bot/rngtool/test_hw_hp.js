@@ -12,7 +12,7 @@
 'use strict';
 const { chromium } = require('playwright');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || SP + '/timeout_timer_v104/timeout_timer_standalone.html', N = +(process.argv[3] || 24);
+const PAGE = process.argv[2] || SP + '/timeout_timer_v105/timeout_timer_standalone.html', N = +(process.argv[3] || 24);
 const R = require('./pmrng_core.js');
 let rs = 9191; const rnd = () => (rs = (Math.imul(rs, 1103515245) + 12345) >>> 0) / 4294967296;
 const pick = D => { let u = rnd(); for (const [v, w] of D) { if (u < w) return v; u -= w; } return D[D.length - 1][0]; };
@@ -30,7 +30,7 @@ function truth(g) {
   await p.addInitScript(() => { const real = performance.now.bind(performance); window.__dt = 0; performance.now = () => real() + window.__dt; });
   await p.goto('file://' + PAGE);
   let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) fails++; };
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v104', 'page version v104');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v105', 'page version v105');
   // A. the read -> hypotheses
   const A = await p.evaluate(() => {
     const T = window.__tot, o = {};

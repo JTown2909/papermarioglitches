@@ -21,7 +21,7 @@
  * confirm; the beam itself is not modelled, but it takes 8654-9351 more random numbers than frames to T6's Charge
  * (fb2_route/t5_steps.py, 120 emulator runs), so the T6 Charge is searched only on that stretch of the carried stream
  * (charge_live.js chgSearch opts.cands) instead of all 2^32 seeds: no slow fresh lock at T6. */
-const FB14_TOL = 0.008, FB14_SIG = 0.004, FB14_COMBOS = 4800, FB14_MAXH = 12000, FB14_LAGS = [[0, 0.75], [1, 0.25]];
+const FB14_TOL = 0.008, FB14_SIG = 0.004, FB14_COMBOS = 1200, FB14_MAXH = 12000, FB14_LAGS = [[0, 0.75], [1, 0.25]];
 const FB14_DELTA = { slam: 52, claw: 62, fire: 55, wave: 72, lightning: 99 }, FB14_AIAFTER = { cn: 332, nothing: 13 }, FB14_JELLY = 118;
 const FB14_WAVE_POST = (() => { const o = { 66: 1, 68: 2, 70: 3, 72: 4, 74: 5, 76: 6, 78: 7, 80: 8, 126: 8, 128: 7, 130: 6, 132: 5, 134: 4, 136: 3, 138: 2, 140: 1 }; for (let d = 82; d <= 124; d += 2) o[d] = 9; return o; })();
 // blind chances per lever frame (fb2_route/README.md section 3: route_build miss strings and the 20000-window study)
@@ -365,7 +365,7 @@ function fb14Lock(res) {
  * render 1234abcd: '10110101201010201040' for the true '01110101021010201310'). The kernel lists every split of a fit
  * within the lock's tolerance (fb1alts); they are weighed by a star's chance to restart on a given frame (16 stars, 1/20
  * each: binomial) and the likeliest FB14_AV kept, each with its prior share. */
-const FB14_AV = 600, FB14_BIN = [0.440, 0.371, 0.146, 0.036, 0.0061];
+const FB14_AV = 48, FB14_BIN = [0.440, 0.371, 0.146, 0.036, 0.0061];
 // each split weighed by its prior and by its score: exp((score - best) / (FB14_SIG x best)). The true fit scores within a
 // few tenths of a percent of the best but not always inside 0.2% (render e2e 1234abcd: 7316 against 7354, the noise of
 // one frame's respawns is ~200), so the lock keeps every fit within FB14_TOL (0.8%) and lets the score weigh them.
@@ -681,7 +681,7 @@ function fb14TruthLock(turn, fresh) { const T = window.__fb14seeds, X = FB14.tLo
   const sOf = l => { const i = M + 61 + l - T.off; return i >= 0 && i < T.s.length ? T.s[i] >>> 0 : null; };
   const dd = (x, y) => { for (let i = 0; i < 400; i++) { if (x === y) return i; x = fbAdv(x); } return -1; }; out.v = H.v; out.d03 = [0, 1].map(l => { const i = M + 13 + l - T.off; return i >= 0 && i + 3 < T.s.length ? dd(T.s[i] >>> 0, T.s[i + 3] >>> 0) : null; });
   const x0a = Math.imul(((H.a >>> 0) - 1) >>> 0, 0x6A76AE6D) >>> 0;
-  for (const h of H.hy) { const ph0 = P.list[h.p].ph[0], pa0 = [(((ph0[0] - M) % 130) + 130) % 130, (((ph0[1] - M) % 220) + 220) % 220]; let x0 = x0a; for (let i = fbBolts(M + 13, pa0); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;
+  for (const h of H.hy.slice().sort((x, y) => y.sc - x.sc).slice(0, 400)) { const ph0 = P.list[h.p].ph[0], pa0 = [(((ph0[0] - M) % 130) + 130) % 130, (((ph0[1] - M) % 220) + 220) % 220]; let x0 = x0a; for (let i = fbBolts(M + 13, pa0); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;
     if ([0, 1].some(l => sOf(l) === (h.s48 >>> 0))) out.hyTrue++;
     const L = (h.alts && h.alts.length ? h.alts.map((a, i) => [a, h.altSc[i]]) : [[h.aura, h.sc]]).map(([a, sc]) => ({ a, sc, pr: a.reduce((x, c) => x * (FB14_BIN[c] || 1e-4), 1) })), byPr = L.slice().sort((x, y) => y.pr - x.pr);
     for (const V of L) { const c = new Uint8Array(20); for (let j = 0; j < 20; j++) c[mod20(M + 13 + j)] = V.a[j]; const E = fbEnd48(x0, M, h.q, c, pa0), ls = [0, 1].filter(l => sOf(l) === E.s); if (!ls.length) continue; out.splitsTrue++;
@@ -690,7 +690,7 @@ function fb14TruthLock(turn, fresh) { const T = window.__fb14seeds, X = FB14.tLo
           if (out.rows.length < 4) { const key = E.s + ':' + (E.nc - M - 13) + ':' + c.join('') + ':' + pa[0] + ':' + pa[1] + ':' + l;
             const fi = fresh.findIndex(x => x.key && x.key.startsWith(key)), ki = FB14.states.findIndex(x => x.key && x.key.startsWith(key)), fs = fresh.slice().sort((x, y) => y.w - x.w), fr = fi >= 0 ? fs.indexOf(fresh[fi]) : -1;
             out.rows.push({ hyp: h.p + '/' + h.q + '/' + h.br, c: c.join(''), ph: pa, l, nc: E.nc - M - 13, sc: +(V.sc - H.best).toFixed(1), prRank: byPr.indexOf(V), alts: L.length, maxC: Math.max(...V.a), coinOk: h.br ? !E.shq : (h.q + 24 >= 48 || E.shq), comboRank: (FB14.tCombos || []).findIndex(([hh, AV]) => hh === h && AV.aura.every((x, j) => x === V.a[j])), combos: (FB14.tCombos || []).length, inFresh: fi >= 0, freshRank: fr, freshN: fresh.length, wRel: fi >= 0 ? +(fresh[fi].w / fs[0].w).toExponential(2) : null, kept: ki >= 0, keptN: FB14.states.length }); } } } } }
-  if (window.__v105t) { const V = window.__v105t, hs = H.hy.filter(h => h.p === V.hyp[0] && h.q === V.hyp[1] && h.br === V.hyp[2]), c = new Uint8Array(20); for (let k = 0; k < 20; k++) c[k] = +V.c[k];
+  if (window.__v105t && window.__v105t[String(turn)]) { const V = window.__v105t[String(turn)], hs = H.hy.filter(h => h.p === V.hyp[0] && h.q === V.hyp[1] && h.br === V.hyp[2]), c = new Uint8Array(20); for (let k = 0; k < 20; k++) c[k] = +V.c[k];
     out.v105 = hs.map(h => ({ s48: (h.s48 >>> 0).toString(16), nc48: h.nc48, inAlts: (h.alts || []).some(a => a.every((x, j) => x === c[mod20(M + 13 + j)])), sc: (P.list[h.p].ph.map(ph => { const pa = [(((ph[0] - M) % 130) + 130) % 130, (((ph[1] - M) % 220) + 220) % 220]; const S = fbNew({ s: h.s48 >>> 0, nc: M + 13 + h.nc48, f: M + 61, c, ph: pa, l: 0, rg: 0, w: 1 }); const x = fb14TruthScore(S, 0); return pa.join(',') + ':' + x.r.toFixed(2) + ':' + x.first; })).join(' '), true61: (sOf(0) || 0).toString(16) })); }
   slog('fb14TruthLock', out); }
 function fb14V100(S, h, bolts, cnt) {
@@ -1345,7 +1345,7 @@ async function fb14Joint(res, maps, one) {
   const M = FB14.t0 == null ? 0 : Math.round((res.trigT - FB14.t0) / fbRate() - 16);
   const cur = { maps, a: H.a >>> 0, M, hyps: H.hy.slice().sort((x, y) => y.sc - x.sc).slice(0, FB14_JH).map(h => [h.p, h.q, h.br]), best: H.best };
   const prev = (FB14.charges || []).filter(c => c.M !== M).slice(-2);
-  if (window.__v105t && FB14.t0 == null) { const V = window.__v105t, B = new Uint8Array(20); for (let j = 0; j < 20; j++) B[j] = +V.c[mod20(M + 13 + j)];     // (diagnostic, v105)
+  const V105 = window.__v105t && window.__v105t[String(FB14.trigTurn || 1)]; if (V105 && (FB14.t0 == null || FB14.hit || !FB14.states.length)) { const V = V105, B = new Uint8Array(20); for (let j = 0; j < 20; j++) B[j] = +V.c[mod20(M + 13 + j)];     // (diagnostic, v105)
     const h0 = H.hy.find(h => h.p === V.hyp[0] && h.q === V.hyp[1] && h.br === V.hyp[2]);
     const r = await one(maps, [{ type: 'cscore', a: H.a >>> 0, hyps: [V.hyp], cands: B }]); slog('fb14V105Score', { truth: +(r[0].out[0] - H.best).toFixed(1), hypBest: h0 ? +(h0.sc - H.best).toFixed(1) : null, best: H.best, tol: +(H.best * FB14_TOL).toFixed(1) }); }
   if (!FB14.on || !prev.length) return { cur };
@@ -1440,5 +1440,6 @@ window.__fb14 = { v103: { boltLik: (S, h, b, c) => fb14BoltLik(S, h, b, c), SIG:
   shareU: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return Array.from(fb14ShareU(fb14Sample(W.list, 300), a, b, turn)); }, C9UNC: FB14_C9UNC, C9SHIFTS: FB14_C9SHIFTS, anchor: (C, from, W, turn, PD) => fb14Anchor(C, from, W, turn, PD), TICK_DROP: FB14_TICK_DROP, ANCHOR_TOL: FB14_ANCHOR_TOL,
   share: (h, a, b, turn) => { fb14Advance(h); const W = fb14Weigh(h); return { doubt: W.doubt, n: W.list.length, share: Array.from(fb14Share(fb14Sample(W.list, 300), a, b, turn, fb14Kind(turn))) }; },
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
+window.__fb14.v105 = { end48: (x0, M, q, c, pa) => fbEnd48(x0, M, q, c, pa), BIN: FB14_BIN, AV: FB14_AV, COMBOS: FB14_COMBOS };   // for tests (v105)
 window.__fb14.v104 = { broad: (C, Wg, t, d, PD) => fb14Broad(C, Wg, t, d, PD), blind: t => fb14Blind(t), truthScore: (S, d) => fb14TruthScore(S, d), isTrueS: S => fb14IsTrueS(S) };
 window.__fb14.v102 = { truthZero: t => fb14TruthZero(t), freshOpen: h => fb14FreshOpen(h), FRESH_D: FB14_FRESH_D, isTrue: S => fb14IsTrue(S) };   // for tests (v102)

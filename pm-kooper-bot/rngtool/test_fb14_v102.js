@@ -63,7 +63,7 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
 { const pg = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'), f2 = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb2_live.js'), 'utf8');
   ok((pg.match(/leverPressNote\(/g) || []).length === 2 && /leverPressNote\('Final Bowser T6, Do Nothing'/.test(f2), 'fb14Confirm (T1-T4), the T1 skip and fb2\'s T6 confirm report their press to the Press check row'); }
 (async () => {
-  const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v104/timeout_timer_standalone.html';
+  const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v105/timeout_timer_standalone.html';
   if (!fs.existsSync(PAGE)) { ok(false, 'page not built: ' + PAGE); } else {
     const { chromium } = require('playwright'), b = await chromium.launch(), p = await b.newPage();
     await p.addInitScript(() => localStorage.setItem('tot-presses', JSON.stringify([0.4, 1.1])));

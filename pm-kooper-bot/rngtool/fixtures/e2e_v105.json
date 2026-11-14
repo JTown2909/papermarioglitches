@@ -1,0 +1,4 @@
+{
+  "note": "v105: numbers only (emulator e2e, fb14_e2e.py TRUTH=1, b13 rebuilt 2026-11-14). t1_1234abcd: the true state of 1234abcd's T1 lock (lock clock: frame 0 = Mario's confirm), from the truth trace (fb2_route t14model / the page's fbStep follow it from the confirm to the end of the trace). x0 = gRandSeed at the start of frame 13 (before its bolts), s61 = at the start of frame 61, nc = the next coin frame after the rays. bestSplitS48 = the seed the kernel gave fit 105/17/1 (its best split's): the lock built the true split with it.",
+  "t1_1234abcd": { "a": "8af2acc9", "x0": "8ef38128", "M": 0, "q": 17, "br": 1, "c": "10120111011211000201", "pa": [27, 87], "s61": "1f58a760", "nc": 102, "sh": [54], "hyp": [105, 17, 1], "bestSplitS48": "e9db28e1", "trueScoreVsBest": -4.7, "fitBestVsBest": -4.7 }
+}

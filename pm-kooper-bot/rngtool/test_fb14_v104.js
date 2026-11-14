@@ -49,5 +49,5 @@ const mk = (s, nc, o) => F.fbNew(Object.assign({ s: s >>> 0, nc, f: 0, c: new Ui
     ok(A.filter(r => r.pp >= 0.95).every(r => r.broad == null || r.pp <= r.broad + 1e-3), 'after: every claim at most its broad claim');
     ok(E.after.pressed.filter(r => r.pp >= 0.95).every(r => r.miss), 'after: no pressed plan >= 95% failed (' + E.after.pressed.filter(r => r.pp >= 0.95).length + ' pressed)');
     ok(E.truth_check.strict_in_kept_95 <= E.truth_check.loose_in_kept_95, 'the per-frame truth: in ' + E.truth_check.strict_in_kept_95 + ' of the >= 95% plans where v103\'s check said ' + E.truth_check.loose_in_kept_95); } }
-const tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8'); ok(/VERSION = 'v104'/.test(tpl), 'page VERSION v104');
+const tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8'); ok(/VERSION = 'v10[4-9]'/.test(tpl), 'page VERSION v104+');
 console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);

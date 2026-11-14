@@ -6,7 +6,7 @@
  * plan claims 95% or more on a frame Bowser hit. Needs the logs (LOGS, default /tmp/claude-0/pm/logs1112) and a built page.
  * usage: node test_console_v100.js   [PAGE=... LOGS=...] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v104/timeout_timer_standalone.html', DIR = process.env.LOGS || '/tmp/claude-0/pm/logs1112';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v105/timeout_timer_standalone.html', DIR = process.env.LOGS || '/tmp/claude-0/pm/logs1112';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v100.json'), 'utf8'));
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {
