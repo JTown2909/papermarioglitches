@@ -907,7 +907,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   // a coin that disagrees no longer removes the plan. The plan is made on the states as weighed, its claim carrying the
   // whole doubt ((1 - d) x share + d x blind: about blind plus the states' edge), with a visible warning; under blind + 3%
   // it is a visible "No edge (the coin disagrees)"
-  const coinWarn = Wg.list.length > 0 && Wg.doubt >= lim && FB14.how === 'carried' && FB14.M[turn] != null && (stp.chg || turn === 3) && !skp;
+  const coinWarn = Wg.list.length > 0 && Wg.doubt >= lim && FB14.how === 'carried' && FB14.M[turn] != null && stp.chg && !skp;
   if (coinWarn && cAt == null && FB14.coinWarnLog !== turn) { FB14.coinWarnLog = turn; slog('fb14CoinWarn', { turn, doubt: +Wg.doubt.toFixed(3), states: Wg.list.length, lim }); }
   if (!coinWarn && (!Wg.list.length || Wg.doubt >= lim)) { st.msg = 'No edge yet: the coin does not confirm the Final Bowser lock (the beeps come if it does). ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; FB14.plan = { none: 'doubt', turn, doubt: Wg.doubt }; if (!offNow) slog('fb14NoEdge', { turn, doubt: +Wg.doubt.toFixed(3), states: Wg.list.length, lim }); FB14.noEdge = FB14.noEdge || {}; FB14.noEdge[turn] = true; fb14Show(); if (cAt == null) { cancelBeeps(); render(); } return true; }
   const rate = fbRate(); let W = Math.max(0, Math.round(num('zwwin') * 1000 / rate));
