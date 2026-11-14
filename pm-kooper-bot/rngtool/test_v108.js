@@ -4,6 +4,9 @@
  *    kept series' last beep and before the confirm. Now the series' plan comes back while it plays (seriesHold), a replan that
  *    leaves no plan keeps the old one while its beeps are scheduled (fb14KeepIfOrphan), and no new series starts within
  *    BEEP_QUIET_MS of a series' last beep (playBeeps) unless the route moved on.
+ * 2. T7 after a T6 Close Call that worked (fb1548 2546.8-2563 s, pLucky 0.531, then "No edge" at doubt 0.29-0.38): the outcome
+ *    read from Mario's HP (fb2HpWatch); a dodge drops the hit branch from the T7 doubt; a hit gives no T7 plan. Replayed from
+ *    the log's T6 Charge capture, confirm and shine.
  * usage: node test_v108.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1114] */
 const fs = require('fs'), path = require('path');
 const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v108/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
@@ -11,7 +14,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
 (async () => {
   if (!fs.existsSync(PAGE)) { console.log('(skipped: no page at ' + PAGE + ')'); console.log('all ok'); return; }
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
-  const open = async () => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e) + (process.env.STK ? e.stack : ''))); await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' })); } catch (e) {} }); await p.goto('file://' + PAGE); return p; };
+  const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e) + (process.env.STK ? e.stack : ''))); await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }, set || { prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' }); await p.goto('file://' + PAGE); return p; };
   const p = await open();
   ok(await p.evaluate(() => window.__tot.VERSION) === 'v108', 'page version v108');
 
@@ -51,6 +54,41 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(r.after === true && r.holdAfter === false, '1. after the confirm read window a new series may play');
   ok(r.afterStep === true, '1. the route moving on (the confirm) lifts the quiet window at once');
   ok(r.orphan && r.orphanGone, '1. a replan leaving no plan keeps the old plan while its beeps are scheduled (and not once they are cut)');
+  // ---- 2. T7 after a T6 Close Call that worked (fb1548 2546.8-2563 s): the outcome read, the hit branch out of the doubt
+  const L1548 = path.join(LOGS, 'fb1548', 'log.json');
+  { const p2 = await open({ prof: 'endgame', off: '-4.5', vlag: '50', zwedge: '0.4', zwwin: '1', fb2t5: 'any' });      // fb1548's settings
+    const r2 = await p2.evaluate(async () => {
+      const T = window.__tot, X = window.__fb2, FB2 = X.FB2, out = {};
+      // synthetic: the HP watch (Mario's HP tens place stubbed: 1 = the "1" of 10 shown)
+      const run = async (tensAfter) => { FB2.t7 = { states: [{ w: 1 }], pLucky: 0.5, atk: {} }; FB2.pT = 100000; FB2.hpw = null; window.__fb2TensTest = t => (t > 102300 ? tensAfter : 0.5);
+        for (let t = 98000; t < 106000 && !FB2.t7.outcome; t += 33.4) X.v108.hpWatch(t, true);
+        return { o: FB2.t7.outcome || null, hit: !!FB2.t7.hit }; };
+      out.dodge = await run(0.5); out.hit = await run(0); out.tail = window.__fb14.slogTail(30).filter(e => /fb2Dodged|fb2HitSeen/.test(e.ev)).map(e => e.ev);
+      delete window.__fb2TensTest; FB2.pT = null; FB2.t7 = null; return out; });
+    ok(r2.dodge.o === 'dodge' && r2.hit.o === 'hit' && r2.hit.hit && r2.tail.includes('fb2Dodged') && r2.tail.includes('fb2HitSeen'), '2. the T6 outcome read from Mario\'s HP (the "1" of 10 steady after the Close Call: dodge; blank: hit) ' + JSON.stringify(r2));
+    if (!fs.existsSync(L1548)) console.log('(2 replay skipped: no logs at ' + LOGS + ')');
+    else {
+      const Lg = JSON.parse(fs.readFileSync(L1548, 'utf8')), cap = Lg.chargeCaptures.find(c => c.prof === 'fb2' && c.stepT === 'Final Bowser T6');
+      const r3 = await p2.evaluate(async (cap) => {
+        const T = window.__tot, X = window.__fb2, FB2 = X.FB2, out = {};
+        T.setStep(T.RT().findIndex(s => s.turn === 'fb2_k'));
+        const TR = 2544621, t0 = performance.now() - 3000, rel = t => t0 + (t - TR);      // the log's Charge trigger, shine and plan times
+        await T.chgReplay(cap, { t0, fb2: true }); out.states = FB2.on ? new Set(FB2.hyps.map(h => h.s + ':' + h.nc)).size : 0; if (!FB2.on) return out;
+        FB2.pObs = 161.5; X.setP(161.5); out.pL = +FB2.t7.pLucky.toFixed(3);
+        FB2.taps = [X.pic(rel(2549697)) - 4.8]; FB2.vis = []; FB2.visFrom = null;
+        const c = X.pic(rel(2558994) + 50), S0 = X.v108.prune(c); out.d0 = +S0.doubt.toFixed(3); out.none = X.planT7At(c);
+        X.v108.outcome('dodge', { test: true }); const S1 = X.v108.prune(c); out.d1 = +S1.doubt.toFixed(3); out.dodge = X.planT7At(c);
+        out.panel = document.getElementById('fb2-status') ? document.getElementById('fb2-status').textContent : '';
+        X.v108.outcome('hit'); FB2.t7.outcome = null; X.v108.outcome('hit', { test: true }); out.hit = X.planT7At(c);
+        return out; }, cap);
+      console.log('   fb1548 T6 -> T7 replay: ' + JSON.stringify(r3).slice(0, 700));
+      ok(r3.states === 4 && Math.abs(r3.pL - 0.531) < 0.1, '2. fb1548 T6 replayed: the T6 Charge locks on 4 states as live, pLucky ' + r3.pL + ' (live 0.531)');
+      ok(r3.d0 > 0.15 && r3.d1 < 0.05, '2. the doubt before the dodge is seen is mostly the hit branch (' + r3.d0 + '), with the dodge seen ' + r3.d1);
+      ok(r3.none && r3.none.none === 'edge' && r3.dodge && !r3.dodge.none && r3.dodge.pp7 >= 0.4, '2. T7 (d ' + (r3.dodge && r3.dodge.d) + '): "No edge" (' + (r3.none && r3.none.pp7 && r3.none.pp7.toFixed(3)) + ') before, a plan with the dodge seen (7+ ' + (r3.dodge && r3.dodge.pp7 && r3.dodge.pp7.toFixed(3)) + ' perfect press, zwedge 0.4)');
+      ok(/Close Call worked \(seen\)/.test(r3.panel), '2. the FB2 panel says the Close Call worked (seen)');
+      ok(r3.hit && r3.hit.none === 'hit', '2. a hit seen: no T7 plan (the dodge branch only is modelled)');
+    }
+    await p2.close(); }
   ok(!errs.length, 'no page errors ' + errs.join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

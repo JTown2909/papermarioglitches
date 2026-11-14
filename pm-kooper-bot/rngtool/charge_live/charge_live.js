@@ -840,6 +840,7 @@ function chgDecide() {
   CHG.F0 = null;
   // v82 (tests): a Final Bowser read replayed into the tracker, as live (fb14Refine, fb14Lock), for the log replays
   if (CHG.replay && CHG.replay.fb14 && CHG.res.fb1) { CHG.state = 'locked'; fb14Refine(CHG.res, G).then(r => { fb14Lock(r); chgReplayDone({ state: 'locked', fb14: FB14.states.length }); }); return; }
+  if (CHG.replay && CHG.replay.fb2 && fb2) { CHG.state = 'locked'; fb2Lock(CHG.res); chgReplayDone({ state: 'locked', fb2: FB2.hyps ? FB2.hyps.length : 0 }); return; }     // v108 (tests): an FB2 read replayed into the T6 tracker, as live
   if (CHG.replay) { const qs = []; if (a.qs) a.qs.forEach((s, q) => { if (s >= a.sc * (1 - CHG_QTOL)) qs.push(q); }); CHG.state = 'locked'; chgReplayDone({ state: 'locked', qsRays: qs }); return; }
   if (fb2) { CHG.state = 'locked'; CHG.qs = [a.q]; slog('chargeLock', Object.assign({ fb2: true, scored: CHG.res.fb2.scored }, CHG.info)); chgRecEnd('lock'); fb2Lock(CHG.res); chgShow(); return; }
   if (CHG.res.fb1) { CHG.state = 'locked'; CHG.qs = []; if (CHG.res.fb1.times) CHG.info.stage = CHG.res.fb1.times; slog('chargeLock', Object.assign({ fb1: true, hyps: CHG.res.fb1.hyps ? CHG.res.fb1.hyps.n : 0 }, CHG.info)); chgRecEnd('lock');
