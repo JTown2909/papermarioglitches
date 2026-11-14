@@ -175,7 +175,8 @@ details[open] summary { margin-bottom: 10px; }
            whose length changes (the chips, the headline, the detail and its progress line) -->
       <div class="row" id="status-btns">
         <button class="b primary" id="dl-log" title="Every shine, gap, lock, plan and press of this session, with times: send it to have a practice run analysed">Download session log</button>
-        <button class="b" id="reset">Reset</button>
+        <button class="b" id="reset" title="Forget the seed, the taps and the plan (the log, settings and press corrections stay)">Reset seed</button>
+        <button class="b" id="erase-log" title="Clear this session's log and its kept Charge reads, so the next saved log holds only new attempts (settings and press corrections stay)">Erase log</button>
       </div>
       <select id="s-prof" hidden aria-hidden="true"><option value="endgame">Endgame</option></select>
       <div class="phase" id="phase">
@@ -400,7 +401,39 @@ function leverBias(k) { if (LEVER_LEARN[k] === false) return 0; const L = leverL
 function leverAdd(k, e) { if (!LEVER_STORE[k]) return []; const L = leverList(k).concat([+e.toFixed(2)]).slice(-8); try { localStorage.setItem(LEVER_STORE[k], JSON.stringify(L)); } catch (x) {} return L; }
 // the earliest confirm frame (on a clock with frame 0 at tLast) whose press and every beep before it are still ahead
 function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) - tLast) / rate + 0.5 - num('off') - 1e-9); }
-function playBeeps(tPress) { const n = nBeeps(), g = num('gapms'); for (let i = 0; i < n; i++) beepAt(tPress - (n - 1 - i) * g, i === n - 1 ? 1320 : 880, i === n - 1 ? 0.12 : 0.06); }
+/* v106 (console logs Nov 14: fb1006 T3 two beeps then a new series; fb0715 a Time Out series cut 0.16 s before the press): a
+ * series always plays all its beeps. playBeeps starts one only when every beep is still ahead and no begun series would
+ * overlap it (false otherwise: the caller keeps its old plan or none); cancelBeeps (shared/beeps.js, BEEP_GUARD) keeps a
+ * series that has begun; only stopBeeps cuts one, with a visible STOP, and only with BEEP_STOP_MS or more left. */
+BEEP_GUARD = true;
+const BEEP_STOP_MS = 400;
+function playBeeps(tPress, n, g) {
+  n = n || nBeeps(); g = g || num('gapms'); const now = performance.now(), t1 = tPress - (n - 1) * g, f = beepsInFlight(now);
+  if (f && Math.abs(f.tEnd - tPress) < 5) return true;      // the same series
+  if (f && t1 < f.tEnd + 300) { slog('beepsSeriesKept', { tEnd: Math.round(f.tEnd), left: f.left, newFirstIn: Math.round(t1 - now) }); return false; }
+  if (t1 < now + 20) { slog('beepsNoFit', { firstIn: Math.round(t1 - now), n }); return false; }
+  for (let i = 0; i < n; i++) beepAt(tPress - (n - 1 - i) * g, i === n - 1 ? 1320 : 880, i === n - 1 ? 0.12 : 0.06);
+  return true;
+}
+/* a running plan's frame turned bad: before its first beep, cancel (the caller may replan); a begun series with BEEP_STOP_MS
+ * or more to its last beep: cut it with a visible STOP; inside that, never cut: keep it, log it, and say after the press that
+ * the coin turned late (st.lateTurn). Returns 'cancelled' | 'stop' | 'kept'. */
+function stopBeeps(why, pNow, P) {
+  const now = performance.now(), f = beepsInFlight(now);
+  if (!f) { cancelBeeps(); return 'cancelled'; }
+  if (f.tEnd - now >= BEEP_STOP_MS) { cancelBeeps({ force: true }); slog('beepsStopVisible', { why, msLeft: Math.round(f.tEnd - now), p: pNow != null ? +pNow.toFixed(3) : null });
+    st.msg = 'STOP: do not press on the last beep. The coin ruled the planned frame out' + (pNow != null ? ' (now ' + Math.round(100 * pNow) + '%)' : '') + '.'; st.stopShown = now; return 'stop'; }
+  slog('beepsLateTurn', { why, msLeft: Math.round(f.tEnd - now), p: pNow != null ? +pNow.toFixed(3) : null });
+  st.lateTurn = { tEnd: f.tEnd, p: pNow, why, was: P && P.mix ? (P.mix.pp != null ? P.mix.pp : P.mix.p) : null }; return 'kept';
+}
+// a plan whose series has begun holds: no replan, no new message until its last beep (stopBeeps alone may cut it)
+function seriesHold(tag) { const f = typeof beepsInFlight === 'function' ? beepsInFlight() : null; if (!f || !st.plan || st.plan.stopped) return false; if (st.holdLog !== st.plan) { st.holdLog = st.plan; slog('replanHeld', { tag, left: f.left, msLeft: Math.round(f.tEnd - performance.now()) }); } return true; }
+// after the last beep of a series kept through a late turn: say so (once)
+function lateTurnTick(now) {
+  const L = st.lateTurn; if (!L || now < L.tEnd + 250) return; st.lateTurn = null;
+  st.msg = 'The coin turned late: the frame you just pressed on was down to ' + (L.p != null ? Math.round(100 * L.p) + '%' : 'less') + (L.was != null ? ' (planned ' + Math.round(100 * L.was) + '%)' : '') + ' when the last beep was under ' + (BEEP_STOP_MS / 1000).toFixed(1) + ' s away, too late to stop it.';
+  slog('lateTurnShown', { p: L.p != null ? +L.p.toFixed(3) : null, was: L.was != null ? +(+L.was).toFixed(3) : null }); render();
+}
 const beepsFit = tPress => tPress - (nBeeps() - 1) * num('gapms') > performance.now() + 20;
 /* ---------- which window to aim at (Settings: Window to aim at) ----------
  * best: the automatic choice (the best chance in the wait on Hallway T2, the widest window soon elsewhere). green /
@@ -604,6 +637,7 @@ $('cal-apply').onclick = () => {
 $('s-off').addEventListener('input', () => {
   saveSettings(); const P = st.plan; if (!P || P.tPress < performance.now()) return;
   const t = pressTime(P.tLast, P.rate, P.target) + (P.bias || 0) * P.rate;
+  if (beepsInFlight()) return;      // v106: a begun series plays out
   if (!beepsFit(t)) { slog('offsetReplan', {}); cancelPlan(); return; }   // too late now for every beep: the next plan takes a later frame
   P.tPress = t; cancelBeeps(); playBeeps(t); render();
 });
@@ -1263,14 +1297,35 @@ const PP_TOL = 0.05, PP_FREE_M = 1, PP_LATER_GAIN = 0.03;
  * (default 1.5) later is taken instead when its chance with the runner's own press spread (pressDist: the rms of the Press
  * check presses) is PP_LATER_GAIN higher; and the next wider window after the pick is reported (the strip shows it). Only the
  * levers with one outcome (Close Calls, Do Nothing, Time Out); the Duplighosts' and the Power Bounce's goals as v83. */
+/* v106 (console fb0748 Jr. T5 Power Bounce: plan window 11, 6+ about 0, "it didn't beep on a window where there were like 8
+ * frames of 6 cap working"): goal 'free' (jrpb5) aims at the widest run of 6+ up to "Wider window up to" (zwlater), at its
+ * middle, among frames that give 5+; the 5+ run's middle only when no 6+ run is in reach (ppPick6 null). v83-v105 sorted by
+ * the 5+ run first and never looked past the extra wait when a 6+ profile existed. */
+function ppPick6(share, share4, a, b, from, W, sc) {
+  const at = (sh, c) => (c >= a && c <= b ? sh[c - a] || 0 : 0);
+  let best = 0; for (let c = from; c <= from + W; c++) best = Math.max(best, at(share, c)); if (best < 0.5) return null;
+  const ok = c => at(share, c) >= Math.max(0.5, best - PP_TOL) - 1e-12;
+  let best4 = 0; for (let c = from; c <= from + W; c++) if (ok(c)) best4 = Math.max(best4, at(share4, c)); if (best4 < 0.5) return null;
+  const ok4 = c => ok(c) && at(share4, c) >= Math.max(0.5, best4 - PP_TOL) - 1e-12;
+  const run = (f, c) => { let s0 = c, e0 = c; while (s0 - 1 >= a && f(s0 - 1)) s0--; while (e0 + 1 <= b && f(e0 + 1)) e0++; return { start: s0, end: e0, length: e0 - s0 + 1, m: Math.min(c - s0, e0 - c) }; };
+  let pick = null;
+  for (let c = from; c <= from + W; c++) if (ok4(c)) { const r4 = run(ok4, c), r = run(ok, c), x = { c, r, r4, sc: sc(c) };
+    if (!pick || r4.length > pick.r4.length || (r4.length === pick.r4.length && (r4.m > pick.r4.m || (r4.m === pick.r4.m && Math.min(r.m, PP_FREE_M) > Math.min(pick.r.m, PP_FREE_M)) || (r4.m === pick.r4.m && Math.min(r.m, PP_FREE_M) === Math.min(pick.r.m, PP_FREE_M) && x.sc > pick.sc + 1e-12)))) pick = x; }
+  if (!pick) return null;
+  return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length }, later: false, six: true };
+}
+const PP_SC_GAIN = 0.1;
 function ppPick(share, share4, a, b, from, W, sc, goal, later) {
+  if (goal === 'free' && share4) { const P6 = ppPick6(share, share4, a, b, from, W + Math.max(0, later || 0), sc); if (P6) { P6.later = P6.target > from + W; return P6; } }
   const P0 = ppPick0(share, share4, a, b, from, W, sc, goal);
   if (!P0.ok || share4 || !(later > 0)) return P0;
   const at = c => (c >= a && c <= b ? share[c - a] || 0 : 0);
   let best = 0; for (let c = from; c <= from + W + later; c++) best = Math.max(best, at(c));
   const ok = c => at(c) >= Math.max(0.5, best - PP_TOL) - 1e-12, runOf = c => { let s0 = c, e0 = c; while (s0 - 1 >= a && ok(s0 - 1)) s0--; while (e0 + 1 <= b && ok(e0 + 1)) e0++; return { start: s0, end: e0, length: e0 - s0 + 1 }; };
   let pick = P0, s0 = sc(P0.target);
-  for (let c = from + W + 1; c <= from + W + later; c++) if (ok(c) && sc(c) > s0 + PP_LATER_GAIN && sc(c) > sc(pick.target) + 1e-9) pick = { target: c, ok: true, run: runOf(c), run4: null, later: true };
+  // v106 (console fb0958 Jr. T5 Do Nothing: the later pick was a 1-frame window between gaps, pressed 2 frames early: hit): a
+  // later frame narrower than the pick needs PP_SC_GAIN more with the press spread, not PP_LATER_GAIN
+  for (let c = from + W + 1; c <= from + W + later; c++) if (ok(c) && sc(c) > sc(pick.target) + 1e-9) { const r = runOf(c); if (sc(c) > s0 + (r.length >= P0.run.length ? PP_LATER_GAIN : PP_SC_GAIN)) pick = { target: c, ok: true, run: r, run4: null, later: true }; }
   // the next wider window after the pick (shown on the strip)
   let next = null; for (let c = pick.run.end + 1; c <= from + W + later; c++) if (ok(c)) { const r = runOf(c); if (r.length > pick.run.length && (!next || r.length > next.length)) next = { start: r.start, length: r.length, sc: +sc(Math.floor((r.start + r.end) / 2)).toFixed(3) }; c = r.end; }
   return Object.assign(pick, { next, sc0: +s0.toFixed(3), scPick: +sc(pick.target).toFixed(3) });
@@ -1295,6 +1350,9 @@ function ppPick0(share, share4, a, b, from, W, sc, goal) {
   }
   if (!pick && goal !== 'safe3') pick = cand.sort(cmp([W3, x => Math.min(x.r.m, PP_FREE_M), H4, M3, W4, M4, SC]))[0];
   if (!pick) pick = cand.sort(cmp([W3, M3, H4, W4, M4, SC]))[0];
+  // v106: the widest run first, unless a frame of a run of 2+ is PP_SC_GAIN likelier with the press spread (a wide run whose
+  // middle the spread still lands off; a patchy pick among gaps) - not for the Duplighosts' 4-copy goals
+  if (goal === 'safe3' || goal === 'free') { const bs = cand.filter(x => x.r.length >= 2).sort(cmp([SC, W3, M3]))[0]; if (bs && bs.sc > pick.sc + PP_SC_GAIN && !pick.r4) pick = bs; }
   return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: pick.r4 ? { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length } : null };
 }
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
@@ -1339,6 +1397,7 @@ function ppText(m, prof, long) {
   return t;
 }
 function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the frames the press can take, the states stepped to h first
+  if (seriesHold('zw')) return true;      // v106
   const now = performance.now(), S = win ? (zwSeen(now), zwStatesAt(Math.max(zwHorizon(now), win.h))) : zwStates(now), F = zwFight();
   if (!S.list.length) {
     st.msg = zw.dead || !zw.parts.length ? 'No edge: the seed was lost. What the page saw since the Charge fits none of its states (a missed or extra shine, an input it did not see, or lag outside the model). ' + F.normal + '.'
@@ -1436,6 +1495,14 @@ function zwPlanChance(P, S) {
   const pid = PROF().id, b3 = ZW_BLIND[pid] != null ? ZW_BLIND[pid] : 0.31;
   return { p: (1 - S.doubt) * v + S.doubt * b3, pStates: v, pp: (1 - S.doubt) * sh[D] + S.doubt * b3, doubt: S.doubt };
 }
+const ZW_RELOCK_GAIN = 0.1;
+function zwRelockReplan(P, ch) {
+  const msg0 = st.msg; zwPlan('relock');      // (st.plan still P: an early plan's floor holds)
+  const N = st.plan !== P ? st.plan : null, pOld = ch ? ch.p : 0, pNew = N && N.mix ? N.mix.p : null;
+  if (N && pNew != null && pNew >= pOld + ZW_RELOCK_GAIN && N.zwAbs !== P.zwAbs) { slog('jrRelockReplan', { from: P.zwAbs, to: N.zwAbs, pOld: +pOld.toFixed(3), pNew: +pNew.toFixed(3), winOld: P.mix.win, winNew: N.mix.win }); st.seedChange = { t: performance.now(), from: P.zwAbs, to: N.zwAbs, ok: true }; return true; }
+  // kept: the old plan and its beeps back (every beep was still ahead)
+  if (N) cancelBeeps(); st.plan = P; st.msg = msg0; if (!beepT.some(t => Math.abs(t - P.tPress) < 5)) playBeeps(P.tPress); slog('jrRelockKept', { at: P.zwAbs, pOld: +pOld.toFixed(3), pNew: pNew != null ? +pNew.toFixed(3) : null, to: N ? N.zwAbs : null }); render(); return false;
+}
 function zwTick(now) {
   if (!zw.on || (ZWD.t && now - ZWD.t < 250)) return; ZWD.t = now;
   ZWD.S = zwStates(now);
@@ -1444,8 +1511,12 @@ function zwTick(now) {
   P.zwKey = ZWD.S.key;
   const ch = zwPlanChance(P, ZWD.S), pk = x => (x.pp != null ? x.pp : x.p), good = !!ch && ch.doubt < 0.5 && pk(ch) >= num('zwedge') && pk(ch) >= pk(P.mix) - 0.15;     // v83: re-scored as planned, on the perfect press
   if (ch) { P.mix.pNow = +pk(ch).toFixed(3); P.mix.pSpreadNow = +ch.p.toFixed(3); }
+  // v106 (console fb0748 Jr. T3: a 1-frame plan at 0.62 kept at 0.73 after the re-lock while a wide window was there; fb0958
+  // T5): after a Charge re-lock (jrStartFrom) the plan is made again while every beep is still ahead; the new one stands only
+  // when it is ZW_RELOCK_GAIN likelier with the press spread, else the old plan and its beeps are put back
+  if (good && P.relock && !P.relockDone) { P.relockDone = true; if (beepsFit(P.tPress) && !beepsInFlight(now) && P.nbK == null && (onTarget() || !V.ref || P.early)) zwRelockReplan(P, ch); return; }
   if (good) return;
-  const old = P.zwAbs, stop = why => { cancelBeeps(); P.seedNote = true; P.stopped = true; st.seedChange = { t: now, from: old, ok: false, stopped: true }; slog('beepsStopped', { from: old, why, p: ch ? +ch.p.toFixed(3) : null, doubt: ch ? +ch.doubt.toFixed(3) : null }); };
+  const old = P.zwAbs, stop = why => { const r = stopBeeps('zw ' + why, ch ? pk(ch) : null, P); P.seedNote = true; if (r === 'kept') return; P.stopped = true; st.seedChange = { t: now, from: old, ok: false, stopped: true }; slog('beepsStopped', { from: old, why, p: ch ? +ch.p.toFixed(3) : null, doubt: ch ? +ch.doubt.toFixed(3) : null }); };     // v106: stopBeeps (a begun series: STOP or kept)
   if (beepsFit(P.tPress) && (onTarget() || !V.ref || P.nbK != null)) {
     if (P.nbK != null && typeof nbCancelPlan === 'function') nbCancelPlan('seed changed'); else zwPlan('seed changed');
     if (st.plan && st.plan !== P) { st.seedChange = { t: now, from: old, to: st.plan.zwAbs, ok: true }; slog('seedChanged', { from: old, to: st.plan.zwAbs }); }
@@ -1672,7 +1743,7 @@ function planScreenLost(t, now) {
   if (P.prof === 'fb2' && typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null) FB2.plan.lost = true;
   cancelPlan(); return true;
 }
-function reset() { stopWorkers(); cancelBeeps(); zw.on = false; chgReset(); Object.assign(WALK, { start: null, vis: 0, lastT: null, last: null }); Object.assign(st, { segs: [{ taps: [] }], chain: [], carry: null, carry0: null, wtorch: null, wtry: null, rcarry: null, wcarry: null, wbase: null, wcarryPending: null, turnEv: [], hyp: null, carryOk: 0, inputs: [], needResync: false, cands: null, lock: null, prevLock: null, searching: false, clock: null, plan: null, msg: null, note: null, example: true }); render(); }
+function reset() { stopWorkers(); cancelBeeps({ force: true }); zw.on = false; chgReset(); Object.assign(WALK, { start: null, vis: 0, lastT: null, last: null }); Object.assign(st, { segs: [{ taps: [] }], chain: [], carry: null, carry0: null, wtorch: null, wtry: null, rcarry: null, wcarry: null, wbase: null, wcarryPending: null, turnEv: [], hyp: null, carryOk: 0, inputs: [], needResync: false, cands: null, lock: null, prevLock: null, searching: false, clock: null, plan: null, msg: null, note: null, example: true }); render(); }
 $('shine').addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
 $('dl-log').onclick = downloadLog; $('find').onclick = find; $('gap').onclick = newSegment; $('plan').onclick = makePlan; $('undo').onclick = undo; $('reset').onclick = () => { reset(); if (typeof arenaReset === 'function') arenaReset(); };
 document.addEventListener('keydown', e => {
@@ -1685,17 +1756,28 @@ document.addEventListener('keydown', e => {
 });
 
 /* ---------- rendering ---------- */
-function setText(h, d) { $('headline').textContent = h; $('detail').textContent = d; const w = /^(WAIT|HOLD)/.test(h), hold = /^HOLD/.test(h); $('headline').style.background = w ? '#c62828' : ''; $('headline').style.color = w ? '#fff' : ''; $('headline').style.padding = w ? (hold ? '14px 12px' : '6px 10px') : ''; $('headline').style.borderRadius = w ? '6px' : ''; $('headline').style.fontSize = hold ? '1.9em' : ''; $('headline').classList.toggle('hold-blink', hold); }
+function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgDropNote === 'function' ? chgDropNote() : ''; if (dn && !(d || '').includes(dn)) d = (d ? d + ' ' : '') + dn; } $('detail').textContent = d; const w = /^(WAIT|HOLD)/.test(h), hold = /^HOLD/.test(h); $('headline').style.background = w ? '#c62828' : ''; $('headline').style.color = w ? '#fff' : ''; $('headline').style.padding = w ? (hold ? '14px 12px' : '6px 10px') : ''; $('headline').style.borderRadius = w ? '6px' : ''; $('headline').style.fontSize = hold ? '1.9em' : ''; $('headline').classList.toggle('hold-blink', hold); }
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v105';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v106';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
   const blob = new Blob([JSON.stringify({ version: 1, page: VERSION, saved: new Date().toISOString(), settings: (() => { const o = {}; SET.forEach(k => o[k] = $('s-' + k).value); return o; })(), route: routeStep, more: { zwwin: num('zwwin'), zwedge: num('zwedge'), chgcpu: num('chgcpu'), presses: presses.slice() }, events: SLOG, chargeCaptures: typeof CHG_CAPS !== 'undefined' ? CHG_CAPS : [] }, null, 0)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pm-rng-log-' + Date.now() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = logFileName(new Date()); document.body.appendChild(a); a.click(); a.remove();
 }
+// v106: the log's file name in local time, as OBS names its clips (pm-rng-log-2026-11-14_10-10-55.json)
+function logFileName(d) { const z = n => String(n).padStart(2, '0'); return 'pm-rng-log-' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + '_' + z(d.getHours()) + '-' + z(d.getMinutes()) + '-' + z(d.getSeconds()) + '.json'; }
+/* v106: Erase log: the session log (SLOG) and the kept Charge reads in it (CHG_CAPS) go; settings, the learned press
+ * corrections and the browser's saved Charge reads (Settings: Clear saved Charge reads) stay. A confirm() first; where the
+ * page's frame blocks dialogs (it returns at once), a second click within 4 s instead. */
+function eraseLog() { const n = SLOG.length, c = typeof CHG_CAPS !== 'undefined' ? CHG_CAPS.length : 0; SLOG.length = 0; if (typeof CHG_CAPS !== 'undefined') CHG_CAPS.length = 0; if (typeof chgCapTitle === 'function') chgCapTitle(); slog('logErased', { events: n, captures: c }); return { events: n, captures: c }; }
+{ const b = document.getElementById('erase-log'); if (b) b.onclick = () => {
+  if (b.dataset.armed) { delete b.dataset.armed; b.textContent = 'Erase log'; eraseLog(); return; }
+  let ok = false, t0 = performance.now(), blocked = false; try { ok = window.confirm('Erase this session\'s log and its kept Charge reads? Settings and press corrections stay.'); } catch (e) { blocked = true; }
+  if (!ok && (blocked || performance.now() - t0 < 30)) { b.dataset.armed = '1'; b.textContent = 'Click again to erase'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Erase log'; }, 4000); return; }
+  if (ok) eraseLog(); }; }
 function render() {
   { const k = st.lock ? (st.lock.seed >>> 0) + ':' + st.lock.seg : null;
     if (k !== slogLock) { slog(st.lock ? 'lock' : 'unlock', st.lock ? { seed: st.lock.seed >>> 0, seg: st.lock.seg, segs: st.segs.length, tier: st.tier, have: st.have, need: st.need, carried: st.turnEv.length } : { segs: st.segs.length }); slogLock = k; } }
@@ -1708,7 +1790,7 @@ function render() {
   else if (st.msg) setText(/^(No |Time Out is done|The seed is being|FB2|Route off|Beeps stopped|T\d: )/.test(st.msg) ? 'No beeps this time' : segLabel + 'Check your taps', st.msg);
   else if (st.plan) { const P = st.plan, typ = P.type && WTYPE[P.type] ? 'Window ' + WTYPE[P.type].name + ': ' : '';
     setText(P.again ? 'Still on the target screen: next window planned' : P.switched ? 'A sooner window came up: press A on the last beep' : 'Press A on the last beep (' + (P.beeps || nBeeps()) + ' beeps)',
-      typ + (P.mix ? (P.mix.zw ? P.mix.groups + ' possible RNG states are left (carried from the Charge or the walk);' : P.mix.groups + ' Spiny Flip outcomes are still possible;') + ' ' + ppText(P.mix, P.prof, true) + ' A shine in this menu replans if it rules the frame out.'
+      typ + (P.mix && P.mix.warn ? 'WARNING: ' + P.mix.warn + ' ' : '') + (P.mix ? (P.mix.zw ? P.mix.groups + ' possible RNG states are left (carried from the Charge or the walk);' : P.mix.groups + ' Spiny Flip outcomes are still possible;') + ' ' + ppText(P.mix, P.prof, true) + ' A shine in this menu replans if it rules the frame out.'
         : P.w.length + ' frame' + (P.w.length > 1 ? 's' : '') + ' in a row. ' + (P.aim4 ? (/^jrpb5/.test(PROF().id) ? 'Aiming at a 6+ bounce frame (the frames next to it give 5+, which the Bomb finishes).' : 'Aiming at the frame where all 4 copy (the frames next to it still give 3).') : 'Aiming at the middle frame.') + ' Missed it? Press Plan again for the next window.')); }
   else if (st.lock) setText(segLabel + 'Locked: no beeps yet', V.stream ? (V.ref ? 'The beeps start when the page sees Time Out\'s target screen in the blue box (now ' + Math.round(V.score * 100) + '% match, needs ' + Math.round(num('tmatch') * 100) + '%). You can also press P (Plan press) on the target screen.' : 'No target screen saved, so the page cannot start the beeps by itself. Save the target screen, or press P (Plan press) once the hand is on Bowser.') : 'Seed 0x' + (st.lock.seed >>> 0).toString(16).padStart(8, '0') + ' from ' + nSh + ' shines. Press Plan press (P) on the target screen.');
   else if (st.cands && st.cands.length > 1) setText(segLabel + st.cands.length + ' seeds still fit', 'Keep watching. Each shine filters instantly.');
@@ -1856,6 +1938,7 @@ function css(v) { return getComputedStyle(document.documentElement).getPropertyV
 function stripGeom(W, span, nowD) { const cw = W / span, v0 = nowD - span * NOW_AT; return { cw, v0, x: f => (f - v0) * cw }; }
 function drawStrip() {
   if (zw.on) zwTick(performance.now());
+  if (st.lateTurn) lateTurnTick(performance.now());
   const cv = $('strip'), ctx = cv.getContext('2d'), dpr = window.devicePixelRatio || 1;
   const W = cv.clientWidth, H = 132; cv.style.height = H + 'px';
   if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
@@ -1942,7 +2025,7 @@ function calibrate() {
   const horizon = (now - C.t0) / C.rate + 60;
   while (f < horizon) {
     s = R.adv(s); const sh = s >= R.SHINE_MIN;
-    if (sh) { const t = C.t0 + (f + 6) * C.rate + num('lag'); if (t > now && t > calNext && t < now + 2000) { beepAt(t, 1040, 0.05); calNext = t; } }
+    if (sh) { const t = C.t0 + (f + 6) * C.rate + num('lag'); if (t > now && t > calNext && t < now + 2000) { beepAt(t, 1040, 0.05, true); calNext = t; } }
     if (sh) { for (let i = 0; i < 48; i++) s = R.adv(s); f += 48; } else { for (let i = 0; i < 24; i++) s = R.adv(s); f += 24; }
   }
 }
@@ -2495,7 +2578,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, v106: { eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },

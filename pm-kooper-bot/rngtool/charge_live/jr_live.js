@@ -548,7 +548,7 @@ function jrStartFrom(k, seed, qs, qw) {
   CHG.jrInner = true; try { chgStartTracker(seed, qs, qw); } finally { CHG.jrInner = false; }
   Object.assign(zw, { fight: 'jr', imps: null, shifts: null, tapLate: 4 });
   // a plan beeping from the old tracker: its frame in the new clock (zwTick checks it against the new states)
-  const P = st.plan; if (old && P && P.mix && P.mix.zw && P.zwAbs != null) { P.zwAbs = Math.round(P.zwAbs + (old.t0 - zw.t0) / zw.rate); P.zwKey = null; }
+  const P = st.plan; if (old && P && P.mix && P.mix.zw && P.zwAbs != null) { P.zwAbs = Math.round(P.zwAbs + (old.t0 - zw.t0) / zw.rate); P.zwKey = null; P.relock = true; }     // v106: zwTick may replan it (relock)
   // v85: this Charge's own confirm is frame -13 of the new clock (the rays' frame 0 = confirm + 13): jrPlanFloor counts from it
   // v87 (console log 2f22d4dc, T3): on Ultra Boots too. v85-v86.1 left Ultra Boots' Charge confirm in the old clock: after the T3
   // lock (cross-check agreed, a new clock) jrPlanFloor counted the Bomb's earliest frame from 872 old-clock frames, i.e. ~1050

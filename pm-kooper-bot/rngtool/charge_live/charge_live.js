@@ -557,6 +557,10 @@ if (window.__chgDebug) {
     if (window.__chgDebug) CHG.G0 = G.map(f => (f ? Math.round(f.t - CHG.trig.t) : null));
     const raw = CHG.frames; CHG.info = { raw: raw.length, spanMs: Math.round(raw[raw.length - 1].t - raw[0].t), grabMs: +(CHG.grabMs || 0).toFixed(1), gaps: raw.slice(1).map((f, i) => Math.round(f.t - raw[i].t)).join(','), frames: G.slice(0, CHG_N).filter(Boolean).length, mario: +sh.dx.toFixed(1), marioNcc: +sh.ncc.toFixed(2), dxWorld: +dxw.toFixed(2), mapsMs: Math.round(t1 - t0) };
     if (sh.wide) CHG.info.marioWide = true;
+    // v106 (console logs Nov 14: dropped pictures, gaps of 30 ms or more, 1-67% of a read; fb1001's T1 Charge had 64% and did
+    // not lock): over CHG_DROP_WARN of the read's pictures dropped is said on the page (and logged)
+    { const gs = CHG.info.gaps ? CHG.info.gaps.split(',').map(Number) : [], nd = gs.filter(g => g >= 30).length, sh = gs.length ? nd / gs.length : 0; CHG.info.drops = +sh.toFixed(2);
+      if (sh > CHG_DROP_WARN) { CHG.dropWarn = { t: performance.now(), share: sh }; if (!CHG.replay) slog('captureDrops', { share: +sh.toFixed(2), n: gs.length, prof: chgP().id }); } else CHG.dropWarn = null; }
     if (weak) { CHG.info.marioWeak = true; slog('chargeMarioWeak', { marioNcc: +sh.ncc.toFixed(2), scan: chgMarioScan() }); }
     if (E) { CHG.info.early = { mapsMs: E.mapsMs, startedBeforeRaysEndMs: Math.round(CHG.tEnd - E.t1) }; CHG.info.prof = chgP().id; }
     CHG.F0 = CHG.frames; CHG.Fm = CHG.frames.map(f => ({ t: f.t, m: f.m, rep: f.rep }));   // v95: the burst levels for fb14TrigPhase (F0 is dropped before the lock)
@@ -930,6 +934,8 @@ function chgStartTracker(seed, qs, qw) {
   if (!dup && CHG.spiny != null) { const c = CHG.spiny; CHG.spiny = null; zwInput('hw_spiny', c, VAN.B(), CHG_IMPS); }
 }
 function chgHyps() { return zw.on && zw.src === 'charge' ? zw.parts.length : CHG.prof && CHG.prof.id === 'fb1' && typeof FB14 !== 'undefined' && FB14.on ? FB14.states.length : typeof FB2 !== 'undefined' && FB2.on ? FB2.hyps.length : null; }
+const CHG_DROP_WARN = 0.3, CHG_DROP_TEXT = '% of the pictures during this Charge read (the rays need every one): try OBS\'s hardware encoder and keep this page\'s window visible (not minimised or covered).';
+function chgDropNote() { const D = typeof CHG !== 'undefined' && CHG.dropWarn; return D && performance.now() - D.t < 90000 ? 'Warning: the capture dropped ' + Math.round(100 * D.share) + CHG_DROP_TEXT : ''; }
 function chgShow() {
   const el = $('chg-status'); if (!el) return;
   const s = CHG.state, I = CHG.info || {};
@@ -939,7 +945,7 @@ function chgShow() {
   const lock = lost ? 'LOST' : doubt ? 'DOUBTFUL' : s === 'locked' ? 'yes' : s === 'search' || s === 'maps' ? 'searching…' : s === 'capture' ? 'reading the rays…' : s === 'nolock' || s === 'failed' || s === 'notseen' ? 'no' : '–';
   const t = I.lockAfterRaysMs != null ? (I.lockAfterRaysMs / 1000).toFixed(1) + ' s after the rays' : s === 'search' && CHG.tSearch ? (Math.round((performance.now() - CHG.tSearch) / 100) / 10) + ' s so far' : '–';
   const h = chgHyps();
-  el.innerHTML = '<b>Charge lock: ' + lock + '</b>' + (s === 'nolock' || s === 'failed' || s === 'notseen' ? ' (' + (CHG.why || '') + ')' : '') +
+  el.innerHTML = '<b>Charge lock: ' + lock + '</b>' + (s === 'nolock' || s === 'failed' || s === 'notseen' ? ' (' + (CHG.why || '') + ')' : '') + (chgDropNote() ? '<br><b style="color:#c62828">' + chgDropNote() + '</b>' : '') +
     '<br>Time to lock: ' + t + (I.searchMs != null ? ' (search ' + (I.searchMs / 1000).toFixed(1) + ' s, ' + (CHG.res ? CHG.res.workers : '?') + ' threads)' : '') +
     '<br>Hypotheses left: ' + (h != null ? h + (zw.dead ? ' (none fit: No edge)' : '') : '–') +
     (s === 'locked' && zw.on && zw.src === 'charge' && !zw.dead ? ' · seed confidence ' + Math.round(100 * (1 - dz)) + '%' + (errs ? ' (best state: ' + errs + ' shine' + (errs > 1 ? 's' : '') + ' did not fit)' : '') : '') +

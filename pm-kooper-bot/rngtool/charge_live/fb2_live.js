@@ -120,6 +120,7 @@ function fb2Lock(res) {
 const fb2Bias = () => (typeof fb14Bias === 'function' ? fb14Bias() : 0);
 const fb2DnPressT = k => fb2PressT(k) + fb2Bias() * fb2Rate();
 function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
+  if (kAt == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
   const t0 = performance.now(), H = FB2.hyps, F = fb2Flags(), now = performance.now(), bias = fb2Bias();
   // v102 (console log fb0449 T6: planned 1.6 s ahead, its 3 beeps 300 ms apart: "the beeps seemed to glitch by speeding up"): the
   // T6 countdown is the runner's own (Settings: Beeps, Beep spacing, Lead time; playBeeps, earliestPress), never squeezed: the
@@ -174,6 +175,7 @@ function fb2SetP(c) {
 }
 /* the K plan: lucky per hypothesis x flags for every logic K, then the best time frame k in the rest of the window */
 function fb2PlanK(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
+  if (kAt == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
   const t0 = performance.now(), H = FB2.hyps, F = fb2Flags(), now = performance.now();
   const kFirst = kAt != null ? kAt : Math.max(FB2_KMIN + 1, Math.ceil(fb2Pic(now + num('vlag')) + (FB2_BEEPS - 1) * FB2_GAP / fb2Rate() + 0.15 * 1000 / fb2Rate() + 2));
   const rows = [], K0 = Math.max(FB2_KMIN, Math.min(FB2_KMAX, kFirst - 3));   // per (h, flag): lucky for K = K0..137 and the AI result
@@ -215,7 +217,7 @@ function fb2PlanK(kAt) {      // kAt (tests): plan as if the earliest beepable f
   // v95: the edge rule (zwedge) on the popup beep too: a Close Call share under it is no plan (close the popup normally)
   if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no popup frame gives Close Call for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind, kFirst, pp: pl.pp, p: pl.p }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; slog('fb2PlanK', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), p: +pl.p.toFixed(3), k: pl.k }); fb2Show(); return nl; }
   if (kAt != null) return pl;
-  cancelBeeps(); for (let i = 0; i < FB2_BEEPS; i++) beepAt(tPress - (FB2_BEEPS - 1 - i) * FB2_GAP, i === FB2_BEEPS - 1 ? 1320 : 880, i === FB2_BEEPS - 1 ? 0.12 : 0.06);
+  cancelBeeps(); if (typeof BEEP_STOP_MS !== 'undefined') playBeeps(tPress, FB2_BEEPS, FB2_GAP); else for (let i = 0; i < FB2_BEEPS; i++) beepAt(tPress - (FB2_BEEPS - 1 - i) * FB2_GAP, i === FB2_BEEPS - 1 ? 1320 : 880, i === FB2_BEEPS - 1 ? 0.12 : 0.06);     // v106: whole series only
   FB2.plan = pl; slog('fb2PlanK', FB2.plan); fb2Show(); return pl;
 }
 /* per picture after the lock: the popup ("+3", a bright box across the top middle: 320-space x 70..250, y 65..100) */
@@ -280,6 +282,7 @@ function fb2Prune(upto) {
  * dodge branch before a T7 beep. */
 /* the T7 plan on the Power Bounce target screen (or at clock frame cScr in tests): the best target-A frame for 7+ */
 function fb2PlanT7(cScr) {
+  if (cScr == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
   if (!FB2.on || !FB2.t7) return false;
   const now = performance.now(), cNow = cScr != null ? cScr : fb2Pic(now + num('vlag')), S = fb2Prune(cNow);
   if (!S.length || S.doubt >= 0.5) { st.msg = 'No edge: the FB2 states the page kept do not fit what it saw in Bowser\'s turn (the coin, or the popup frame). Press Power Bounce normally.'; FB2.t7.plan = { none: 'no state fits' }; slog('fb2NoEdge', { doubt: S.doubt != null ? +S.doubt.toFixed(3) : null }); fb2Show(); render(); return true; }
