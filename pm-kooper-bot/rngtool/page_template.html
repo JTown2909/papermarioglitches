@@ -1314,9 +1314,11 @@ function ppPick6(share, share4, a, b, from, W, sc) {
   if (!pick) return null;
   return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length }, later: false, six: true };
 }
-const PP_SC_GAIN = 0.1;
+const PP_SC_GAIN = 0.1, PP_SIX_TOL = 0.02;
 function ppPick(share, share4, a, b, from, W, sc, goal, later) {
-  if (goal === 'free' && share4) { const P6 = ppPick6(share, share4, a, b, from, W + Math.max(0, later || 0), sc); if (P6) { P6.later = P6.target > from + W; return P6; } }
+  // the 6 run only where it costs (almost) nothing on 5+ (the fight's win): test_jr_plan's carry T6 went 5+ 95% -> 88% when it
+  // always took the 6 run; PP_SIX_TOL of the 5+ chance with the press spread against the 5+ pick's
+  if (goal === 'six') { goal = 'free'; if (share4) { const P6 = ppPick6(share, share4, a, b, from, W + Math.max(0, later || 0), sc), Q = ppPick(share, share4, a, b, from, W, sc, 'free', later); if (P6 && (!Q.ok || sc(P6.target) >= sc(Q.target) - PP_SIX_TOL)) { P6.later = P6.target > from + W; return P6; } return Q; } }
   const P0 = ppPick0(share, share4, a, b, from, W, sc, goal);
   if (!P0.ok || share4 || !(later > 0)) return P0;
   const at = c => (c >= a && c <= b ? share[c - a] || 0 : 0);
@@ -1352,7 +1354,7 @@ function ppPick0(share, share4, a, b, from, W, sc, goal) {
   if (!pick) pick = cand.sort(cmp([W3, M3, H4, W4, M4, SC]))[0];
   // v106: the widest run first, unless a frame of a run of 2+ is PP_SC_GAIN likelier with the press spread (a wide run whose
   // middle the spread still lands off; a patchy pick among gaps) - not for the Duplighosts' 4-copy goals
-  if (goal === 'safe3' || goal === 'free') { const bs = cand.filter(x => x.r.length >= 2).sort(cmp([SC, W3, M3]))[0]; if (bs && bs.sc > pick.sc + PP_SC_GAIN && !pick.r4) pick = bs; }
+  if ((goal === 'safe3' || goal === 'free') && !share4) { const bs = cand.filter(x => x.r.length >= 2).sort(cmp([SC, W3, M3]))[0]; if (bs && bs.sc > pick.sc + PP_SC_GAIN && !pick.r4) pick = bs; }
   return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: pick.r4 ? { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length } : null };
 }
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
@@ -1365,7 +1367,7 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
   const sc = scOf(share), sc4 = share4 ? scOf(share4) : null, type = wtype(), honest = (p, k) => (adj ? (1 - adj.d) * p + adj.d * adj[k] : p);
   let target = null, w = null, none = null, pk = null;
   if (type === 'best') {
-    pk = ppPick(share, share4, a, b, from, W, sc, goal, later);
+    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later);     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
     target = pk.target; w = pk.run;
     if (honest(share[target - a] || 0, 'b3') < num('zwedge')) none = 'edge';
   } else {

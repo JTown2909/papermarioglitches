@@ -32,10 +32,12 @@ let fails = 0; const check = (ok, msg) => { if (!ok) { fails++; console.log('FAI
       let k = 0; const until = P.tPress + 400;
       while (performance.now() < until) { while (k < extra.length && readAt(extra[k]) <= performance.now()) T.zwTap(readAt(extra[k++])); await step(16); }
       const S = T.SLOG, st = document.getElementById('strip-state');
-      return { tPressIn: Math.round(P.tPress - now0), taps: extra.length, stopped: !!P.stopped, stopEv: S.filter(x => x.ev === 'beepsStopped').map(x => ({ t: Math.round(x.t - now0), why: x.why, doubt: x.doubt })), stopsBeforePress: S.some(x => x.ev === 'beepsStopped' && x.t < P.tPress), dead: zw.dead, parts: zw.parts.length, strip: st ? st.textContent : null, oscStopped: window.__stops };
+      return { tPressIn: Math.round(P.tPress - now0), taps: extra.length, stopped: !!P.stopped, stopEv: S.filter(x => x.ev === 'beepsStopped').map(x => ({ t: Math.round(x.t - now0), why: x.why, doubt: x.doubt })), stopsBeforePress: S.some(x => x.ev === 'beepsStopped' && x.t < P.tPress), lateTurn: S.some(x => x.ev === 'beepsLateTurn' && x.t < P.tPress), stopVisible: S.some(x => x.ev === 'beepsStopVisible' && x.t < P.tPress), dead: zw.dead, parts: zw.parts.length, strip: st ? st.textContent : null, oscStopped: window.__stops };
     }, [seed, bad]);
     console.log((bad ? 'contradicting shines ' : 'control ') + seed.toString(16) + ': ' + JSON.stringify(r));
-    if (bad) { check(r.stopped && r.stopsBeforePress, seed.toString(16) + ': the beeps were not stopped before the press'); check(/stopped|lost/i.test(r.strip || ''), seed.toString(16) + ': the strip does not say so'); }
+    // v106: within BEEP_STOP_MS (0.4 s) of the last beep a begun series is never cut (the runner cannot react; the page says after the
+    // press that the coin turned late); with more time left it is stopped (a visible STOP when it had begun)
+    if (bad) { check((r.stopped && r.stopsBeforePress) || r.lateTurn, seed.toString(16) + ': the beeps were neither stopped before the press nor logged as a late turn inside the last 0.4 s'); check(/stopped|lost/i.test(r.strip || ''), seed.toString(16) + ': the strip does not say so'); }
     else check(!r.stopped && !(r.stopEv || []).length, 'control: the plan was stopped by its own shines');
     await p.close();
   }

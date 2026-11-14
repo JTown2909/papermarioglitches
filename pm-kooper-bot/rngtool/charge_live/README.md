@@ -1,3 +1,109 @@
+# Time Out Timer v106: whole beep series only; a carried Charge lock that the coin then doubts still plans (honestly, with a warning); replans by the realistic chance; the Power Bounce's 6 run; capture-drop warning; Erase log (Nov 14)
+
+From the runner's console logs of Nov 14 (logs1114: fb0715 ... fb1010; numbers and event names only, no clip or frame committed).
+
+## 1. Final Bowser T2 (fb1010, 937-943 s): the carry and the Charge agreed, the coin killed the plan
+- Live (page v104): T1 a fresh stream lock (72 fits), Cloud Nine F126, the skip read F393 (planned 390, err +2.82); T2's Charge
+  locked carried (`fb14Check` 5443 of the 6994 held states drew its rays, M 578), then `fb14NoEdge` doubt 0.82, 478 states:
+  "No edge yet", no beeps; the runner confirmed Do Nothing blind on F839 and Bowser hit.
+- Replayed offline (`test_v106.js` section 1; the log's two kept Charge captures, its shines and bar stretches, its inputs) through
+  v104 and v105, with and without the stream window, and with the skip read moved to 386 / 389 / 393 / 397 / 400: the T2 Charge
+  locks carried on M 578 every time, and 62-84 carried states explain **both** shines since T1 (F107, F513) and the empty menu
+  stretch (no error), doubt 0.001-0.003, plan 0.56-0.66 (v105: 765, 2 frames, broad 0.60). So **the menu coin was read right**
+  (states that draw exactly those shines exist, and agree with the T2 rays) and **the skip's read error does not matter** (the
+  skip moves Bowser's AI draw, not the coin; every skip frame 386-400 gives the same coin fit).
+- What differs is the T1 fit list: the replay's pictures are the kept webp (q 0.1) copies, and its T1 read gives 52-85 fits
+  where the live one gave 72 (another best, 4793-5852 against 5115). The live carried set, built from that list and cut to 12000
+  after the Cloud Nine x 7 and skip x 7 shifts (by prior weight), held **no** coin-consistent state: the true state was missing
+  from the carry (v105's root cause 2, the one-Charge lock's budget), not misread by the coin. Not reproducible exactly from
+  the kept pictures, so not fixed at the source.
+- Fix (the requirement: a coin disagreement after an agreeing carry is never silently nothing): when this turn's Charge locked
+  carried, the doubt gate no longer removes the plan. The plan is made on the states as weighed, its claim carrying the whole
+  doubt ((1 - d) x share + d x blind), logged `fb14CoinWarn`, the plan `coinWarn`, and the page says "WARNING: the coin
+  disagrees with the carried seed (82% off): a lower chance, about blind plus the states' edge". Under blind + 3% it is a
+  visible "No edge (the coin disagrees) ... no better than blind". fb1010 T2 with the live doubt forced on the replayed states:
+  765, claim 0.577 (the kept states 0.88; at doubt 0.82 no claim can pass 0.18 + 0.82 x 0.495 = 0.59). A fresh lock at the same
+  doubt stays "No edge" (unchanged). The tick keeps such a plan on its claim (the doubt is already in it).
+
+## 2. Beeps: always the whole series, never cut or swapped mid-way
+- fb1006 T3 (698.87 s): the plan's first beep fell before it was scheduled (`beepsCancelled n 2` at the replan: two beeps), then
+  the plan loop made the next window's series: "2 beeps then a new series". fb0715 (269.3 s): a Time Out series cut by zwTick
+  `stop('late')` 0.16 s before the press (the press still worked).
+- Now (`shared/beeps.js`, `page_template.html`): every scheduled beep time is tracked (`beepsInFlight`: a series whose first beep
+  has sounded). `playBeeps` plays only when every beep is still ahead and no begun series overlaps (else false, logged
+  `beepsNoFit` / `beepsSeriesKept`); `cancelBeeps` keeps a begun series (`beepsKept`); a plan holds while its series plays
+  (`seriesHold`: zwPlan, fb14Plan, fb2's three planners; `fb14ReplanHeld`). Only `stopBeeps` cuts a begun series: with 0.4 s
+  or more to the last beep, a visible "STOP: do not press on the last beep" (`beepsStopVisible`); inside 0.4 s never: it plays
+  out (`beepsLateTurn`) and after the last beep the page says "The coin turned late: the frame you just pressed on was down to
+  N% (planned M%)" (`lateTurnShown`). zwTick (Time Out, Jr., Hallway, Duplighosts), fb14Tick and the T6 series use it; Reset
+  seed still cuts at once. fb14Plan takes its first frame from now + 250 ms (`FB14_PLAN_MS`: the plan's own time), so its
+  first beep is not past when scheduled.
+
+## 3. Replans by the realistic chance
+- fb1006 T2: `fb14ReplanNear` moved from a 5-frame window (0.59 with the press spread) to the nearest frame that cleared pp - 0.1,
+  a 1-frame window (0.41, broad 0.49). `fb14Anchor` now scores every frame that clears the perfect-press bar by the press
+  spread over the kept states' share, capped by the same over every state the coin has not ruled out (fb14Broad's states), and
+  takes the best; nearness to the turn's first frame only breaks ties within 0.03 (`FB14_ANCHOR_RTOL`). Synthetic fb1006 shape:
+  207 (5-frame, 0.89) over 215 (1-frame, 0.56). test_console_v96's anchor checks still hold (perfect press there).
+- ppPick (Time Out, Jr., Hallway): a later frame narrower than the pick needs 0.10 more with the press spread (`PP_SC_GAIN`;
+  equal or wider: 0.03 as before): fb0958 Jr. T5 Do Nothing took a later 1-frame window between gaps (0.66 with the spread),
+  pressed 2 frames early: hit. ppPick0 keeps the widest run first, unless a frame of a 2+ run is 0.10 likelier with the spread.
+
+## 4. Jr. Troopa: a re-lock replans
+- fb0748 T3 (a 0.62 1-frame plan kept at 0.73 after the re-lock while a wide window existed; hit) and fb0958 T5: zwTick only
+  re-scored the old plan (kept at >= old - 0.15). Now a plan marked by `jrStartFrom` (`P.relock`) is planned again once, while
+  every beep is ahead and none has sounded; the new plan stands when it is 0.10 likelier with the press spread
+  (`ZW_RELOCK_GAIN`, logged `jrRelockReplan`), else the old plan and its beeps come back (`jrRelockKept`).
+
+## 5. Jr. Power Bounce aims at the 6 run
+- fb0748 (plan window 11, 6+ about 0; "it didn't beep on a window where there were like 8 frames of 6 cap working"): goal
+  `free` (jrpb5) sorted by the 5+ run first and never looked past the extra wait when a 6+ profile existed. `ppPick6` now
+  searches up to "Wider window up to" (zwlater) for the widest 6+ run among 5+ frames and aims at its middle; the 5+ middle
+  only when no 6+ run is in reach. Synthetic fb0748 shape: 5+ for 11 frames now, an 8-frame 6 run 1 s later: aimed at 130.
+
+## 6. Capture-drop warning
+- chargeMaps' gaps of 30 ms or more (dropped pictures) were 0-67% of a read in these logs; fb1001's T1 Charges 64% / 64% (no
+  lock). Over 30% the Charge panel and the status detail say "Warning: the capture dropped N% of the pictures during this
+  Charge read (the rays need every one): try OBS's hardware encoder and keep this page's window visible" for 90 s
+  (`captureDrops` logged, `info.drops` in chargeMaps).
+
+## 7. / 8. Log name, buttons
+- Download session log saves `pm-rng-log-YYYY-MM-DD_HH-MM-SS.json` in local time (as OBS names its clips).
+- "Reset" is now "Reset seed" (same behaviour). "Erase log" (right of it): after a confirm() (a second click within 4 s where the
+  page's frame blocks dialogs) it clears the session log and its kept Charge reads (SLOG, CHG_CAPS) so the next saved log holds
+  only new attempts; settings, press corrections and the browser's saved Charge reads stay.
+
+## 9. End to end (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 PLANCHECK=1, b13, T1-T4, 5 seeds, page v106)
+Not run. The e2e harness (`fb14_e2e.py` on the b13 states) gives the page no Charge trigger at all after the container restart:
+every turn blind, `nplans` 0, the page log only `step` / `screenClosed` / `fb14ConfirmBeforeLock`, and the v105 build fails it
+the same way (1234abcd T1, both builds), so it is the harness (the emulator picture reaching the page), not v106. The v106 changes
+are checked by the suite's console replays and `test_v106.js` instead; the e2e numbers wait for the harness fix.
+
+## Tests
+New `test_v106.js` (in `run_suite.sh`): the beep series rules (no partial series, a begun one kept against cancel / replace /
+replan, STOP with 0.4 s left, the late-turn note after the press, a plain cancel before the first beep), the anchor and ppPick
+picks, the Jr. relock wiring, the 6-run aim and its fallback, the log name, the buttons and Erase log (confirm and the
+two-click fallback), and with logs1114 here: fb1010 T2 replayed (carried on M 578, the coin explained, the warned plan's honest
+claim, the fresh lock unchanged) and fb1001's 64% drop warning. Version checks and the page tests' default build moved to v106.
+Route texts unchanged.
+
+Full `run_suite.sh` (in two parts after the first runner died at test 25, all passed to there): 75 pass; fail only the known
+torch_core, hw_v77, route_replay, session_plans, capture_replay (maze TORCH=1 and the two upload-log replays not run). The first
+pass also failed test_dup_plan (20), test_pp_plan, test_jr_plan and test_beeps_stop, fixed after the job stopped:
+- ppPick's 6-run aim (`ppPick6`) and the realistic-chance override in ppPick0 also fired for the Duplighosts' goal `free` (it has
+  an all-4 profile): the Power Bounce now asks for its own goal `six` (zwChoose, jrpb5 only) and the override is for levers with
+  one outcome only (no share4). test_dup_plan / test_pp_plan pass again.
+- The 6 run cost the fight's 5+ (test_jr_plan carry T6: 5+ 95% -> 88%): the 6 run is taken only within `PP_SIX_TOL` (0.02) of the
+  5+ pick's 5+ chance with the press spread (carry T6 now 5+ 96.9%, 6+ 60.0%; coin / own / lock 5+ 98.1%, 6+ 80-87.5%), the
+  fb0748 shape still aims at the 8-frame 6 run.
+- test_beeps_stop 2468ace0: the seed is lost 0.24 s before the press; v105 cut the beeps there, v106 plays the begun series out
+  inside 0.4 s (the rule above) and logs `beepsLateTurn` with "Seed lost" on the strip: the test now asks for a stop before the
+  press or a late turn inside the last 0.4 s.
+
+## Not done
+- The source of the T2 miss: the one-Charge T1 lock's budget (the coin-consistent states cut from the live carry); v105's
+  root cause 2 stands.
+
 # Time Out Timer v105: each aura split of a lock gets its own seed after the rays; why the truth was missing from the locks (Nov 14)
 
 Goal: honest Final Bowser plans as high as possible; first, why v104 found locks with no state that follows the game. Numbers
