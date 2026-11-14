@@ -48,7 +48,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // v106.1 (console 14-33-11): the route moving on (the turn's confirm is in) cuts a begun series
   const stp = await p.evaluate(async () => {
     const V = window.__tot.v106, w = ms => new Promise(r => setTimeout(r, ms)), now = () => performance.now();
-    V.setStep(0); await w(50); V.playBeeps(now() + 1100, 3, 500); await w(200); const a = !!V.inFlight(); V.setStep(1); const b = !!V.inFlight(); V.setStep(0); return { a, b }; });
+    V.setStep(0); await w(900); V.playBeeps(now() + 1100, 3, 500); await w(200); const a = !!V.inFlight(); V.setStep(1); const b = !!V.inFlight(); V.setStep(0); return { a, b }; });
   ok(stp.a && !stp.b, '2. a begun series is cut when the route moves on after the confirm (no beeps after the press)');
   // fb1006 T3's two beeps: the first was past when scheduled; the plan now takes its frames from now + FB14_PLAN_MS
   const src14 = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'), tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8');

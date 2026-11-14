@@ -407,14 +407,27 @@ function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) 
  * overlap it (false otherwise: the caller keeps its old plan or none); cancelBeeps (shared/beeps.js, BEEP_GUARD) keeps a
  * series that has begun; only stopBeeps cuts one, with a visible STOP, and only with BEEP_STOP_MS or more left. */
 BEEP_GUARD = true;
-const BEEP_STOP_MS = 400;
+const BEEP_STOP_MS = 400, BEEP_QUIET_MS = 800;
 function playBeeps(tPress, n, g) {
   n = n || nBeeps(); g = g || num('gapms'); const now = performance.now(), t1 = tPress - (n - 1) * g, f = beepsInFlight(now);
   if (f && Math.abs(f.tEnd - tPress) < 5) return true;      // the same series
   if (f && t1 < f.tEnd + 300) { slog('beepsSeriesKept', { tEnd: Math.round(f.tEnd), left: f.left, newFirstIn: Math.round(t1 - now) }); return false; }
   if (t1 < now + 20) { slog('beepsNoFit', { firstIn: Math.round(t1 - now), n }); return false; }
+  // v108 (console fb1548 T4: a new series 18 ms after the kept series' last beep, before the confirm was read): after a
+  // series' last beep no new one until the confirm read window (BEEP_QUIET_MS) has passed or the route moved on (setStep)
+  { const S = st.series; if (S && !S.cut && S.tEnd <= now && now - S.tEnd < BEEP_QUIET_MS && beepT.some(t => Math.abs(t - S.tEnd) < 2)) { slog('beepsQuiet', { sinceLast: Math.round(now - S.tEnd), newFirstIn: Math.round(t1 - now) }); return false; } }
   for (let i = 0; i < n; i++) beepAt(tPress - (n - 1 - i) * g, i === n - 1 ? 1320 : 880, i === n - 1 ? 0.12 : 0.06);
+  const S = st.series = { tPress, tEnd: tPress, t1, made: now, plan: null };
+  // the plan whose series this is: the caller sets st.plan in the same task (before or after this call)
+  const bind = () => { if (st.series === S && !S.plan && st.plan && Math.abs((st.plan.tPress || 0) - tPress) < 5) { S.plan = st.plan; if (st.plan.fb14 && typeof FB14 !== 'undefined') S.fb14plan = FB14.plan; } };
+  bind(); (typeof queueMicrotask === 'function' ? queueMicrotask : f => Promise.resolve().then(f))(bind);
   return true;
+}
+// v108: the series still owns the turn: its beeps not cut and its last beep under BEEP_QUIET_MS ago (or still to come)
+function seriesActive(now) {
+  now = now != null ? now : performance.now(); const S = st.series;
+  if (!S || S.cut || now > S.tEnd + BEEP_QUIET_MS) return null;
+  return beepT.some(t => Math.abs(t - S.tEnd) < 2) ? S : null;
 }
 /* a running plan's frame turned bad: before its first beep, cancel (the caller may replan); a begun series with BEEP_STOP_MS
  * or more to its last beep: cut it with a visible STOP; inside that, never cut: keep it, log it, and say after the press that
@@ -422,13 +435,21 @@ function playBeeps(tPress, n, g) {
 function stopBeeps(why, pNow, P) {
   const now = performance.now(), f = beepsInFlight(now);
   if (!f) { cancelBeeps(); return 'cancelled'; }
-  if (f.tEnd - now >= BEEP_STOP_MS) { cancelBeeps({ force: true }); slog('beepsStopVisible', { why, msLeft: Math.round(f.tEnd - now), p: pNow != null ? +pNow.toFixed(3) : null });
+  if (f.tEnd - now >= BEEP_STOP_MS) { cancelBeeps({ force: true }); if (st.series) st.series.cut = true; slog('beepsStopVisible', { why, msLeft: Math.round(f.tEnd - now), p: pNow != null ? +pNow.toFixed(3) : null });
     st.msg = 'STOP: do not press on the last beep. The coin ruled the planned frame out' + (pNow != null ? ' (now ' + Math.round(100 * pNow) + '%)' : '') + '.'; st.stopShown = now; return 'stop'; }
   slog('beepsLateTurn', { why, msLeft: Math.round(f.tEnd - now), p: pNow != null ? +pNow.toFixed(3) : null });
   st.lateTurn = { tEnd: f.tEnd, p: pNow, why, was: P && P.mix ? (P.mix.pp != null ? P.mix.pp : P.mix.p) : null }; return 'kept';
 }
 // a plan whose series has begun holds: no replan, no new message until its last beep (stopBeeps alone may cut it)
-function seriesHold(tag) { const f = typeof beepsInFlight === 'function' ? beepsInFlight() : null; if (!f || !st.plan || st.plan.stopped) return false; if (st.holdLog !== st.plan) { st.holdLog = st.plan; slog('replanHeld', { tag, left: f.left, msLeft: Math.round(f.tEnd - performance.now()) }); } return true; }
+// v108 (console fb1548 T4: the plan was dropped while its series played, a replan made a second target, then a third beeped):
+// while a series is in flight or inside BEEP_QUIET_MS after its last beep the turn keeps that series' plan; one dropped or
+// replaced meanwhile comes back (seriesPlanKept)
+function seriesHold(tag) {
+  const now = performance.now(), f = typeof beepsInFlight === 'function' ? beepsInFlight(now) : null, S = seriesActive(now);
+  if (S && S.plan && !S.plan.stopped && (f || S.tEnd <= now)) {
+    if (st.plan !== S.plan) { slog('seriesPlanKept', { tag, target: S.plan.target, was: st.plan ? st.plan.target : null, msToLast: Math.round(S.tEnd - now) }); st.plan = S.plan; if (S.fb14plan && typeof FB14 !== 'undefined') FB14.plan = S.fb14plan; }
+    if (st.holdLog !== st.plan) { st.holdLog = st.plan; slog('replanHeld', { tag, left: f ? f.left : 0, msLeft: Math.round(S.tEnd - now) }); } return true; }
+  if (!f || !st.plan || st.plan.stopped) return false; if (st.holdLog !== st.plan) { st.holdLog = st.plan; slog('replanHeld', { tag, left: f.left, msLeft: Math.round(f.tEnd - now) }); } return true; }
 // after the last beep of a series kept through a late turn: say so (once)
 function lateTurnTick(now) {
   const L = st.lateTurn; if (!L || now < L.tEnd + 250) return; st.lateTurn = null;
@@ -1754,7 +1775,7 @@ function planScreenLost(t, now) {
   if (P.prof === 'fb2' && typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null) FB2.plan.lost = true;
   cancelPlan(); return true;
 }
-function reset() { stopWorkers(); cancelBeeps({ force: true }); zw.on = false; chgReset(); Object.assign(WALK, { start: null, vis: 0, lastT: null, last: null }); Object.assign(st, { segs: [{ taps: [] }], chain: [], carry: null, carry0: null, wtorch: null, wtry: null, rcarry: null, wcarry: null, wbase: null, wcarryPending: null, turnEv: [], hyp: null, carryOk: 0, inputs: [], needResync: false, cands: null, lock: null, prevLock: null, searching: false, clock: null, plan: null, msg: null, note: null, example: true }); render(); }
+function reset() { stopWorkers(); cancelBeeps({ force: true }); st.series = null; zw.on = false; chgReset(); Object.assign(WALK, { start: null, vis: 0, lastT: null, last: null }); Object.assign(st, { segs: [{ taps: [] }], chain: [], carry: null, carry0: null, wtorch: null, wtry: null, rcarry: null, wcarry: null, wbase: null, wcarryPending: null, turnEv: [], hyp: null, carryOk: 0, inputs: [], needResync: false, cands: null, lock: null, prevLock: null, searching: false, clock: null, plan: null, msg: null, note: null, example: true }); render(); }
 $('shine').addEventListener('pointerdown', e => { e.preventDefault(); tap(); });
 $('dl-log').onclick = downloadLog; $('find').onclick = find; $('gap').onclick = newSegment; $('plan').onclick = makePlan; $('undo').onclick = undo; $('reset').onclick = () => { reset(); if (typeof arenaReset === 'function') arenaReset(); };
 document.addEventListener('keydown', e => {
@@ -1771,7 +1792,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v107';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v108';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2244,7 +2265,7 @@ function applyProfile() {
 /* v106.1 (console 14-33-11: the Jr. T4 Syrup and T6 Bounce beeps played on after the confirm, `beepsKept`): the route moving on
  * means the turn's confirm is in, so its series is cut whether or not it has begun (the begun-series guard is for replans) */
 function setStep(i) {
-  slog('step', { to: i }); const was = routeStep; st.hwDone = false; if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { cancelBeeps({ force: true, why: 'step' }); dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
+  slog('step', { to: i }); const was = routeStep; st.hwDone = false; if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { cancelBeeps({ force: true, why: 'step' }); st.series = null; dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
   if (RT()[was] && /^Hallway Bowser/.test(RT()[was].t || '') && !/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '') && routeStep > was) st.hwLeft = { at: performance.now(), hides: 0 };
   else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); if (routeStep !== was) fb2WaitArm(); }
 // v92: the runner's own route moves (a click, the buttons, the keys) are told from the page's (a screen, a burst): a Final
@@ -2596,7 +2617,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), seriesActive: n => seriesActive(n), BEEP_QUIET_MS, zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },

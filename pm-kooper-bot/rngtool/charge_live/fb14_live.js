@@ -872,7 +872,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const skp = fb14SkipPhase(), stp0 = fb14Step(), stp = skp ? (RT().find(x => x.fb14 === 1 && x.fb14role === 'lever') || stp0) : stp0, turn = stp && stp.fb14;
   if (!turn || stp.fb14role !== 'lever') return false;
   if (cAt == null) FB14.decide = null;
-  if (cAt == null && typeof seriesHold === 'function' && st.plan && st.plan.fb14 && seriesHold('fb14')) return true;      // v106: a begun series plays out (fb14Tick's STOP alone cuts it)
+  if (cAt == null && typeof seriesHold === 'function' && seriesHold('fb14')) return true;      // (v108: also with st.plan dropped: the series' plan comes back)      // v106: a begun series plays out (fb14Tick's STOP alone cuts it)
   if (FB14.hit && FB14.hitLogged !== turn) { FB14.hitLogged = turn; slog('fb14NoEdge', { turn, why: 'hit', hit: FB14.hit }); }
   if (FB14.hit === 4 || FB14.routeOff) { st.msg = 'Route off: ' + (FB14.routeOff || 'Mario was hit on T4') + '. The page plans no Final Bowser lever from this attempt (the next attempt\'s T1 Charge locks again).'; FB14.plan = { none: 'route off', turn }; fb14Show(); if (cAt == null) { cancelBeeps(); render(); } return true; }
   if (FB14.hit) { st.msg = 'No edge: Mario was hit on T' + FB14.hit + ' (the Life Shroom revive is not modelled, and it ends the route\'s dodge). ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; FB14.plan = { none: 'hit', turn }; fb14Show(); if (cAt == null) { cancelBeeps(); render(); } return true; }
@@ -1049,6 +1049,13 @@ function fb14Anchor(C, from, W, turn, PD, nKept) {
 }
 /* about 4 times a second with a plan running: the coin may have moved the weights; a planned frame that no longer works
  * for enough of the states stops its beeps (and replans while the beeps still fit) */
+/* v108 (console fb1548 T4: fb14Refine dropped the plan, the replan returned early on a "WAIT, searching" path and left the old
+ * plan's beeps scheduled with no plan: the next replans made targets 231 and 255): a replan that leaves no plan while the old
+ * plan's beeps are still scheduled keeps the old plan (its beeps are what the runner hears) */
+function fb14KeepIfOrphan(P, why) {
+  if (st.plan || !P || typeof beepT === 'undefined' || !beepT.some(t => Math.abs(t - P.tPress) < 2)) return;
+  st.plan = P; slog('fb14PlanKept', { why, target: P.target, msToPress: Math.round(P.tPress - performance.now()) });
+}
 function fb14Tick(t) {
   const P = st.plan; if (!P || !P.fb14 || P.stopped || P.tPress < performance.now() - 300) return;
   if (FB14.pendChg) return;
@@ -1068,9 +1075,9 @@ function fb14Tick(t) {
     const now = performance.now(), narrowed = Wg.list.length < 0.9 * (P.mix.groups || 1e9) || Wg.doubt < (P.mix.doubt || 0) - 0.02 || (P.freshCap && !FB14.fresh);     // v102: the fresh lock's cap lifted by the coin
     if (narrowed && (P.mix.pp || 0) < FB14_UP && P.tPress - (nBeeps() - 1) * num('gapms') > now + 300 && now - (P.upT || P.tMade) > 700) {
       slog('fb14Refine', { from: P.target, pp: +(P.mix.pp || 0).toFixed(3), pNow: +p.toFixed(3), states: Wg.list.length, was: P.mix.groups, doubt: +Wg.doubt.toFixed(3) });
-      FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; if (st.plan) st.plan.upT = now; }
+      FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; fb14KeepIfOrphan(P, 'refine'); if (st.plan) st.plan.upT = now; }
     return; }     // v96: 0.25 (was 0.15: 0dfd444d T2's second replan at 0.775 of 0.989)
-  if (P.tPress - (nBeeps() - 1) * num('gapms') > performance.now() + 200) { slog('fb14Replan', { from: P.target, p: +p.toFixed(3) }); FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; return; }
+  if (P.tPress - (nBeeps() - 1) * num('gapms') > performance.now() + 200) { slog('fb14Replan', { from: P.target, p: +p.toFixed(3) }); FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; fb14KeepIfOrphan(P, 'replan'); return; }
   // v106: a begun series is never cut silently: STOP (visible) with 0.4 s or more left, else it plays out (stopBeeps)
   const r = typeof stopBeeps === 'function' ? stopBeeps('fb14', p, P) : (cancelBeeps(), 'cancelled'); P.stopped = true;
   if (r === 'kept') return;
@@ -1477,3 +1484,4 @@ window.__fb14 = { v103: { boltLik: (S, h, b, c) => fb14BoltLik(S, h, b, c), SIG:
 window.__fb14.v105 = { end48: (x0, M, q, c, pa) => fbEnd48(x0, M, q, c, pa), BIN: FB14_BIN, AV: FB14_AV, COMBOS: FB14_COMBOS };   // for tests (v105)
 window.__fb14.v104 = { broad: (C, Wg, t, d, PD) => fb14Broad(C, Wg, t, d, PD), blind: t => fb14Blind(t), truthScore: (S, d) => fb14TruthScore(S, d), isTrueS: S => fb14IsTrueS(S) };
 window.__fb14.v102 = { truthZero: t => fb14TruthZero(t), freshOpen: h => fb14FreshOpen(h), FRESH_D: FB14_FRESH_D, isTrue: S => fb14IsTrue(S) };   // for tests (v102)
+window.__fb14.v108 = { keepIfOrphan: (P, w) => fb14KeepIfOrphan(P, w) };
