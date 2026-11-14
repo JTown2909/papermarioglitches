@@ -77,6 +77,10 @@ checks and the page tests' default build moved to v105. Diagnostics (e2e only, `
 count after each input and before T2 / T4's held check, the carried check's end-seed misses; `V105T` (test_fb14_page.js env: a
 known true aura scored by the kernel, `fb14V105Score`). Route texts unchanged.
 
+Full `run_suite.sh`: 78 pass (test_fb14_v105, every test_console_* replay, test_route_texts among them); fail only the known
+torch_core, hw_v77, route_replay, session_plans, capture_replay; test_maze_dup_page TORCH=1 hung (killed by PID: the known hang);
+the two upload-log replays found no file (`/root/.claude/uploads/...` gone after the container restart).
+
 ## Not done
 - Root cause 2: the one-Charge lock's budget (the true split past `FB14_COMBOS` / the 12000 cap on 1234abcd T1): needs a cheaper
   state (phase pairs or splits merged until they diverge) or evidence that ranks splits (Cloud Nine's puffs, the bolts).
