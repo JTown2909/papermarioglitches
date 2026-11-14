@@ -41,6 +41,13 @@ S() { echo "== $*"; Q env "$@"; }
 # Close Call, Ultra Boots, 10 HP / 15 FP, Jammin' Jelly + Life Shroom, the Peach Beam
 S AC=1 PARTNER=8 BRANK=1 BADGES=e4,10c,10d,112 BOOTS=2 HP=10 FP=15 ITEMS=a2,95 NOFS=1 STARBEAM=2 SUF=_peach python3 boss_battle_start_setup.py 2304
 Q env PYTHONPATH=. python3 "$HERE/fb2_route/t1menu_state.py" /dev/shm/fb2r/t1menu.st
+# v108: the e2e's T1 build (fb14_e2e.py BUILD = /dev/shm/fb2r/b13): the T1 menu with Mario 10 HP, Bowser 80 (DIAGNOSTIC
+# writes, as route_build.py does; fb14_e2e writes each run's own gRandSeed). The e2e needs Xvfb at 800x600x24 (the grab
+# box 80,60 .. 720,540 is the 640x480 window centred on that screen) and the page served on 127.0.0.1.
+Q env PYTHONPATH=. python3 -c "
+import sys, os; sys.path.insert(0, '$HERE/fb2_route'); from route import *
+os.makedirs('/dev/shm/fb2r/b13', exist_ok=True); r = Run('rb', log=False); r.load('/dev/shm/fb2r/t1menu.st')
+r.e.w8(PLAYER_DATA + 2, 10); r.set_bowser_hp(80); r.seed(0x1234abcd); r.e.save('/dev/shm/fb2r/b13/t1_menu.st'); print('b13 ok')"
 # Final Bowser phase 2, Normal Boots (charge_live v86 section 3), and its T2 menu (fb2_route/nb_p2_state.py)
 S AC=1 PARTNER=1 BRANK=1 BADGES=10c,e4,112,11f BOOTS=0 FP=10 HP=10 ITEMS=93,95,95,a3 NOFS=1 STARBEAM=2 SUF=_nbg python3 boss_battle_start_setup.py 2304
 Q env PYTHONPATH=. python3 "$HERE/fb2_route/nb_p2_state.py"

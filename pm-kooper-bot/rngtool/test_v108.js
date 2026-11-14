@@ -7,6 +7,8 @@
  * 2. T7 after a T6 Close Call that worked (fb1548 2546.8-2563 s, pLucky 0.531, then "No edge" at doubt 0.29-0.38): the outcome
  *    read from Mario's HP (fb2HpWatch); a dodge drops the hit branch from the T7 doubt; a hit gives no T7 plan. Replayed from
  *    the log's T6 Charge capture, confirm and shine.
+ * 4. Final Bowser's post-hit fresh lock (logs1114 fb1516 T2, fb1548 T4, fb1203 T4 replayed): the menu coin's window that takes in
+ *    Bowser's hit and the revive is not used (fb14MenuAfterHit); after a hit, also when under FB14_FEWMIN fits survive it.
  * usage: node test_v108.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1114] */
 const fs = require('fs'), path = require('path');
 const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v108/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
@@ -89,6 +91,33 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       ok(r3.hit && r3.hit.none === 'hit', '2. a hit seen: no T7 plan (the dodge branch only is modelled)');
     }
     await p2.close(); }
+  // ---- 4. the post-hit fresh lock: the menu coin's window across Bowser's hit and the revive is not used (logs1114 replays:
+  // the Charge capture, the bar's hides, the shines, the hit read; the states weighed 3 s / 8 s after the trigger, before the confirm)
+  const CASES = [['fb1516', 2, 599912, 592233, 1], ['fb1548', 4, 2508454, 2493536, 3], ['fb1203', 4, 1897673, 1868150, 2]], H = {};
+  for (const [L, turn, TR, HT, hitTurn] of CASES) {
+    const LP = path.join(LOGS, L, 'log.json'); if (!fs.existsSync(LP)) { console.log('(4 skipped: no log ' + LP + ')'); continue; }
+    const Lg = JSON.parse(fs.readFileSync(LP, 'utf8')), E = Lg.events, hide = E.filter(e => e.ev === 'barHide' && e.at < TR).pop(), wl = Date.parse(Lg.saved) - (E[E.length - 1].t - TR);
+    const cap = Lg.chargeCaptures.filter(c => c.stepT === 'Final Bowser T' + turn).sort((x, y) => Math.abs(Date.parse(x.wall) - wl) - Math.abs(Date.parse(y.wall) - wl))[0];
+    const taps = E.filter(e => e.ev === 'shine' && e.at < TR + 10000).map(e => e.at), vis = E.filter(e => e.ev === 'barHide' && e.at < TR + 10000).map(e => [e.at - e.upMs, e.at]);
+    for (const mode of ['before', 'after']) {
+      const p4 = await open({ prof: 'endgame', off: '-4.5', vlag: '50', fbc9: 'skip', zwedge: '0.4' });
+      H[L + mode] = await p4.evaluate(async ({ cap, t0, turn, HT, hitTurn, menuSince, taps, vis, mode }) => {
+        const T = window.__tot, X = window.__fb14, FB = X.FB14, out = {};
+        X.reset(); T.setStep(T.RT().findIndex(x => x.fb14 === turn && x.fb14role === 'lever'));
+        if (mode === 'after') { FB.hit = hitTurn; FB.hitT = HT - 10 * 1000 / 29.97; }      // (before: v107, no hit time kept)
+        T.v106.CHG().menuSince = menuSince; await T.chgReplay(cap, { fb14: true, t0 });
+        FB.taps = taps.slice(); FB.vis = vis.slice(); FB.visFrom = null; FB.pendChg = null;
+        out.n = FB.states.length; out.afterHit = X.slogTail(300).some(e => e.ev === 'fb14MenuAfterHit');
+        for (const dt of [3000, 8000]) { const h = Math.floor(X.pic(t0 + dt)); FB.states.forEach(S => X.fbRun(S, h - S.l)); const W = X.weigh(h); out['w' + dt] = [W.list.length, +W.doubt.toFixed(3)]; }
+        return out; }, { cap, t0: hide.at - cap.hideMs, turn, HT, hitTurn, menuSince: hide.at - hide.upMs, taps, vis, mode });
+      await p4.close(); }
+    console.log('   ' + L + ' T' + turn + ' post-hit fresh lock: before ' + JSON.stringify(H[L + 'before']) + ' after ' + JSON.stringify(H[L + 'after']));
+  }
+  if (H.fb1516after) {
+    ok(H.fb1516after.afterHit && H.fb1516after.w8000[1] < 0.5 && H.fb1516before.w8000[1] > 0.9, '4. fb1516 T2 (the window took in the hit): the menu coin across the hit is not used: 8 s on, doubt ' + H.fb1516before.w8000[1] + ' -> ' + H.fb1516after.w8000[1] + ' (' + H.fb1516before.w8000[0] + ' -> ' + H.fb1516after.w8000[0] + ' states)');
+    ok(H.fb1548after.w8000[1] <= H.fb1548before.w8000[1] + 1e-9 && H.fb1548after.w8000[0] > 0, '4. fb1548 T4 (the window took in the hit and the revive flashes): the same or better (' + JSON.stringify(H.fb1548after.w8000) + ')');
+    ok(!H.fb1203after.afterHit && H.fb1203after.n === H.fb1203before.n, '4. fb1203 T4 (the menu came after the revive): the window is kept, the lock unchanged');
+  }
   ok(!errs.length, 'no page errors ' + errs.join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

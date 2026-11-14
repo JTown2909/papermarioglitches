@@ -43,11 +43,11 @@ const FB14_T5 = [8540, 9420];
 const FB14_VAN = { M: 1, S: 2, K: 3, Kon: 0 };     // v101: K the skip (Cloud Nine's message gone: the A + 3), Kon the message's first picture (P + 255 + Kon)
 // a Charge burst this long after the last one, on that turn's lever step, is the next turn's Charge (Bowser's turn alone
 // takes 15 s+ on console: T1 Cloud Nine -> T2 menu 18 s in the 2026-11-07 clip)
-const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000;
+const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000, FB14_HIT_N = 10, FB14_REVIVE_F = 450, FB14_FEWMIN = 200;
 const FB14_MISSW = 0.01;     // v86: a state whose Bowser hit Mario on a turn the bar showed a miss (the HP read can be wrong: not 0)
 const FB14_HIDE = { jelly: 2, peach: 2 }, FB14_JSHIFTS = [[-1, 0.25], [0, 0.5], [1, 0.25]];
 var FB14 = { on: false };
-function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null }); }
+function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hitT: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null }); }
 fb14Reset();
 /* ---- the random numbers (fast, no arrays) ---- */
 let FBV = 0;
@@ -202,6 +202,12 @@ function fb14Lock(res) {
   const seen = new Set(); const hadCarry = !first && FB14.states.length > 0;
   // the menu's coin before the Charge: back to 1 s after the bar came up for that menu (at most 15 s)
   let menuF = FB14.menuT != null ? Math.min(M, Math.max(M - 450, Math.ceil(fbPic(FB14.menuT) + 30))) : M;
+  // v108 (v105's post-hit fresh lock: the menu coin's window took in Bowser's hit and the revive, which no menu draw explains,
+  // left 48 of the fits and dropped the true one; logs1114 fb1516 / fb1203: the bar stays up 14 s after the hit read, with
+  // shine-like flashes every 48 frames to 13 s): a window that reaches back to within FB14_REVIVE_F of the hit is not used
+  const hitF = FB14.hitT != null && FB14.hitT < trigT ? Math.ceil(fbPic(FB14.hitT) + FB14_REVIVE_F) : null;
+  if (hitF != null && hitF > menuF && menuF < M) { slog('fb14MenuAfterHit', { M, menuF, hitF }); menuF = M; }
+  const afterHit = hitF != null;
   const back0 = (x0, F0, q, c, pa) => { const r = fbBackShines(x0, F0, q, c, pa, menuF); return { ok: r.ok, sh: r.sh.sort((a, b) => a - b), from: Math.min(menuF, F0) }; };
   // v87: the fresh fits are built only when no carried state drew these rays (about 1 s on the page's thread)
   const buildFresh = () => {
@@ -324,7 +330,8 @@ function fb14Lock(res) {
     // v92 (e2e 5eed0fb2 T2 after T1's hit: the bar stayed up through Bowser's attack and the Life Shroom, 18 s; the
     // menu's coin window took in the revive's shines, which no menu draw explains, and every fit died: no T2 plan): when
     // the menu's coin leaves no fit, the fits are built again without it (the coin after the Charge still weighs them)
-    if (!Wg.list.length && menuF < M) { slog('fb14MenuCoinDropped', { turn, M, menuF, fits: keep.length }); menuF = M; seen.clear(); FB14.gone = false; FB14.allOutLogged = false;
+    // v108: after a hit, also when very few fits survive it (FB14_FEWMIN; v105: 48 left, the truth not among them)
+    if ((!Wg.list.length || (afterHit && Wg.list.length < FB14_FEWMIN)) && menuF < M) { slog('fb14MenuCoinDropped', { turn, M, menuF, fits: keep.length, left: Wg.list.length }); menuF = M; seen.clear(); FB14.gone = false; FB14.allOutLogged = false;
       keep = buildFresh(); const sum2 = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum2; S.lw = 1; S.err = 0; }); FB14.states = keep; n0 = keep.length; Wg = fb14Weigh(M + 61); }
     if (Wg.list.length) keep = Wg.list; }
   keep.sort((x, y) => y.w * y.lw - x.w * x.lw);
@@ -351,7 +358,7 @@ function fb14Lock(res) {
   if (turn === 4) FB14.states = fb14WaveSplit(FB14.states);     // v87: the T4 wave's second particle order
   // v91 (B, log a53781d5: the hit of an earlier attempt kept every later plan at "hit", no log line): a fresh lock after a
   // hit (the Life Shroom revive) is this fight's seed again; its turns are planned
-  if (FB14.hit && FB14.hit !== 4) { slog('fb14HitCleared', { hit: FB14.hit, turn, how }); FB14.hit = null; FB14.hpw = FB14.hpw ? { seen10: FB14.hpw.seen10, tenRun: 0, blankRun: 0, ok: {}, done: Object.assign({}, FB14.hpw.done) } : null; FB14.hitLogged = null; }
+  if (FB14.hit && FB14.hit !== 4) { slog('fb14HitCleared', { hit: FB14.hit, turn, how }); FB14.hit = null; FB14.hitT = null; FB14.hpw = FB14.hpw ? { seen10: FB14.hpw.seen10, tenRun: 0, blankRun: 0, ok: {}, done: Object.assign({}, FB14.hpw.done) } : null; FB14.hitLogged = null; }
   // (v92, e2e 5eed0fb2 attempt 2: T4's lock landed after T4's confirm; the watch built anew then never saw the "10" before an
   // open turn, so T4's wave hit was never read, no "Route off", and the Peach Beam was taken: the watch keeps what it saw)
   // v98: the T2 lock's states kept (T3's re-lock on the stream from here when the carry dies or is contradicted on T3)
@@ -577,7 +584,8 @@ function fb14HpWatch(t, present) {
    * and no hit by the next turn's own action (its Charge or the Jelly) = Bowser missed. Each state's attack and test value
    * for that turn are then checked against it (fb14Weigh): on log 1794169517521's T1 (Bowser's fire breath missed) only
    * 36% of the weight predicted that, and with it the T2 shares are 93-99% or under 7% on almost every frame. */
-  if (FB14.hit || typeof jrTens !== 'function') return;
+  if (typeof jrTens !== 'function') return;
+  if (FB14.hit) return;
   const stp = fb14Step(); if (!stp || !stp.fb14) return;
   const W = FB14.hpw || (FB14.hpw = { seen10: false, tenRun: 0, blankRun: 0, ok: {}, done: {} });
   const B = JRT.bar; if (!present || !B.since || t - B.since < 6 * FRAME) { W.tenRun = 0; W.blankRun = 0; return; }
@@ -588,7 +596,7 @@ function fb14HpWatch(t, present) {
   const pT = FB14.pT[open]; if (t < pT + 2000) { if (W.tenRun >= 6) W.seen10 = true; return; } if (!W.seen10) return;     // (v92: a watch begun after the confirm reads the 10 HP there)
   if (t - pT > 25000) { W.done[open] = 'late'; return; }
   if (one) W.ok[open] = (W.ok[open] || 0) + 1;
-  if (W.blankRun >= 10) { W.done[open] = 'hit'; FB14.hit = open; if (open === 4) FB14.routeOff = 'T4\'s wave hit Mario (the route needs it blocked)'; slog('fb14Hit', { turn: open, afterMs: Math.round(t - pT), tens: +v.toFixed(2) }); cancelBeeps(); if (st.plan && st.plan.fb14) st.plan = null; fb14CarryGone(); fb14Show(); render(); }
+  if (W.blankRun >= FB14_HIT_N) { W.done[open] = 'hit'; FB14.hit = open; FB14.hitT = t - FB14_HIT_N * FRAME; if (open === 4) FB14.routeOff = 'T4\'s wave hit Mario (the route needs it blocked)'; slog('fb14Hit', { turn: open, afterMs: Math.round(t - pT), tens: +v.toFixed(2) }); cancelBeeps(); if (st.plan && st.plan.fb14) st.plan = null; fb14CarryGone(); fb14Show(); render(); }
 }
 /* v86: the turn before `turn` is over (this turn's Charge burst, or the Jelly): Bowser missed it if the bar showed Mario's
  * 10 HP through his turn and no hit was read. Weighs the states from then on (fb14Weigh). */
