@@ -210,7 +210,8 @@ function fb14Lock(res) {
   const combos = [];
   // with the joint patterns: every kept pattern on its share of this Charge's best fits (a pattern the coin may still
   // prefer must not be crowded out by the joint score's favourite)
-  const hyJ = J ? H.hy.slice().sort((x, y) => y.sc - x.sc).slice(0, Math.max(4, Math.ceil(FB14_COMBOS / J.keep.size))) : null;
+  // (v105: four times the fits, cut to the first jLim that have a split whose coins run as the fit says, below)
+  const jLim = J ? Math.max(4, Math.ceil(FB14_COMBOS / J.keep.size)) : 0, hyJ = J ? H.hy.slice().sort((x, y) => y.sc - x.sc).slice(0, 4 * jLim) : null;
   if (J) for (const h of hyJ) { const sig = Math.max(1, FB14_SIG * H.best), wf = Math.exp((h.sc - H.best) / sig);
     for (const [k, d] of J.keep) { const aura = new Array(20); for (let j = 0; j < 20; j++) aura[j] = +k[mod20(M + 13 + j)]; combos.push([h, { aura, w: wf * Math.exp(d / Math.max(1, FB14_JSIG * J.tot)) }]); } }
   for (const h of (J ? [] : H.hy)) for (const AV of fbAuraVariants(h, H.best)) combos.push([h, AV]);
@@ -225,6 +226,7 @@ function fb14Lock(res) {
   combos.sort((x, y) => y[1].w - x[1].w);
   const okC = []; let nOut = 0;
   for (const cb of combos) { if (!J && okC.length >= FB14_COMBOS) break; const [h, AV] = cb, c = new Uint8Array(20); for (let j = 0; j < 20; j++) c[mod20(M + 13 + j)] = AV.aura[j]; AV.E = endOf(h, c); if (AV.E.ok) okC.push(cb); else nOut++; }
+  if (J) { const hs = []; for (const h of hyJ) if (okC.some(cb => cb[0] === h)) { hs.push(h); if (hs.length >= jLim) break; } const hk = new Set(hs); for (let i = okC.length - 1; i >= 0; i--) if (!hk.has(okC[i][0])) okC.splice(i, 1); }
   if (nOut) slog('fb14SplitCoinOut', { turn, out: nOut, kept: okC.length, of: combos.length });
   const wTop = okC.length ? okC[0][1].w : 1;
   for (const [h, AV0] of okC) {
