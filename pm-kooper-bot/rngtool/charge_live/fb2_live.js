@@ -320,7 +320,7 @@ function fb2Show() {
   if (!FB2.on) { el.innerHTML = '<b>FB2 T6 → T7:</b> ' + (FB2.why ? FB2.why : 'waiting for the T6 Super Charge lock'); return; }
   const P = FB2.plan, T = FB2.t7, pc = x => Math.round(100 * x) + '%';
   el.innerHTML = '<b>FB2 T6 → T7</b> (' + FB2.hyps.length + ' RNG states after the rays)' +
-    '<br>Do Nothing (Lakilester): ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; blind about ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + ')') +
+    '<br>Do Nothing (Lakilester): ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; blind about ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, ' + likelyText({ p: P.p, win: P.win }) + ' · perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + ')') +
     (FB2.pObs != null && T ? '<br>Seen: Do Nothing on +' + FB2.pObs.toFixed(1) + '; Close Call ' + pc(T.pLucky) + '; Bowser ' + Object.entries(T.atk).map(([a, w]) => a + ' ' + pc(w)).join(', ') : '') +
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }

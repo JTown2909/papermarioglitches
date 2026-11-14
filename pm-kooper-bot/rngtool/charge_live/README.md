@@ -1,3 +1,25 @@
+# Time Out Timer v107: the chance with the press spread leads every plan display ("LIKELY"); a Jr. Troopa-only press correction; v106.1's beep cut on the route moving on (Nov 14)
+
+## 1. LIKELY first, "1 FRAME – coin flip"
+- Console 14-30-16 (Jr.): the T3 Bomb's strip said "Perfect press: works · window 1 frame" (96.5%) where the chance with the
+  runner's press spread was 57%, the T5 Do Nothing 73% / 48%; both hit. The runner reads the big number as the odds.
+- `likelyText(m, top)`: "LIKELY 57% with your press spread · 1 FRAME – coin flip" (the 6+ / all 4 chance in brackets for the
+  Power Bounce / Duplighosts), put in front of the perfect-press text (`ppText`, unchanged) on the strip status and in the Jr.,
+  Duplighost, Final Bowser T1-T4 and T6 panels. The plans themselves are unchanged (blind is lower still: Close Call 30%).
+
+## 2. Jr. Troopa press correction (`jrfix`, Settings)
+- The 32 beeped Jr. Close Calls of Nov 14 (logs1114, the outcome against the read error and the window): the outcomes fit best
+  with the reads moved one frame later (23 of 32 consistent at +1, 19 at 0, 17 at +1.5); the hits read -1.55 on average, the
+  dodges -0.84. Press check correction (`pfix`) moves every read, Final Bowser's Cloud Nine box onset too (`fb14Van`, the box `c`),
+  so the runner's -1 there moved the T1 skip plan by a frame (15-16-45: T1 hit). `jrfix` (default 0; the runner: -1) is added
+  only in jr_live's press read (`jrPress`) and confirm frame (the carry), never in fb14 / fb2.
+
+## Tests
+`test_v107.js` (in run_suite.sh): the LIKELY texts (1-frame, 3-frame, Power Bounce, none), the setting, jrfix only in jr_live.
+VERSION v107; the version checks and page tests' default build moved to v107.
+
+SUITE107_PLACEHOLDER
+
 # Time Out Timer v106: whole beep series only; a carried Charge lock that the coin then doubts still plans (honestly, with a warning); replans by the realistic chance; the Power Bounce's 6 run; capture-drop warning; Erase log (Nov 14)
 
 From the runner's console logs of Nov 14 (logs1114: fb0715 ... fb1010; numbers and event names only, no clip or frame committed).

@@ -12,7 +12,7 @@
  * 7. The log's file name in local time. 8. "Reset seed" and "Erase log".
  * usage: node test_v106.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1114] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v106/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v107/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
@@ -20,7 +20,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (init) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(init || (() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' })); } catch (e) {} })); await p.goto('file://' + PAGE); return p; };
   let p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v106', 'page version v106');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v107', 'page version v106');
 
   // ---- 2. beeps
   const bp = await p.evaluate(async () => {

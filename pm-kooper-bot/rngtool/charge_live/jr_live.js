@@ -305,7 +305,7 @@ function jrDeath(k, fr) {
 function jrApply(inp, re) {
   const s = JRS()[inp.k];
   if (inp.cancel) { const g = JRT.inputs.find(x => x.k === inp.k && !x.cancel && x.c != null); inp.G = g ? g.c : null; }
-  const c = inp.cancel && inp.rel != null && inp.G != null ? inp.G + inp.rel : Math.round(zwF(inp.t, inp.h + num('pfix')));
+  const c = inp.cancel && inp.rel != null && inp.G != null ? inp.G + inp.rel : Math.round(zwF(inp.t, inp.h + num('pfix') + num('jrfix')));
   inp.c = c;
   zwSeen(performance.now());
   if (zw.visFrom != null && (zw.visTo == null || zw.visTo < c - 4)) zw.visTo = c - 4;
@@ -592,7 +592,7 @@ function jrPress(inp) {
   if (!P || !P.mix || !P.mix.zw || P.zwAbs == null || P.measured || !s || !jrSeqProf(s) || PROF().id !== jrSeqProf(s) || !(zw.on && zw.fight === 'jr')) return;
   if (s.cancel && PROF().lever === 'cancel' && !inp.cancel) return;      // v85: Goombario's Charge confirm is not the beeped press (its box A is)
   const rate = zw.rate; if (inp.t - inp.h * rate < (P.tMade || 0)) return;      // the plan came after the press
-  const c = zwF(inp.t, inp.h + num('pfix')), f = Math.round(c), err = c - P.zwAbs, onBeeps = Math.abs(err) <= 5 && !P.stopped;
+  const c = zwF(inp.t, inp.h + num('pfix') + num('jrfix')), f = Math.round(c), err = c - P.zwAbs, onBeeps = Math.abs(err) <= 5 && !P.stopped;
   const d = f - P.zwAbs, inWin = P.target + d >= P.w.start && P.target + d <= P.w.end;
   // v90 (log 1c4d37ef T5: read 212.6 on the one-frame window 213, "works", and Mario was hit): a reading within PRESS_EDGE of
   // a window edge cannot tell the two frames apart (the picture's vblank; the console reading's own spread): logged as edge
@@ -651,7 +651,7 @@ function jrStatusLine(s, lost) {
   if (JRT.lost && zw.dead) body += 'No edge: ' + JRT.lost + ' (until the next Charge locks, or the coin finds the seed again). ';
   if (JRT.shineRec && !zw.dead) body += 'seed found again from ' + JRT.shineRec.taps + ' shines. ';
   if (JRT.cross) body += 'the ' + JRS()[JRT.cross.k].t + ' Charge ' + (JRT.cross.agree ? 'confirmed the carried seed. ' : 'did not fit the carry: tracking from its lock. ');
-  if (P && P.mix && stp && PROF().group === 'jr') body += (/^jrpb5n?$/.test(PROF().id) ? 'Power Bounce on the beep: ' + ppText(P.mix, PROF().id) + ' (blind 67.5% / ' + pc(JR_BLIND.p6) + '; with your press spread 5+ ' + pc(P.mix.p) + ', 6+ ' + pc(P.mix.p4 || 0) + ')' : jrWhat(JRS()[stp.jr]) + ' on the beep: Close Call. ' + ppText(P.mix, PROF().id) + ' (blind ' + pc(JR_BLIND.cc) + '; with your press spread ' + pc(P.mix.p) + ')');
+  if (P && P.mix && stp && PROF().group === 'jr') body += (/^jrpb5n?$/.test(PROF().id) ? 'Power Bounce on the beep: ' + likelyText(P.mix, '6+') + ' · ' + ppText(P.mix, PROF().id) + ' (blind 67.5% / ' + pc(JR_BLIND.p6) + '; with your press spread 5+ ' + pc(P.mix.p) + ', 6+ ' + pc(P.mix.p4 || 0) + ')' : jrWhat(JRS()[stp.jr]) + ' on the beep: Close Call. ' + likelyText(P.mix) + ' · ' + ppText(P.mix, PROF().id) + ' (blind ' + pc(JR_BLIND.cc) + '; with your press spread ' + pc(P.mix.p) + ')');
   else if ((s === 'nolock' || s === 'failed' || s === 'notseen' || lost) && !(zw.on && zw.fight === 'jr' && !zw.dead)) body += 'play it blind (Close Call ' + pc(JR_BLIND.cc) + '; Power Bounce 5+ 67.5%, 6+ ' + pc(JR_BLIND.p6) + ').';
   else if (zw.on && zw.fight === 'jr') body += 'carried from the ' + JRS()[JRT.origin || 0].t + ' Charge; the beeps start on each Close Call / Power Bounce target screen.';
   return head + body + (outs ? ' <span class="note">(' + outs + ')</span>' : '');

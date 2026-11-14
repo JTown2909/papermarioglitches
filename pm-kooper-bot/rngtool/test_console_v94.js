@@ -13,7 +13,7 @@
  * usage: node test_console_v94.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v106/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v107/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v94.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
 const median = a => { const s = a.slice().sort((x, y) => x - y); return s[s.length >> 1]; };
@@ -42,7 +42,7 @@ const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v106', 'page version v106');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v107', 'page version v106');
   // ---- 3. the readings
   const r3 = await p.evaluate(D => { const T = window.__tot, X = window.__fb14, FB = X.FB14, RT = T.RT(), out = { readS: X.readX('S'), readBar: X.readX('M', 'bar'), readM: X.readX('M'), vanS: X.van('S'), shifts: X.SHIFTS_S.map(x => x[0]) };
     const mk = () => X.fbNew({ s: 1, nc: 0, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, rg: 0, w: 1, from: 0, sh: [], tag: 2 });

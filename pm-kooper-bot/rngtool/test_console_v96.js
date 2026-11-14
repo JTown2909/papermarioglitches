@@ -12,7 +12,7 @@
  * usage: node test_console_v96.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v106/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v107/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v96.json'), 'utf8'));
 const F95 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v95.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
@@ -48,7 +48,7 @@ const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(L => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v93', JSON.stringify(L)); } catch (e) {} }, L);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v106', 'page version v106');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v107', 'page version v106');
   const k = await p.evaluate(() => { const X = window.__fb14; return { bar: X.readX('M', 'bar'), S: X.readX('S'), unc: X.C9UNC, sh: X.C9SHIFTS.map(x => x[0]), drop: X.TICK_DROP, tol: X.ANCHOR_TOL }; });
   check(k.bar === 2.5 && k.S === 3.4, '2. FB14_READX: Cloud Nine\'s bar +2.5 (v94 +1.15), Do Nothing +3.4');
   check(JSON.stringify(k.unc) === '[[-1,0.2],[0,0.6],[1,0.2]]' && k.sh.join() === '-3,-2,-1,0,1,2,3', '2. the T1 share over -1 .. +1 (0.2 / 0.6 / 0.2; v95 -2 .. +3 even), the Cloud Nine confirm carried on -3 .. +3');

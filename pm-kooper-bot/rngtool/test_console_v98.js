@@ -52,7 +52,7 @@ const E = k => FIX[k].events, ev = (k, n) => E(k).filter(e => e.ev === n);
   ok(F.doubtFloor(3, 0) === F.T3.RELOCK, 'a re-locked T3 plans under ' + F.T3.RELOCK);
   ok(F.relock3(1490) === false, 'once per T2 lock'); }
 // --- the T4 replay (with the page and the log) ---
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v106/timeout_timer_standalone.html', LOG = process.env.LOG98 || '/tmp/claude-0/pm/logs1112/7483f3b1-pm-rng-log-1794523788029.json';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v107/timeout_timer_standalone.html', LOG = process.env.LOG98 || '/tmp/claude-0/pm/logs1112/7483f3b1-pm-rng-log-1794523788029.json';
 (async () => {
   if (!PAGE || !fs.existsSync(PAGE) || !fs.existsSync(LOG)) { console.log('(the T4 replay skipped: PAGE / LOG98 not here)'); }
   else {

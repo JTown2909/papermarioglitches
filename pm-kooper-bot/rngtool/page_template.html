@@ -218,7 +218,8 @@ details[open] summary { margin-bottom: 10px; }
         <label class="f">Beep spacing (ms)<input id="s-gapms" type="number" step="50" value="500"><small>Time between beeps.</small></label>
         <label class="f">Shortest window to use (frames)<input id="s-min" type="number" min="1" max="8" value="3"><small>Best chance, outside Hallway T2: the narrowest run it plans on.</small></label>
         <label class="f">Video lag, camera mode (ms)<input id="s-vlag" type="number" step="5" value="50"><small>Capture delay; moves beeps and strip together.</small></label>
-        <label class="f">Press check correction (frames)<input id="s-pfix" type="number" step="0.5" value="0"><small>Raise it if presses that worked read as late.</small></label>
+        <label class="f">Press check correction (frames)<input id="s-pfix" type="number" step="0.5" value="0"><small>Raise it if presses that worked read as late. Applies everywhere, Final Bowser's Cloud Nine box included: leave it at 0 unless every fight reads off.</small></label>
+        <label class="f">Jr. Troopa press correction (frames)<input id="s-jrfix" type="number" step="0.5" value="0"><small>v107: Jr. Troopa only (its press reads and the frames it carries). The Nov 14 Close Calls fit best at -1 (presses that worked read about a frame early).</small></label>
         <label class="f">Console frame time (ms; 0 = measure from the shines)<input id="s-crate" type="number" step="0.001" value="0"><small>A real N64 frame is ~33.43 ms (an emulator 33.37); the tracker drifts if it is wrong.</small></label>
         <label class="f">Resync range after a gap (extra draws)<input id="s-range" type="number" step="250" value="1000"><small>How far the shine search looks after a gap.</small></label>
         <label class="f">Flash threshold (0 = automatic)<input id="s-wthr" type="number" step="0.005" value="0"><small>White level that counts as a coin shine.</small></label>
@@ -354,7 +355,7 @@ const FRAME = R.FRAME_MS;
 const $ = id => document.getElementById(id);
 
 /* ---------- settings ---------- */
-const SET = ['react', 'lag', 'off', 'min', 'lead', 'beeps', 'gapms', 'range', 'vlag', 'wthr', 'tmatch', 'cpu', 'zoom', 'voff', 'pfix', 'prof', 'chgsc', 'chgdx', 'chgdy', 'fb2t5', 'wtype', 'zwwin', 'zwlater', 'zwedge', 'chgcpu', 'crate', 'duproute', 'jrroute', 'dupgoal', 'boots', 'nbcc', 'fbhp', 'fbc9'];
+const SET = ['react', 'lag', 'off', 'min', 'lead', 'beeps', 'gapms', 'range', 'vlag', 'wthr', 'tmatch', 'cpu', 'zoom', 'voff', 'pfix', 'jrfix', 'prof', 'chgsc', 'chgdx', 'chgdy', 'fb2t5', 'wtype', 'zwwin', 'zwlater', 'zwedge', 'chgcpu', 'crate', 'duproute', 'jrroute', 'dupgoal', 'boots', 'nbcc', 'fbhp', 'fbc9'];
 function loadSettings() { try { const s = JSON.parse(localStorage.getItem('tot-settings') || '{}'); if (s.lead === '4' && !localStorage.getItem('tot-lead15')) { s.lead = '1.5'; localStorage.setItem('tot-lead15', '1'); } if (!localStorage.getItem('tot-beeps3')) { if (s.beeps === '4' || s.beeps === undefined) s.beeps = '3'; localStorage.setItem('tot-beeps3', '1'); } SET.forEach(k => { if (s[k] !== undefined && $('s-' + k)) { $('s-' + k).value = s[k]; if ($('s-' + k).tagName === 'SELECT' && $('s-' + k).selectedIndex < 0) $('s-' + k).selectedIndex = 0; } }); } catch (e) {} }
 function saveSettings() { try { const s = {}; SET.forEach(k => s[k] = $('s-' + k).value); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }
 const num = k => parseFloat($('s-' + k).value) || 0;
@@ -1381,6 +1382,14 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
 }
 /* v83: what a plan says (the strip's headline, the detail, the Charge / Jr. / FB panels): the perfect press first
  * ("Perfect press: works · window N frames · seed confidence NN%"), the spread-weighted chance only in the detail (long) */
+/* v107 (the runner, console 14-30-16: Jr. T3 Bomb "96%" was 57% with the press spread, T5 Do Nothing "73%" was 48%, both 1-frame
+ * windows): every plan display leads with the chance counting the runner's press spread (LIKELY), and a 1-frame window says
+ * so; the perfect-press numbers (ppText) follow as before */
+function likelyText(m, top) {
+  if (!m || m.p == null) return '';
+  const pc = x => Math.round(100 * x) + '%';
+  return 'LIKELY ' + pc(m.p) + (m.p4 != null ? ' (' + (top || 'top') + ' ' + pc(m.p4) + ')' : '') + ' with your press spread' + (m.win === 1 ? ' · 1 FRAME – coin flip' : '');
+}
 function ppText(m, prof, long) {
   if (!m) return '';
   const pc = x => Math.round(100 * x) + '%', conf = m.doubt != null ? ' · seed confidence ' + pc(1 - m.doubt) : '';
@@ -1762,7 +1771,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v106';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v107';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -1906,7 +1915,7 @@ function stripState(d) {
   if (P && d.stale) return { cls: 'stale', text: 'Seed lost – showing old prediction. Press normally.', overlay: 'Seed lost – old prediction' };
   if (sc) return sc.ok ? { cls: 'stale', text: 'Seed changed – new window (a shine ruled the old one out). Follow the new beeps.' } : { cls: 'stale', text: 'Seed changed – too late to move the beeps; the planned frame still works for ' + Math.round(100 * (P && P.mix && P.mix.pNow != null ? P.mix.pNow : 0)) + '%.' };
   if (P) {
-    const left = P.tPress - now, typ = P.type && WTYPE[P.type] ? WTYPE[P.type].name : 'best chance', ch = P.mix ? ' · ' + ppText(P.mix, P.prof) : '';
+    const left = P.tPress - now, typ = P.type && WTYPE[P.type] ? WTYPE[P.type].name : 'best chance', ch = P.mix ? ' · ' + (likelyText(P.mix, /^jrpb5/.test(P.prof || '') ? '6+' : 'all 4') ? likelyText(P.mix, /^jrpb5/.test(P.prof || '') ? '6+' : 'all 4') + ' · ' : '') + ppText(P.mix, P.prof) : '';
     if (left > -400) return { cls: 'plan', text: 'Beeping: ' + (P.beeps || nBeeps()) + ' beeps, press on the last · ' + typ + (P.mix && P.mix.pp != null ? '' : ' · ' + P.w.length + '-frame window') + ch };
     return { cls: 'plan', text: onTarget() ? 'Window passed – planning the next one' : 'Window passed' };
   }
@@ -2582,7 +2591,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },
