@@ -25,6 +25,7 @@ const fs = require('fs');
   await p.addInitScript(() => {
     localStorage.setItem('tot-boxes', JSON.stringify({ coin: { x: 1080 / 1280, y: 40 / 720, w: 40 / 1280, h: 52 / 720 }, target: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 } }));
   });
+  if (process.env.V105T) await p.addInitScript(t => { window.__v105t = JSON.parse(t); }, process.env.V105T);     // (diagnostic, v105: a known true aura to score)
   await p.goto(base + '/tot.html');
   const out = await p.evaluate(async ({ dbg, base, M, crate, cpus, t5, vclock, verify }) => {
     const T = window.__tot, F = window.__fb14;

@@ -21,7 +21,7 @@
  * confirm; the beam itself is not modelled, but it takes 8654-9351 more random numbers than frames to T6's Charge
  * (fb2_route/t5_steps.py, 120 emulator runs), so the T6 Charge is searched only on that stretch of the carried stream
  * (charge_live.js chgSearch opts.cands) instead of all 2^32 seeds: no slow fresh lock at T6. */
-const FB14_TOL = 0.008, FB14_SIG = 0.004, FB14_COMBOS = 1200, FB14_MAXH = 12000, FB14_LAGS = [[0, 0.75], [1, 0.25]];
+const FB14_TOL = 0.008, FB14_SIG = 0.004, FB14_COMBOS = 4800, FB14_MAXH = 12000, FB14_LAGS = [[0, 0.75], [1, 0.25]];
 const FB14_DELTA = { slam: 52, claw: 62, fire: 55, wave: 72, lightning: 99 }, FB14_AIAFTER = { cn: 332, nothing: 13 }, FB14_JELLY = 118;
 const FB14_WAVE_POST = (() => { const o = { 66: 1, 68: 2, 70: 3, 72: 4, 74: 5, 76: 6, 78: 7, 80: 8, 126: 8, 128: 7, 130: 6, 132: 5, 134: 4, 136: 3, 138: 2, 140: 1 }; for (let d = 82; d <= 124; d += 2) o[d] = 9; return o; })();
 // blind chances per lever frame (fb2_route/README.md section 3: route_build miss strings and the 20000-window study)
@@ -128,6 +128,11 @@ function fbStep(S) {
   S.s = fbRi(s, 1); S.f = f + 1;
 }
 function fbRun(S, to) { while (S.f < to) fbStep(S); return S; }
+/* v105: a Charge's window M + 13 .. M + 60 run on the model from x0 (gRandSeed before frame M + 13's bolts) with aura split c,
+ * lightning phases pa (any pair of the fit's pattern: the window's bolts are the pattern's) and the first coin on M + 13 + q:
+ * the seed on M + 61, the next coin frame, the window's shines and whether the coin on q shone */
+function fbEnd48(x0, M, q, c, pa) { const S = fbNew({ s: x0 >>> 0, nc: M + 13 + q, f: M + 13, c, ph: pa, l: 0, w: 1 }); fbEv(S, { k: 'chg', f: M + 13 }); fbEv(S, { k: 'chg', f: M + 16 }); S.mk = M; fbRun(S, M + 61);
+  return { s: S.s >>> 0, nc: S.nc, sh: S.sh.slice(), shq: S.sh.includes(M + 13 + q) }; }
 /* ---- the clock: logic frame 0 = T1's Mario confirm; FB14.t0 = the time the picture of frame 0 would show ---- */
 const fbRate = () => FB14.rate || (typeof chgRate === 'function' ? chgRate() : FRAME);
 const fbPic = t => (t - FB14.t0) / fbRate();
@@ -205,25 +210,34 @@ function fb14Lock(res) {
   const combos = [];
   // with the joint patterns: every kept pattern on its share of this Charge's best fits (a pattern the coin may still
   // prefer must not be crowded out by the joint score's favourite)
-  const hyJ = J ? H.hy.filter(h => Math.abs(h.esc - h.sc) <= 2).sort((x, y) => y.sc - x.sc).slice(0, Math.max(4, Math.ceil(FB14_COMBOS / J.keep.size))) : null;
+  const hyJ = J ? H.hy.slice().sort((x, y) => y.sc - x.sc).slice(0, Math.max(4, Math.ceil(FB14_COMBOS / J.keep.size))) : null;
   if (J) for (const h of hyJ) { const sig = Math.max(1, FB14_SIG * H.best), wf = Math.exp((h.sc - H.best) / sig);
     for (const [k, d] of J.keep) { const aura = new Array(20); for (let j = 0; j < 20; j++) aura[j] = +k[mod20(M + 13 + j)]; combos.push([h, { aura, w: wf * Math.exp(d / Math.max(1, FB14_JSIG * J.tot)) }]); } }
-  for (const h of (J ? [] : H.hy)) {
-    if (Math.abs(h.esc - h.sc) > 2) continue;              // the second coin assumed by the fit is not the one the seed draws
-    for (const AV of fbAuraVariants(h, H.best)) combos.push([h, AV]);
-  }
-  combos.sort((x, y) => y[1].w - x[1].w); const wTop = combos.length ? combos[0][1].w : 1;
-  for (const [h, AV0] of (J ? combos : combos.slice(0, FB14_COMBOS))) {
-    { const AV = { aura: AV0.aura, w: AV0.w / wTop };
+  for (const h of (J ? [] : H.hy)) for (const AV of fbAuraVariants(h, H.best)) combos.push([h, AV]);
+  // v105: the seed and the next coin after the rays are each split's own (fbEnd48): the kernel's s48 / nc48 are its best split's,
+  // and a split that moves a count between the window's once- and twice-seen residues (or across a coin) ends elsewhere
+  // (e2e 1234abcd T1: the true split tied the best, its seed after the rays differed: no state of the lock followed the game).
+  // A split whose coins do not run as its fit assumes (q, the second coin) is out (the kernel's esc check, per split now).
+  const x0a = Math.imul(((H.a >>> 0) - 1) >>> 0, 0x6A76AE6D) >>> 0, endC = new Map();
+  const endOf = (h, c) => { const k = h.p + ':' + h.q + ':' + h.br + ':' + c.join(''); let E = endC.get(k); if (E) return E; const pa = (() => { const ph = P.list[h.p].ph[0]; return [(((ph[0] - M) % 130) + 130) % 130, (((ph[1] - M) % 220) + 220) % 220]; })();
+    let x0 = x0a; for (let i = fbBolts(M + 13, pa); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;   // before frame M + 13's bolts
+    E = fbEnd48(x0, M, h.q, c, pa); E.ok = h.br ? !E.shq : (h.q + 24 >= 48 || E.shq); endC.set(k, E); return E; };
+  combos.sort((x, y) => y[1].w - x[1].w);
+  const okC = []; let nOut = 0;
+  for (const cb of combos) { if (!J && okC.length >= FB14_COMBOS) break; const [h, AV] = cb, c = new Uint8Array(20); for (let j = 0; j < 20; j++) c[mod20(M + 13 + j)] = AV.aura[j]; AV.E = endOf(h, c); if (AV.E.ok) okC.push(cb); else nOut++; }
+  if (nOut) slog('fb14SplitCoinOut', { turn, out: nOut, kept: okC.length, of: combos.length });
+  const wTop = okC.length ? okC[0][1].w : 1;
+  for (const [h, AV0] of okC) {
+    { const AV = { aura: AV0.aura, w: AV0.w / wTop }, E = AV0.E, s48 = E.s, nc48 = E.nc - (M + 13);
     const c = new Uint8Array(20); for (let j = 0; j < 20; j++) c[mod20(M + 13 + j)] = AV.aura[j];
     for (const ph of P.list[h.p].ph) {
       const pa = [(((ph[0] - M) % 130) + 130) % 130, (((ph[1] - M) % 220) + 220) % 220];
       for (const [l, wl] of FB14_LAGS) {
-        const key = h.s48 + ':' + h.nc48 + ':' + c.join('') + ':' + pa[0] + ':' + pa[1] + ':' + l; if (seen.has(key)) continue; seen.add(key);
+        const key = s48 + ':' + nc48 + ':' + c.join('') + ':' + pa[0] + ':' + pa[1] + ':' + l; if (seen.has(key)) continue; seen.add(key);
         const F0 = M + 13; let x0 = Math.imul(((H.a >>> 0) - 1) >>> 0, 0x6A76AE6D) >>> 0;   // the seed before A's base-angle draw
         for (let i = fbBolts(F0, pa); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;   // before frame 0's bolts
         const B = back0(x0, F0, F0 + h.q, c, pa);
-        for (const [rg, wr] of fb14RgList()) fresh.push(fbNew({ s: h.s48 >>> 0, nc: M + 13 + h.nc48, f: M + 61, c, ph: pa, l, rg, w: wr * wl * AV.w * (B.ok ? 1 : 1e-3), from: B.from, sh: B.sh, key: key + ':' + rg, tag: turn }));
+        for (const [rg, wr] of fb14RgList()) fresh.push(fbNew({ s: s48 >>> 0, nc: M + 13 + nc48, f: M + 61, c, ph: pa, l, rg, w: wr * wl * AV.w * (B.ok ? 1 : 1e-3), from: B.from, sh: B.sh.concat(E.sh), key: key + ':' + rg, tag: turn }));
       }
     }
     }
@@ -231,6 +245,7 @@ function fb14Lock(res) {
   // the aura pattern is the fight's: a fresh fit after an earlier lock keeps only the patterns the carried states still
   // hold (when any is among them)
   if (!J && !first && FB14.states.length) { const cs = new Set(FB14.states.map(S => S.c.join(''))), f2 = fresh.filter(S => cs.has(S.c.join(''))); if (f2.length) fresh = f2; slog('fb14AuraKeep', { turn, fits: fresh.length, of: seen.size }); }
+  if (window.__fb14seeds) FB14.tCombos = combos;     // (diagnostic: v105 fb14TruthLock)
   return fresh; };
   const J = res.joint && res.joint.keep && res.joint.keep.size ? res.joint : null;
   // v87: a T2 / T4 Charge held for the narrowed search (fb14ChgCands): the carried states get it now, at the shifts whose
@@ -249,6 +264,7 @@ function fb14Lock(res) {
         const T = fbClone(S); T.w = S.w * wd; T.mk = pc.M + d; fbInputEv(T, 'chg', F, pc.turn); h.push(T); } });
       if (pc.turn === 4) h = fb14WaveSplit(h);
       slog('fb14Held', { turn: pc.turn, M: pc.M, d: dsel.map(x => x[0]), states: h.length, pre: !!filt }); return h; };
+    if (window.__fb14seeds) fb14Truth('preheld' + pc.turn);     // (diagnostic: v105)
     held = mkHeld(Pp); heldPre = !!Pp;
   }
   let keep = null, how = 'fresh', fresh = [];
@@ -269,7 +285,7 @@ function fb14Lock(res) {
       const T = held ? S : fbClone(S);
       fbRun(T, m + 13); let x = T.s; for (let i = fbBolts(m + 13, T.ph); i; i--) x = fbRi(x, 359);
       if ((fbAdv(x) >>> 0) !== a) continue;
-      fbRun(T, m + 61); if (!ends.has(String(T.s >>> 0))) continue;
+      fbRun(T, m + 61); if (!ends.has(String(T.s >>> 0))) { if (window.__fb14seeds) { FB14.tEnds = (FB14.tEnds || 0) + 1; if (fb14IsTrueS(T)) FB14.tEndsTrue = (FB14.tEndsTrue || 0) + 1; } continue; }
       match.push(T);       // (v87: the matched states keep their coin history)
     } };
     matchAll();
@@ -289,14 +305,14 @@ function fb14Lock(res) {
       const Mt = +Object.keys(by).sort((x, y) => by[y] - by[x])[0], share = tot > 0 ? by[Mt] / tot : 0;
       if (Mt !== M && Number.isFinite(Mt)) { if (share >= 0.6) { slog('fb14ClockFix', { turn, M, Mt, share: +share.toFixed(3) }); FB14.t0 = trigT - (Mt + 16) * fbRate(); } else slog('fb14ClockKept', { turn, M, Mt, share: +share.toFixed(3) }); }
     }
-    slog('fb14Check', { turn, M, carried: carriedL.length, matched: match.length, held: held ? held.length : null });
+    slog('fb14Check', { turn, M, carried: carriedL.length, matched: match.length, held: held ? held.length : null, endsMiss: FB14.tEnds, endsMissTrue: FB14.tEndsTrue }); FB14.tEnds = FB14.tEndsTrue = undefined;
     if (!match.length && held) FB14.states = fb14Cap(held);
   }
   const tL1 = performance.now();
   // v92: the light fits of a narrowed read (end seeds only) cannot build fresh states: the placement / joint refine
   // (fb14Refine) fetches the whole list and locks again; the turn is decided then, as before this call
   if (!keep && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14LightNoMatch', { turn, M, ms: Math.round(tL1 - tL0) }); return 'light'; }
-  if (!keep) { fresh = buildFresh(); keep = fresh; }
+  if (!keep) { fresh = buildFresh(); keep = fresh; if (window.__fb14seeds) FB14.tLockCtx = { H, M, P, J: !!J }; }
   const sum = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum; S.lw = 1; S.err = 0; });
   // the menu's coin before the Charge weighs the fits now (fbBackShines), before any are dropped for the cap: with the
   // weights all equal an even sample would lose the true one (T2 render: 1605 fits x their lightning phases x 2 lags)
@@ -341,7 +357,7 @@ function fb14Lock(res) {
   slog('fb14Lock', { turn, M, how, hyps: H.hy.length, n: H.n, fits: FB14.n0, states: FB14.states.length, best: Math.round(H.best), a: (H.a >>> 0).toString(16), ms: { check: Math.round(tL1 - tL0), build: Math.round(performance.now() - tL1) }, stream: res.stream ? res.stream.steps : undefined });
   FB14.decide = { t: performance.now(), turn };      // v91 (logs B, E, F): every lock ends in a plan or a logged "No edge" (fb14Frame's watchdog)
   { const s1 = fb14Step(); if (s1 && s1.fb14 === 1 && s1.fb14role === 'charge') { const c1l = RT().findIndex(x => x.fb14 === 1 && x.fb14role === 'lever'); if (c1l >= 0) { slog('fb14StepByLock', { from: routeStep, to: c1l }); setStep(c1l); } } }
-  if (window.__fb14seeds) fb14Truth('lock' + turn);
+  if (window.__fb14seeds) { fb14Truth('lock' + turn); if (how === 'fresh' && FB14.tLockCtx) fb14TruthLock(turn, fresh); FB14.tLockCtx = null; }
   fb14Show(); return how;
 }
 /* The aura's split the rays cannot see: where a residue's frames have only faded or offscreen respawns (or none), the
@@ -349,7 +365,7 @@ function fb14Lock(res) {
  * render 1234abcd: '10110101201010201040' for the true '01110101021010201310'). The kernel lists every split of a fit
  * within the lock's tolerance (fb1alts); they are weighed by a star's chance to restart on a given frame (16 stars, 1/20
  * each: binomial) and the likeliest FB14_AV kept, each with its prior share. */
-const FB14_AV = 48, FB14_BIN = [0.440, 0.371, 0.146, 0.036, 0.0061];
+const FB14_AV = 600, FB14_BIN = [0.440, 0.371, 0.146, 0.036, 0.0061];
 // each split weighed by its prior and by its score: exp((score - best) / (FB14_SIG x best)). The true fit scores within a
 // few tenths of a percent of the best but not always inside 0.2% (render e2e 1234abcd: 7316 against 7354, the noise of
 // one frame's respawns is ~200), so the lock keeps every fit within FB14_TOL (0.8%) and lets the score weigh them.
@@ -397,6 +413,7 @@ function fb14Input(kind, Fc, turn, shifts, tRef, off) {
   }
   if (shifts) FB14.states = fb14Cap(kind === 'chg' && turn === 4 ? fb14WaveSplit(out) : out);
   slog('fb14Input', { kind, F: Fc, turn, states: FB14.states.length });
+  if (window.__fb14seeds) fb14Truth('input-' + kind + turn);     // (diagnostic: v105)
 }
 function fbInputEv(T, kind, F, turn) {
   if (kind === 'chg') { fbEv(T, { k: 'chg', f: F + 13 }); fbEv(T, { k: 'chg', f: F + 16 }); }
@@ -656,6 +673,26 @@ function fb14TruthDiv(h) { const T = window.__fb14seeds, C = fbClone(FB14.tRef),
   slog('fb14TruthDiv', { h, from: f0 + C.l, div, l: C.l, p1: C.p1, ev: C.ev.map(e => e.k + e.f).slice(0, 6), w: +(FB14.tRef.w || 0).toExponential(2) }); FB14.tRef = null; }
 function fb14TruthPh(at) { if (!window.__fb14seeds) return; const ph = new Set(); for (const S of FB14.states) if (fb14IsTrue(S)) ph.add(S.ph[0] + ',' + S.ph[1] + ',' + S.l); slog('fb14TruthPh', { at, ph: [...ph].slice(0, 8) }); }
 /* the v100 factors of one state (1: nothing against it), and per evidence the count of states it cut */
+// v105 (diagnostic, the e2e only): where a fresh lock loses the truth. Every fit whose seed after the rays is the game's (lag 0 / 1)
+// is built again with every aura split the kernel listed and every lightning phase pair of its pattern (no FB14_AV / FB14_COMBOS /
+// FB14_MAXH cut), each checked frame by frame against the trace (fb14IsTrueS); logged: the true splits' prior rank among the fit's
+// splits, and the best true state's rank by weight in the fresh fits and in the kept states
+function fb14TruthLock(turn, fresh) { const T = window.__fb14seeds, X = FB14.tLockCtx; if (!T || !X) return; const { H, M, P } = X, out = { turn, M, hy: H.hy.length, hyTrue: 0, splitsTrue: 0, built: 0, strict: 0, rows: [] };
+  const sOf = l => { const i = M + 61 + l - T.off; return i >= 0 && i < T.s.length ? T.s[i] >>> 0 : null; };
+  const dd = (x, y) => { for (let i = 0; i < 400; i++) { if (x === y) return i; x = fbAdv(x); } return -1; }; out.v = H.v; out.d03 = [0, 1].map(l => { const i = M + 13 + l - T.off; return i >= 0 && i + 3 < T.s.length ? dd(T.s[i] >>> 0, T.s[i + 3] >>> 0) : null; });
+  const x0a = Math.imul(((H.a >>> 0) - 1) >>> 0, 0x6A76AE6D) >>> 0;
+  for (const h of H.hy) { const ph0 = P.list[h.p].ph[0], pa0 = [(((ph0[0] - M) % 130) + 130) % 130, (((ph0[1] - M) % 220) + 220) % 220]; let x0 = x0a; for (let i = fbBolts(M + 13, pa0); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;
+    if ([0, 1].some(l => sOf(l) === (h.s48 >>> 0))) out.hyTrue++;
+    const L = (h.alts && h.alts.length ? h.alts.map((a, i) => [a, h.altSc[i]]) : [[h.aura, h.sc]]).map(([a, sc]) => ({ a, sc, pr: a.reduce((x, c) => x * (FB14_BIN[c] || 1e-4), 1) })), byPr = L.slice().sort((x, y) => y.pr - x.pr);
+    for (const V of L) { const c = new Uint8Array(20); for (let j = 0; j < 20; j++) c[mod20(M + 13 + j)] = V.a[j]; const E = fbEnd48(x0, M, h.q, c, pa0), ls = [0, 1].filter(l => sOf(l) === E.s); if (!ls.length) continue; out.splitsTrue++;
+      for (const ph of P.list[h.p].ph) { const pa = [(((ph[0] - M) % 130) + 130) % 130, (((ph[1] - M) % 220) + 220) % 220];
+        for (const l of ls) { out.built++; const S = fbNew({ s: E.s, nc: E.nc, f: M + 61, c, ph: pa, l, rg: 0, w: 1 }); if (!fb14IsTrueS(S)) continue; out.strict++;
+          if (out.rows.length < 4) { const key = E.s + ':' + (E.nc - M - 13) + ':' + c.join('') + ':' + pa[0] + ':' + pa[1] + ':' + l;
+            const fi = fresh.findIndex(x => x.key && x.key.startsWith(key)), ki = FB14.states.findIndex(x => x.key && x.key.startsWith(key)), fs = fresh.slice().sort((x, y) => y.w - x.w), fr = fi >= 0 ? fs.indexOf(fresh[fi]) : -1;
+            out.rows.push({ hyp: h.p + '/' + h.q + '/' + h.br, c: c.join(''), ph: pa, l, nc: E.nc - M - 13, sc: +(V.sc - H.best).toFixed(1), prRank: byPr.indexOf(V), alts: L.length, maxC: Math.max(...V.a), coinOk: h.br ? !E.shq : (h.q + 24 >= 48 || E.shq), comboRank: (FB14.tCombos || []).findIndex(([hh, AV]) => hh === h && AV.aura.every((x, j) => x === V.a[j])), combos: (FB14.tCombos || []).length, inFresh: fi >= 0, freshRank: fr, freshN: fresh.length, wRel: fi >= 0 ? +(fresh[fi].w / fs[0].w).toExponential(2) : null, kept: ki >= 0, keptN: FB14.states.length }); } } } } }
+  if (window.__v105t) { const V = window.__v105t, hs = H.hy.filter(h => h.p === V.hyp[0] && h.q === V.hyp[1] && h.br === V.hyp[2]), c = new Uint8Array(20); for (let k = 0; k < 20; k++) c[k] = +V.c[k];
+    out.v105 = hs.map(h => ({ s48: (h.s48 >>> 0).toString(16), nc48: h.nc48, inAlts: (h.alts || []).some(a => a.every((x, j) => x === c[mod20(M + 13 + j)])), sc: (P.list[h.p].ph.map(ph => { const pa = [(((ph[0] - M) % 130) + 130) % 130, (((ph[1] - M) % 220) + 220) % 220]; const S = fbNew({ s: h.s48 >>> 0, nc: M + 13 + h.nc48, f: M + 61, c, ph: pa, l: 0, rg: 0, w: 1 }); const x = fb14TruthScore(S, 0); return pa.join(',') + ':' + x.r.toFixed(2) + ':' + x.first; })).join(' '), true61: (sOf(0) || 0).toString(16) })); }
+  slog('fb14TruthLock', out); }
 function fb14V100(S, h, bolts, cnt) {
   let f = 1;
   for (const k in FB14.atk) { const a = FB14.atk[k], o = S.out[k]; if (!a || !o || !o.atk) continue;
@@ -1308,6 +1345,9 @@ async function fb14Joint(res, maps, one) {
   const M = FB14.t0 == null ? 0 : Math.round((res.trigT - FB14.t0) / fbRate() - 16);
   const cur = { maps, a: H.a >>> 0, M, hyps: H.hy.slice().sort((x, y) => y.sc - x.sc).slice(0, FB14_JH).map(h => [h.p, h.q, h.br]), best: H.best };
   const prev = (FB14.charges || []).filter(c => c.M !== M).slice(-2);
+  if (window.__v105t && FB14.t0 == null) { const V = window.__v105t, B = new Uint8Array(20); for (let j = 0; j < 20; j++) B[j] = +V.c[mod20(M + 13 + j)];     // (diagnostic, v105)
+    const h0 = H.hy.find(h => h.p === V.hyp[0] && h.q === V.hyp[1] && h.br === V.hyp[2]);
+    const r = await one(maps, [{ type: 'cscore', a: H.a >>> 0, hyps: [V.hyp], cands: B }]); slog('fb14V105Score', { truth: +(r[0].out[0] - H.best).toFixed(1), hypBest: h0 ? +(h0.sc - H.best).toFixed(1) : null, best: H.best, tol: +(H.best * FB14_TOL).toFixed(1) }); }
   if (!FB14.on || !prev.length) return { cur };
   const cand = new Map(), add = (k, w) => { if (!cand.has(k) || cand.get(k) < w) cand.set(k, w); };
   for (const S of FB14.states.slice().sort((x, y) => y.w * y.lw - x.w * x.lw).slice(0, FB14_JC)) add(S.c.join(''), S.w * S.lw);
