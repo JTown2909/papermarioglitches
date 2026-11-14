@@ -2,6 +2,12 @@
 
 From the runner's console logs of Nov 14 (logs1114: fb0715 ... fb1010; numbers and event names only, no clip or frame committed).
 
+## v106.1 (Nov 14, after the first v106 console runs)
+- Console 14-33-11 (`beepsKept` at the Jr. T4 Syrup and T6 Bounce confirms): the begun-series guard also kept the beeps after the
+  runner had confirmed. `setStep` (the route moving on: the turn's confirm is in) now cuts the series whether or not it has
+  begun (`cancelBeeps({ force: true, why: 'step' })`); test_v106 checks it. test_v106's 6-run checks call the Power Bounce's own goal
+  (`six`). VERSION stays v106 (published as v106.1).
+
 ## 1. Final Bowser T2 (fb1010, 937-943 s): the carry and the Charge agreed, the coin killed the plan
 - Live (page v104): T1 a fresh stream lock (72 fits), Cloud Nine F126, the skip read F393 (planned 390, err +2.82); T2's Charge
   locked carried (`fb14Check` 5443 of the 6994 held states drew its rays, M 578), then `fb14NoEdge` doubt 0.82, 478 states:

@@ -45,6 +45,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(bp.stop === 'stop' && /^STOP/.test(bp.stopMsg) && !bp.afterStop, '2. a frame turned bad with >= 0.4 s left: the series is cut with a visible STOP ("' + (bp.stopMsg || '').slice(0, 60) + '…")');
   ok(bp.late === 'kept' && bp.lateFlight && !bp.lateMsg0 && /coin turned late/.test(bp.lateMsg || '') && /31%/.test(bp.lateMsg) && bp.lateLog.join() === 'beepsLateTurn,lateTurnShown', '2. inside the last 0.4 s it plays out; after the press: "' + (bp.lateMsg || '').slice(0, 70) + '…"');
   ok(bp.before === 'cancelled', '2. before the first beep a stop is a plain cancel (the caller may replan)');
+  // v106.1 (console 14-33-11): the route moving on (the turn's confirm is in) cuts a begun series
+  const stp = await p.evaluate(async () => {
+    const V = window.__tot.v106, w = ms => new Promise(r => setTimeout(r, ms)), now = () => performance.now();
+    V.setStep(0); await w(50); V.playBeeps(now() + 1100, 3, 500); await w(200); const a = !!V.inFlight(); V.setStep(1); const b = !!V.inFlight(); V.setStep(0); return { a, b }; });
+  ok(stp.a && !stp.b, '2. a begun series is cut when the route moves on after the confirm (no beeps after the press)');
   // fb1006 T3's two beeps: the first was past when scheduled; the plan now takes its frames from now + FB14_PLAN_MS
   const src14 = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8'), tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8');
   ok(/earliestPress\(now \+ FB14_PLAN_MS\)/.test(src14) && /stopBeeps\('fb14', p, P\)/.test(src14) && /fb14ReplanHeld/.test(src14) && /seriesHold\('fb2'\)/.test(fs.readFileSync(path.join(__dirname, 'charge_live', 'fb2_live.js'), 'utf8')) && /stopBeeps\('zw ' \+ why/.test(tpl), '2. every lever goes through it: zwTick, fb14Tick / fb14Plan, fb2 (seriesHold), the T6 series via playBeeps');
@@ -80,8 +85,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---- 5. Power Bounce 6 run
   const pb = await p.evaluate(() => { const T = window.__tot.v106, a = 90, b = 170, sh5 = [], sh6 = [], sc = c => sh5[c - a] || 0;
     for (let c = a; c <= b; c++) { sh5.push(c >= 100 && c <= 110 ? 0.95 : c >= 125 && c <= 136 ? 0.95 : 0.2); sh6.push(c >= 127 && c <= 134 ? 0.9 : 0.05); }
-    const r = window.__tot.ppPick(sh5, sh6, a, b, 100, 15, sc, 'free', 30);
-    const sh6b = sh6.map(() => 0.05), r2 = window.__tot.ppPick(sh5, sh6b, a, b, 100, 15, sc, 'free', 30);
+    const r = window.__tot.ppPick(sh5, sh6, a, b, 100, 15, sc, 'six', 30);
+    const sh6b = sh6.map(() => 0.05), r2 = window.__tot.ppPick(sh5, sh6b, a, b, 100, 15, sc, 'six', 30);
     return { r: [r.target, r.run4 && r.run4.length, !!r.later], r2: [r2.target, r2.run.length] }; });
   ok(pb.r[0] === 130 || pb.r[0] === 131, '5. fb0748 shape: 5+ for 11 frames now (no 6), an 8-frame 6+ run 1 s later: aimed at the 6 run\'s middle (' + JSON.stringify(pb.r) + ')');
   ok(pb.r2[0] === 105, '5. no 6+ run in reach: the 5+ run\'s middle as before (' + JSON.stringify(pb.r2) + ')');
