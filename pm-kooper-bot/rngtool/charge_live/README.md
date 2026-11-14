@@ -1,3 +1,89 @@
+# Time Out Timer v105: each aura split of a lock gets its own seed after the rays; why the truth was missing from the locks (Nov 14)
+
+Goal: honest Final Bowser plans as high as possible; first, why v104 found locks with no state that follows the game. Numbers
+only in `fixtures/e2e_v105.json`; no clip, frame or picture committed.
+
+## 1. The model is right: the draws per frame (emulator, full RAM truth)
+- The truth trace of each e2e run (gRandSeed per step) gives the draws per frame. The page's own model (`fbStep`, run in node
+  from the Mario confirm with the aura split, lightning phases and coin fitted from the menu frames before it) meets the game's
+  seed on **every frame** from the confirm through Cloud Nine, the skip, Bowser's AI and dodge test and on into T2 (2b7e1516:
+  frames 0-1343, to T2's hit; 1234abcd: 0 to the end of the trace). `t14model.py check` on a new debug-core log (b13, 2b7e1516
+  T1): exact to the test. No draw source missing, no varying count, no lag or clock drift within a turn, the 30 fps clock right.
+- After Bowser's hit the menu's draws are the same aura / lightning / coin pattern on T1's frame numbers (1234abcd T2 menu): the
+  fight's pattern survives the hit and the Life Shroom; only the hit itself (about 12 frames) is not modelled (as before).
+- The aura pattern of the v104 b13 build had a residue with 4 draws (all three seeds: the build's pattern), prior 0.0061 against
+  0.371 for a 1 (`FB14_BIN`): its true states ranked low. The rebuilt b13 (this run's) has no 4.
+
+## 2. Root cause 1 (fixed): every split of a fit got the best split's seed
+- The kernel lists every aura split of a fit within the tolerance (`fb1alts`) but computes the seed and next coin after the rays
+  (`s48`, `nc48`, `fb1end`) for the fit's **best** split only; `fb14Lock` built every split with those. A split that moves a count
+  between a residue seen three times in the window (rays frames 0-7 mod 20) and one seen twice, or across a coin, draws a
+  different number of times by frame 61: those states were **not self-consistent** (their seed is not what their own aura makes).
+- e2e 1234abcd T1 (`fb14TruthLock`, diagnostic): the true fit 105/17/1 and the true split were both listed (the true split's
+  score tied the fit's best, -4.7 of 6485), but built with seed e9db28e1 instead of the game's 1f58a760: **no state could follow
+  the game** (0 of 12000; v104's 0 of 12000 on 2b7e1516's old build likewise).
+- Fix: `fbEnd48` runs each split's window on the model (from the seed before frame M + 13, the chosen split, the pattern's bolts,
+  the fit's first coin) for its own seed, next coin and the window's shines (now in the state's shines). The kernel's `esc` check
+  (the fit's second coin not the one the seed draws) is now per split: a split whose first coin shines when the fit says a second
+  coin follows (or the other way) is not built (`fb14SplitCoinOut`). The joint path takes its fits after that check.
+- Before / after on the same rebuilt b13 (T1 locks holding the truth by the 90-frame check): 2 of 5 -> 3 of 5 (0badf00d's T1
+  now holds it; 1234abcd and deadbeef do not, section 3).
+
+## 3. Root cause 2 (not fixed): a one-Charge lock has more plausible states than it keeps
+- 1234abcd T1: the true split is the 46th of its fit's 540 splits by the binomial prior; over all fits it is combination 4183 of
+  753252 by weight (prior x score), past `FB14_COMBOS` 1200 / `FB14_AV` 48. With `FB14_AV` 600 and `FB14_COMBOS` 4800 it is among the
+  72066 fits (rank 7951, weight 0.39 of the best), and the 12000-state cap after the menu coin cuts it. Each kept split also
+  carries every lightning phase pair of its pattern (18 here) and both lags. A larger cap costs ~0.7 us per state per frame on the
+  page (12000 states: 8 ms a frame); not taken. The budgets stay 48 / 1200 / 12000.
+- deadbeef: no lock held the truth before or after (not analysed further).
+- Post-hit fresh lock (9e3779b9 after run): the truth was among the fits (combination 98, weight 1.0 of the best) and the menu
+  coin before the Charge, whose 15 s window took in Bowser's hit and the revive, left 48 states and dropped it; the lock then lost
+  every state on the next shine (`fb14AllOut`) and T2-T4 went unplanned. v92's fallback only triggers when no state survives.
+- 2b7e1516's carried T2 (v104: no truth) now keeps it (strict 7, T2 plans with the truth): on the rebuilt b13 the T1 truth ranks
+  high and survives the skip's shift copies; on the old build its prior (the 4) made it the first cut there.
+
+## 4. Measured (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 PLANCHECK=1, T1-T4, 5 seeds, rebuilt b13)
+| run | plans | >= 95% | >= 95% with Bowser hitting | locks holding the truth | T1 locks holding it |
+|---|---|---|---|---|---|
+| before (v104 page) | 61 | 14 | **0** | 8 of 15 | 2 of 5 |
+| after (v105, before the joint-path fix) | 43 | 6 | **0** | 7 of 11 | 3 of 5 |
+- The two runs of a seed diverge from T1 on (other skip frames: in the after run 1234abcd's and 9e3779b9's T1 skips were hit,
+  claimed 0.499 and 0.540), so the counts are not a paired comparison; the after run planned fewer turns (two post-hit T2s gave
+  no plan, section 3).
+- Calibration (plans, Bowser missed / claimed): after 0.5-0.7: 10 of 11 (claimed 0.60), 0.7-0.8: 7 of 8 (0.76), 0.8-0.9: 10 of 10
+  (0.84), 0.9-0.95: 7 of 7 (0.93), >= 0.95: 6 of 6 (0.97). Before: 15 / 15, 7 / 10, 10 / 10, 7 / 7, 14 / 14. Claims under 0.9
+  run low (actual ~0.9 against claimed 0.6-0.8): the broad claim and the T3 floor; nothing claimed >= 0.9 failed in either run.
+- No `FORCE_HIT` run this time: the after run's two natural T1 hits are the post-hit case (section 3).
+
+## 5. v104's conservative rules: kept
+The truth is still missing from 4 of 11 locks (1234abcd T1, deadbeef T1 / T2 / T4); `fb14Broad` is what keeps those locks' claims
+honest (v104's confident wrong claims all came from such locks), so its tolerance and the fresh-lock cap are not relaxed: the data
+does not support it. With the truth in the set (2b7e1516, 0badf00d) the broad claim costs 0.02-0.25 (T3 0.81 -> 0.59, T4 0.99 ->
+0.90) on plans that were all right.
+
+## 6. T6 / T7, console logs
+- `fb2_live.js` (T6 / T7) has no aura (gone after the Peach Beam): its fits (`hyps` pairs) have one seed each; not affected. It
+  gains only through the carried T4 states.
+- Console: the logs have no truth; the `test_console_*` replays (logs1109 / 1110 / 1112 in the suite) lock as before (the seed
+  search is unchanged; only the states built from a lock changed). logs1113 (fb0443 / fb0447 / fb0449) have no Charge-capture
+  replay test (they are used for the skip box and T6 numbers in `test_fb14_v102`); not added.
+
+## Tests
+New `test_fb14_v105.js` (in `run_suite.sh`): `fbEnd48` on the e2e's true 1234abcd T1 state (the game's seed and coin, not the
+kernel's), a split moving a count between a twice- and a thrice-seen residue ends elsewhere, `fb14Lock` (node, stubbed page) builds
+each split with its own seed and coin and drops a split whose coins contradict its fit, the window's shine in the states, the e2e
+fixture (no >= 95% plan with Bowser hitting, before or after; T1 truth 3 of 5 against 2; every plan claimed >= 0.9 right). Version
+checks and the page tests' default build moved to v105. Diagnostics (e2e only, `window.__fb14seeds`): `fb14TruthLock`, the truth
+count after each input and before T2 / T4's held check, the carried check's end-seed misses; `V105T` (test_fb14_page.js env: a
+known true aura scored by the kernel, `fb14V105Score`). Route texts unchanged.
+
+## Not done
+- Root cause 2: the one-Charge lock's budget (the true split past `FB14_COMBOS` / the 12000 cap on 1234abcd T1): needs a cheaper
+  state (phase pairs or splits merged until they diverge) or evidence that ranks splits (Cloud Nine's puffs, the bolts).
+- The menu coin across Bowser's hit for a post-hit fresh lock (drop the window's part before the revive, or fall back when it
+  leaves few states, not only none).
+- deadbeef's locks; relaxing `fb14Broad` (only once the truth is reliably in the set).
+
 # Time Out Timer v104: a plan claims no more than every state still possible supports; v103's truth check took aliases (Nov 13)
 
 Goal (the user's top rule: never beep a confident wrong answer): v103's e2e found 3 of 25 plans at >= 95% whose kept states held

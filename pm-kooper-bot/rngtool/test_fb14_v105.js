@@ -54,6 +54,8 @@ const C = s => Uint8Array.from(s.split('').map(Number));
 // 4.
 { const R = fx.runs; if (!R) console.log('(no runs in the fixture yet)'); else {
   ok(R.after.hiHit === 0, 'after: no plan >= 95% with Bowser hitting (' + R.after.hi + ' >= 95% of ' + R.after.plans + ')');
-  ok(R.after.locksTrue >= R.before.locksTrue, 'after: locks holding the truth ' + R.after.locksTrue + ' of ' + R.after.locks + ' (before ' + R.before.locksTrue + ' of ' + R.before.locks + ')'); } }
+  ok(R.before.hiHit === 0, 'before: none either (' + R.before.hi + ' >= 95% of ' + R.before.plans + ')');
+  ok(R.after.t1True > R.before.t1True, 'T1 locks holding the truth: ' + R.after.t1True + ' of ' + R.after.t1Locks + ' (before ' + R.before.t1True + ' of ' + R.before.t1Locks + '; 0badf00d\'s now)');
+  ok(R.after.buckets.every(([lo, hi, n, m]) => !n || lo < 0.9 || m === n), 'after: every plan claimed >= 90% had Bowser miss'); } }
 const tpl = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8'); ok(/VERSION = 'v10[5-9]'/.test(tpl), 'page VERSION v105+');
 console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
