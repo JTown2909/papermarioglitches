@@ -2489,12 +2489,17 @@ function measurePress(tObs) {
 function leverPressNote(label, err, id) {      // v102: a Final Bowser lever press on the beeps, for the Press check row
   st.lastLever = { label, err, t: performance.now(), bias: typeof leverBias === 'function' ? leverBias(id) : 0 }; slog('leverPressNote', { label, err: +err.toFixed(2), lever: id });
   try { showPresses(); } catch (e) {}
+  try { if (typeof fb14Show === 'function') fb14Show(); } catch (e) {}
 }
 function showPresses() {
   const row = $('press-row'), P = st.plan && st.plan.measured;
   row.hidden = false;
   calPreview();
-  if (V.pressNote) { $('press-msg').textContent = 'Press check: ' + V.pressNote; return; }
+  // v107 (the runner: "the page doesn't tell me if I am early or late on the Final Bowser presses"): on a Final Bowser step the
+  // generic screen check (checkPress: "No beep plan was running" - Final Bowser's plans are FB14 / FB2's, not st.plan) wrote
+  // V.pressNote right after the lever press and hid it; there the lever's own last press wins
+  const stp0 = isRoute() ? RT()[routeStep] : null, fbStep = !!stp0 && (!!stp0.fb14 || /^fb2/.test(stp0.turn || ''));
+  if (V.pressNote && !(fbStep && st.lastLever)) { $('press-msg').textContent = 'Press check: ' + V.pressNote; return; }
   // v102 (the runner: "last frame seems to be stuck on 1.1"): the Final Bowser levers (fb14Confirm, the T1 skip, fb2's T6) never
   // reached this row, which kept an older fight's press. Their last press on the beeps is shown here (not in the generic presses:
   // each lever has its own correction)

@@ -14,6 +14,12 @@
   so the runner's -1 there moved the T1 skip plan by a frame (15-16-45: T1 hit). `jrfix` (default 0; the runner: -1) is added
   only in jr_live's press read (`jrPress`) and confirm frame (the carry), never in fb14 / fb2.
 
+## 3. Final Bowser presses: early / late shown
+- The runner: "the page doesn't tell me if I am early or late on the Final Bowser presses". `leverPressNote` (v102) wrote the
+  lever's press to the Press check row, then the generic screen check (checkPress: "No beep plan was running", since Final
+  Bowser's plans are FB14 / FB2's, not st.plan) set V.pressNote, which showPresses put first. On a Final Bowser step the lever's
+  last press now wins, and the T1-T4 panel shows it in bold ("Last press (Final Bowser T2, Do Nothing): 1.1 frames EARLY").
+
 ## Tests
 `test_v107.js` (in run_suite.sh): the LIKELY texts (1-frame, 3-frame, Power Bounce, none), the setting, jrfix only in jr_live.
 VERSION v107; the version checks and page tests' default build moved to v107.

@@ -19,6 +19,10 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(r.pb === 'LIKELY 89% (6+ 60%) with your press spread', 'Power Bounce: "' + r.pb + '"');
   ok(r.none === '', 'no spread chance: nothing');
   ok(r.jrfix && r.jrfixDef === '0', 'Jr. Troopa press correction setting, default 0');
+  // the Final Bowser lever press stays on the Press check row after the generic screen check, and shows in the T1-T4 panel
+  const fbp = await p.evaluate(() => { const T = window.__tot, i = T.RT().findIndex(s => s.fb14 === 2); T.setStep(i); T.V.pressNote = 'No beep plan was running.'; T.leverPressNote('Final Bowser T2, Do Nothing', -1.06, 'fb14');
+    return { row: document.getElementById('press-msg').textContent, i }; });
+  ok(fbp.i >= 0 && /Last press \(Final Bowser T2, Do Nothing\): 1\.1 frames early/.test(fbp.row), 'Final Bowser press on the Press check row over the generic note: "' + fbp.row.slice(0, 90) + '"');
   const jr = fs.readFileSync(path.join(__dirname, 'charge_live', 'jr_live.js'), 'utf8'), fb = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8');
   ok((jr.match(/num\('jrfix'\)/g) || []).length === 2 && !/jrfix/.test(fb), 'jrfix read by the Jr. press read and carry only, never by Final Bowser');
   ok(!errs.length, 'no page errors ' + errs.join(' | '));
