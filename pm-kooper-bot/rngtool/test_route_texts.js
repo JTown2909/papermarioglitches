@@ -12,6 +12,8 @@ const PIN = {
   'Hallway Bowser': ['T1: Charge; Spiny Flip - Danger', 'T2: Time Out; Spiny Flip', 'T3: Bounce x3; Spiny Flip', 'T4: Bounce x3; Spiny Flip', 'T5: Jump x2; Spiny Flip'],
   'Final Bowser': ['T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', "T3: Jammin' Jelly; Do Nothing", 'T4: Charge; Do Nothing - Block Wave', 'T5: Peach Beam - Danger', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7'],
   'Jr. Troopa (ENDGAME_JR)': ['T1: Charge; Bomb', 'T2: Bomb; Whacka [Up 1]', 'T3: Charge; Bomb', 'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T7: Star Storm if 4 capped / Shooting Star [Down 5] if 4 capped'],
+  // v109, the runner's partnerless route, verbatim
+  'Jr. Troopa: Ultra Boots Partnerless': ['T1: Charge; Do Nothing', 'T2: Charge; Do Nothing - Close Call', 'T3: Maple; Do Nothing - Close Call', 'T4: Charge; Do Nothing - Close Call', 'T5: Charge; Do Nothing - Close Call', 'T6: Whacka; Do Nothing', 'T7: Bounce x6'],
   'Duplighosts (Charge route)': ['T1: Charge; Bombette Do Nothing on the beep - 3+ Transform (4 ideal)', 'T2: Power Bomb; Jump x2 on the one that did not transform'],
   'NB Duplighosts': ['T1: Charge; Bombette Do Nothing on the beep - 3+ Transform (4 ideal: 3 costs 2 damage)', 'T2: Power Bomb; Jump x2 on the one that did not transform', 'T3: Jump x1'],
   'NB Jr. Troopa': ['T1: Super Charge; Charge [3HP, 5FP]', 'T2: Super Charge; Charge [3HP, 0FP] - Close Call', 'T3: Maple; Charge [3HP, 9FP] - Close Call', 'T4: Super Charge; Charge [3HP, 4FP] - Close Call', 'T5: Super Charge; Headbonk x2 [3HP, 0FP] - Close Call', 'T6: Whacka; Do Nothing [3HP, 10FP]', 'T7: Bounce x5 [3HP, 7FP]'],

@@ -1,3 +1,153 @@
+# Time Out Timer v109: Jr. Troopa's missed Do Nothing and the T5 revive carried, solid windows; Final Bowser step tracking (one confirm per screen, T3 -> T4's Charge, no Peach Beam trigger), the press on the strip (Nov 15)
+
+From the runner's console logs of Nov 15 (logs1115: jr0701, jr0706, fb0709, fb0713, fb0718, fb0722, fb0727; clips read for numbers
+only, nothing committed but numbers).
+
+## 1. Jr. Troopa T4 (jr0701): "a frame early", on off on off on
+- The clip (60 fps; page = clip + 16.184 s from the 9 bar hides, fit error 3 ms in all): the overlay's A lit 111 ms after the plan's
+  press time (T3 Bomb 143 ms, Power Bounce 85 ms); the page read the Syrup confirm at -0.71 (Bomb -0.25, bounce -0.97). The
+  overlay and the reads agree within the overlay's half-vblank jitter, so the press was read at frame 664 for a target of 665: one
+  frame early, as the runner says.
+- The plan (665, pp 0.59, p 0.486 with the runner's spread rms 1.23) stood on 2 states, 60 / 40, one frame apart: frames 663 / 665 /
+  667 work for the 60% state, 664 / 666 for the 40% one; the strip (share >= 50%) showed on off on off on. 0.486 is the right chance
+  for that pattern (0.6 x 0.494 + 0.4 x 0.456; the islands two frames apart catch some of the spread) and the next window, a solid
+  2-frame run 29 frames later, was 0.473: by the score the pick was right, and the press landed on the 40% state's frame.
+- Fix (`ppPick`, solid): a wider run whose frame is within `PP_SOLID_TOL` (0.02) of the pick with the press spread takes it, up to
+  "Wider window up to" (Close Calls, Do Nothing, Time Out; not Final Bowser T1-T4, whose anchor rules stay). jr0701 T4 would have
+  aimed at the 2-frame run (0.473). It costs at most 0.02 of the modelled chance and holds when the press is a frame off for a
+  reason the symmetric spread does not model (a bias, a reading lattice); an island does not. jr0706's "prefer wider over 2-frame
+  windows when p is close" is the same rule.
+- The press timing: both logs ran with **Jr. Troopa correction 0 and Press check correction 0** (the logs' settings), not -1. The
+  outcomes against the reads (true = read + s): jr0706 T3 -0.79 dodged and T4 -0.27 dodged on 1-frame windows, T5 Do Nothing +0.51
+  died; jr0701 T3 -0.25 dodged (3 frames), T4 -0.71 died (the 60 / 40 window). They fit s = +0.29 .. +0.77, i.e. Jr. Troopa
+  correction about -0.5 (-1 reads jr0706 T4 at +0.73, just outside, within the reading's half-frame lattice). The beeps themselves
+  are centred (the Bomb / Syrup presses sit at about 0 true); the Do Nothing at +1. No default changed.
+
+## 2. Jr. Troopa T5 (jr0701): the route did not move on, a 3 cap
+- The clip: the T5 Charge locked at page 94.31 s; Bombette's Strategies box was up **8 frames (133 ms)**, 93.95-94.08 s (at 10 HP
+  after the T4 revive there is no roll, so the runner did not wait). A target screen's close counted only after 200 ms up (cat S),
+  so the Do Nothing was never read; at 10 HP neither Do Nothing nor Jr. Troopa's turn hides the bar, so nothing else read it. The
+  route stayed on T5; the runner stepped to T6 by hand; the tracker had no Do Nothing (and its Jr. Troopa turn draws) and planned
+  the bounce at 405, "5+ 98.5%". Then the bounce's target screen closing was taken as the missing Do Nothing (c 407, after the
+  bounce at 404). The runner pressed 404 (err -0.97): 3 bounces.
+- Fixes: on a Jr. Troopa (and Final Bowser) Strategies step 2 game frames up count (`closeMinMs`); a shorter close is kept
+  (`V.shortClose`). A step forward by hand past unread confirms (`jrStepGap`; also a bar hide at 10 HP while Do Nothing is still
+  expected, which is the next confirm) puts a kept short close in as the Do Nothing, or marks the carry lost and says which confirm
+  was not seen ("No edge: the seed was lost: T5 Do Nothing was not seen (stepped on by hand) ..."): never a plan from states that
+  lack an input. A close on a non-Strategies step is never taken as the Do Nothing (`jrCloseNotStrat`).
+- Replayed (test_v109 section 3, the T5 lock and shines): stepped on by hand, no plan and the reason; with the Do Nothing at the
+  clip's close (c 101) the bounce plans at 420 (5+ 0.94, 6+ 0.61) and **the frame the runner pressed, 403, gives 4 or fewer for 100%
+  of the states** (v108 without the Do Nothing: 5+ there): the model agrees with the 3 cap.
+
+## 3. Jr. Troopa after a T5 death (jr0706): the bounce carried through the Life Shroom
+- Live: the T5 Do Nothing (+0.51 on a 1-frame window) died; the bounce plan made before the outcome went to doubt 0.99 ("No
+  edge"), the HP read (443 frames after the confirm) ended the carry, and the T6 step said nothing more; blind, 4 bounces.
+- Now (`jrReviveCarry`, lifeshroom/README.md: death = roll + 27, the menu 399 frames later, 933-939 RNG steps in between, 935 in 11
+  of 27): the states whose roll killed Mario are stepped to the death, then each step count 932-940 (weighted as the sweep) x the 48
+  coin phases at the menu starts a state; the menu's coin weighs them; background 15%. Only after T5 (T3 / T4 deaths: the next
+  Charge locks again). jr0706 replayed (section 4): 752 states, at 0.8 s after the HP read the bounce plans at 715, 5+ 0.95, 6+
+  0.64, 2.1 s ahead (the runner pressed 2.5 s after the read; the model gives his frame 4 bounces for 40% of the states, he got 4).
+  Not checked on console.
+
+## 4. Final Bowser T2 (fb0709): a reachable target swapped for a worse one
+- Live: plan 770 (p 0.63, 2-frame); 0.6 s later the states narrowed (114 -> 32), 770 re-scored 0.994; `fb14Refine` dropped the plan
+  to replan, but 770's first beep was 0.15 s away, inside a new plan's own lead (`FB14_PLAN_MS` + the countdown), so the replan
+  could not reach it and `fb14Anchor` took 792 (0.51); 770's series was cancelled before it began. The runner pressed 794 (+1.86):
+  hit.
+- Fix: a refine runs only while a new plan can still aim at the planned frame (`reach`); otherwise the plan, which holds, keeps its
+  frame and beeps (`fb14RefineKept`). fb0713's T1-T4 plans (0.64 / 0.81 / 0.80 / 0.97) were all first plans or same-frame refines.
+
+## 5. Final Bowser T4 (fb0709): beeps stopped 0.19 s before the first
+- After the post-hit fresh lock (plan 229, 0.77), its first shine "confirmed" it (`fb14FreshConfirmed` takes any shine) while the
+  weighing put the doubt at 0.554, just over `FB14_EDGE_OFF`; 229 re-scored 0.626 (drop rule: >= pp - 0.25 = 0.636), 7 ms too late
+  to replan: all 3 beeps cancelled (`beepsCancelled n 3` before the first): the runner got no beeps, pressed 229 (+0.29) anyway,
+  Bowser missed. Fix: too late to move, a frame still `FB14_KEEP_EDGE` (0.05) over blind and over the edge setting keeps its beeps
+  (`fb14KeptLower`).
+
+## 6. Final Bowser T3 / T4 under blind (fb0727)
+- T3: Bowser's attack cut the carried states 132 -> 6; for them a 5-frame window (0.82), but every state the coin had not ruled out
+  gave 0.435 there (fb14Broad), under blind 0.495; planned anyway (the edge check ran before the broad cap). Pressed 1305 (-0.97),
+  hit. Now a plan whose claim is under blind is "No edge" (`fb14UnderBlind`). T4 (fresh after the hit): 200, 1 frame, 0.63, pressed
+  199.38: a coin flip, honest.
+- 1-frame picks (fb0727, fb0731 T3: `fb14ReplanNear` to a 1-frame 695 at 0.55, pressed on target, hit): in `fb14Anchor` a 1-frame
+  pick gives way to the nearest frame of a 2+ run within `FB14_ANCHOR_RTOL` of the best realistic chance (a first plan and the
+  anchor rule otherwise as v96-v106).
+
+## 6b. Final Bowser T7 (fb0731): 9 s of "No edge" before the 7 window
+- After the T6 dodge (14 states, doubt about 0), every T7 plan from d 452 to 745 had no frame in the next second giving 7 for 40%+
+  of them (p7 0, 6+ 0.25-0.5); at d 746 one gave 7 for all (pp7 0.999; with the spread 0.50, 1 frame). The window was real; the
+  page now says how long until it ("Waiting for the next 7-bounce window, in about N s: stay on the target screen for its beeps",
+  looked for up to `FB2_T7_AHEAD` 600 frames).
+- No `fb2Dodged` / `fb2HitSeen` in fb0731: the HP watch (v108) waits for the "1" of 10 HP, and Mario was not at 10 there (two hits
+  earlier, T1 and T3); the route went to T7's confirm 20 s after T6's, before its 25 s "unread" log. The watch still assumes 10 HP.
+- fb0731 T1: fresh lock, 388-389 (0.68), pressed 389.32 (inside), hit: the lock (or the 32%); the T1 fresh lock's coin split keeps
+  1200 of up to 15000 states (see (m)).
+
+## 7. Final Bowser step tracking
+- fb0718 (j): T3's Strategies box close read twice, 317 ms apart (the page was ~300 ms behind: `fb14Input` on 12000 states runs on
+  the confirm), the second taken as T4's Do Nothing: T4 skipped, never planned ("no wave"). Now a close within `FB_RECLOSE_MS`
+  (1.5 s) of the close that moved the route is the same box (`closeTooSoon`). A step back by hand onto a lever whose confirm was
+  read plans it again (`fb14ConfirmUndone`; the false input stays in the carry, the coin weighs it).
+- fb0722 (o): after the T2 hit no plan, T3's Do Nothing pressed at once: its box was too short (the 200 ms rule, now 2 frames), and
+  on T3's step no Charge reader ran (T3 has no Charge), so T4's Charge never moved the route: stuck on T3. T3's lever step now reads
+  T4's Charge (`chgProfNow`: fb1), whose burst moves the route (`fb14StepByBurst`).
+- fb0722 (p): Peach Beam's flash triggered the T6 reader (base 29.6, m 39.5); 87 frames later a close read as T6's Do Nothing moved
+  the route to T7. Every console Final Bowser lock of Nov 9-15 started at base 81-85 (fb1) / 81-96 (fb2), false triggers 30-63:
+  `CHG_FB_BASEMIN` 70. Without a T6 lock a close before `FB2_PMIN` - 20 (110) frames is not the Do Nothing (console 149-392).
+- fb0722 (q): a step back by hand to T6 re-arms its reader (`fb2Rearmed`, chgReset), so the real T6 Charge locks.
+- fb0713: T6 planned 1 frame at 0.49 after the T5 miss, steps 14 -> 15 by hand, then 15 -> 16 on a close: nothing wrong found.
+
+## 8. The press on the strip, T6 / T7 strips
+- (h) A Final Bowser lever press (T1 skip, T2-T4 Do Nothing, T6) keeps the plan's frames, its window and the measured frame
+  (`pressShow`): the strip shows them after the route moves on, the frame hit green (works for most states) or red, "you ✓ / ✗",
+  until the next plan beeps (2 min at most); the Press check row is coloured with ✓ / ✗ as the other fights'.
+- (f) fb0709 T6 "no track was shown but it beeped" (and fb1153): fb2's plans carried `tab: []`: nothing to draw, ever. T6 / T7
+  plans now carry the per-frame share (>= 50%) on a clock whose frame reaches the now-line at its press.
+
+## 8b. (u) Jr. Troopa: Ultra Boots Partnerless (the runner's route, "it might be faster. bombs are slow")
+- Settings → Jr. Troopa route → "Ultra Boots Partnerless" (`jrroute` = `pl`, kept with the other settings). The route list shows
+  "Jr. Troopa: Ultra Boots Partnerless" and the runner's 7 turns verbatim (pinned in test_route_texts.js).
+- Steps: T1 Charge (the lock) + Do Nothing (no roll), T2-T5 Do Nothing on the beep → Close Call (`jrcc_nothing`), T6 Whacka + Do
+  Nothing (nothing to time), T7 Power Bounce → 6 (`jrpb5`, the 6 run). The carry (`JR_SEQ_PL`) reuses measured pieces: Super
+  Charge, Maple Syrup (`nb_syrup`, 10 sparkles on +118), Whacka's Bump (`jr_whacka`), Jr. Troopa's hit with no roll
+  (`jr_nothing_hit`, +53) and the Close Call on Do Nothing + 26 (`jr_nothing_cc`); a death leaves the next turn at 10 HP (no roll).
+  The route moves on the Charges' bar hides and the Strategies boxes' closes as the Bombette route.
+- **Not checked (marked "untested" on the option and T1's step):** Mario's own Do Nothing (no partner) was never run in the emulator
+  nor seen on console; its Close Call frame is taken as Bombette's (+26), its Strategies box as Bombette's (cat S: the runner saves
+  that screen once), and whether Jr. Troopa's turn hides the bar after it is unknown. Also T1's / T6's hit draws at the HP this
+  route has there, and Maple Syrup / Whacka's Bump as Mario's first action of a turn (measured as items, not in this order). Needed:
+  one console clip (input display + status bar) of the whole partnerless fight with its session log, ideally two (one with a T2-T5
+  death), or the emulator run of the route from a T1 state with Bombette left out.
+- test_v109 section 7: the option, the 7 turns, T1's Do Nothing moving the route, T2-T5's Close Calls and T7's bounce planned from
+  a known seed (unit level, jrPlanAt).
+
+## 9. UI
+- (r) A star left of every turn the page times (a beeped lever), outside the clickable chip; the turn texts are unchanged.
+- (i) Erase log erases at once (no confirm, no undo); (s) Reset seed / Erase log say "Seed reset ✓" / "Log erased ✓" for 1.5 s.
+
+## Measured, not changed
+- (g) Final Bowser presses, Nov 15 (13 on the beeps): mean +0.28, median +0.23, sd 0.96 frames; T2 alone +1.86 / +0.89 / -0.65 /
+  -0.62 / -0.62. No Final Bowser bias beyond the spread. The repeated -0.62 / +0.38 / +1.88 are the reading's lattice (the 60 fps
+  capture against 30 fps game frames: readings fall on half-frame steps with a fixed phase), not an offset: a reading of -0.62 is a
+  press anywhere in about -0.87 .. -0.37. pfix stays 0.
+- (k) fb0718 T3: 710 (0.57) refined, the replan's 740 refused (its series had begun), 710 kept; 0.2 s later 710 re-scored 0.379
+  (no shine or bar event in between: the attack evidence's cut, 3403 -> 2662 states, re-weighed) and the series was stopped
+  visibly (`beepsStopVisible`, 619 ms left), then 786 (0.60) beeped and worked (+0.18).
+- (l) The lag on T2 / T3 (fb0718): `fb14Input` on 12000 states ~230-330 ms at each confirm, `fb14Plan` 140-160 ms per (re)plan,
+  `fb14Lock` build 156 ms, on the main thread (the beeps are audio-scheduled and keep time; the strip and the screen reads stall).
+  Not moved off the main thread in v109.
+- (m) fb0718 T1: the fresh lock's coin split kept the 1200 cap of 14976 (`fb14SplitCoinOut`): the lock budget (v105 root cause 2)
+  can cut the truth; the T1 plan (393, 0.68) was pressed on target and Bowser hit. Not changed.
+- (n) fb0722 T2: carried (M 613) but the coin disagreed (doubt 0.652, `fb14CoinWarn`), plan 809 at 0.54, 1 frame: a warned
+  coin-flip plan ("WARNING: the coin disagrees ..."), pressed -0.62, hit.
+
+## Tests
+`test_v109.js` (in run_suite.sh): the solid rule, the short-close thresholds, jr0701 T5 replayed (gap / short close / the bounce
+screen), jr0706's revive carry and plan, the Final Bowser step rules (re-close, T3's Charge reader, base 70, early T6 close, T6
+re-arm, step back), pressShow / strip state / Press check colour, the stars, Erase log and the buttons, and the refine / stop / T6-T7
+tab rules in the source. test_v106's Erase log check: one click, no confirm. VERSION v109; version checks and the page tests'
+default build moved to v109. Route texts unchanged.
+
 # Time Out Timer v108: a beep series keeps its target to the confirm; the T6 outcome read before T7; the post-hit fresh lock's menu coin; the emulator harness back (Nov 14)
 
 From the runner's console logs of Nov 14 (logs1114: fb1157, fb1203, fb1516, fb1542, fb1548; numbers and event names only).

@@ -342,7 +342,7 @@ details[open] summary { margin-bottom: 10px; }
       </div>
     <p class="note" style="margin:0">Duplighosts → Jr. Troopa → Hallway Bowser → Final Bowser · click a step to jump there · ★ = planned press</p>
     <label class="f" style="margin:0">Duplighosts route<select id="s-duproute"><option value="rta">RTA: Spiny Surge (no lock)</option><option value="charge">Charge lock: Mario Charge, Bombette Do Nothing</option></select><small id="duproute-note"></small></label>
-    <label class="f" style="margin:0">Jr. Troopa route<select id="s-jrroute"><option value="charge">Charge lock: T1 Super Charge, beeps on T3-T6</option><option value="shine">Old: a shine lock carried through the turns (v72)</option></select></label>
+    <label class="f" style="margin:0">Jr. Troopa route<select id="s-jrroute"><option value="charge">Charge lock: T1 Super Charge, beeps on T3-T6</option><option value="shine">Old: a shine lock carried through the turns (v72)</option><option value="pl">Ultra Boots Partnerless: Charge; Do Nothing - Close Call T2-T5, Bounce x6 (v109, untested)</option></select></label>
 </aside>
 </div>
 
@@ -560,6 +560,20 @@ const ENDGAME_JR = { h: 'Jr. Troopa', turns: [
   { text: 'T5: Charge; Do Nothing', steps: [{ label: 'Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 9 }] },
   { text: 'T6: Bounce x6; Bomb if 5 capped', steps: [{ label: 'Power Bounce on the beep → 6 (5 + Bomb)', cat: 'K', prof: 'jrpb5', chg: 'jr', jr: 10 }] },
   { text: 'T7: Star Storm if 4 capped / Shooting Star [Down 5] if 4 capped', steps: [] } ] };
+/* v109, the runner's partnerless route ("it might be faster. bombs are slow"; Settings key jrroute = 'pl'): Mario alone, each turn
+ * his action then Do Nothing (the Strategies box, read as Bombette's), Jr. Troopa's attack after it. T2-T5's Do Nothing is the
+ * Close Call lever (Mario in Danger), T7 the Power Bounce (6 run, ppPick6). The carry (JR_SEQ_PL, jr_live.js) reuses the measured
+ * pieces: the Super Charge, Maple Syrup (nb_syrup), Whacka's Bump (jr_whacka), Jr. Troopa's hit with no roll (jr_nothing_hit) and
+ * the Do Nothing Close Call on +26 (jr_nothing_cc). NOT CHECKED: Mario's own Do Nothing was never run in the emulator or seen on
+ * console; its Close Call frame is taken as Bombette's (+26), and whether Jr. Troopa's turn hides the bar after it is not known. */
+const ENDGAME_JR_PL = { h: 'Jr. Troopa: Ultra Boots Partnerless', pl: true, turns: [
+  { text: 'T1: Charge; Do Nothing', steps: [{ label: 'Super Charge (its rays lock the seed), then Do Nothing (no Close Call yet: untested route, see Settings)', cat: 'S', chg: 'jr', jr: 1, seq: 'ultrapl' }] },
+  { text: 'T2: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 3, seq: 'ultrapl' }] },
+  { text: 'T3: Maple; Do Nothing - Close Call', steps: [{ label: 'Maple Syrup, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 5, seq: 'ultrapl' }] },
+  { text: 'T4: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 7, seq: 'ultrapl' }] },
+  { text: 'T5: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 9, seq: 'ultrapl' }] },
+  { text: 'T6: Whacka; Do Nothing', steps: [{ label: 'Whacka\'s Bump, then Do Nothing (nothing to time)', cat: 'S', chg: 'jr', jr: 11, seq: 'ultrapl' }] },
+  { text: 'T7: Bounce x6', steps: [{ label: 'Power Bounce on the beep → 6', cat: 'K', prof: 'jrpb5', chg: 'jr', jr: 12, seq: 'ultrapl' }] } ] };
 /* The Duplighosts on the Charge-lock route (dup_charge/README.md), selectable in the route panel instead of the RTA turn
  * above (Settings key duproute): T1 Mario's Super Charge (no Z: Mario first), whose rays lock the seed (charge_live.js,
  * profile dup), then Bombette's Do Nothing on the beep. That A is the only lever: each Duplighost rolls RandInt(1000) <
@@ -624,9 +638,9 @@ const FBNB_LOCKED = { 6: 0.92, 7: 0.32, 8: 0.03 };
 ENDGAME_NB.forEach(f => f.turns.forEach(tu => tu.steps.forEach(st => { if (st.fbcap) { st.nomodel = 'Final Bowser\'s phase-2 Power Bounce is not beeped yet (v86). Measured in the emulator: after your Super Charge, Goombario\'s Charge and his box A (or the box running out) start Bowser\'s AI 16 frames later, his Close Call roll comes 52 / 55 / 62 frames after it (Body Slam / Fire Breath / Claw Swipe) and your next menu 101 / 134 / 83 frames after that, and the Power Bounce rolls every 26 frames from your target A + 70. Not done: the Super Charge read in this arena with Goombario out, and Bowser\'s Star Rod / wave / Lightning Blast choices from T3 on. With a lock and a perfect press in a 1 s window the model gives 6+ ' + Math.round(100 * FBNB_LOCKED[6]) + '%, 7+ ' + Math.round(100 * FBNB_LOCKED[7]) + '%, 8+ ' + Math.round(100 * FBNB_LOCKED[8]) + '%. Nothing you do on the earlier turns changes this'; st.blind = 'Power Bounce whenever you like: ' + fbnbCapText() + ' (blind cap odds)'; } })));
 const bootsNow = () => ($('s-boots') && $('s-boots').value === 'normal' ? 'normal' : 'ultra');
 const dupRoute = () => ($('s-duproute') && $('s-duproute').value === 'charge' ? 'charge' : 'rta');
-const jrRoute = () => ($('s-jrroute') && $('s-jrroute').value === 'shine' ? 'shine' : 'charge');
+const jrRoute = () => { const v = $('s-jrroute') && $('s-jrroute').value; return v === 'shine' ? 'shine' : v === 'pl' ? 'pl' : 'charge'; };     // v109: 'pl' the partnerless route
 const endgameNow = () => (bootsNow() === 'normal' ? ENDGAME_NB.map(f => (f.h === 'Duplighosts' && dupRoute() !== 'charge' ? ENDGAME[0] : f))
-  : (dupRoute() === 'charge' ? ENDGAME_DC : ENDGAME).map(f => (f.h === 'Jr. Troopa' && jrRoute() === 'charge' ? ENDGAME_JR : f)));
+  : (dupRoute() === 'charge' ? ENDGAME_DC : ENDGAME).map(f => (f.h === 'Jr. Troopa' && jrRoute() === 'charge' ? ENDGAME_JR : f.h === 'Jr. Troopa' && jrRoute() === 'pl' ? ENDGAME_JR_PL : f)));
 const ENDGAME_BY = {}, endgameSteps = () => { const k = bootsNow() + ':' + dupRoute() + ':' + jrRoute(); return ENDGAME_BY[k] || (ENDGAME_BY[k] = stepsOf(endgameNow())); };
 const CAT = { M: { screen: 'a target screen with the hand on Mario (Super Charge, an item on Mario)', box: 'the マリオ name box in the top-left' },
   K: { screen: 'a target screen with the hand on Jr. Troopa', box: 'the name box in the top-left' },

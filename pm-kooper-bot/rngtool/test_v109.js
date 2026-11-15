@@ -162,6 +162,32 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     ok(r.erased === 'logErased' && r.asked === 0 && r.eraseLabel === 'Log erased ✓' && r.eraseCls && r.resetLabel === 'Seed reset ✓', '6. Erase log at once (no confirm), "Log erased ✓" / "Seed reset ✓" for 1.5 s');
     await q.close();
   }
+  // ---- 7. the partnerless route (unit level: Mario's own Do Nothing is not modelled from the emulator; see README v109)
+  {
+    const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'pl', duproute: 'charge' });
+    const r = await q.evaluate(() => {
+      const T = window.__tot, out = { opt: !!document.querySelector('#s-jrroute option[value="pl"]') };
+      out.turns = [...document.querySelectorAll('#route-list [data-i]')].map(x => x.textContent).filter(t => /Do Nothing|Bounce x6/.test(t));
+      out.head = [...document.querySelectorAll('#route-list li')].map(x => x.textContent).find(t => /Partnerless/.test(t)) || null;
+      const L = T.RT(), i1 = L.findIndex(s => s.seq === 'ultrapl' && s.jr === 1); T.setStep(i1);
+      T.jrTrackerAt(0x2468ace0, [12], performance.now() + 3600000, 0);
+      out.seq = T.JRT.k; T.jrScreenAt(200, 3); out.k1 = T.JRT.k; T.jrConfirmClock(2, 600); out.stepT2 = T.RT()[T.step()].jr;
+      const plans = []; let c = 600;
+      const cc = (k, pre) => { const P = T.jrPlanAt(c + pre, 1.5, 1, 'jrcc_nothing'); plans.push({ k, target: P.target, p: P.p, pp: P.pp, none: P.none }); if (P.target == null) return false; T.jrScreenAt(P.target, 3); T.jrDodge(k); c = P.target; return true; };
+      cc(3, 115); T.jrConfirmClock(4, c + 120); c += 120; cc(5, 165); T.jrConfirmClock(6, c + 120); c += 120; cc(7, 115); T.jrConfirmClock(8, c + 120); c += 120; cc(9, 115);
+      T.jrConfirmClock(10, c + 130); c += 130; T.jrScreenAt(c + 200, 3); c += 200; out.stepT7 = T.RT()[T.step()]; out.stepT7 = out.stepT7 && out.stepT7.jr;
+      const P7 = T.jrPlanAt(c + 100, 1.5, 1.5, 'jrpb5'); out.pb = { target: P7.target, p: P7.p, p6: P7.p6, none: P7.none, w4: P7.w4 };
+      out.plans = plans; out.k = T.JRT.k; out.inputs = T.JRT.inputs.map(x => x.id + ':' + x.c);
+      return out;
+    });
+    console.log('7', JSON.stringify(r).slice(0, 900));
+    const PLT = ['T1: Charge; Do Nothing', 'T2: Charge; Do Nothing - Close Call', 'T3: Maple; Do Nothing - Close Call', 'T4: Charge; Do Nothing - Close Call', 'T5: Charge; Do Nothing - Close Call', 'T6: Whacka; Do Nothing', 'T7: Bounce x6'], i0 = r.turns.indexOf(PLT[0]);
+    ok(r.opt && i0 >= 0 && PLT.every((t, j) => r.turns[i0 + j] === t) && /Partnerless/.test(r.head || ''), '7. the partnerless route is a Jr. Troopa route option and shows its 7 turns under its header (' + r.turns.slice(i0, i0 + 7).join(' | ') + ')');
+    ok(r.k1 === 2 && r.stepT2 === 3, '7. T1\'s Do Nothing read from its Strategies box moves the route to T2');
+    ok(r.plans.length === 4 && r.plans.every(x => x.target != null && !x.none && x.p > 0.3), '7. T2-T5\'s Do Nothing Close Calls planned from a known seed (' + r.plans.map(x => x.target + ' ' + (x.p || 0).toFixed(2)).join(', ') + ')');
+    ok(r.stepT7 === 12 && r.pb.target != null && !r.pb.none && r.pb.p > 0.675, '7. after Whacka and T6\'s Do Nothing, T7\'s Power Bounce planned (' + r.pb.target + ', 5+ ' + (r.pb.p || 0).toFixed(2) + ', 6+ ' + (r.pb.p6 || 0).toFixed(2) + ')');
+    await q.close();
+  }
   // the rules in the source (replays of these need the Final Bowser lock pictures; numbers in README v109)
   const src = n => fs.readFileSync(path.join(__dirname, n), 'utf8'), fb14 = src('charge_live/fb14_live.js'), fb2 = src('charge_live/fb2_live.js');
   ok(/const reach = fbPressT\(P\.target\) >= earliestPress\(now \+ FB14_PLAN_MS\)/.test(fb14) && /narrowed && reach &&/.test(fb14), '6. fb0709 T2: a refine runs only while a new plan can still aim at the planned frame (770 at 0.994 was swapped for 792, 0.51)');

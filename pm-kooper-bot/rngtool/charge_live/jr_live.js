@@ -66,7 +66,24 @@ const HW_SEQ_NB = [
   { id: 'hw_charge', t: 'T1', charge: true, hide: 3, menu: 150 },
   { id: 'nb_gch', t: 'T1', hide: 4, cancel: 'nb_hwcc', ai: true, next: 160, prof: 'hwcc_gch', profW: 'hwcc_gchw', what: 'A on Goombario\'s box' },
   { id: 'to_nb', t: 'T2', hide: 3, prof: 'timeout', what: 'Time Out' } ];
-const JR_SEQS = { ultra: JR_SEQ, nbjr: JR_SEQ_NB, nbhw: HW_SEQ_NB };
+/* v109, the partnerless route (ENDGAME_JR_PL): Mario's action, then Do Nothing; the Close Calls on T2-T5's Do Nothing (+26, taken
+ * as Bombette's: not checked), Jr. Troopa's hit with no roll on T1 / T6 (Mario over 5 HP), a death's revive leaves the next turn
+ * at 10 HP (no roll). */
+const JR_SEQ_PL = [
+  { id: 'jr_charge', t: 'T1', charge: true, hide: 3 },
+  { id: 'jr_nothing_hit', t: 'T1', hide: 3, strat: true, what: 'Do Nothing' },
+  { id: 'jr_charge', t: 'T2', charge: true, hide: 3 },
+  { id: 'jr_nothing_cc', t: 'T2', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 5 },
+  { id: 'nb_syrup', t: 'T3', hide: 3, menu: 160 },
+  { id: 'jr_nothing_cc', t: 'T3', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 7 },
+  { id: 'jr_charge', t: 'T4', charge: true, hide: 3 },
+  { id: 'jr_nothing_cc', t: 'T4', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 9 },
+  { id: 'jr_charge', t: 'T5', charge: true, hide: 3 },
+  { id: 'jr_nothing_cc', t: 'T5', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true },
+  { id: 'jr_whacka', t: 'T6', hide: 3, rearm: true },
+  { id: 'jr_nothing_hit', t: 'T6', hide: 3, strat: true, what: 'Do Nothing' },
+  { id: 'jr_pb', t: 'T7', hide: 3, prof: 'jrpb5', what: 'Power Bounce' } ];
+const JR_SEQS = { ultra: JR_SEQ, nbjr: JR_SEQ_NB, nbhw: HW_SEQ_NB, ultrapl: JR_SEQ_PL };
 const jrStepSeq = () => { const s = isRoute() && RT()[routeStep]; return (s && s.seq) || 'ultra'; };
 const JRS = () => JR_SEQS[(JRT && JRT.on && JRT.seq) || jrStepSeq()] || JR_SEQ;
 // v85: what the beeped press is on a Goombario Charge turn (by the Settings mode)

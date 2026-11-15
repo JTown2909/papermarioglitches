@@ -49,7 +49,7 @@ function fb2Idle(S, f0, f1, ph) { for (let f = f0; f < f1; f++) fb2Frame1(S, f, 
  * KO'd): Lakilester's Do Nothing confirm on frame P is the lever, Bowser's AI on E = P + 13 (as on T2-T4), the Close Call
  * test FB2_DNDELTA after it, the T7 menu FB2_DNMENU after the test. The popup A draws nothing and moves no draw once P is
  * fixed (the same seed at P for K = 77 / 100 / 130 / none). */
-const FB2_DNAI = 13, FB2_PMIN = 130, FB2_DNDELTA = { slam: 52, claw: 55, fire: 55 }, FB2_DNMENU = { slam: 101, claw: 134, fire: 134 };
+const FB2_T7_AHEAD = 600, FB2_DNAI = 13, FB2_PMIN = 130, FB2_DNDELTA = { slam: 52, claw: 55, fire: 55 }, FB2_DNMENU = { slam: 101, claw: 134, fire: 134 };
 function fb2AI(S0, E, ph, slamOk, clawOk, dn) {
   const DL = dn ? FB2_DNDELTA : FB2_DELTA, MN = dn ? FB2_DNMENU : FB2_MENU;
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null };
@@ -341,7 +341,11 @@ function fb2PlanT7(cScr) {
     plan.none = 'edge'; FB2.t7.plan = plan; if (cScr != null) return plan;
     const was = st.plan && st.plan.prof === 'fb2'; if (was || FB2.t7.edgeLogged !== d) { slog('fb2NoEdge', { why: 'edge', d, p7: +plan.p7.toFixed(3), pp7: +plan.pp7.toFixed(3), p6: +plan.p6.toFixed(3), win: plan.win, doubt: plan.doubt, states: plan.states }); FB2.t7.edgeLogged = d; }
     if (was) st.plan = null; cancelBeeps();
-    st.msg = 'No edge, press normally: no target-A frame gives 7 bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, 6+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + '). Press Power Bounce normally.';
+    // v109 (console fb0731 T7: 9 s of "No edge" before a 7 window, the runner did not know whether the page was waiting or broken):
+    // the next frame where 7 bounces work for most states, looked for up to FB2_T7_AHEAD frames on
+    if (!FB2.t7.next || FB2.t7.next.from > from || (FB2.t7.next.at != null && FB2.t7.next.at < from + W) || (FB2.t7.next.at == null && from - FB2.t7.next.from > 60)) { let at = null; if (S.length <= 64) for (let x = from + W + 1; x <= from + W + FB2_T7_AHEAD && at == null; x++) { let v = 0; for (const o of S) if (fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph) >= 7) v += o.w / tot; if ((1 - dz) * v >= num('zwedge')) at = x; } FB2.t7.next = { from, at }; }
+    const nx = FB2.t7.next && FB2.t7.next.at != null ? ' Waiting for the next 7-bounce window, in about ' + Math.max(0, (FB2.t7.next.at - W - from) * fb2Rate() / 1000).toFixed(0) + ' s: stay on the target screen for its beeps.' : '';
+    st.msg = 'No edge yet: no target-A frame in the next ' + num('zwwin') + ' s gives 7 bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, 6+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + ').' + (nx || ' Press Power Bounce normally.');
     fb2Show(); render(); return true;
   }
   FB2.t7.plan = plan;

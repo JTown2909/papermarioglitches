@@ -938,6 +938,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (EV0) fb14EvLog(turn, EV0, Wg, L0, C, from, W, X, D, PD);
   if (cAt == null || window.__fb14ReplanTest) fb14Anchor(C, from, W, turn, PD, Wg.list.length);
   if (!window.__fb14WeighTest) fb14Broad(C, Wg, turn, dEff, PD);     // v104: the claim no higher than every state the coin has not ruled out supports
+  // v109 (console fb0727 T3: Bowser's attack cut the states 132 -> 6, a 5-frame window for them, but every state the coin had not
+  // ruled out gave 0.435 there, under blind 0.495; pressed on it, hit): a plan whose claim is under blind is no plan
+  if (!C.none && C.target != null && C.pp != null && C.pp < fb14Blind(turn) && !coinWarn) { if (cAt == null) slog('fb14UnderBlind', { turn, target: C.target, pp: +C.pp.toFixed(3), blind: fb14Blind(turn), kept: Wg.list.length }); C.none = 'edge'; }
   // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame (v102: after the anchor,
   // the frame the beeps aim at; pp the plan's claim there)
   if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)), TlS = Tl.filter(fb14IsTrueS), nS = TlS.length, allS = FB14.states.filter(fb14IsTrueS), nAll = allS.length; if (allS.length) FB14.tRef = fbClone(allS[0]); else if (FB14.tRef) fb14TruthDiv(h); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
@@ -1047,7 +1050,12 @@ function fb14Anchor(C, from, W, turn, PD, nKept) {
   if (C.target >= from && C.target <= from + W && !cands.some(x => x[0] === C.target)) cands.push([C.target, real(C.target)]);
   if (!cands.length) { slog('fb14ReplanMoved', { turn, anchor: A, target: C.target, pp: +C.pp.toFixed(3) }); return C; }
   const rmax = Math.max(...cands.map(x => x[1])); let pick = null;
-  for (const [c, r] of cands) { if (r < rmax - FB14_ANCHOR_RTOL - 1e-12) continue; if (pick == null || Math.abs(c - A) < Math.abs(pick - A) || (Math.abs(c - A) === Math.abs(pick - A) && c < pick)) pick = c; }
+  // v109 (fb0727 / fb0731: 1-frame coin flips picked where a wider window was as likely): within FB14_ANCHOR_RTOL of the best
+  // realistic chance a 1-frame pick gives way to the nearest frame of a 2+ run
+  const okA = c => honest(c) >= thr - 1e-12, runL = c => { let s0 = c, e0 = c; while (s0 - 1 >= from && okA(s0 - 1)) s0--; while (e0 + 1 <= from + W && okA(e0 + 1)) e0++; return e0 - s0 + 1; };
+  const near = (c, p) => p == null || Math.abs(c - A) < Math.abs(p - A) || (Math.abs(c - A) === Math.abs(p - A) && c < p);
+  for (const [c, r] of cands) { if (r < rmax - FB14_ANCHOR_RTOL - 1e-12) continue; if (near(c, pick)) pick = c; }
+  if (pick != null && runL(pick) === 1) { let p2 = null; for (const [c, r] of cands) if (r >= rmax - FB14_ANCHOR_RTOL - 1e-12 && runL(c) >= 2 && near(c, p2)) p2 = c; if (p2 != null) pick = p2; }     // a 1-frame pick only when no 2+ run is as likely
   if (pick === C.target) { if (C.target !== A) slog('fb14ReplanMoved', { turn, anchor: A, target: C.target, pp: +C.pp.toFixed(3), real: +real(pick).toFixed(3) }); return C; }
   const okR = c => honest(c) >= thr - 1e-12; let s0 = pick, e0 = pick; while (s0 - 1 >= from && okR(s0 - 1)) s0--; while (e0 + 1 <= from + W && okR(e0 + 1)) e0++;
   slog('fb14ReplanNear', { turn, anchor: A, best: C.target, bestPP: +C.pp.toFixed(3), bestReal: +real(C.target).toFixed(3), target: pick, pp: +honest(pick).toFixed(3), real: +real(pick).toFixed(3), win: e0 - s0 + 1 });

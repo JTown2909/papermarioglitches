@@ -71,7 +71,8 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
         const a = { step: T.step(), ev: T.SLOG.slice(n2).map(e => e.ev) }; const n3 = T.SLOG.length; T.screenClosed(t1 + 1000); V.hudGone = t1 + 1060; T.closeTick(t1 + 1070, false);
         out.noHide = { a, b: { step: T.step(), ev: T.SLOG.slice(n3).map(e => e.ev) }, l1 };
         // Lakilester's Do Nothing (cat S) leaves the bar up: its close is a confirm at once
-        X.reset(); T.setStep(l2); FB.M = { 2: 0 }; V.hudGone = 0; const n5 = T.SLOG.length; T.screenClosed(t1 + 2000); out.noHide.s = T.SLOG.slice(n5).map(e => e.ev); V.present = false; V.hudGone = 0; }
+        X.reset(); T.setStep(l2); FB.M = { 2: 0 }; V.hudGone = 0; T.st.lastStepClose = null;     // (v109: a close 1 s after the one that moved the route would be the same box, FB_RECLOSE_MS)
+         const n5 = T.SLOG.length; T.screenClosed(t1 + 2000); out.noHide.s = T.SLOG.slice(n5).map(e => e.ev); V.present = false; V.hudGone = 0; }
       // 6. a Charge turn's lever before its Charge: no plan (e2e 5eed0fb2: T2 beeped during Bowser's T1 attack)
       { setup(); FB.M = { 1: 0 }; T.setStep(l2); const n4 = T.SLOG.length; X.plan(); const ev = T.SLOG.slice(n4).map(e => e.ev); out.waitChg = { none: FB.plan && FB.plan.none, ev, beeps: ev.includes('fb14Plan') };
         setup(); FB.M = { 1: 0, 2: 300 }; T.setStep(RT.findIndex(x => x.fb14 === 3 && x.fb14role === 'lever')); const n6 = T.SLOG.length; X.plan(); out.waitChg.t3 = { none: FB.plan && FB.plan.none, ev: T.SLOG.slice(n6).map(e => e.ev) }; }
