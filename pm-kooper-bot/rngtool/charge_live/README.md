@@ -134,6 +134,18 @@ the Normal Boots ones included: jr_live's press read and carry)
 - T6 -> T7 by hand (Whacka, then Do Nothing unread): the 2-frame Strategies rule and `jrStepGap` (a hide while a no-roll Do Nothing
   is expected is the next confirm; a step by hand puts a kept short close in, or says the carry is lost) as jr0701.
 
+- (x, jrg0753) Wait mode costs time: the beeped press is Goombario's Charge confirm, so the runner holds on its screen until the
+  planned frame. A wait-mode Close Call now aims at the earliest frame within `PP_WAIT_TOL` (0.05) of the pick with the press
+  spread, and the strip says how long to hold ("... on the 3rd beep, not before (in N s, 3 beeps)"). It saves up to the extra-wait
+  window (1 s) per Close Call where an earlier frame is nearly as good; most of the hold (the menu, the beep lead and the 3-beep
+  countdown, about 2.5 s) stays. Not measured on the logs (the plans' earliest frames are not logged).
+- (y, jrg0753) T6 -> T7 by hand again: covered by the 2-frame rule and `jrStepGap` (test_v109 6c: Normal Boots T6's Do Nothing
+  close moves the route to the bounce).
+- (z) Jr. Troopa correction applies to every Jr. profile (jrcc_gch / gchw / hb / pb5n too: jr_live's `jrPress` and `jrApply`), and
+  "works" is judged on the corrected frame. jrg0753 (correction 0): -0.40 / -0.31 / -1.35 / -1.44, all dodged; the -1.35 was a
+  1-frame window at pp 0.96 whose neighbours worked for most states (p 0.82 with the spread), so it does not pin the shift. With
+  section 1: true = read + about +0.3 .. +0.8, a correction of -0.5 to -1.
+
 ## 8d. (w) After Erase log, nothing (logs 07-48-18, 07-49-56)
 - Both logs hold only `logErased` (and hand steps) through whole fights on the clip. `eraseLog` only empties the log's arrays (the
   same arrays: test_v109 6b logs on after it). The jrg0744 log before them ends at jrEnd (2701.2 s) and the next erase counted 2

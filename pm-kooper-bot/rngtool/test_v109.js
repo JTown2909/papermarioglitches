@@ -174,6 +174,16 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     ok(/no new picture/.test(r.st || '') && /Not seeing the game/.test(r.msg || '') && r.btn, '6b. a capture with no pictures for 3 s: captureStalled (' + r.st + '), the red banner with Restart capture ("' + (r.msg || '').slice(0, 70) + '")');
     await q.close();
   }
+  // ---- 6c. Normal Boots (jrg0753 / jrg0744): T6's Do Nothing read moves the route to the bounce; wait-mode plans aim early
+  {
+    const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50', boots: 'normal', nbcc: 'wait', duproute: 'charge' });
+    const r = await q.evaluate(() => { const T = window.__tot, L = T.RT(), i6 = L.findIndex(s => s.seq === 'nbjr' && s.jr === 11), i1 = L.findIndex(s => s.seq === 'nbjr' && s.jr != null);
+      T.setStep(i1); T.jrTrackerAt(0x13572468, [10], performance.now() + 3600000, 0); T.setStep(i6); T.JRT.k = 11; const min = Math.round(T.v109.closeMinMs());
+      T.jrScreenAt(5000, 3); return { i6, step: T.step(), next: (T.RT()[T.step()] || {}).jr, min, tol: T.v109.PP_WAIT_TOL }; });
+    ok(r.next === 12 && r.min < 70, '6c. jrg0753: Normal Boots T6\'s Do Nothing (a 2-frame box counts: ' + r.min + ' ms) moves the route to the bounce (step ' + r.step + ', jr ' + r.next + ')');
+    ok(r.tol === 0.05 && /prof\.lever === 'wait' && pk\.ok/.test(fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8')), '6c. jrg0753: a wait-mode Close Call aims at the earliest frame within 0.05 of the pick with the spread');
+    await q.close();
+  }
   // ---- 7. the partnerless route (unit level: Mario's own Do Nothing is not modelled from the emulator; see README v109)
   {
     const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'pl', duproute: 'charge' });
