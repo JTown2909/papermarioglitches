@@ -1888,7 +1888,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v112';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v113';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2722,7 +2722,8 @@ function measurePress(tObs) {
   // candidates for the carry, most likely first: the beeps put the press on the aimed frame (emulator: every press on the
   // ideal frame), while the video read can be off by a frame or two on a capture card (run 3: 1.7 frames early)
   const near = nearWorking(P.seedBL, f, PROF()).sort((a, b) => Math.abs(f + a - P.target) - Math.abs(f + b - P.target) || Math.abs(a) - Math.abs(b));
-  P.measured = { frame: f, c, err, inWin, works: works || in4, likely, tObs, onBeeps, edge, on4: on4 || undefined, hit4: (in4 && !edge4) || undefined, off4: off4 || undefined, p: P.mix && P.mix.p != null ? P.mix.p : null };
+  const qF = P.chance && P.first != null && P.chance[f - P.first] != null ? +P.chance[f - P.first] : null;     // v113: the pressed frame's realistic chance (the strip's shading)
+  P.measured = { frame: f, c, err, inWin, works: works || in4, likely, tObs, onBeeps, edge, on4: on4 || undefined, hit4: (in4 && !edge4) || undefined, off4: off4 || undefined, p: P.mix && P.mix.p != null ? P.mix.p : null, pNow: qF, w: { start: P.w.start, end: P.w.end }, fr: f };
   if (lk && onBeeps && !P.fb14) leverAdd(lk, err - (P.bias || 0));     // v87: the lever's own press record
   slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely, near, onBeeps, edge: edge || undefined, on4: on4 ? (in4 && !edge4 ? 'hit' : 'edge') : undefined, off4: off4 || undefined, bias: P.bias ? +P.bias.toFixed(2) : undefined, lever: lk ? +leverBias(lk).toFixed(2) : undefined }); st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
   const stp = isRoute() && RT()[routeStep];
@@ -2744,6 +2745,38 @@ function leverPressNote(label, err, id, works) {      // v102: a Final Bowser le
   try { showPresses(); } catch (e) {}
   try { if (typeof fb14Show === 'function') fb14Show(); } catch (e) {}
 }
+/* v113 (the runner: "there should probably be a consistent logic table for the last press": frame pressed / inside the
+ * window? / a working frame? (green or red) / the chance against failure / the expected result): every press (each fight,
+ * the Final Bowser levers) is shown in this one layout. The colour follows the pressed frame's realistic chance q (the press
+ * spread and the seed doubt, as the strip's shading): green at MARK_SOLID+, red under 0.2, yellow between (a coin flip). A
+ * known outcome (the Close Call's dodge or hit) adds a Result row and colours by it. */
+function pressTable(o) {
+  const pc = x => Math.round(100 * x) + '%', esc = x => String(x).replace(/[<>&]/g, '');
+  const e = o.err, ae = Math.round(Math.abs(e) * 10) / 10, when = Math.abs(e) < 0.5 ? 'on time' : ae + ' frames ' + (e > 0 ? 'late' : 'early');
+  const fTxt = o.f != null ? 'frame ' + o.f + ' · ' : '';
+  // a press on an all-4 frame (Duplighosts): where it landed, not early / late against a beep it did not aim at (d1416)
+  const when4 = o.on4 ? (o.hit4 ? 'hit the 4' : 'on the 4 (edge)') + (o.off4 ? ', not the beeped frame (' + ae + ' frames ' + (e > 0 ? 'after' : 'before') + ' it)' : '') : null;
+  const winTxt = o.w ? (o.w.start === o.w.end ? 'frame ' + o.w.start : o.w.start + '-' + o.w.end) : null;
+  const win = o.edge ? 'on the edge of the window' + (winTxt ? ' ' + winTxt : '') + ' (the video cannot tell)' : o.inWin == null ? (winTxt ? 'window ' + winTxt : '–') : (o.inWin ? 'inside' : 'outside') + (winTxt ? ' (window ' + winTxt + (o.target != null && o.w && o.w.start !== o.w.end ? ', aimed ' + Math.round(o.target) : '') + ')' : '');
+  const frame = o.on4 ? (o.hit4 ? 'an all-4 frame (white)' : 'beside an all-4 frame (the video cannot tell)') + (o.off4 ? ', not the beeped frame' : '') : o.works == null ? '–' : o.works ? 'working (green)' : o.likely ? 'failing (red) by the video; a working one is within ' + PRESS_TOL + ' frames' : 'failing (red)';
+  let q = o.q != null ? Math.max(0, Math.min(1, o.q)) : o.works == null ? null : o.works ? (o.p != null ? o.p : 1) : 0, qOf = o.q != null ? 'this frame' : 'the plan';
+  const goal = o.on4 && o.hit4 ? 'all 4 copy' : (o.goal || 'works'), fail = o.failWord || 'fails';
+  const chance = q == null ? '–' : goal + ' ' + pc(q) + ' · ' + fail + ' ' + pc(1 - q) + ' (' + qOf + (o.p != null && qOf === 'this frame' && Math.abs(o.p - q) >= 0.01 ? '; the plan was ' + pc(o.p) : '') + ')';
+  let good = q == null ? null : q >= MARK_SOLID ? true : q < 0.2 ? false : null;
+  if (o.on4 && o.hit4) good = true;
+  const expect = o.on4 && o.hit4 ? 'all 4 copy' : o.on4 ? 'all 4 copy, or 3+ (the video cannot tell the frames apart)' : q == null ? '–' : q >= MARK_SOLID ? goal : q < 0.2 ? fail.replace(/s$/, '') : 'coin flip (' + goal + ' ' + pc(q) + ')';
+  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win], ['Frame', frame], ['Chance', chance], ['Expected', expect]];
+  // the badge keeps the press's colour (a hit on a coin-flip plan is not a bad press); the Result row says what happened
+  if (o.outcome) rows.push(['Result', o.outcome === 'dodge' ? 'dodged' : o.outcome === 'hit' ? 'hit' + (q != null && q > 0 && q < 1 ? ' (the ' + pc(1 - q) + ')' : '') : o.outcome]);
+  const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--run2)', ink = good === null ? '#1b1404' : '#fff';
+  const mark = good === true ? ' ✓' : good === false ? ' ✗' : ' ?';
+  const head = 'Last press' + (o.label ? ' (' + esc(o.label) + ')' : '') + ': ' + fTxt + (when4 || when) + (o.onBeeps === false && !o.on4 ? ' (not on the beeps)' : '');
+  const html = '<span style="color:' + ink + '; background:' + col + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head + mark + '</span>'
+    + '<table style="border-collapse:collapse; margin:2px 0 4px; font-size:0.95em">' + rows.map(([k, v]) => '<tr><td style="padding:1px 10px 1px 0; opacity:0.75">' + k + '</td><td style="padding:1px 0">' + esc(v) + '</td></tr>').join('') + '</table>';
+  return { html, good, head, text: head + mark + ' ' + rows.map(([k, v]) => k + ': ' + v).join(' / ') };
+}
+const pressGoal = pr => pr && pr.short ? (/Close Call/.test(pr.short) ? 'dodge' : pr.short.replace(/ works$/, '')) : 'works';
+const pressFail = pr => pr && pr.short && /Close Call/.test(pr.short) ? 'hit' : 'fails';
 function showPresses() {
   const row = $('press-row'), P = st.plan && st.plan.measured;
   row.hidden = false;
@@ -2758,18 +2791,17 @@ function showPresses() {
   // each lever has its own correction)
   const LL = st.lastLever;
   if (LL && (st.lastGenT == null || LL.t > st.lastGenT)) { const e = LL.err, a = Math.round(Math.abs(e) * 10) / 10;
-    const head = 'Last press (' + LL.label + '): ' + (Math.abs(e) < 0.5 ? 'on time' : a + ' frames ' + (e > 0 ? 'late' : 'early')) + (LL.works == null ? '' : LL.works ? ' (a working frame) ✓' : ' (a failing frame) ✗'), rest = ' against the beeped frame. This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(LL.bias).toFixed(1) + ' frames ' + (LL.bias >= 0 ? 'later' : 'earlier') + ' (learned from its own presses).';
-    if (LL.works == null) { $('press-msg').textContent = 'Press check: ' + head + rest; return; }     // v109: coloured as the other fights' presses
-    $('press-msg').innerHTML = '<span style="color:#fff; background:' + (LL.works ? 'var(--run3)' : 'var(--run1)') + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head.replace(/[<>&]/g, '') + '</span><br>' + rest.charAt(1).toUpperCase() + rest.slice(2); return; }
+    const rest = 'This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(LL.bias).toFixed(1) + ' frames ' + (LL.bias >= 0 ? 'later' : 'earlier') + ' (learned from its own presses).';
+    // v113: the same table as every other press; the frame, window and chance from the strip's press record (pressShow) when it is this press
+    const ps = st.pressShow && st.pressShow.label === LL.label && Math.abs(st.pressShow.t - LL.t) < 3000 ? st.pressShow : null;
+    const T = pressTable({ label: LL.label, err: e, f: ps ? Math.round(ps.hit) : null, target: ps ? ps.target : null, w: ps && ps.w ? ps.w : null, inWin: ps && ps.w ? Math.round(ps.hit) >= ps.w.start && Math.round(ps.hit) <= ps.w.end : null, works: LL.works, p: ps ? ps.p : null, goal: 'works', failWord: 'fails' });
+    $('press-msg').innerHTML = T.html + rest; return; }
   if (!presses.length && !(P || st.lastPress)) { $('press-msg').textContent = 'Press check: after you confirm on the target screen (with the beeps running), this says how early or late you pressed, measured against the middle of the aimed frame.'; return; }
   // v111: the press just made first (its own lever's record since v110: the global list no longer gets the Jr. / Duplighosts presses)
   const last = (P || st.lastPress) ? (P || st.lastPress).err : presses.length ? presses[presses.length - 1] : 0, r = x => Math.round(x * 10) / 10;
   const avg = presses.length ? presses.reduce((a, b) => a + b, 0) / presses.length : 0;
   const spread = presses.length ? Math.sqrt(presses.reduce((a, b) => a + (b - avg) * (b - avg), 0) / presses.length) : 0;
   const dir = x => Math.abs(x) < 0.5 ? 'on time' : (Math.abs(r(x)) + ' frames ' + (x > 0 ? 'late' : 'early'));
-  const fr = q => q.edge ? 'on the edge of the window: the video cannot tell whether it ' + (q.inWin ? 'worked' : 'missed') : q.works ? 'a working frame' : q.likely ? 'a failing frame by the video, but a working one is within ' + PRESS_TOL + ' frames' : 'a failing frame';
-  const head = P && P.on4 ? 'Last press: ' + (P.hit4 ? 'hit the 4' : 'on the 4 (edge)') + (P.off4 ? ', not the beeped frame' : '')     // v112
-    : P && !P.onBeeps ? 'Pressed ' + Math.abs(Math.round(P.err)) + ' frames ' + (P.err < 0 ? 'before' : 'after') + ' the beeps: ' + fr(P) : 'Last press: ' + dir(last) + (P ? (P.edge ? ' (' : P.inWin ? ' (inside the window, ' : ' (outside the window, ') + fr(P) + ')' : '');     // v111 (5): an edge press is neither
   let s = '';
   const lq = P || st.lastPress;
   if (lq && lq.likely && !lq.on4) s += 'The page counts it as worked (the next shines check it). Did the outcome come out right (all 4 copied, the Close Call dodged)? Then your capture reads presses about ' + Math.abs(r(lq.err)) + ' frames ' + (lq.err < 0 ? 'early' : 'late') + ': set Press check correction to ' + (Math.round((num('pfix') + lq.err) * 2) / 2) + ' (now ' + num('pfix') + '). ';
@@ -2777,15 +2809,10 @@ function showPresses() {
   const ready = presses.length >= 3 && Math.abs(avg) >= 0.5, step = x => Math.round(x * 2) / 2;
   if (ready) s += 'Consistently off? Calibrate… (next to this) moves the beep and visual offsets by the measured error, after you confirm.';
   const lkS = leverKey(PROF().id); if (lkS) s += ' This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(leverBias(lkS)).toFixed(1) + ' frames ' + (leverBias(lkS) >= 0 ? 'later' : 'earlier') + ', from your last ' + leverList(lkS).length + ' presses here.';
-  let lp = P || st.lastPress, good = lp ? (lp.on4 ? (lp.hit4 ? true : null) : lp.edge ? null : lp.works ? true : lp.likely ? null : false) : null;
-  // v112 (d1423: "on time" on a 53% plan, then a hit; the runner: "a lie"): on a plan under MARK_SOLID a working frame is no promise
-  const pq = lp && lp.p != null ? lp.p : null, flip = pq != null && pq < MARK_SOLID && !lp.on4, pc0 = x => Math.round(100 * x) + '%';
-  let head2 = head;
-  if (lp && lp.outcome === 'hit' && (lp.works || lp.inWin)) { head2 = 'Last press: ' + dir(lp.err) + ', hit anyway' + (pq != null ? ' (coin flip: this plan was ' + pc0(pq) + ')' : ''); good = null; }
-  else if (lp && lp.outcome && flip) head2 = head + ' · ' + (lp.outcome === 'dodge' ? 'dodged' : 'hit');
-  else if (lp && flip && good === true) { head2 = head + ' · this plan was ' + pc0(pq) + ': a hit is the other ' + pc0(1 - pq); good = null; }
-  const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--ink)';
-  $('press-msg').innerHTML = '<span style="color:' + (good === null ? 'var(--bg)' : '#fff') + '; background:' + col + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head2 + (good === true ? ' ✓' : good === false ? ' ✗' : lp && lp.likely && !lp.on4 ? ' ?' : '') + '</span><br>' + s;
+  const lp = P || st.lastPress, pr = PROF();
+  if (!lp) { $('press-msg').textContent = 'Last press: ' + dir(last) + '. ' + s; return; }
+  const T = pressTable({ err: lp.err, f: lp.fr != null ? lp.fr : lp.frame, target: lp.target != null ? lp.target : st.plan ? st.plan.target : null, w: lp.w || (P && st.plan && st.plan.w) || null, inWin: lp.inWin, edge: lp.edge, works: lp.on4 ? null : lp.works, likely: lp.likely, on4: lp.on4, hit4: lp.hit4, off4: lp.off4, q: lp.pNow, p: lp.p, goal: pressGoal(pr), failWord: pressFail(pr), outcome: lp.outcome, onBeeps: lp.onBeeps });
+  $('press-msg').innerHTML = T.html + s;
 }
 /* Calibrate from last press (feedback item 9): in a menu, never one click. It moves the beep offset and the visual offset
  * by the last measured press error (or the average of the last 3 / 5 presses on the beeps), shows what it will change,

@@ -9,7 +9,7 @@
  *     coin-flip plan and after a hit; a lock landing after the rearm confirm arms the reader (x1425 / x1436); the capture-drop line.
  * usage: node test_v112.js [PAGE=...] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v112/timeout_timer_standalone.html';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v113/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1115_v112.json'), 'utf8'));
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {
@@ -75,9 +75,9 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     console.log(JSON.stringify(r).slice(0, 900));
     ok(r.before === 'locked' && r.after !== 'locked' && r.log === 1, '5. x1425: a T1 lock landing after T1\'s Do Nothing (the rearm confirm) arms the reader for the T2 Charge (' + r.before + ' -> ' + r.after + ')');
     ok(r.plan && r.note === false && r.relock, '5. a Charge relock clears the frozen "Seed changed" mark so the plan is scored again (seedNote ' + r.note + ')');
-    ok(/on time · this plan was 53%: a hit is the other 47%/.test(r.t1) && !/✓/.test(r.t1), '5. d1423: on time on a 53% plan says so, no ✓ (' + r.t1.slice(0, 90) + ')');
-    ok(/on time, hit anyway \(coin flip: this plan was 53%\)/.test(r.t2), '5. after the hit: "on time, hit anyway (coin flip ...)" (' + r.t2.slice(0, 90) + ')');
-    ok(/✓/.test(r.t3) && !/this plan was/.test(r.t3), '5. a 92% plan keeps its ✓ (' + r.t3.slice(0, 70) + ')');
+    ok(/on time \?/.test(r.t1) && /dodge 53% · hit 47%/.test(r.t1) && /coin flip/.test(r.t1) && !/✓/.test(r.t1), '5. d1423 (v113 table): on time on a 53% plan says coin flip, no ✓ (' + r.t1.slice(0, 90) + ')');
+    ok(/Result ?hit \(the 47%\)/.test(r.t2) && !/✓/.test(r.t2), '5. after the hit (v113 table): a Result row "hit (the 47%)" (' + r.t2.slice(0, 90) + ')');
+    ok(/✓/.test(r.t3) && !/coin flip/.test(r.t3), '5. a 92% plan keeps its ✓ (' + r.t3.slice(0, 70) + ')');
     ok(/^Capture dropping 44% of frames: check OBS\. y/.test(r.drop), '6. the capture-drop line comes first (' + r.drop.slice(0, 60) + ')');
     await p.close(); }
   // 2. Duplighosts
@@ -114,7 +114,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     ok(r.lbl === 'Final Bowser route' && JSON.stringify(r.ultra) === '["Ultra Boots Laki"]' && JSON.stringify(r.back) === '["Ultra Boots Laki"]', '3. Ultra Boots: one route, "Ultra Boots Laki"');
     ok(JSON.stringify(r.normal) === JSON.stringify(['Normal Boots Power Bounce cap', 'Normal Boots Goombario (untested)']) && r.val === 'goomba' && r.saved === 'cap' && r.nb === 'cap', '3. Normal Boots: its two routes, the saved fbnbroute shown and kept (' + r.val + ' -> ' + r.saved + ')');
     await p.close(); }
-  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v112', '0. page version v112'); await p.close(); }
+  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v113', '0. page version v112'); await p.close(); }
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

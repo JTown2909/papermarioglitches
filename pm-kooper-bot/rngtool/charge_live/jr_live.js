@@ -33,7 +33,9 @@ const JR_SEQ = [
   { id: 'jr_bomb', t: 'T2', hide: 4 },
   { id: 'jr_whacka', t: 'T2', hide: 3, rearm: true },
   { id: 'jr_charge', t: 'T3', charge: true, hide: 3 },
-  { id: 'jr_bomb_cc', t: 'T3', hide: 4, prof: 'jrcc_bomb', cc: 179, next: 246, what: 'Bomb', revive: 7 },
+  // v113 (x1803 T3: read 191.15 on the window 192-193, "failing", dodged; the v112 fit of 5 Bomb presses best at +1.5, x1441 one more):
+  // the T3 Bomb's bar-hide read is taken 1 frame later (hide 3, was 4); the carry's -2..+1 shifts are unchanged
+  { id: 'jr_bomb_cc', t: 'T3', hide: 3, prof: 'jrcc_bomb', cc: 179, next: 246, what: 'Bomb', revive: 7 },
   { id: 'jr_bomb', t: 'T4', hide: 4 },
   { id: 'jr_syrup_cc', t: 'T4', hide: 3, prof: 'jrcc_syrup', cc: 163, hit: 'jr_syrup_hit', next: 230, what: 'Maple Syrup', rearm: true, revive: 9 },
   { id: 'jr_charge', t: 'T5', charge: true, hide: 3 },
@@ -761,7 +763,7 @@ function jrPress(inp) {
   // v112 (x1434 / x1439 / x1441 / x1425: the verdict came from a plan made before a Charge relock): 'works' is the newest states'
   // share on the frame read (half or more), not the old plan's window; pNow the chance there (the frame read, its neighbours)
   let works = inWin, pNow = null; try { const L = zwStates(performance.now()).list; if (L.length) { const sh = zwShare(L, f - 1, f + 1, PROF()); works = sh[1] >= 0.5; pNow = +(0.25 * sh[0] + 0.5 * sh[1] + 0.25 * sh[2]).toFixed(3); } } catch (e) {}
-  V.pressNote = null; P.measured = { frame: f, c, err, inWin, works, likely: false, tObs: inp.t, onBeeps, edge, p: P.mix.p, pNow, k: inp.k };
+  V.pressNote = null; P.measured = { frame: f, c, err, inWin, works, likely: false, tObs: inp.t, onBeeps, edge, p: P.mix.p, pNow, k: inp.k, fr: P.target + d, w: { start: P.w.start, end: P.w.end } };     // v113: the plan's frame and window for the press table
   slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined, pNow: pNow != null ? pNow : undefined });
   st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
   if (typeof showPresses === 'function') showPresses();
