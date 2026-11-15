@@ -54,8 +54,10 @@ Plans carry each cell's realistic chance (zwPlan, fb14, fb2 T6): a red cell with
   states the replay holds at the press, read c as the page computes it, read noise 0.45 frame): Do Nothing (17 presses, both routes):
   best shift 0, log-likelihood -8.43 (shift +1: -12.37, -1: -12.54; the test inverted: -23.23; blind 0.3: -12.84); expected dodges 9.9,
   seen 8. Partnerless alone (13): roll +26 at shift 0 -6.73 (best +0.25: -6.46; +1: -8.40; roll +25 / +27: -9.87 / -8.40). The emulator
-  has the roll on +26 (16 of 16) at the partnerless loadout. No model change. Bomb (4 presses): best shift +1.5 (-1.91 against -9.07 at 0):
-  a lead on the bar-hide read of the Bomb, too few presses to move it. Syrup (3): 0 to +0.5.
+  has the roll on +26 (16 of 16) at the partnerless loadout. No model change. Bomb (4 presses): best shift +1.5 (-1.91 against -9.07 at 0);
+  x1441 T3 adds one more (read 172.24: 0 at 172, 1 at 173, dodged), and the v111 clips had the Bomb read 0.7 frame earlier against the A
+  than Do Nothing (n 2): a lead on the Bomb's bar-hide read (about +1 frame), not moved in v112 (5 presses; an input-display clip of a few
+  T3 Bombs would settle it). Syrup (3): 0 to +0.5.
 - The cause of the "works, hit" presses: the plan the press was judged against. x1434 T2 / x1439 T3 / x1441 T3 / x1420 T2: a "Seed
   changed" too late to move the beeps set seedNote; zwTick then ignored the plan for good, so the T2 / T3 Charge relock 2-3 s before the
   press never re-scored it (x1434: the old frame had 0.14 under the relocked states). A relock now clears that mark and re-scores; a
