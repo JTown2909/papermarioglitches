@@ -117,7 +117,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
   check(r.list.lis.some(x => /^T1: Charge; Bombette Do Nothing/.test(x)) && r.list.lis.some(x => /^T1: Charge; Bomb$/.test(x)), 'each turn reads "Tn: actions" (v87: no step numbers)');
   check(/^T1: Charge; Bomb/.test(r.list.cur || ''), 'the current step\'s turn line is highlighted');
   check(!r.list.lis.some(x => /Life Shroom|Spiny Flip \[/.test(x)), 'v87: no Life Shroom and no Spiny Flip numbers in the route texts');
-  check(r.version === 'v107' && r.ver === 'v107', 'version v99 in the log and the header');
+  check(r.version === 'v108' && r.ver === 'v108', 'version v99 in the log and the header');
   check(r.title === 'Paper Mario Any% (No ACE) (RNG Manipulation)' && /RNG Manipulation/.test(r.h1), 'the page\'s new name in the title and header');
   await p.close();
   // 8. the Final Bowser plan / re-score
@@ -141,7 +141,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
         out.runs.push({ p: +(P.mix.pp != null ? P.mix.pp : P.mix.p).toFixed(3), pNow: pNow.slice(0, 4), replans: ev.filter(e => e === 'fb14Replan').length, cancels: ev.filter(e => e === 'beepsCancelled').length, kept: T.st.plan === P, PDn: P.PD.length });
         cancelBeepsSafe();
       }
-      function cancelBeepsSafe() { try { T.st.plan = null; } catch (e) {} }
+      function cancelBeepsSafe() { try { T.st.plan = null; T.v106.cancelBeeps({ force: true }); T.st.series = null; } catch (e) {} }      // (v108: a series keeps its plan to the confirm window)
       // a carry with every state ruled out: dropped, plain message, the next Charge locks afresh
       T.setStep(lever); X.on = true; X.t0 = performance.now() - 2000 * rate; X.states = []; X.gone = true; X.M = { 2: 0 }; T.st.plan = null; F.plan();
       out.gone = { msg: T.st.msg || '', on: X.on, t0: X.t0 };

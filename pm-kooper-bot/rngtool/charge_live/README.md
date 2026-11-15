@@ -1,3 +1,80 @@
+# Time Out Timer v108: a beep series keeps its target to the confirm; the T6 outcome read before T7; the post-hit fresh lock's menu coin; the emulator harness back (Nov 14)
+
+From the runner's console logs of Nov 14 (logs1114: fb1157, fb1203, fb1516, fb1542, fb1548; numbers and event names only).
+
+## 1. Beeps: one target per series, nothing new before the confirm (fb1548 T4, 2513.1-2515.0 s)
+- Live (v106/v107): the plan for 213 (3-frame window, 0.63) beeped. `fb14Refine` dropped the plan (`st.plan = null`) to replan,
+  the replan returned early on a "WAIT, searching" path (the Charge reader re-armed after the lock) and left no plan while 213's
+  beeps were scheduled. With no plan the v106 guards (`seriesHold`, `fb14ReplanHeld`: both need `st.plan`) did not hold: a
+  replan picked 231 (`fb14ReplanNear`; its beeps refused, `beepsSeriesKept`, `fb14PlanNoBeeps`), then 255 (`fb14ReplanMoved`),
+  whose series began 18 ms after 213's last beep, before the confirm was read (F 213, logged against "planned 255", err -42).
+  The runner heard 3 beeps, then new ones.
+- Now: `playBeeps` binds the series to the plan that made it (`st.series`); while the series plays and for `BEEP_QUIET_MS`
+  (0.8 s, the confirm read window) after its last beep, `seriesHold` keeps that plan (one dropped or replaced meanwhile comes back,
+  `seriesPlanKept`; the T1-T4 panel's plan too), for fb14, fb2 and the generic planners alike; `playBeeps` starts no new series in
+  that window (`beepsQuiet`) unless the route moved on (`setStep`, the confirm). A replan that leaves no plan while the old plan's
+  beeps are still scheduled keeps the old plan (`fb14PlanKept`). A visible STOP (v106) still frees the turn.
+
+## 2. T7 after a T6 Close Call that worked (fb1548 2546.8-2563 s)
+- Live: the T6 lock (4 states), Do Nothing planned 162 (0.57, 1 frame), confirmed 161.5, `fb2P` pLucky 0.531, the Close Call
+  dodged; T7 then "No edge" (7+ 0.15-0.34 with a perfect press, doubt 0.29-0.38), later doubt 0.9.
+- How fb2 learned the outcome: it did not. `fb2SetP` already keeps only the dodge states (lucky at the measured confirm, over the
+  confirm read spread `FB14_SHIFTS_S` and the console lag), but `fb2Prune` counted the hit branch ((1 - pLucky) / pLucky = 0.88 of
+  the prior) as background on every T7 plan: that is most of the doubt, not states that should have been dropped.
+- Now `fb2HpWatch` reads the outcome as T1-T4 do (Mario's HP tens place on the steady bar, `jrTens`): the "1" of 10 seen, then
+  blank for 10 frames after the confirm = a hit (`fb2HitSeen`: no T7 plan, "Bowser hit Mario on T6"); the "1" steady for 30
+  frames from 3.2 s after the confirm (past the Close Call test at P + 68 and the damage) = a dodge (`fb2Dodged`): the hit branch
+  leaves the T7 background. The FB2 panel says "Close Call worked (seen)" / "missed: Bowser hit (seen)".
+- fb1548 replayed (its T6 Charge capture, confirm and shine; `chgReplay(cap, { fb2: true })` now feeds an FB2 read into the
+  tracker): 4 states as live, pLucky 0.47 (live 0.53); at the first T7 plan (d 503) the doubt goes 0.229 -> 0.013 with the dodge
+  seen and 7+ with a perfect press 0.358 ("No edge", zwedge 0.4) -> 0.458 (a plan; 0.27 with the press spread). The later rise to
+  0.9 is the coin (missed shines in the bar's stretches), which the log does not keep (no bar stretches logged in Bowser's turn).
+  Not checked on console (the HP read at T6 assumes Mario at 10 HP there, as on this route).
+
+## 3. The emulator harness
+- After this session's restart /dev/shm had lost `fb2r/t1menu.st` and `b13` again. Rebuilt (`t1menu_state.py`, then the T1 menu
+  at Mario 10 HP / Bowser 80 as route_build writes it) and run with Xvfb at **800x600x24** (the harness grabs 80,60 .. 720,540:
+  the 640x480 window centred on that screen; on another screen size the grab misses the game picture), the page sees the Charge
+  again (1234abcd T1: trigger, a fresh lock holding the truth, the skip plan). The v106 runs' display and states were gone, so
+  which of the two broke them is not certain; the screen size is the likely one (the pictures reached the page, the reader never
+  armed: no bar was ever seen). `make_states.sh` now builds `b13` and says the Xvfb size.
+
+## 4. Final Bowser after a hit (Life Shroom): the post-hit fresh lock
+- (ii) done: the menu coin before a post-hit Charge is read back from the Charge on the model; a window that reaches back to
+  within `FB14_REVIVE_F` (450 frames) of the hit read (`FB14.hitT`) takes in the hit and the revive, which no menu draw explains
+  (logs1114 fb1516 / fb1203: the bar stays up ~14 s after the hit read, with shine-like flashes every 48 frames up to 13 s).
+  Such a window is not used (`fb14MenuAfterHit`), and after a hit the fits are built again without it when fewer than
+  `FB14_FEWMIN` (200) survive it (v92's fallback only fired at none). Console replays (test_v108 section 4; the Charge capture,
+  the bar's hides, the shines, the hit read; weighed 8 s after the trigger, before the confirm): fb1516 T2 doubt 1 (184 states)
+  -> 0.40 (7072); fb1548 T4 the same or better (v107 fell back there only when no fit was left); fb1203 T4 unchanged (its menu
+  came after the revive). fb1542 T4 (n 134 live, then `fb14AllOut`): the hit was 65 s before, no change.
+- (i) not done: the carry still ends at the hit (`fb14CarryGone`); no frame-offset bridge through the hit.
+- (iii) not done: the one-Charge lock's budget (48 / 1200 / 12000) unchanged.
+
+## 5. Measured (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 PLANCHECK=1 FORCE_HIT=1.1, b13, T1-T4, 5 seeds)
+T1's skip is forced onto a frame where Bowser hits (Life Shroom), so T2 is a post-hit fresh lock (5eed0fb2 is hit again on T3).
+Before = this version without section 4 (a9d39a2), after = with it; both runs at once on two Xvfb screens.
+| run | plans | >= 95% | >= 95% with Bowser hitting | post-hit locks holding the truth | plans after a hit | of them with the truth |
+|---|---|---|---|---|---|---|
+| before | 36 | 4 | **0** | 2 of 6 | 22 | 10 |
+| after | 56 | 10 | **0** | 3 of 6 (2b7e1516 T2 now) | 22 | 15 |
+- 2b7e1516: before, the post-hit T2 lock had no true state (6 plans, the carry then lost: T3 / T4 unplanned); after, it holds it
+  and T3 / T4 plan on the carry (every plan's frame makes Bowser miss). 1234abcd / 0badf00d post-hit T2 hold the truth both ways
+  (0badf00d before: 2 of its 4 T2 plans on hitting frames, T3 lost; after: T2-T4 carried). 9e3779b9 T2: no truth either way;
+  5eed0fb2 T2 / T4: no lock either way. The two runs diverge after T1 (other confirm frames), so this is not a paired count.
+- Calibration (claim -> Bowser missed on that frame), after: 0.5-0.6 7 plans 86%, 0.6-0.7 5 60%, 0.7-0.8 9 100%, 0.8-0.9 16
+  100%, 0.9+ 8 100%; before: 0.5 7 43%, 0.7 9 89%, 0.8+ 11 100%.
+
+## Tests
+`test_v108.js` (in run_suite.sh): the series rules (bound plan, kept through a drop / a replacement, no overlap, the quiet window,
+the step lifting it, the orphan keep), the T6 outcome watch (stubbed tens read) and the fb1548 T6 -> T7 replay, the post-hit
+lock replays (fb1516 T2, fb1548 T4, fb1203 T4). test_v106's step-cut check waits out the quiet window. VERSION v108; version
+checks and the page tests' default build moved to v108. Route texts unchanged.
+
+Full `run_suite.sh` (built to scratchpad/timeout_timer_v108 and timeout_timer): 80 pass; fail only the known torch_core, hw_v77,
+route_replay, session_plans, capture_replay, plus test_console_1107: its carry-gone check called the planner right after a plan's
+series, which the series now keeps (section 1); the test now cuts the series first and passes (rerun alone: all passed).
+
 # Time Out Timer v107: the chance with the press spread leads every plan display ("LIKELY"); a Jr. Troopa-only press correction; v106.1's beep cut on the route moving on (Nov 14)
 
 ## 1. LIKELY first, "1 FRAME – coin flip"
@@ -24,7 +101,9 @@
 `test_v107.js` (in run_suite.sh): the LIKELY texts (1-frame, 3-frame, Power Bounce, none), the setting, jrfix only in jr_live.
 VERSION v107; the version checks and page tests' default build moved to v107.
 
-SUITE107_PLACEHOLDER
+Full `run_suite.sh`: 81 pass; fail only the known torch_core, hw_v77, route_replay, session_plans, capture_replay and the
+maze TORCH=1 timeout, plus test_v107, which ran on a build from before d63452a (on a clean d63452a build test_v107,
+test_press_lever, test_fb14_v102, test_status_btns and test_v106 all pass).
 
 # Time Out Timer v106: whole beep series only; a carried Charge lock that the coin then doubts still plans (honestly, with a warning); replans by the realistic chance; the Power Bounce's 6 run; capture-drop warning; Erase log (Nov 14)
 
