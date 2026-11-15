@@ -2725,6 +2725,9 @@ function measurePress(tObs) {
   const qF = P.chance && P.first != null && P.chance[f - P.first] != null ? +P.chance[f - P.first] : null;     // v113: the pressed frame's realistic chance (the strip's shading)
   P.measured = { frame: f, c, err, inWin, works: works || in4, likely, tObs, onBeeps, edge, on4: on4 || undefined, hit4: (in4 && !edge4) || undefined, off4: off4 || undefined, p: P.mix && P.mix.p != null ? P.mix.p : null, pNow: qF, w: { start: P.w.start, end: P.w.end }, fr: f };
   if (lk && onBeeps && !P.fb14) leverAdd(lk, err - (P.bias || 0));     // v87: the lever's own press record
+  // v114 (the runner: "after you do an input, it shows you how well you did ... only on final bowser? it should be everywhere"): the strip
+  // keeps the plan's frames, its window and the frame hit (as the Final Bowser levers since v109) until the next plan beeps
+  try { pressShow(P, c, PROF().name || PROF().short); } catch (e) {}
   slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely, near, onBeeps, edge: edge || undefined, on4: on4 ? (in4 && !edge4 ? 'hit' : 'edge') : undefined, off4: off4 || undefined, bias: P.bias ? +P.bias.toFixed(2) : undefined, lever: lk ? +leverBias(lk).toFixed(2) : undefined }); st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
   const stp = isRoute() && RT()[routeStep];
   if (stp && stp.turn && !unmodeledAfter(P.tLast) && !(P.mix && P.mix.zw && !onBeeps)) { if (near.length) addTurn(P.baseF + f, stp.turn, 'Carrying the seed through this turn.', null, near, 'press'); else { st.needResync = true; st.turnEv = []; } }

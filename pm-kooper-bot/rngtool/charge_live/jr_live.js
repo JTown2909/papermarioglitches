@@ -766,6 +766,7 @@ function jrPress(inp) {
   V.pressNote = null; P.measured = { frame: f, c, err, inWin, works, likely: false, tObs: inp.t, onBeeps, edge, p: P.mix.p, pNow, k: inp.k, fr: P.target + d, w: { start: P.w.start, end: P.w.end } };     // v113: the plan's frame and window for the press table
   slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined, pNow: pNow != null ? pNow : undefined });
   st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
+  try { if (typeof pressShow === 'function') pressShow(P, P.target + (c - P.zwAbs), PROF().name || PROF().short); } catch (e) {}     // v114: the strip shows where the press landed (as Final Bowser's)
   if (typeof showPresses === 'function') showPresses();
 }
 /* the fight is over or left: the tracker off (the Hallway's walk tracker can start) */
