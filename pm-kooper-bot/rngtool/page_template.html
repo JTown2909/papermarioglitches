@@ -1467,14 +1467,14 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
     // press is a wait (the Charge confirm held until the beep), the earliest frame within PP_WAIT_TOL of the pick with the press spread
     if (prof.lever === 'wait' && pk.ok && !share4) { const okE = c => (share[c - a] || 0) >= 0.5; for (let c = from; c < pk.target; c++) if (okE(c) && sc(c) >= sc(pk.target) - PP_WAIT_TOL) { let s0 = c, e0 = c; while (s0 - 1 >= a && okE(s0 - 1)) s0--; while (e0 + 1 <= b && okE(e0 + 1)) e0++; pk = Object.assign({}, pk, { target: c, run: { start: s0, end: e0, length: e0 - s0 + 1 }, earlier: pk.target - c }); break; } }
     // v112 (console d1416: the runner aimed at the all-4 frame beside a 4-frame 3+ window, 3+ 0.96 there; the beeps were on the
-    // 3+ middle): on the Duplighosts' 4-goals the beep goes on the all-4 frame (perfect press 4 for most states) whose realistic
-    // 3+ chance (the press spread, the seed doubt) is DUP4_AIM or more, the likeliest 4 among them; else on the safest 3+ frame
-    if (prof.id === 'dup3' && share4 && (goal === 'run2' || goal === 'free')) {
+    // 3+ middle): on the Duplighosts' run2 goal (the runner's) the beep goes on the all-4 frame (perfect press 4 for most states) whose realistic
+    // 3+ chance (the press spread, the seed doubt) is DUP4_AIM or more, the likeliest 4 among them; else the goal's own pick
+    if (prof.id === 'dup3' && share4 && goal === 'run2') {     // (the runner's goal; 'free' keeps the widest 3+ window, test_dup_plan)
       const at = (sh, c) => (c >= a && c <= b ? sh[c - a] || 0 : 0), lo = from, hi = from + W;
       let c4 = null; for (let c = lo; c <= hi; c++) if (at(share4, c) >= 0.5 && honest(sc(c), 'b3') >= DUP4_AIM - 1e-12 && (c4 == null || sc4(c) > sc4(c4) + 1e-12 || (Math.abs(sc4(c) - sc4(c4)) <= 1e-12 && sc(c) > sc(c4) + 1e-12))) c4 = c;
       if (c4 != null) { const run = f => { let s0 = c4, e0 = c4; while (s0 - 1 >= a && f(s0 - 1)) s0--; while (e0 + 1 <= b && f(e0 + 1)) e0++; return { start: s0, end: e0, length: e0 - s0 + 1 }; };
         pk = { target: c4, ok: true, run: run(c => at(share, c) >= 0.5), run4: run(c => at(share4, c) >= 0.5), four: true }; }
-      else pk = ppPick(share, share4, a, b, from, W, sc, 'safe3', later, true);
+      // else the goal's own pick (a 2+ frame all-4 run, else the widest 3+ window)
     }
     target = pk.target; w = pk.run;
     if (honest(share[target - a] || 0, 'b3') < num('zwedge')) none = 'edge';

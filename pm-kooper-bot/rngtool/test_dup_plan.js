@@ -139,13 +139,13 @@ function frames() {     // [[expected arena, clip, frame, png base64]] for the c
       if (any4) n4++;
       if (runW(o, P.free.t, sh3) < runW(o, P.safe3.t, sh3) || P.free.pp4 < P.safe3.pp4 - 1e-9) badFree++;
       if (any4 && (!(sh4(o, P.four.t) >= 0.5) || runW(o, P.four.t, sh4) < runW(o, P.free.t, sh4))) badFour++;
-      if (P.run2.t !== P.free.t) { run2On++; const t = P.run2.t; if (!(sh4(o, t) >= 0.5 && (sh4(o, t - 1) >= 0.5 || sh4(o, t + 1) >= 0.5))) badRun++; } }
+      if (P.run2.t !== P.free.t) { run2On++; const t = P.run2.t, r3 = SPD[sp].reduce((v, [d, q]) => v + q * sh3(o, t + d), 0); if (!(sh4(o, t) >= 0.5 && (sh4(o, t - 1) >= 0.5 || sh4(o, t + 1) >= 0.5 || r3 >= 0.9 - 1e-9))) badRun++; } }     // v112: or a single all-4 frame whose 3+ chance with the spread is 0.90+ (DUP4_AIM)
     const n = set.length, f = k => (100 * tot[k][0] / n).toFixed(1) + '% / ' + (100 * tot[k][1] / n).toFixed(1) + '%';
     console.log('goals, ' + nm + ', planned with spread ' + sp + ' (3+ / all 4, lag-0 truth; perfect press | 25/50/25 | runner): ' + GS.map(g => g + ' ' + f(g + ':perfect') + ' | ' + f(g + ':std') + ' | ' + f(g + ':runner')).join(' ;; ') + ' (an all-4 frame in reach ' + n4 + ' / ' + n + ', run2 moved ' + run2On + ')');
     check(!bad3, nm + ' ' + sp + ': every goal beeps a frame most states give 3+ on (' + bad3 + ' bad)');
     check(!badFree, nm + ' ' + sp + ': "4 when it\'s free" keeps the widest 3+ window and never less all 4 than 3+ safe (' + badFree + ' bad)');
     check(!badFour, nm + ' ' + sp + ': "4 first" beeps the widest all-4 window (' + badFour + ' bad)');
-    check(!badRun, nm + ' ' + sp + ': "4 if 2+" moves only onto a 2+ frame all-4 run (' + badRun + ' bad)');
+    check(!badRun, nm + ' ' + sp + ': "4 if 2+" moves only onto a 2+ frame all-4 run or an all-4 frame with 3+ 90%+ (' + badRun + ' bad)');
     if (nm !== 'fixture') {
       check(tot['safe3:perfect'][0] >= 0.9 * n && tot['free:perfect'][0] >= 0.9 * n, nm + ' ' + sp + ': a perfect press gives 3+ on 90%+ (safe3 / free)');
       check(tot['free:perfect'][1] >= tot['safe3:perfect'][1] - 1e-9 && tot['four:perfect'][1] >= tot['free:perfect'][1] - 1e-9, nm + ' ' + sp + ': all 4 with a perfect press: 4 first >= 4 when free >= 3+ safe');
