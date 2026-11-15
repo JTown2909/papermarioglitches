@@ -1,3 +1,78 @@
+# Time Out Timer v112: the partnerless T6 measured (T7 plans), a Charge relock replans a frozen plan, the T1 lock rearms the reader, Duplighosts' all-4 beep and "hit the 4", one Final Bowser route menu, the strip's chance shading, coin-flip press wording (Nov 15)
+
+From the runner's console logs of Nov 15 on v111 (logs1115: x1420, x1425, x1428, x1434, x1436, x1439, x1441, d1416, d1423; v109/v110 x1027,
+x1135, jr1012, jr1019; fb1145, fb1149; fbp1_1448, fbp2_1451) and the emulator (numbers only; no clip, frame, picture or state committed).
+
+## 1. Partnerless Jr. T6 (x1420, x1027: the carry died after T6, T7 never beeped)
+- The "partnerless" route has Bombette out (the clips): Mario's action, then her Do Nothing. T6 used the Bombette route's `jr_whacka`,
+  whose Jr. Troopa hit on Whacka + 190 belongs to T2 there (Whacka the turn's last action). Here the hit hangs off the Do Nothing
+  (`jr_nothing_hit`, +53): the hit was counted twice.
+- Emulator (`jr_pl_routelog.py`, state boss_0207_plb: Bombette, Ultra Boots, Power Bounce / Charge 10c / Power Rush / Close Call, 4 seeds):
+  T6 = Whacka's 22 x [359, 10, 10] on +118 and the hit's 10 x 359 on Do Nothing + 53, nothing else; the Close Call on Do Nothing + 26 on
+  every T2-T5 (Mario at 2 HP); the page core matched every frame from the T1 Charge to the T7 confirm with `nb_whacka`
+  (`jr_pl_check.js`), and broke at Whacka + 191 with `jr_whacka`. The bar hides 3 frames after the Whacka A (as every Mario action);
+  Bombette's menu opens 153 frames after it. JR_SEQ_PL T6 is `nb_whacka` now.
+- Replayed (test_v112 1): x1420, x1027, x1428 carry through T6 (no zwInconsistent) and T7 plans: x1420 p 1.00 (window 2), x1027 0.80
+  (1 frame), x1428 0.75 (window 2; console 0.79). At x1420's press (c 817) the states give 5+ for all and 6+ for 0.19: 5 bounces, as the
+  clip. (The clip's Jr. Troopa was KO'd by those 5; six6 still aims at the 6.)
+
+## 2. Duplighosts' all-4 frame (d1416)
+- (b) On the 4-goals (run2, free) the beep goes on the all-4 frame (perfect press 4 for half the states or more) whose realistic 3+ chance
+  (press spread, seed doubt) is >= 0.90 (`DUP4_AIM`), the likeliest 4 among them; else on the safest 3+ frame (safe3 pick). The plan's
+  aim4 / w4 follow, so the beeps, the strip marker and its white ring follow the chosen frame.
+- d1416 replayed from its lock (d34bb989, q 4): 4 frames on 199, 202, 204; 3+ window 203-206. v111 and v112 both beep 204 (the 4 there,
+  3+ 0.98, 4 0.47). The runner pressed 202.42 (the 4 on 202: 3+ 0.63 realistic, 4 0.75 perfect) and all 4 copied.
+- (a) A press on an all-4 frame says "hit the 4" ("on the 4 (edge)" within PRESS_EDGE of a frame that is not a 4: d1416's 202.42), never
+  outside / early. When it is another all-4 run than the beeped frame's, it is left out of the lever's learned correction and the press
+  list: it records where the runner chose to press, not their error on the beep; recording it against that 4 would assume they aimed
+  there, which the page cannot know. A press on the beeped all-4 frame is an ordinary press on the beeps.
+
+## 3. Final Bowser route menu
+"Final Bowser route" (#s-fbroute) follows Boots: Ultra Boots "Ultra Boots Laki"; Normal Boots "Normal Boots Power Bounce cap" / "Normal
+Boots Goombario (untested)". The Normal Boots choice stays in the hidden #s-fbnbroute (saved key fbnbroute), so it survives Ultra and back.
+
+## 4. Strip shading, lock badge
+Plans carry each cell's realistic chance (zwPlan, fb14, fb2 T6): a red cell with a real chance is shaded green by it, a green cell under
+0.8 is paled. The lock badge shows "plan NN%" (the plan's realistic chance) while a plan beeps, the seed confidence otherwise.
+
+## 5. Coin-flip presses (d1423) and better options
+- A working frame on a plan under 0.80: "on time · this plan was 53%: a hit is the other 47%", no ✓; after a hit: "on time, hit anyway
+  (coin flip: this plan was 53%)"; after a dodge "· dodged". Jr. press verdicts ('works') come from the newest states at the press.
+- d1423 T2: from the relock's 4 states the best realistic frame in the next 2.5 s was the beeped one (replay 0.60; nothing above 0.5
+  later); pNow 0.749 was the perfect-press re-score of that frame, not another frame. The relock (qs [23, 0], the confirm -1..+1) was not
+  narrow: a few shines in the Strategies menu narrow it.
+
+## 6. The T2 Charge never read (x1425, x1436); capture drops (x1425, x1428)
+- The T1 lock landed after T1's Do Nothing (x1425: 1.4 s after), whose rearm found the reader still searching; the reader stayed 'locked'
+  and the T2 Charge was never read. A lock landing after a rearm confirm arms the reader at once (`jrLateRearm`), unless that next Charge
+  has gone by (x1436: its T1 lock came after the T2 Charge).
+- "Capture dropping 44% of frames: check OBS." now leads the detail line on every step (the long hint stays on the Charge panel).
+- x1428 T5: the lock came 285 ms before the press (search 3.2 s on a read with 44% drops): not made faster in v112.
+
+## 7. Close Call presses that "worked" and were hit (task 7)
+- Fit (every Close Call press of x1420, x1428, x1434, x1436, d1423, x1425, x1439, x1135, jr1012, jr1019; 24 presses; each scored from the
+  states the replay holds at the press, read c as the page computes it, read noise 0.45 frame): Do Nothing (17 presses, both routes):
+  best shift 0, log-likelihood -8.43 (shift +1: -12.37, -1: -12.54; the test inverted: -23.23; blind 0.3: -12.84); expected dodges 9.9,
+  seen 8. Partnerless alone (13): roll +26 at shift 0 -6.73 (best +0.25: -6.46; +1: -8.40; roll +25 / +27: -9.87 / -8.40). The emulator
+  has the roll on +26 (16 of 16) at the partnerless loadout. No model change. Bomb (4 presses): best shift +1.5 (-1.91 against -9.07 at 0):
+  a lead on the bar-hide read of the Bomb, too few presses to move it. Syrup (3): 0 to +0.5.
+- The cause of the "works, hit" presses: the plan the press was judged against. x1434 T2 / x1439 T3 / x1441 T3 / x1420 T2: a "Seed
+  changed" too late to move the beeps set seedNote; zwTick then ignored the plan for good, so the T2 / T3 Charge relock 2-3 s before the
+  press never re-scored it (x1434: the old frame had 0.14 under the relocked states). A relock now clears that mark and re-scores; a
+  relock that rules the frame out plans again from the new states (`jrRelockReplan` forced); an early Jr. plan can move on a "Seed changed"
+  before its screen shows.
+- Final Bowser (fb14 / fb2): no such path; each turn plans after its own lock and fb14 replans on its own. fb1145 / fb1149 T6 (window 0)
+  had no later lock to replan them.
+
+## Not done
+- Final Bowser Phase 1 tracker (fbp1_1448) and the Phase 2 reads after a real Phase 1 (fbp2_1451): T1's Mario was read 17 px right of
+  the camera table (dxWorld 6.35) and no dx scale recovers the read (scores 1600-2700, ratio ~1.05); T2's Mario was in place and the read
+  still scored 4716 / 1.62 (fb07xx-fb1145 lock at 5000-6600 / 2+). Needs the emulator's Phase 1 -> 2 transition (Mario's position, the
+  camera) before the reads can be fitted.
+
+## Tests
+`test_v112.js` (in run_suite.sh; fixtures/console_1115_v112.json, numbers only). VERSION v112; version checks and default build paths moved.
+
 # Time Out Timer v111: a Close Call hit is a death on every Jr. route (the carry held through it), the partnerless Charges read again, an unread no-roll Do Nothing taken from Jr. Troopa's hit, the 6 run on the partnerless T7, the strip's star / coin markers, the per-lever timing from the clips, short route labels (Nov 15)
 
 From the runner's console logs of Nov 15 (logs1115: x1024, x1027 on v109; jr1126, jr1128, x1133, x1135, dup1138-dup1143, fb1145,
