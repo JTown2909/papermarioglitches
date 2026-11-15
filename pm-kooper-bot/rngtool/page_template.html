@@ -2768,11 +2768,11 @@ function showPresses() {
   const spread = presses.length ? Math.sqrt(presses.reduce((a, b) => a + (b - avg) * (b - avg), 0) / presses.length) : 0;
   const dir = x => Math.abs(x) < 0.5 ? 'on time' : (Math.abs(r(x)) + ' frames ' + (x > 0 ? 'late' : 'early'));
   const fr = q => q.edge ? 'on the edge of the window: the video cannot tell whether it ' + (q.inWin ? 'worked' : 'missed') : q.works ? 'a working frame' : q.likely ? 'a failing frame by the video, but a working one is within ' + PRESS_TOL + ' frames' : 'a failing frame';
-  const head = P && P.on4 ? 'Last press: ' + (P.hit4 ? 'hit the 4' : 'on the 4 (edge: the video cannot tell it from the frame beside it)') + (P.off4 ? ', not the beeped frame' : '')     // v112
+  const head = P && P.on4 ? 'Last press: ' + (P.hit4 ? 'hit the 4' : 'on the 4 (edge)') + (P.off4 ? ', not the beeped frame' : '')     // v112
     : P && !P.onBeeps ? 'Pressed ' + Math.abs(Math.round(P.err)) + ' frames ' + (P.err < 0 ? 'before' : 'after') + ' the beeps: ' + fr(P) : 'Last press: ' + dir(last) + (P ? (P.edge ? ' (' : P.inWin ? ' (inside the window, ' : ' (outside the window, ') + fr(P) + ')' : '');     // v111 (5): an edge press is neither
   let s = '';
   const lq = P || st.lastPress;
-  if (lq && lq.likely) s += 'The page counts it as worked (the next shines check it). Did the outcome come out right (all 4 copied, the Close Call dodged)? Then your capture reads presses about ' + Math.abs(r(lq.err)) + ' frames ' + (lq.err < 0 ? 'early' : 'late') + ': set Press check correction to ' + (Math.round((num('pfix') + lq.err) * 2) / 2) + ' (now ' + num('pfix') + '). ';
+  if (lq && lq.likely && !lq.on4) s += 'The page counts it as worked (the next shines check it). Did the outcome come out right (all 4 copied, the Close Call dodged)? Then your capture reads presses about ' + Math.abs(r(lq.err)) + ' frames ' + (lq.err < 0 ? 'early' : 'late') + ': set Press check correction to ' + (Math.round((num('pfix') + lq.err) * 2) / 2) + ' (now ' + num('pfix') + '). ';
   if (presses.length >= 2) s += 'Average of ' + presses.length + ': ' + dir(avg) + ', spread ±' + r(spread) + ' frames. ';
   const ready = presses.length >= 3 && Math.abs(avg) >= 0.5, step = x => Math.round(x * 2) / 2;
   if (ready) s += 'Consistently off? Calibrate… (next to this) moves the beep and visual offsets by the measured error, after you confirm.';
@@ -2785,7 +2785,7 @@ function showPresses() {
   else if (lp && lp.outcome && flip) head2 = head + ' · ' + (lp.outcome === 'dodge' ? 'dodged' : 'hit');
   else if (lp && flip && good === true) { head2 = head + ' · this plan was ' + pc0(pq) + ': a hit is the other ' + pc0(1 - pq); good = null; }
   const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--ink)';
-  $('press-msg').innerHTML = '<span style="color:' + (good === null ? 'var(--bg)' : '#fff') + '; background:' + col + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head2 + (good === true ? ' ✓' : good === false ? ' ✗' : lp && lp.likely ? ' ?' : '') + '</span><br>' + s;
+  $('press-msg').innerHTML = '<span style="color:' + (good === null ? 'var(--bg)' : '#fff') + '; background:' + col + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head2 + (good === true ? ' ✓' : good === false ? ' ✗' : lp && lp.likely && !lp.on4 ? ' ?' : '') + '</span><br>' + s;
 }
 /* Calibrate from last press (feedback item 9): in a menu, never one click. It moves the beep offset and the visual offset
  * by the last measured press error (or the average of the last 3 / 5 presses on the beeps), shows what it will change,
