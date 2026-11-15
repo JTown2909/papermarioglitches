@@ -17,8 +17,9 @@ x1135, jr1012, jr1019; fb1145, fb1149; fbp1_1448, fbp2_1451) and the emulator (n
   clip. (The clip's Jr. Troopa was KO'd by those 5; six6 still aims at the 6.)
 
 ## 2. Duplighosts' all-4 frame (d1416)
-- (b) On the 4-goals (run2, free) the beep goes on the all-4 frame (perfect press 4 for half the states or more) whose realistic 3+ chance
-  (press spread, seed doubt) is >= 0.90 (`DUP4_AIM`), the likeliest 4 among them; else on the safest 3+ frame (safe3 pick). The plan's
+- (b) On the runner's goal (run2, the default) the beep goes on the all-4 frame (perfect press 4 for half the states or more) whose
+  realistic 3+ chance (press spread, seed doubt) is >= 0.90 (`DUP4_AIM`), the likeliest 4 among them; else run2's own pick (a 2+ frame
+  all-4 run, else the widest 3+ window). 'free' keeps the widest 3+ window (test_dup_plan; its run2 check now allows the 1-frame 4). The plan's
   aim4 / w4 follow, so the beeps, the strip marker and its white ring follow the chosen frame.
 - d1416 replayed from its lock (d34bb989, q 4): 4 frames on 199, 202, 204; 3+ window 203-206. v111 and v112 both beep 204 (the 4 there,
   3+ 0.98, 4 0.47). The runner pressed 202.42 (the 4 on 202: 3+ 0.63 realistic, 4 0.75 perfect) and all 4 copied.
