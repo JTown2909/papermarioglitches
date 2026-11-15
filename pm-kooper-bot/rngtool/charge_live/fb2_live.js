@@ -148,7 +148,10 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   cancelBeeps(); playBeeps(pl.tPress);
   FB2.plan = pl; FB2.plans = (FB2.plans || []).concat([Object.assign({ tMade: now }, pl)]); slog('fb2PlanP', pl);
   // v99: early (made on the lock, before the Strategies screen opens): the screen-lost rule (planScreenLost) waits for that
-  st.msg = null; st.plan = { tMade: now, w: { start: k, end: k, length: 1 }, target: k, tPress: pl.tPress, tLast: CHG.trig.t, rate: fb2Rate(), carried: true, early: true, from: kFirst, to: kFirst + W, first: 0, prof: 'fb2', tab: [], tab4: null, mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
+  // v109 (console fb0709 T6, clip fb1153: "no track was shown but it beeped"): the plan carried no frames (tab: []), so the strip
+  // drew nothing; now the perfect-press share per frame (>= 0.5 works), on a clock whose frame k reaches the now-line at its press
+  const r6 = fb2Rate(), w6 = pk.ok ? pk.run : { start: k, end: k, length: 1 };
+  st.msg = null; st.plan = { tMade: now, w: { start: w6.start, end: w6.end, length: w6.length }, target: k, tPress: pl.tPress, tLast: pl.tPress - (k - 0.5 + num('off')) * r6, rate: r6, carried: true, early: true, from: kFirst, to: kFirst + W, first: a, prof: 'fb2', tab: sh.map(v => v >= 0.5), tab4: null, mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
   fb2Show(); if (typeof render === 'function') render(); return pl;
 }
 /* the Do Nothing confirm (the Strategies box closing on T6's step): its frame into the states, the press into the learned
@@ -156,8 +159,11 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
 function fb2Confirm(tObs) {
   if (!CHG.trig) { slog('fb2ConfirmNoTrig', { at: Math.round(tObs) }); return; }
   const c = fb2Pic(tObs) - (typeof fb14Van === 'function' ? fb14Van('S') : -1.4), P = FB2.plan && FB2.plan.k != null ? FB2.plan : null;
+  // v109 (console fb0722 T5: a Strategies-like close 87 frames after a false trigger moved the route to T7): without a T6 lock, a
+  // close before FB2_PMIN - 20 frames after the trigger is not the Do Nothing (console Do Nothing confirms: 149-392)
+  if (!FB2.on && c < FB2_PMIN - 20) { slog('fb2ConfirmTooEarly', { c: +c.toFixed(2) }); return; }
   slog('fb2Confirm', { c: +c.toFixed(2), planned: P ? P.k : null, err: P ? +(c - P.k).toFixed(2) : null });
-  if (P && Math.abs(c - P.k) <= 5 && typeof fb14PressAdd === 'function') { const L = fb14PressAdd(c - P.k - (P.bias || 0)); slog('fb2PressBias', { n: L.length, bias: +fb2Bias().toFixed(2) }); if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T6, Do Nothing', c - P.k, 'fb14'); }
+  if (P && Math.abs(c - P.k) <= 5 && typeof fb14PressAdd === 'function') { const L = fb14PressAdd(c - P.k - (P.bias || 0)); slog('fb2PressBias', { n: L.length, bias: +fb2Bias().toFixed(2) }); const SP = st.plan && st.plan.prof === 'fb2' && st.plan.target === P.k ? st.plan : null, wk = typeof pressShow === 'function' ? pressShow(SP, c, 'Final Bowser T6, Do Nothing') : null; if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T6, Do Nothing', c - P.k, 'fb14', wk); }
   FB2.pObs = c; FB2.pT = tObs; FB2.hpw = null; cancelBeeps(); if (st.plan && st.plan.prof === 'fb2') st.plan = null;
   if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex(x => x.turn === 'fb2_pb'); if (i >= 0) { slog('fb2StepByConfirm', { from: routeStep, to: i }); setStep(i); } }
   if (FB2.on) fb2SetP(c);
@@ -341,7 +347,8 @@ function fb2PlanT7(cScr) {
   FB2.t7.plan = plan;
   if (cScr != null) return plan;
   if (cScr == null) { cancelBeeps(); playBeeps(plan.tPress);
-    st.msg = null; st.plan = { tMade: now, w: { start: d, end: d, length: 1 }, target: d, tPress: plan.tPress, tLast: CHG.trig.t, rate: fb2Rate(), carried: true, from, to: from + W, first: 0, prof: 'fb2', tab: [], tab4: null, mix: { p: plan.p7, pp: plan.pp7, win: plan.win, doubt: dz, groups: S.length, zw: true } }; }
+    const r7 = fb2Rate(), w7 = pk.ok ? pk.run : { start: d, end: d, length: 1 };      // v109: the strip's frames (7 bounces for most states), as T6
+    st.msg = null; st.plan = { tMade: now, w: { start: w7.start, end: w7.end, length: w7.length }, target: d, tPress: plan.tPress, tLast: plan.tPress - (d - 0.5 + num('off')) * r7, rate: r7, carried: true, from, to: from + W, first: from - 1, prof: 'fb2', tab: e7.map(v => (1 - dz) * v >= 0.5), tab4: null, mix: { p: plan.p7, pp: plan.pp7, win: plan.win, doubt: dz, groups: S.length, zw: true } }; }
   slog('fb2PlanT7', plan); fb2Show(); if (cScr == null) render(); return true;
 }
 function fb2Show() {

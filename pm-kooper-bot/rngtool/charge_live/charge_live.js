@@ -66,9 +66,13 @@ const CHG_BRIGHT_JR = [7.1, 12.9, 19.5, 28.0, 36.5, 43.6, 48.6, 50.0, 51.5, 54.4
  * than 10 over the emulator curve on 4 pictures, so the shape check called it a false trigger and the T2 lock never ran. */
 const CHG_BRIGHT_FB1 = [9.6, 15.4, 24.6, 32.1, 39.0, 44.7, 45.4, 45.5, 45.7, 47.7, 49.9, 50.1, 53.0, 55.0, 55.2, 54.9, 53.9, 55.8, 51.2, 49.2, 46.9,
   42.2, 37.8, 33.9, 24.1, 15.9, 11.5, 5.2, 1.9, 3.5, 6.7, 3.7, -1.3, -2.5, -2.7, -2.5, -3.1, -2.9, -3.8, -3.6, -4.3, -4.6, -4.9];   // frames 3..45
+/* v109 (console fb0722 T5: Peach Beam's flash triggered the T6 reader at base 29.6 / m 39.5, its read moved the route to T7): a
+ * Final Bowser Charge starts from a lit arena, base 81-85 (fb1) / 81-96 (fb2) at every console lock of Nov 9-15; false triggers
+ * read 30-63. Under CHG_FB_BASEMIN it is no Charge */
+const CHG_FB_BASEMIN = 70;
 const CHG_PROF = {
   hw: { id: 'hw', turn: 'hw_spiny', cams: () => CHG_CAMS, mario: () => CHG_MARIO, bright: () => CHG_BRIGHT, bolts: false, early: false, offs: [24, 25], effects: [0, 1], trigLo: 5, trigHi: 25, trigN: true, tol: () => 1.5, trigMin: 250, trigMax: 1000, baseMin: 30, shape: true },
-  fb2: { id: 'fb2', turn: 'fb2_pb', cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB2 || CHG_BRIGHT, bolts: true, early: true, offs: [24, 25, 26, 27], effects: [0], trigLo: 7.5, trigHi: 20, tol: tb => 1.5 + 0.08 * Math.abs(tb), trigMin: 0, trigMax: 4000 },
+  fb2: { id: 'fb2', turn: 'fb2_pb', cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB2 || CHG_BRIGHT, bolts: true, early: true, offs: [24, 25, 26, 27], effects: [0], baseMin: CHG_FB_BASEMIN, trigLo: 7.5, trigHi: 20, tol: tb => 1.5 + 0.08 * Math.abs(tb), trigMin: 0, trigMax: 4000 },
   // dup: the route step with chg 'dup' (Duplighosts, Charge-lock route). The lock starts the zero-wait tracker as on the
   // Hallway; its plan is Bombette's Do Nothing (profile dup3: 3+ copies, 4 as tie-break). altMs (v76; v77: CHG_PRESS): retries only while the
   // runner would still be waiting on Do Nothing (the natural confirm is ~2-3 s after the rays).
@@ -81,7 +85,7 @@ const CHG_PROF = {
   // and Mario's patch places the centre only that well: 0.35 world units per raster px of his shift (the projection: 17 raster
   // px = 5.7, the console c565d268 T1 locks at 6.0 for his 17.1 px, at 5 or 7 it reads noise; 0.37 put it at 6.3), and the
   // re-reads try the centre half a unit to either side before the frame shifts.
-  fb1: { id: 'fb1', turn: null, cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB1, bolts: false, aura: true, early: false, offs: Array.from({ length: 15 }, (_, i) => 24 + i), effects: [0, 1], trigLo: 6, trigHi: 27, trigN: true, trigCut: [12.5, 20.0], shapeUp: 0.2, shiftAlts: [-1, 1], shiftWide: true, dxK: 0.35, cenAlts: [[-0.5, 0], [0.5, 0]], tol: tb => 4 + 0.3 * Math.abs(tb), trigMin: 250, trigMax: 1000, baseMin: 30, shape: true, altMs: 12000 },
+  fb1: { id: 'fb1', turn: null, cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB1, bolts: false, aura: true, early: false, offs: Array.from({ length: 15 }, (_, i) => 24 + i), effects: [0, 1], trigLo: 6, trigHi: 27, trigN: true, trigCut: [12.5, 20.0], shapeUp: 0.2, shiftAlts: [-1, 1], shiftWide: true, dxK: 0.35, cenAlts: [[-0.5, 0], [0.5, 0]], tol: tb => 4 + 0.3 * Math.abs(tb), trigMin: 250, trigMax: 1000, baseMin: CHG_FB_BASEMIN, shape: true, altMs: 12000 },
   dup: { id: 'dup', turn: null, cams: () => CHG_CAMS, mario: () => CHG_MARIO, bright: () => CHG_BRIGHT_DUP, bolts: false, early: false, offs: [24, 25], effects: [0, 1], trigLo: 5, trigHi: 25, trigN: true, tol: () => 1.5, trigMin: 250, trigMax: 1000, baseMin: 30, shape: true, altMs: 6000 },
   // jr: the Jr. Troopa steps (chg 'jr'). The lock goes to jrLock (jr_live.js): the T1 lock starts the tracker that carries it
   // through the fight; the T3 / T5 locks check the carry or start it again.
@@ -104,7 +108,7 @@ function chgEnabled() { const el = $('s-chg'); return !el || el.checked; }
 /* any Hallway Bowser step arms the Hallway Charge (the runner is often on T2 after a retry; a burst seen there sets the
  * route back to T1, chgFrame) */
 const chgHallStep = s => !!(s && s.t && /^Hallway Bowser/.test(s.t));
-function chgProfNow() { const s = isRoute() && RT()[routeStep]; if (!s) return null; if (s.nb) return (s.chg && CHG_PROF[s.chg]) || null;     /* v84: a Normal Boots step reads only its own chg (v85: the Duplighosts', Jr. Troopa's, Hallway T1's) */ if (chgHallStep(s)) return CHG_PROF.hw; if (s.turn === 'fb2_k') return CHG_PROF.fb2;     /* v93: T6's own step reads the T6 Charge too */ if (s.chg && CHG_PROF[s.chg]) return CHG_PROF[s.chg]; for (const k in CHG_PROF) if (CHG_PROF[k].turn && CHG_PROF[k].turn === s.turn) return CHG_PROF[k]; return null; }
+function chgProfNow() { const s = isRoute() && RT()[routeStep]; if (!s) return null; if (s.fb14 && s.fb14role === 'lever' && !s.chg && !s.nb) return CHG_PROF.fb1;     /* v109 (fb0722: T3's Do Nothing unread after a hit, the route sat on T3 and T4's Charge was never read): T3's step reads T4's Charge, whose burst moves the route (fb14StepByBurst) */ if (s.nb) return (s.chg && CHG_PROF[s.chg]) || null;     /* v84: a Normal Boots step reads only its own chg (v85: the Duplighosts', Jr. Troopa's, Hallway T1's) */ if (chgHallStep(s)) return CHG_PROF.hw; if (s.turn === 'fb2_k') return CHG_PROF.fb2;     /* v93: T6's own step reads the T6 Charge too */ if (s.chg && CHG_PROF[s.chg]) return CHG_PROF[s.chg]; for (const k in CHG_PROF) if (CHG_PROF[k].turn && CHG_PROF[k].turn === s.turn) return CHG_PROF[k]; return null; }
 function chgStepActive() { return !!chgProfNow(); }
 /* Which arena the capture shows, read at a real bar hide (the menu just closed, battle camera): the band under the
  * battle floor (320-space y 165-190) is the dark bushes in the Hallway (luma 45-67 at all 43 bar hides of the 14

@@ -1081,11 +1081,22 @@ function fb14Tick(t) {
     // v100: the states narrowed after the plan (the coin, Bowser's attack, a bolt): refine it while its beeps have not begun. The
     // replan keeps the anchored frame unless a frame FB14_ANCHOR_TOL better is in reach (fb14Anchor): no jumping
     const now = performance.now(), narrowed = Wg.list.length < 0.9 * (P.mix.groups || 1e9) || Wg.doubt < (P.mix.doubt || 0) - 0.02 || (P.freshCap && !FB14.fresh);     // v102: the fresh lock's cap lifted by the coin
-    if (narrowed && (P.mix.pp || 0) < FB14_UP && P.tPress - (nBeeps() - 1) * num('gapms') > now + 300 && now - (P.upT || P.tMade) > 700) {
+    // v109 (console fb0709 T2: the refine dropped 770, its pNow 0.994 with the narrowed states, but its first beep was 0.15 s away,
+    // inside a new plan's own lead: the replan could not reach 770 and moved to 792, 0.51; the runner pressed 794, hit): a refine
+    // runs only while a new plan can still aim at the planned frame (its whole series ahead of now + FB14_PLAN_MS); otherwise the
+    // plan, which still holds, keeps its frame and its beeps
+    const reach = fbPressT(P.target) >= earliestPress(now + FB14_PLAN_MS);
+    if (narrowed && !reach && P.refineSkip !== h) { P.refineSkip = h; if (!P.refineSkipLogged) { P.refineSkipLogged = true; slog('fb14RefineKept', { target: P.target, pNow: +p.toFixed(3), msToPress: Math.round(P.tPress - now) }); } }
+    if (narrowed && reach && (P.mix.pp || 0) < FB14_UP && P.tPress - (nBeeps() - 1) * num('gapms') > now + 300 && now - (P.upT || P.tMade) > 700) {
       slog('fb14Refine', { from: P.target, pp: +(P.mix.pp || 0).toFixed(3), pNow: +p.toFixed(3), states: Wg.list.length, was: P.mix.groups, doubt: +Wg.doubt.toFixed(3) });
       FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; fb14KeepIfOrphan(P, 'refine'); if (st.plan) st.plan.upT = now; }
     return; }     // v96: 0.25 (was 0.15: 0dfd444d T2's second replan at 0.775 of 0.989)
   if (P.tPress - (nBeeps() - 1) * num('gapms') > performance.now() + 200) { slog('fb14Replan', { from: P.target, p: +p.toFixed(3) }); FB14.prevPlan = P; st.plan = null; fb14Plan(); FB14.prevPlan = null; fb14KeepIfOrphan(P, 'replan'); return; }
+  // v109 (console fb0709 T4: the fresh lock's first shine raised the doubt to 0.554, just over FB14_EDGE_OFF, the re-scored frame
+  // 0.626 against 0.887; 7 ms too late to replan, so the beeps were stopped 0.19 s before the first one; the runner pressed 229
+  // anyway and Bowser missed): too late to move, a planned frame still FB14_KEEP_EDGE over blind (and over the edge setting)
+  // keeps its beeps - pressing blind is worse than pressing on it
+  if (p >= Math.max(num('zwedge'), fb14Blind(P.fb14) + FB14_KEEP_EDGE)) { if (P.keptLow !== h) { if (P.keptLow == null) slog('fb14KeptLower', { target: P.target, p: +p.toFixed(3), pp: +(P.mix.pp || 0).toFixed(3), doubt: +Wg.doubt.toFixed(3), blind: fb14Blind(P.fb14) }); P.keptLow = h; } return; }
   // v106: a begun series is never cut silently: STOP (visible) with 0.4 s or more left, else it plays out (stopBeeps)
   const r = typeof stopBeeps === 'function' ? stopBeeps('fb14', p, P) : (cancelBeeps(), 'cancelled'); P.stopped = true;
   if (r === 'kept') return;
@@ -1095,7 +1106,7 @@ function fb14Tick(t) {
   render();
 }
 /* the step's screen closed: the partner's confirm (the lever), read off the video to about +-2 frames */
-const FB14_EDGE_ON = 0.4, FB14_EDGE_OFF = 0.55, FB14_TICK_DROP = 0.25, FB14_UP = 0.95;
+const FB14_EDGE_ON = 0.4, FB14_EDGE_OFF = 0.55, FB14_TICK_DROP = 0.25, FB14_UP = 0.95, FB14_KEEP_EDGE = 0.05;
 const FB14_SHIFTS = [[-2, 0.1], [-1, 0.25], [0, 0.4], [1, 0.2], [2, 0.05]];
 const FB14_C9WAIT = 1200;
 /* v93 (console logs 00700c7e / a87486a0): the Do Nothing readings on console sit 1-4 frames before the frames the model gave the
@@ -1181,7 +1192,7 @@ function fb14Confirm(tObs, stp, shifts, src) {
   // v91 (logs E, F: the confirm logged at err -91 / -63 against a replan made after the press): the plan up at the press
   const Ph = (FB14.plans || []).filter(x => x.turn === turn && !x.sk && x.tMade <= tObs).pop(), P = Ph && (!P0 || P0.tMade > tObs) ? Object.assign({}, P0 || {}, { target: Ph.target, tMade: Ph.tMade, bias: Ph.bias, stopped: false }) : P0;
   slog('fb14Confirm', { turn, F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, src, lever: turn === 1 && fb14SkipMode() ? 'cloud nine (not the lever: the skip is)' : undefined });
-  if (P && !P.stopped && src !== 'bar' && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14'); slog('fb14PressBias', { n: L.length, bias: +fb14Bias().toFixed(2) }); if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T' + turn + ', ' + (turn === 1 ? 'Cloud Nine' : 'Do Nothing'), c - P.target, 'fb14'); }
+  if (P && !P.stopped && src !== 'bar' && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14'); slog('fb14PressBias', { n: L.length, bias: +fb14Bias().toFixed(2) }); const lb = 'Final Bowser T' + turn + ', ' + (turn === 1 ? 'Cloud Nine' : 'Do Nothing'), wk = typeof pressShow === 'function' ? pressShow(P0 && P0.target === P.target ? P0 : null, c, lb) : null; if (typeof leverPressNote === 'function') leverPressNote(lb, c - P.target, 'fb14', wk); }
   if (FB14.on) { const h = fb14Horizon(performance.now()); fb14Advance(Math.min(h, F - 3)); fb14Input(fb14Kind(turn), F, turn, shifts || (stp.cat === 'S' ? FB14_SHIFTS_S : FB14_SHIFTS), tObs, fb14Van(stp.cat, src)); }
   fb14Show();
 }
@@ -1224,7 +1235,7 @@ function fb14SkipConfirm(tObs) {
   const P = st.plan && st.plan.sk ? st.plan : (FB14.plans || []).filter(x => x.sk && x.tMade <= tObs).pop() || null;
   FB14.sk = F;
   slog('fb14Confirm', { turn: 1, lever: 'skip', F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, base: B0, k: F - B0, natural: nat || undefined, src: 'box' });
-  if (P && !P.stopped && !nat && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14sk'); slog('fb14PressBias', { lever: 'fb14sk', n: L.length, bias: +fb14Bias('fb14sk').toFixed(2) }); if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T1, the A that skips Cloud Nine\'s message', c - P.target, 'fb14sk'); }
+  if (P && !P.stopped && !nat && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14sk'); slog('fb14PressBias', { lever: 'fb14sk', n: L.length, bias: +fb14Bias('fb14sk').toFixed(2) }); const lb = 'Final Bowser T1, the A that skips Cloud Nine\'s message', wk = typeof pressShow === 'function' ? pressShow(P.tab ? P : null, c, 'Final Bowser T1, the skip A') : null; if (typeof leverPressNote === 'function') leverPressNote(lb, c - P.target, 'fb14sk', wk); }
   if (FB14.on) { fb14Advance(Math.min(fb14Horizon(performance.now()), F - 3)); fb14Input('skip', F, 1, FB14_SKSHIFTS, tObs, van); }
   if (st.plan && st.plan.sk) { if (st.plan.tPress > performance.now()) cancelBeeps(); st.plan = null; }
   fb14Show();

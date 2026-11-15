@@ -12,7 +12,7 @@
  * 7. The log's file name in local time. 8. "Reset seed" and "Erase log".
  * usage: node test_v106.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1114] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v108/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v109/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
@@ -20,7 +20,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (init) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(init || (() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' })); } catch (e) {} })); await p.goto('file://' + PAGE); return p; };
   let p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v108', 'page version v106');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v109', 'page version v106');
 
   // ---- 2. beeps
   const bp = await p.evaluate(async () => {
@@ -99,12 +99,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     V.SLOG.push({ t: 1, ev: 'x' }); T.CHG_CAPS.push({ id: 'a' }); const n0 = V.SLOG.length;
     window.confirm = () => true; document.getElementById('erase-log').click();
     const after = { slog: V.SLOG.map(e => e.ev), caps: T.CHG_CAPS.length, lever: localStorage.getItem('tot-fb14press-v93'), settings: localStorage.getItem('tot-settings') === set0 };
-    window.confirm = () => false; V.SLOG.push({ t: 2, ev: 'y' }); const e = document.getElementById('erase-log'); e.click(); const armed = e.textContent; e.click();
+    let asked = 0; window.confirm = () => { asked++; return false; }; V.SLOG.push({ t: 2, ev: 'y' }); const e = document.getElementById('erase-log'); e.click(); const armed = e.textContent + (asked ? ' (asked)' : '');
     return { name: V.logFileName(d), bs, n0, after, armed, second: V.SLOG.map(e => e.ev) }; });
   ok(ui.name === 'pm-rng-log-2026-11-14_10-10-55.json', '7. the saved log is named in local time like the OBS clips: ' + ui.name);
   ok(ui.bs.join() === 'dl-log:Download session log,reset:Reset seed,erase-log:Erase log', '8. buttons: ' + ui.bs.join(' | '));
-  ok(ui.after.slog.join() === 'logErased' && ui.after.caps === 0 && ui.after.lever === '[1,2]' && ui.after.settings, '8. Erase log (confirmed): the log and the kept Charge reads go (left: ' + ui.after.slog.join() + '), settings and press corrections stay');
-  ok(ui.armed === 'Click again to erase' && ui.second.join() === 'logErased', '8. where confirm() returns at once (a sandboxed frame), a second click erases');
+  ok(ui.after.slog.join() === 'logErased' && ui.after.caps === 0 && ui.after.lever === '[1,2]' && ui.after.settings, '8. Erase log: the log and the kept Charge reads go (left: ' + ui.after.slog.join() + '), settings and press corrections stay');
+  ok(ui.armed === 'Log erased ✓' && ui.second.join() === 'logErased', '8. v109: one click erases at once, no confirm dialog, the button says so (' + ui.armed + ')');
   await p.close();
 
   // ---- 1 / 6. the console logs

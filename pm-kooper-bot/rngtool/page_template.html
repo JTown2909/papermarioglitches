@@ -29,6 +29,7 @@ main { max-width: 880px; margin: 0 auto; display: grid; gap: 18px; }
 .layout > main { margin: 0; }
 .side { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow: auto; display: grid; gap: 8px; align-content: start; }
 .side #route-list { font-size: .8rem; }
+.b.done { background: var(--good-soft); border-color: var(--good); }
 .side #route-list .chip { font-size: .68rem; padding: 2px 7px; }
 @media (max-width: 1240px) { .layout { grid-template-columns: minmax(0, 880px); } .side { position: static; max-height: none; } }
 
@@ -1336,8 +1337,8 @@ function ppPick6(share, share4, a, b, from, W, sc) {
   if (!pick) return null;
   return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length }, later: false, six: true };
 }
-const PP_SC_GAIN = 0.1, PP_SIX_TOL = 0.02;
-function ppPick(share, share4, a, b, from, W, sc, goal, later) {
+const PP_SC_GAIN = 0.1, PP_SIX_TOL = 0.02, PP_SOLID_TOL = 0.02;
+function ppPick(share, share4, a, b, from, W, sc, goal, later, solid) {      // solid (v109): prefer a wider run within PP_SOLID_TOL
   // the 6 run only where it costs (almost) nothing on 5+ (the fight's win): test_jr_plan's carry T6 went 5+ 95% -> 88% when it
   // always took the 6 run; PP_SIX_TOL of the 5+ chance with the press spread against the 5+ pick's
   if (goal === 'six') { goal = 'free'; if (share4) { const P6 = ppPick6(share, share4, a, b, from, W + Math.max(0, later || 0), sc), Q = ppPick(share, share4, a, b, from, W, sc, 'free', later); if (P6 && (!Q.ok || sc(P6.target) >= sc(Q.target) - PP_SIX_TOL)) { P6.later = P6.target > from + W; return P6; } return Q; } }
@@ -1350,6 +1351,12 @@ function ppPick(share, share4, a, b, from, W, sc, goal, later) {
   // v106 (console fb0958 Jr. T5 Do Nothing: the later pick was a 1-frame window between gaps, pressed 2 frames early: hit): a
   // later frame narrower than the pick needs PP_SC_GAIN more with the press spread, not PP_LATER_GAIN
   for (let c = from + W + 1; c <= from + W + later; c++) if (ok(c) && sc(c) > sc(pick.target) + 1e-9) { const r = runOf(c); if (sc(c) > s0 + (r.length >= P0.run.length ? PP_LATER_GAIN : PP_SC_GAIN)) pick = { target: c, ok: true, run: r, run4: null, later: true }; }
+  // v109 (console jr0701 Jr. T4: a 1-frame frame between alternating 60 / 40 frames, on off on off on, 0.486 with the spread,
+  // over a solid 2-frame window 29 frames later at 0.473; pressed in between, hit. jr0706: "prefer wider windows over 2-frame
+  // ones when p is close"): a wider run whose frame is within PP_SOLID_TOL of the pick with the press spread takes it (a solid
+  // run holds when the press lands a frame off for a reason the spread does not model; islands do not)
+  if (solid) { let alt = null; for (let c = from; c <= from + W + later; c++) if (ok(c)) { const r = runOf(c); if (r.length > pick.run.length && sc(c) >= sc(pick.target) - PP_SOLID_TOL && (!alt || r.length > alt.run.length || (r.length === alt.run.length && sc(c) > sc(alt.target) + 1e-12))) alt = { target: c, ok: true, run: r, run4: null, later: c > from + W, solid: true }; }
+    if (alt) { const was = pick.target, ws = pick.run.length; pick = alt; pick.from = { target: was, run: ws }; } }
   // the next wider window after the pick (shown on the strip)
   let next = null; for (let c = pick.run.end + 1; c <= from + W + later; c++) if (ok(c)) { const r = runOf(c); if (r.length > pick.run.length && (!next || r.length > next.length)) next = { start: r.start, length: r.length, sc: +sc(Math.floor((r.start + r.end) / 2)).toFixed(3) }; c = r.end; }
   return Object.assign(pick, { next, sc0: +s0.toFixed(3), scPick: +sc(pick.target).toFixed(3) });
@@ -1389,7 +1396,7 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
   const sc = scOf(share), sc4 = share4 ? scOf(share4) : null, type = wtype(), honest = (p, k) => (adj ? (1 - adj.d) * p + adj.d * adj[k] : p);
   let target = null, w = null, none = null, pk = null;
   if (type === 'best') {
-    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later);     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
+    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
     target = pk.target; w = pk.run;
     if (honest(share[target - a] || 0, 'b3') < num('zwedge')) none = 'edge';
   } else {
@@ -1432,7 +1439,8 @@ function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the f
   if (seriesHold('zw')) return true;      // v106
   const now = performance.now(), S = win ? (zwSeen(now), zwStatesAt(Math.max(zwHorizon(now), win.h))) : zwStates(now), F = zwFight();
   if (!S.list.length) {
-    st.msg = zw.dead || !zw.parts.length ? 'No edge: the seed was lost. What the page saw since the Charge fits none of its states (a missed or extra shine, an input it did not see, or lag outside the model). ' + F.normal + '.'
+    st.msg = zw.dead && zw.fight === 'jr' && typeof JRT !== 'undefined' && JRT.lost ? 'No edge: the seed was lost: ' + JRT.lost + '. ' + F.normal + '.'     // v109: why, when the page knows
+      : zw.dead || !zw.parts.length ? 'No edge: the seed was lost. What the page saw since the Charge fits none of its states (a missed or extra shine, an input it did not see, or lag outside the model). ' + F.normal + '.'
       : 'No edge yet: ' + F.busy;
     render(); return true;
   }
@@ -1792,7 +1800,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v108';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v109';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -1803,13 +1811,13 @@ function downloadLog() {
 function logFileName(d) { const z = n => String(n).padStart(2, '0'); return 'pm-rng-log-' + d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + '_' + z(d.getHours()) + '-' + z(d.getMinutes()) + '-' + z(d.getSeconds()) + '.json'; }
 /* v106: Erase log: the session log (SLOG) and the kept Charge reads in it (CHG_CAPS) go; settings, the learned press
  * corrections and the browser's saved Charge reads (Settings: Clear saved Charge reads) stay. A confirm() first; where the
- * page's frame blocks dialogs (it returns at once), a second click within 4 s instead. */
+ * page's frame blocks dialogs (it returns at once), a second click within 4 s instead. v109: no confirm, at once. */
 function eraseLog() { const n = SLOG.length, c = typeof CHG_CAPS !== 'undefined' ? CHG_CAPS.length : 0; SLOG.length = 0; if (typeof CHG_CAPS !== 'undefined') CHG_CAPS.length = 0; if (typeof chgCapTitle === 'function') chgCapTitle(); slog('logErased', { events: n, captures: c }); return { events: n, captures: c }; }
-{ const b = document.getElementById('erase-log'); if (b) b.onclick = () => {
-  if (b.dataset.armed) { delete b.dataset.armed; b.textContent = 'Erase log'; eraseLog(); return; }
-  let ok = false, t0 = performance.now(), blocked = false; try { ok = window.confirm('Erase this session\'s log and its kept Charge reads? Settings and press corrections stay.'); } catch (e) { blocked = true; }
-  if (!ok && (blocked || performance.now() - t0 < 30)) { b.dataset.armed = '1'; b.textContent = 'Click again to erase'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'Erase log'; }, 4000); return; }
-  if (ok) eraseLog(); }; }
+// v109 (the runner: the confirm() cost time mid-run): Erase log erases at once, no dialog, no undo
+// v109 (s): a pressed Reset seed / Erase log shows it for 1.5 s (a class and the label; no dialog, no focus change)
+function btnDone(id, text) { const b = document.getElementById(id); if (!b) return; if (b._done) clearTimeout(b._done); else b._label = b.textContent; b.classList.add('done'); b.textContent = text; b._done = setTimeout(() => { b.classList.remove('done'); b.textContent = b._label; b._done = null; }, 1500); }
+{ const b = document.getElementById('erase-log'); if (b) b.onclick = () => { eraseLog(); btnDone('erase-log', 'Log erased ✓'); }; }
+{ const b = document.getElementById('reset'); if (b) b.addEventListener('click', () => btnDone('reset', 'Seed reset ✓')); }
 function render() {
   { const k = st.lock ? (st.lock.seed >>> 0) + ':' + st.lock.seg : null;
     if (k !== slogLock) { slog(st.lock ? 'lock' : 'unlock', st.lock ? { seed: st.lock.seed >>> 0, seg: st.lock.seg, segs: st.segs.length, tier: st.tier, have: st.have, need: st.need, carried: st.turnEv.length } : { segs: st.segs.length }); slogLock = k; } }
@@ -1866,6 +1874,8 @@ const NOW_AT = 0.25;
 const onTarget = () => !!V.wasOn;
 function stripData() {
   const P = st.plan;
+  if (st.pressShow && (P || performance.now() - st.pressShow.t > 120000)) st.pressShow = P && P.tMade < st.pressShow.t ? st.pressShow : null;     // v109: until the next plan (2 min at most)
+  if (st.pressShow && (!P || P.tMade < st.pressShow.t)) return st.pressShow;
   if (P) return { src: 'plan', tab4: P.tab4, tab: P.tab, first: P.first, tLast: P.tLast, rate: P.rate, w: P.w, target: P.target, stale: !!(P.mix && P.mix.zw && (zw.dead || P.stopped)) };
   if (zw.on && PROF().rolls.length) {
     const z = zwDisplay(performance.now(), false);
@@ -1931,6 +1941,7 @@ function lockBadgeShow() {
 /* what the strip shows, in words (the strip's state line and the overlay on stale or waiting frames) */
 function stripState(d) {
   const now = performance.now(), P = st.plan, sc = st.seedChange && now - st.seedChange.t < 4000 ? st.seedChange : null;
+  if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press (' + d.label + '): frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? 'a working frame ✓' : 'a failing frame ✗') + '. Shown until the next plan beeps.' };     // v109
   if (!PROF().rolls.length) return { cls: 'wait', text: 'Nothing to time on this step: just play it.' };
   if (P && P.stopped) return { cls: 'stale', text: (zw.dead ? 'Seed lost' : 'Beeps stopped') + ' – the coin ruled the planned frame out. Press normally.', overlay: zw.dead ? 'Seed lost – beeps stopped' : 'Beeps stopped' };
   if (P && d.stale) return { cls: 'stale', text: 'Seed lost – showing old prediction. Press normally.', overlay: 'Seed lost – old prediction' };
@@ -2008,7 +2019,13 @@ function drawStrip() {
   }
   ctx.textAlign = 'left'; ctx.globalAlpha = 1;
   if (d.w) { const x = X(d.w.start) + gap / 2, w = d.w.length * cw - gap; ctx.fillStyle = gold; ctx.fillRect(x, Y0 - 8, w, 5); ctx.fillRect(x, Y0 + CH + 3, w, 5); }
-  if (d.target != null && st.plan) {   // the aimed frame: a marker in the middle of its cell (press when it reaches the now-line)
+  if (d.src === 'press' && d.hit != null) {     // v109: the frame the press landed on, green (works) / red
+    const xh = X(d.hit + 0.5), cH = d.works ? css('--run3') : css('--run1');
+    ctx.fillStyle = bg; ctx.fillRect(xh - 4, Y0 - 16, 8, CH + 32); ctx.fillStyle = cH; ctx.fillRect(xh - 2.5, Y0 - 16, 5, CH + 32);
+    ctx.font = '700 12px ' + css('--mono'); ctx.textAlign = 'center'; ctx.fillText(d.works ? 'you ✓' : 'you ✗', Math.max(24, Math.min(W - 24, xh)), Y0 - 18); ctx.textAlign = 'left';
+    if (d.target != null) { const xm = X(d.target + 0.5); ctx.fillStyle = gold; ctx.fillRect(xm - 1, Y0 - 8, 2, CH + 16); }
+  }
+  if (d.target != null && st.plan && d.src !== 'press') {   // the aimed frame: a marker in the middle of its cell (press when it reaches the now-line)
     const xm = X(d.target + 0.5); ctx.globalAlpha = d.stale ? 0.4 : 1;
     ctx.fillStyle = bg; ctx.fillRect(xm - 3, Y0 - 2, 6, CH + 4);
     ctx.fillStyle = gold; ctx.fillRect(xm - 1.5, Y0 - 12, 3, CH + 24);
@@ -2152,11 +2169,11 @@ function onFrame(t) {
     // hysteresis: a score hovering around the cutoff must not flicker the screen on and off (that restarted the plan)
     const on = V.wasOn ? V.score >= num('tmatch') - 0.04 : V.score >= num('tmatch');
     // an item on Mario confirmed quickly shows the hand screen only for a moment: count it from one frame (cat M)
-    if (V.wasOn && !on && V.onFor > (isRoute() && RT()[routeStep] && (RT()[routeStep].cat === 'M' || RT()[routeStep].turn === 'hw_spiny') ? 20 : 200)) {   // the target screen just closed (after being up for a moment)
+    if (V.wasOn && !on && V.onFor > closeMinMs()) {   // the target screen just closed (after being up for a moment)
       // a hand-on-Bowser screen (Spiny Flip, Time Out) with the status bar still up: a confirm hides the bar 2-3 frames
       // later, B (back to the menu) leaves it up. Decided below; a back-out is not a press and does not move the route.
       screenClosed(t);
-    }
+    } else if (V.wasOn && !on && V.onFor > 0) V.shortClose = { t, step: routeStep, onFor: Math.round(V.onFor) };     // v109: too short to count, kept for jrStepGap
     closeTick(t, on);
     if (on && !V.onSeen && V.onFor > 300) { V.onSeen = true; hwStepByTarget(t); } else if (!on) V.onSeen = false;
     // an optional step that does not happen: if the next step's screen shows up instead, skip to it
@@ -2196,6 +2213,16 @@ function onFrame(t) {
     $('r-fps').textContent = V.fps.toFixed(0) + ' fps · ' + dims().join('×') + (V.src ? ' · background' : '');
     if (!document.hidden) drawPreview();
   }
+}
+/* how long a target screen must have been up for its closing to count. v109 (console jr0701 T5 at 10 HP: Bombette's Strategies
+ * box was up 8 frames, 133 ms - no roll, so the runner did not wait - and the 200 ms rule missed it: the carry never got the
+ * Do Nothing, the route stayed on T5 and the Power Bounce was planned from states without it, 98% 5+, a 3 cap): on a Jr. Troopa
+ * Strategies step 2 game frames are enough (a shorter one is kept as a candidate: jrStepGap) */
+function closeMinMs() {
+  const s = isRoute() && RT()[routeStep]; if (!s) return 200;
+  if (s.cat === 'M' || s.turn === 'hw_spiny') return 20;
+  if (s.cat === 'S' && (s.jr != null || s.fb14 || s.turn === 'fb2_k')) return 2 * FRAME - 1;     // (fb0722 T3: Do Nothing after a hit, no plan, a quick press)
+  return 200;
 }
 function screenClosed(t) {
   // v92 (e2e 5eed0fb2: the saved Mario screen matched Mario's and Lakilester's action wheels at 0.92, and the wheel
@@ -2254,7 +2281,9 @@ function applyProfile() {
       f.turns.map(tu => {
         if (!tu.steps.length) return '<li style="list-style:none; margin-left:-1.4em">' + tu.text + '</li>';
         const i0 = k; k += tu.steps.length; const cur = routeStep >= i0 && routeStep < k;
-        return '<li style="list-style:none; margin-left:-1.4em"><span data-i="' + i0 + '" class="chip' + (cur ? ' on' : '') + '" title="' + esc(tu.steps.map((s, j) => s.label + (s.optional ? ' (optional)' : '')).join('\n')) + '" style="cursor:pointer; margin:2px 4px 2px 0; display:inline-block' + (cur ? '; font-weight:700' : '') + '">' + tu.text + '</span></li>';
+        // v109 (the runner): a star left of each turn the page times (a beeped lever), outside the clickable chip; the text is unchanged
+        const timed = tu.steps.some(s => !!s.prof || s.fb14role === 'lever' || s.turn === 'fb2_k' || s.turn === 'fb2_pb'), star = '<span class="rngstar" aria-hidden="true" title="RNG-manipulated: the page beeps this turn" style="display:inline-block; width:1.1em; color:var(--gold)">' + (timed ? '★' : '') + '</span>';
+        return '<li style="list-style:none; margin-left:-2.5em">' + star + '<span data-i="' + i0 + '" class="chip' + (cur ? ' on' : '') + '" title="' + esc(tu.steps.map((s, j) => s.label + (s.optional ? ' (optional)' : '')).join('\n')) + '" style="cursor:pointer; margin:2px 4px 2px 0; display:inline-block' + (cur ? '; font-weight:700' : '') + '">' + tu.text + '</span></li>';
       }).join('')).join('');
   } else {
     $('target-label').textContent = P.id === 'timeout' ? "Time Out's Hand on Hallway" : "Bombette's do-nothing menu";
@@ -2270,7 +2299,12 @@ function setStep(i) {
   else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); if (routeStep !== was) fb2WaitArm(); }
 // v92: the runner's own route moves (a click, the buttons, the keys) are told from the page's (a screen, a burst): a Final
 // Bowser read takes the runner's turn only (fb14Lock)
-function userStep(i) { st.userStepT = performance.now(); slog('userStep', { from: routeStep, to: i }); setStep(i); }
+function userStep(i) { st.userStepT = performance.now(); slog('userStep', { from: routeStep, to: i });
+  // v109 (fb0718: back to T4 by hand after a false confirm, then "fb14PlanAfterConfirm" and no plan): a step back by hand onto a
+  // Final Bowser lever whose confirm was read lets that turn plan again
+  // v109 (fb0722: back to T6 by hand after a false T6 read; the real T6 Charge never locked): the T6 reader re-arms
+  { const z = RT()[i]; if (i < routeStep && z && z.turn === 'fb2_k' && typeof chgReset === 'function' && !(typeof FB2 !== 'undefined' && FB2.on && FB2.pObs == null)) { slog('fb2Rearmed', { why: 'step back by hand', was: typeof CHG !== 'undefined' ? CHG.state : null }); chgReset('step back by hand'); } }
+  { const z = RT()[i]; if (i < routeStep && z && z.fb14 && z.fb14role === 'lever' && typeof FB14 !== 'undefined' && FB14.pT && FB14.pT[z.fb14] != null) { slog('fb14ConfirmUndone', { turn: z.fb14 }); delete FB14.pT[z.fb14]; FB14.afterConf = null; } } setStep(i); }
 $('route-list').addEventListener('click', e => { const li = e.target.closest('[data-i]'); if (li) userStep(+li.dataset.i); });
 $('route-prev').onclick = () => userStep(routeStep - 1); $('route-next').onclick = () => userStep(routeStep + 1); $('route-reset').onclick = () => userStep(0);
 document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || !isRoute()) return; if (e.key === '[') userStep(routeStep - 1); else if (e.key === ']') userStep(routeStep + 1); });
@@ -2443,10 +2477,16 @@ const VANISH_ = () => PROF().vanish;   // frames from the confirm until the targ
 const presses = (function () { try { return JSON.parse(localStorage.getItem('tot-presses') || '[]'); } catch (e) { return []; } })();
 // Every time the target screen closes, say what happened. With a beep plan: early/late vs the aimed frame (feeds the
 // Fine offset suggestion). Locked but no plan: the frame you confirmed on and whether Time Out works there.
+/* v109 (console fb0718 T3 -> T4: the Strategies box's close read twice, 317 ms apart, the second taken as T4's Do Nothing: T4 was
+ * skipped, never planned, "no wave"): on the Final Bowser steps a screen close within FB_RECLOSE_MS of the close that moved the
+ * route here is the same box, not this step's confirm */
+const FB_RECLOSE_MS = 1500;
 function checkPress(tObs) {
+  { const z = isRoute() && RT()[routeStep], L = st.lastStepClose;
+    if (z && (z.fb14 || /^fb2/.test(z.turn || '')) && L && L.to === routeStep && tObs - L.t < FB_RECLOSE_MS && tObs >= L.t) { slog('closeTooSoon', { at: Math.round(tObs), step: routeStep, afterMs: Math.round(tObs - L.t) }); return; } }
   if (typeof fb14OwnClose === 'function' && isRoute() && fb14OwnClose(tObs, RT()[routeStep])) return;     // v92: the Charge's own screen, seen after its burst
   if (typeof fb14Confirm === 'function' && isRoute()) fb14Confirm(tObs, RT()[routeStep]);     // Final Bowser T1-T4: the lever's frame
-  if (typeof fb2Confirm === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { fb2Confirm(tObs); return; }     // v97: Final Bowser T6, Lakilester's Do Nothing
+  if (typeof fb2Confirm === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const was = routeStep; fb2Confirm(tObs); if (routeStep !== was) st.lastStepClose = { t: tObs, to: routeStep }; return; }     // v97: Final Bowser T6, Lakilester's Do Nothing
   if (typeof jrStepNow === 'function' && jrStepNow()) { slog('screenClosed', { at: Math.round(tObs), step: routeStep, jr: true }); jrScreenClosed(tObs); return; }   // v82: the press is measured at the confirm (jrPress)   // Jr. Troopa: the bar count moves the route
   { const z = isRoute() && RT()[routeStep];
     // the hide the Charge capture armed on is the Charge confirm itself (its pre was used up by an earlier hide, e.g. the
@@ -2468,7 +2508,7 @@ function checkPress(tObs) {
     // Charge burst sets T1, a long gap (hwRetry) does, or Final Bowser's arena shows at a bar hide (chgArenaProf).
     const nx = RT()[routeStep + 1];
     if (stp && nx && /^Hallway Bowser/.test(stp.t || '') && !/^Hallway Bowser/.test(nx.t || '')) { if (!st.hwDone) slog('hallwayDone', { step: routeStep }); st.hwDone = true; }
-    else setStep(routeStep + 1);
+    else { setStep(routeStep + 1); st.lastStepClose = { t: tObs, to: routeStep }; }
   }
 }
 function checkPress_(tObs) {
@@ -2507,8 +2547,18 @@ function measurePress(tObs) {
   if (stp && stp.turn && !unmodeledAfter(P.tLast) && !(P.mix && P.mix.zw && !onBeeps)) { if (near.length) addTurn(P.baseF + f, stp.turn, 'Carrying the seed through this turn.', null, near, 'press'); else { st.needResync = true; st.turnEv = []; } }
   showPresses();
 }
-function leverPressNote(label, err, id) {      // v102: a Final Bowser lever press on the beeps, for the Press check row
-  st.lastLever = { label, err, t: performance.now(), bias: typeof leverBias === 'function' ? leverBias(id) : 0 }; slog('leverPressNote', { label, err: +err.toFixed(2), lever: id });
+/* v109 (the runner: the other fights show where the press landed in the window, Final Bowser only a text line): a Final
+ * Bowser lever press (T1-T4, T6) keeps the plan's frames, its window and the measured confirm frame; the strip shows them (the
+ * frame hit green if it works for most states, red if not) after the route moves on, until the next plan beeps */
+function pressShow(P, c, label) {
+  if (!P || !P.tab || !P.tab.length || P.first == null || c == null) return null;
+  const f = Math.round(c), works = !!P.tab[f - P.first];
+  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: null, first: P.first, tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now() };
+  slog('pressShow', { label, target: P.target, c: +c.toFixed(2), works });
+  return works;
+}
+function leverPressNote(label, err, id, works) {      // v102: a Final Bowser lever press on the beeps, for the Press check row (v109: works = the frame hit works)
+  st.lastLever = { label, err, t: performance.now(), bias: typeof leverBias === 'function' ? leverBias(id) : 0, works: works == null ? null : !!works }; slog('leverPressNote', { label, err: +err.toFixed(2), lever: id });
   try { showPresses(); } catch (e) {}
   try { if (typeof fb14Show === 'function') fb14Show(); } catch (e) {}
 }
@@ -2526,7 +2576,9 @@ function showPresses() {
   // each lever has its own correction)
   const LL = st.lastLever;
   if (LL && (st.lastGenT == null || LL.t > st.lastGenT)) { const e = LL.err, a = Math.round(Math.abs(e) * 10) / 10;
-    $('press-msg').textContent = 'Press check: Last press (' + LL.label + '): ' + (Math.abs(e) < 0.5 ? 'on time' : a + ' frames ' + (e > 0 ? 'late' : 'early')) + ' against the beeped frame. This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(LL.bias).toFixed(1) + ' frames ' + (LL.bias >= 0 ? 'later' : 'earlier') + ' (learned from its own presses).'; return; }
+    const head = 'Last press (' + LL.label + '): ' + (Math.abs(e) < 0.5 ? 'on time' : a + ' frames ' + (e > 0 ? 'late' : 'early')) + (LL.works == null ? '' : LL.works ? ' (a working frame) ✓' : ' (a failing frame) ✗'), rest = ' against the beeped frame. This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(LL.bias).toFixed(1) + ' frames ' + (LL.bias >= 0 ? 'later' : 'earlier') + ' (learned from its own presses).';
+    if (LL.works == null) { $('press-msg').textContent = 'Press check: ' + head + rest; return; }     // v109: coloured as the other fights' presses
+    $('press-msg').innerHTML = '<span style="color:#fff; background:' + (LL.works ? 'var(--run3)' : 'var(--run1)') + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head.replace(/[<>&]/g, '') + '</span><br>' + rest.charAt(1).toUpperCase() + rest.slice(2); return; }
   if (!presses.length && !(P || st.lastPress)) { $('press-msg').textContent = 'Press check: after you confirm on the target screen (with the beeps running), this says how early or late you pressed, measured against the middle of the aimed frame.'; return; }
   const last = presses.length ? presses[presses.length - 1] : (P || st.lastPress || { err: 0 }).err, r = x => Math.round(x * 10) / 10;
   const avg = presses.length ? presses.reduce((a, b) => a + b, 0) / presses.length : 0;
@@ -2617,10 +2669,10 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), seriesActive: n => seriesActive(n), BEEP_QUIET_MS, zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id) => leverPressNote(l, e, id), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), seriesActive: n => seriesActive(n), BEEP_QUIET_MS, zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id, w) => leverPressNote(l, e, id, w), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
-  JRT, JR_SEQ, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },
+  JRT, JR_SEQ, v109: { chgProfNow: () => (typeof chgProfNow === 'function' ? (chgProfNow() || {}).id || null : null), CHG_PROF: typeof CHG_PROF !== 'undefined' ? CHG_PROF : null, closeMinMs: () => closeMinMs(), jrStepGap: (k, w) => jrStepGap(k, w), jrDeath: (k, f) => jrDeath(k, f), jrReviveCarry: k => jrReviveCarry(k), JR_REVIVE_D, pressShow: (P, c, l) => pressShow(P, c, l), FB_RECLOSE_MS, PP_SOLID_TOL, ppPick: (...a) => ppPick(...a) }, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },
   // v80 (test_console_1108.js): Mario's match on one raster; a capture handed to the live read (not a replay: kept as live)
   chgMarioNcc: Y => chgMarioShift([Y]).ncc, chgMarioRef: () => { const M = CHG_MARIO; return { w: M.w, h: M.h, x0: M.x0, y0: M.y0, b64: M.b64 }; },
   chgPlaceTest: (frames, trig, prof) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF[prof], trig: Object.assign({}, trig), frames }); const G = chgGameFrames(null), r = { n: frames.map(f => G.indexOf(f)), trigN: CHG.trig.n }; CHG.frames = []; return r; },   // v88: the placement alone (frames: t, m, fresh)
@@ -2641,7 +2693,7 @@ window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v106
   jrTrackerAt: (seed, qs, trigT, k, hp10) => { chgReset(); jrReset(); const trig = { t: trigT }; Object.assign(JRT, { on: true, k: k || 0, t0: trigT, trigSeen: trig }, hp10 ? { hp10 } : {}); jrConfirm(k || 0, trigT - 16 * FRAME, 3, 'test'); Object.assign(CHG, { prof: CHG_PROF.jr, trig, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'jr'; },
   dupPlanAt, dupClasses, dupStatesAt: h => zwStatesAt(h).list.map(q => ({ s: q.s >>> 0, nc: q.nc, g: q.g, w: q.w })), dupRoute, dupNoLockMsg, chgArena: () => chgArena(), chgProfNow: () => chgProfNow(), CHG_PROF,
   dupTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.dup, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'dup'; },
-  zwTap: t => zwTap(t), screenClosed, closeTick, hwStepByTarget, presses, calPreview, zwStates: n => zwStates(n), fastTable, pickRun, nBeeps, earliestFrame, pressTime, consoleRate, CR, stripData, CHG, chgReset, chgMap, chgGame, chgFrameBox, chgEvalAt, chgPlanAt, zwF: (t, l) => zwF(t, l), zw, WALK, walkWatch, EDGES, st, R, evaluate, find, newSegment, makePlan, tap, V, startCam, onFrame, addShine, coinBack, checkPress, preConfirm, baseState, setStep, userStep, RT, showPresses, SLOG, step: () => routeStep,
+  pressShow: (P, c, l) => pressShow(P, c, l), stripState: () => stripState(stripData()), zwTap: t => zwTap(t), zwShareX: (L, a, b, pid) => zwShare(L, a, b, pid ? R.PROFILES[pid] : PROF()), screenClosed, closeTick, hwStepByTarget, presses, calPreview, zwStates: n => zwStates(n), fastTable, pickRun, nBeeps, earliestFrame, pressTime, consoleRate, CR, stripData, CHG, chgReset, chgMap, chgGame, chgFrameBox, chgEvalAt, chgPlanAt, zwF: (t, l) => zwF(t, l), zw, WALK, walkWatch, EDGES, st, R, evaluate, find, newSegment, makePlan, tap, V, startCam, onFrame, addShine, coinBack, checkPress, preConfirm, baseState, setStep, userStep, RT, showPresses, SLOG, step: () => routeStep,
   // v76 (test_console_1107.js)
   // v77 (charge_live/test_capture_replay.js)
   chgReplay: (c, o) => chgReplay(c, o), chgCapFromV1: (c, f) => chgCapFromV1(c, f), CHG_CAPS, CHG_CAP_FMT, chgDbAll: () => chgDbAll(), chgDbStats: () => chgDbStats(), chgDbClear: () => chgDbClear(), chgLockBy: P => chgLockBy(P || chgP()), chgPicEncode: (Y, f) => chgPicEncode(Y, f), chgPicDecode: (b, f) => chgPicDecode(b, f),

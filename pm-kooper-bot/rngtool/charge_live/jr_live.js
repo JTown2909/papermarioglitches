@@ -198,13 +198,43 @@ function jrHide(tH, upMs) {
   if (JRT.k >= JRS().length) return;
   const s = JRS()[JRT.k];
   if (s.strat && JRT.stratAt != null && Math.abs(tH - JRT.stratAt) < 2000) { slog('jrHideAfterNothing', { at: Math.round(tH) }); return; }   // Do Nothing was read from its screen
-  slog('jrHide', { k: JRT.k, id: s.id, at: Math.round(tH), upMs: Math.round(upMs) });
-  jrConfirm(JRT.k, tH, s.hide, 'bar');
+  // v109: at 10 HP (after a revive) Do Nothing hides no bar and neither does Jr. Troopa's turn: a hide while Do Nothing is still
+  // expected is the next confirm (the Power Bounce); the Do Nothing was missed (jrStepGap)
+  if (s.strat && JRT.hp10[JRT.k] && JRT.k + 1 < JRS().length) jrStepGap(JRT.k + 1, 'bar hid with Do Nothing unread (10 HP)');
+  const s2 = JRS()[JRT.k];
+  slog('jrHide', { k: JRT.k, id: s2.id, at: Math.round(tH), upMs: Math.round(upMs) });
+  jrConfirm(JRT.k, tH, s2.hide, 'bar');
+}
+/* v109 (console jr0701 T5: Do Nothing at 10 HP, its Strategies box up 133 ms, not read; the runner stepped to the Power Bounce by
+ * hand, and the page planned it from states without the Do Nothing: 98% 5+, a 3 cap): confirms the page did not read before
+ * confirm kTo. A Do Nothing whose box closed too fast to count (V.shortClose, on that step since the previous confirm) goes in
+ * at that close; any other missed confirm has no frame: the carry is marked lost (no plan from states that lack an input; the
+ * coin search may find the seed again), never planned as if it had not happened. */
+function jrStepGap(kTo, why) {
+  if (!JRT.on || JRT.k >= kTo) return;
+  const lost = [];
+  while (JRT.k < kTo && JRT.k < JRS().length) {
+    const k = JRT.k, s = JRS()[k], prev = JRT.inputs.filter(x => x.k < k && x.t != null).pop(), sc = V.shortClose;
+    if (s.strat && sc && (!prev || sc.t > prev.t + 500) && sc.t < performance.now() && RT()[sc.step] && RT()[sc.step].cat === 'S') {
+      V.shortClose = null; JRT.stratAt = sc.t; slog('jrShortClose', { k, at: Math.round(sc.t), onFor: sc.onFor, why });
+      JRT.stepping = true; try { jrConfirm(k, sc.t, R.PROFILES.jrcc_nothing.vanish, 'short'); } finally { JRT.stepping = false; }
+      continue;
+    }
+    JRT.inputs.push({ k, id: s.id, t: null, h: s.hide, src: 'missed', c: null }); lost.push(k); JRT.k = k + 1;
+  }
+  if (!lost.length) return;
+  slog('jrStepGap', { missed: lost, why });
+  if (zw.on && zw.fight === 'jr' && !zw.dead) {
+    zw.parts = []; zw.dead = true; zw.deadAt = null; JRT.lostF = Math.floor(zwHorizon(performance.now()));
+    JRT.lost = lost.map(k => JRS()[k].t + ' ' + (jrWhat(JRS()[k]) || 'confirm')).join(', ') + ' was not seen (' + why + '), so its frame and its random numbers are unknown';
+    if (typeof chgShow === 'function') chgShow();
+  }
 }
 /* Bombette's Do Nothing on its Strategies screen (cat S): the screen closing is the confirm (3 frames, VAN.S) */
 function jrScreenClosed(tObs) {
   if (!jrStepNow() || !JRT.on || JRT.k >= JRS().length) return false;
   const s = JRS()[JRT.k]; if (!s.strat) return false;
+  if (RT()[routeStep].cat !== 'S') { slog('jrCloseNotStrat', { k: JRT.k, step: routeStep, at: Math.round(tObs) }); return false; }     // v109 (jr0701: the Power Bounce's target screen closing was taken as the missed Do Nothing)
   JRT.stratAt = tObs; slog('jrStrategiesClosed', { k: JRT.k, at: Math.round(tObs) });
   jrConfirm(JRT.k, tObs, R.PROFILES.jrcc_nothing.vanish, 'screen'); return true;
 }
@@ -297,8 +327,40 @@ function jrDeath(k, fr) {
   // the next turn's Close Call turn is at 10 HP (the revive): no roll there, its 10-HP draws instead
   const nx = JRS()[k].revive; if (nx != null) JRT.hp10[nx] = true;
   JRT.dead = JRS()[k].t + ': Mario was hit (10 HP after the Life Shroom, read ' + fr + ' frames after the confirm): the revive breaks the carry';
+  if (zw.on && zw.fight === 'jr' && jrReviveCarry(k)) { JRT.dead = null; if (typeof chgShow === 'function') chgShow(); if (st.plan && st.plan.mix && st.plan.mix.zw) { cancelBeeps(); st.plan = null; } render(); return; }
   if (zw.on && zw.fight === 'jr') { zw.on = false; slog('jrCarryEnds', { k, why: 'death' }); }
   if (typeof chgShow === 'function') chgShow(); render();
+}
+/* v109 (console jr0706: Mario died on the T5 Close Call; the Power Bounce step then had no plan and no beeps, the runner pressed
+ * blind, 4 bounces): carry the seed through the Life Shroom revive. lifeshroom/README.md (emulator, 27 deaths): death = the roll
+ * + 27 frames, the next menu 399 frames after it, and 933-939 RNG steps in between (935 most often; the knockout and sparkle
+ * bursts' counts vary). The states whose roll killed Mario are stepped to the death, then each of those 7 step counts x the 48
+ * coin phases at the menu (the coin draws in the revive are in the count; which phase it ends on is not known) starts a state
+ * on the menu. The coin on the menu weighs them as any carry; the background starts at JR_REVIVE_BG. Only where nothing else
+ * follows the death but menus (T5 -> T6's Power Bounce; T3 / T4 deaths need no carry: the next Charge locks again). */
+const JR_REVIVE_D = [[932, 0.02], [933, 0.1], [934, 0.14], [935, 0.38], [936, 0.14], [937, 0.1], [938, 0.05], [939, 0.05], [940, 0.02]];
+const JR_REVIVE_DEATH = 27, JR_REVIVE_MENU = 399, JR_REVIVE_BG = 0.15;
+function jrReviveCarry(k) {
+  const s = JRS()[k], inp = JRT.inputs.filter(x => x.k === k && x.c != null).pop();
+  if (!s || !s.cc || s.revive != null || !inp || JRS() !== JR_SEQ) return false;
+  const dead = zw.parts.filter(p => p.cc && p.cc[k] === false); if (!dead.length) { slog('jrReviveNone', { k }); return false; }
+  const out = [], seen = new Map(); let n0 = 0;
+  for (const p of dead) {
+    const fd = inp.c + (p.sh || 0) + s.cc + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
+    const q = zwClone(p); while (q.g < fd) { if (q.pause && q.g === q.pauseAt) { q.S.nc += q.pause; q.g += q.pause; continue; } R.frameEv(q.S, q.g, q.ev); q.g++; }
+    n0++;
+    const mAll = new Set(zw.taps.map((t, i) => i).filter(i => zw.taps[i] < fm));
+    let x = q.S.s >>> 0, n = 0;
+    for (const [D, wD] of JR_REVIVE_D) { while (n < D) { x = R.adv(x); n++; }
+      for (let ph = 0; ph < 48; ph++) { const key = x + ':' + (fm + ph), w = p.w * wD / 48, o = seen.get(key); if (o) { o.w += w; continue; }
+        const np = { S: { s: x, nc: fm + ph, inst: [] }, g: fm, ev: new Map(), evMax: fm, pauseAt: null, pause: 0, w, m: new Set(mAll), fx: new Set(p.fx || []), err: p.err || 0, cc: p.cc ? Object.assign({}, p.cc) : null, rev: D };
+        seen.set(key, np); out.push(np); } }
+  }
+  zw.parts = out; zw.dead = false; zw.deadAt = null; zw.bg = 0; zwBgAdd(JR_REVIVE_BG);
+  const lastM = Math.max(...out.map(p => p.g)); if (zw.visFrom != null && zw.visFrom < lastM) zw.visFrom = lastM;      // the coin watched from the menu on
+  JRT.revive = { k, fm: lastM, states: out.length }; JRT.lost = null;
+  slog('jrReviveCarry', { k, from: n0, states: out.length, menu: lastM, d: [JR_REVIVE_D[0][0], JR_REVIVE_D[JR_REVIVE_D.length - 1][0]] });
+  return true;
 }
 /* an input in the tracker: like zwInput, with the confirm frame -2..+1 (JR_SHIFTS) and, on a Close Call confirm, whether
  * each state's roll dodges (p.cc[k]), so the outcome seen later can drop the ones that would have died */
@@ -609,6 +671,8 @@ function jrEnd(why) { if (zw.on && zw.fight === 'jr') zw.on = false; JRT.on = fa
 function jrStepChange(was) {
   const W = RT()[was], N = RT()[routeStep];
   if (JRT.stepping) return;
+  // v109: a step forward by hand past confirms the page did not read (jrStepGap)
+  if (W && N && W.jr != null && N.jr != null && (N.seq || 'ultra') === (W.seq || 'ultra') && JRT.on && routeStep > was) { const k1 = (RT()[routeStep - 1] && RT()[routeStep - 1].jr != null ? RT()[routeStep - 1].jr : N.jr - 1) + 1; if (k1 > JRT.k) jrStepGap(k1, 'stepped on by hand'); }
   if (W && W.jr != null && !(N && N.jr != null && (N.seq || 'ultra') === (W.seq || 'ultra'))) { if (JRT.on || (zw.on && zw.fight === 'jr')) jrEnd('left the Jr. Troopa steps'); if (N && N.jr != null) jrReset('another fight'); return; }
   if (N && N.jr != null && JRT.on && N.jr < JRT.k - 1) {
     jrReset('route moved back by hand'); slog('jrRestart', { to: routeStep });
