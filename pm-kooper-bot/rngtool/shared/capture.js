@@ -58,7 +58,7 @@ function startBackground(track) {
       let r; try { r = await rd.read(); } catch (e) { break; }
       if (r.done) break;
       const fr = r.value;
-      try { if (V.force === 'bg' || performance.now() - V.lastVfc > 150) { V.src = fr; onFrame(performance.now()); V.bgFrames = (V.bgFrames || 0) + 1; } }
+      try { if (V.force === 'bg' || performance.now() - V.lastVfc > 150) { V.src = fr; frameSafe(performance.now()); V.bgFrames = (V.bgFrames || 0) + 1; } }
       finally { V.src = null; fr.close(); }
     }
   })();

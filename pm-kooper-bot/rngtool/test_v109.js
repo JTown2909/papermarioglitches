@@ -167,10 +167,12 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50' });
     const r = await q.evaluate(async () => { const T = window.__tot, ref = T.SLOG; document.getElementById('erase-log').click(); T.setStep(3); T.setStep(4);
       const after = T.SLOG.map(e => e.ev), same = ref === T.SLOG;
-      T.V.stream = { getVideoTracks: () => [{ readyState: 'live', muted: false }] }; T.V.camOn = true; T.V.lastFrameT = performance.now() - 4000; await new Promise(r => setTimeout(r, 1300));
-      const st = T.SLOG.find(e => e.ev === 'captureStalled'), b = document.getElementById('cap-banner'); const out = { after, same, st: st && st.why, msg: !b.hidden && document.getElementById('cap-banner-msg').textContent, btn: !!document.getElementById('cap-restart') };
+      T.V.stream = { getVideoTracks: () => [{ readyState: 'live', muted: false }] }; T.V.camOn = true; T.V.lastFrameT = performance.now() - 4000; await new Promise(r => setTimeout(r, 1300)); const kick = T.SLOG.some(e => e.ev === 'captureLoopRestart'); await new Promise(r => setTimeout(r, 4300));
+      setTimeout(() => { throw new Error('v109 test error'); }, 0); await new Promise(r => setTimeout(r, 50)); const pe = T.SLOG.find(e => e.ev === 'pageError');
+      const st = T.SLOG.find(e => e.ev === 'captureStalled'), b = document.getElementById('cap-banner'); const out = { after, same, st: st && st.why, msg: !b.hidden && document.getElementById('cap-banner-msg').textContent, btn: !!document.getElementById('cap-restart'), kick, pe: pe && pe.msg };
       T.V.stream = null; T.V.camOn = false; return out; });
     ok(r.same && r.after.join() === 'logErased,step,step', '6b. after Erase log the same log goes on (' + r.after.join() + ')');
+    ok(r.kick && /v109 test error/.test(r.pe || ''), '6b. the watchdog first restarts the picture loop (captureLoopRestart); an uncaught error goes into the log (pageError: ' + r.pe + ')');
     ok(/no new picture/.test(r.st || '') && /Not seeing the game/.test(r.msg || '') && r.btn, '6b. a capture with no pictures for 3 s: captureStalled (' + r.st + '), the red banner with Restart capture ("' + (r.msg || '').slice(0, 70) + '")');
     await q.close();
   }
@@ -182,6 +184,17 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
       T.jrScreenAt(5000, 3); return { i6, step: T.step(), next: (T.RT()[T.step()] || {}).jr, min, tol: T.v109.PP_WAIT_TOL }; });
     ok(r.next === 12 && r.min < 70, '6c. jrg0753: Normal Boots T6\'s Do Nothing (a 2-frame box counts: ' + r.min + ' ms) moves the route to the bounce (step ' + r.step + ', jr ' + r.next + ')');
     ok(r.tol === 0.05 && /prof\.lever === 'wait' && pk\.ok/.test(fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8')), '6c. jrg0753: a wait-mode Close Call aims at the earliest frame within 0.05 of the pick with the spread');
+    await q.close();
+  }
+  // ---- 6d. the exception that stopped the picture loop after a Normal Boots fight (logs 07-48-18 / 07-49-56)
+  {
+    const q = await open({ prof: 'endgame', boots: 'normal', nbcc: 'wait', duproute: 'charge', vlag: '50' });
+    const r = await q.evaluate(() => { const T = window.__tot, L = T.RT(), i1 = L.findIndex(s => s.seq === 'nbjr' && s.jr != null), errs = [];
+      T.setStep(i1); T.jrTrackerAt(0x13572468, [10], performance.now() - 120000, 0); let c = 100;
+      for (let k = 1; k <= 12; k++) { T.jrConfirmClock(k, c); c += 300; for (const pr of [true, false]) errs.push(...T.v109.frameParts(performance.now(), pr)); }
+      T.setStep(T.step() + 1); errs.push(...T.v109.frameParts(performance.now(), true)); T.userStep(1); errs.push(...T.v109.frameParts(performance.now(), true));
+      return errs; });
+    ok(!r.length, '6d. a whole Normal Boots fight to its bounce and the steps after: no exception in the picture path (v108: jrStatusLine read JR_SEQ[12]) ' + r.slice(0, 2).join(' | '));
     await q.close();
   }
   // ---- 7. the partnerless route (unit level: Mario's own Do Nothing is not modelled from the emulator; see README v109)
@@ -215,6 +228,6 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
   ok(/const reach = fbPressT\(P\.target\) >= earliestPress\(now \+ FB14_PLAN_MS\)/.test(fb14) && /narrowed && reach &&/.test(fb14), '6. fb0709 T2: a refine runs only while a new plan can still aim at the planned frame (770 at 0.994 was swapped for 792, 0.51)');
   ok(/p >= Math\.max\(num\('zwedge'\), fb14Blind\(P\.fb14\) \+ FB14_KEEP_EDGE\)/.test(fb14), '6. fb0709 T4: too late to move, a frame still 5 points over blind keeps its beeps (0.626 was stopped 0.19 s before the first beep)');
   ok((fb2.match(/tab: sh\.map\(v => v >= 0\.5\)|tab: e7\.map/g) || []).length === 2, '6. fb0709 T6: the T6 / T7 plans carry their frames (v108: tab [], no strip)');
-  ok(!errs.length, 'no page errors ' + errs.join(' | ').slice(0, 300));
+  const errs2 = errs.filter(e => !/v109 test error/.test(e)); ok(!errs2.length, 'no page errors ' + errs2.join(' | ').slice(0, 300));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

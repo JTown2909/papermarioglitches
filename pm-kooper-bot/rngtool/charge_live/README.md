@@ -154,7 +154,13 @@ the Normal Boots ones included: jr_live's press read and carry)
   always scheduled and an error is logged once per message (`frameError`, with the first stack lines), so the next log names it.
 - A watchdog (`capWatch`): with a capture started (not stopped by hand), no new picture for 3 s, or the track ended / not live:
   a red "Not seeing the game - ..." banner with Restart capture, and `captureStalled` (why, readyState, muted, the last picture's
-  age, document.hidden, frame errors). Which exception it was is not known (not reproduced from the logs).
+  age, document.hidden, frame errors). It first starts the picture loop again (`captureLoopRestart`), the banner 3 s after if that
+  did not help. Uncaught errors and rejected promises go into the log (`pageError`).
+- The exception, found (test_v109 6d): after a fight ended (`jrEnd`, JRT.on false) `JRS()` fell back to the route step's sequence
+  while `JRT.out` / `JRT.origin` still held the finished fight's confirm numbers; `jrStatusLine` (the Charge panel, drawn from the
+  picture path) read `JR_SEQ[k]` for a Normal Boots k past its end and threw on every picture: the loop died at the Normal Boots
+  fight's bounce (13 confirms against the Ultra sequence's 11), for every fight after until a reload. `JRS()` keeps the finished
+  fight's sequence until `jrReset`, the panel's reads are guarded, and the loop survives any such error anyway.
 
 ## 9. UI
 - (r) A star left of every turn the page times (a beeped lever), outside the clickable chip; the turn texts are unchanged.

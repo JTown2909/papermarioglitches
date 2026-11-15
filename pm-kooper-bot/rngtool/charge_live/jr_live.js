@@ -85,7 +85,10 @@ const JR_SEQ_PL = [
   { id: 'jr_pb', t: 'T7', hide: 3, prof: 'jrpb5', what: 'Power Bounce' } ];
 const JR_SEQS = { ultra: JR_SEQ, nbjr: JR_SEQ_NB, nbhw: HW_SEQ_NB, ultrapl: JR_SEQ_PL };
 const jrStepSeq = () => { const s = isRoute() && RT()[routeStep]; return (s && s.seq) || 'ultra'; };
-const JRS = () => JR_SEQS[(JRT && JRT.on && JRT.seq) || jrStepSeq()] || JR_SEQ;
+/* v109 (logs 07-48-18 / 07-49-56: the picture loop died after a Normal Boots fight): after jrEnd (JRT.on false) the sequence fell back
+ * to the route step's, while JRT.out / JRT.origin still held the finished fight's confirms; jrStatusLine (the Charge panel, every
+ * picture) then read JR_SEQ[k] of a Normal Boots k and threw. The finished fight's own sequence stays until jrReset */
+const JRS = () => JR_SEQS[(JRT && JRT.seq) || jrStepSeq()] || JR_SEQ;
 // v85: what the beeped press is on a Goombario Charge turn (by the Settings mode)
 const jrWhat = s => (!s ? null : s.cancel ? (jrSeqProf(s) === s.profW ? 'Goombario\'s Charge confirm' : 'A on Goombario\'s box') : s.what);
 const jrSeqProf = s => (s && s.profW && (typeof nbccMode !== 'function' || nbccMode() === 'wait') ? s.profW : s && s.prof);
@@ -729,16 +732,16 @@ function jrNoLockMsg() {
 // the Charge panel's line
 function jrStatusLine(s, lost) {
   const P = st.plan, pc = x => Math.round(100 * x) + '%', stp = jrStepNow() && RT()[routeStep];
-  const outs = Object.keys(JRT.out).map(k => JRS()[k].t + ' ' + (JRT.out[k] === 'dodge' ? 'dodged' : 'hit (Life Shroom)')).join(', ');
+  const outs = Object.keys(JRT.out).map(k => ((JRS()[k] || {}).t || 'k' + k) + ' ' + (JRT.out[k] === 'dodge' ? 'dodged' : 'hit (Life Shroom)')).join(', ');
   const head = '<br><b>' + (JRS() === HW_SEQ_NB ? 'Hallway Bowser (Normal Boots)' : JRS() === JR_SEQ_NB ? 'Jr. Troopa (Normal Boots)' : 'Jr. Troopa') + (JRT.on ? ' ' + (JRS()[Math.min(JRT.k, JRS().length - 1)] || {}).t : '') + ':</b> ';
   let body = '';
   if (JRT.dead) body = JRT.dead + '. ';
   if (JRT.lost && zw.dead) body += 'No edge: ' + JRT.lost + ' (until the next Charge locks, or the coin finds the seed again). ';
   if (JRT.shineRec && !zw.dead) body += 'seed found again from ' + JRT.shineRec.taps + ' shines. ';
-  if (JRT.cross) body += 'the ' + JRS()[JRT.cross.k].t + ' Charge ' + (JRT.cross.agree ? 'confirmed the carried seed. ' : 'did not fit the carry: tracking from its lock. ');
+  if (JRT.cross) body += 'the ' + ((JRS()[JRT.cross.k] || {}).t || '') + ' Charge ' + (JRT.cross.agree ? 'confirmed the carried seed. ' : 'did not fit the carry: tracking from its lock. ');
   if (P && P.mix && stp && PROF().group === 'jr') body += (/^jrpb5n?$/.test(PROF().id) ? 'Power Bounce on the beep: ' + likelyText(P.mix, '6+') + ' · ' + ppText(P.mix, PROF().id) + ' (blind 67.5% / ' + pc(JR_BLIND.p6) + '; with your press spread 5+ ' + pc(P.mix.p) + ', 6+ ' + pc(P.mix.p4 || 0) + ')' : jrWhat(JRS()[stp.jr]) + ' on the beep: Close Call. ' + likelyText(P.mix) + ' · ' + ppText(P.mix, PROF().id) + ' (blind ' + pc(JR_BLIND.cc) + '; with your press spread ' + pc(P.mix.p) + ')');
   else if ((s === 'nolock' || s === 'failed' || s === 'notseen' || lost) && !(zw.on && zw.fight === 'jr' && !zw.dead)) body += 'play it blind (Close Call ' + pc(JR_BLIND.cc) + '; Power Bounce 5+ 67.5%, 6+ ' + pc(JR_BLIND.p6) + ').';
-  else if (zw.on && zw.fight === 'jr') body += 'carried from the ' + JRS()[JRT.origin || 0].t + ' Charge; the beeps start on each Close Call / Power Bounce target screen.';
+  else if (zw.on && zw.fight === 'jr') body += 'carried from the ' + ((JRS()[JRT.origin || 0] || {}).t || 'last') + ' Charge; the beeps start on each Close Call / Power Bounce target screen.';
   return head + body + (outs ? ' <span class="note">(' + outs + ')</span>' : '');
 }
 /* for tests: the plan if the step's target screen showed on clock frame cScr (zwChoose over the tracker's states, the
