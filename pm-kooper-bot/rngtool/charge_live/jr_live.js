@@ -215,7 +215,7 @@ function jrOutcomeWatch(t, present) {
   const fr = (t - P.t) / jrRate(), B = JRT.bar;
   if (present && B.since && t - B.since > 5 * FRAME && fr > 150) {
     const v = jrTens(); P.n = v >= JR_TENS_MIN ? (P.n || 0) + 1 : 0; P.max = Math.max(P.max || 0, v);
-    if (P.n >= 6) { JRT.ccPend = null; slog('jrOutcome', { k: P.k, frames: Math.round(fr), dodge: false, by: 'HP 10', tens: +v.toFixed(2) }); jrDeath(P.k, Math.round(fr)); return; }
+    if (P.n >= 6) { JRT.ccPend = null; slog('jrOutcome', { k: P.k, frames: Math.round(fr), dodge: false, by: 'HP 10', tens: +v.toFixed(2) }); jrDeath(P.k, Math.round(fr)); jrPressOutcome(P.k, false); return; }
   }
   if (fr > JRS()[P.k].next + JR_DEATH + 60) jrSettle('time');
 }
@@ -244,9 +244,11 @@ function jrHpDropWatch(t, present) {
   slog('jrHpDrop', { k, at: Math.round(H.t0), confirmAt: Math.round(tc) });
   JRT.stratAt = tc; jrConfirm(k, tc, R.PROFILES.jrcc_nothing.vanish, 'hpdrop', JR_HPDROP_SHIFTS);
 }
+/* v112 (d1423: "on time" and then a hit): the press check gets the outcome of the press it showed */
+function jrPressOutcome(k, dodge) { const q = st.lastPress; if (!q || q.k !== k) return; q.outcome = dodge ? 'dodge' : 'hit'; if (st.plan && st.plan.measured && st.plan.measured.k === k) st.plan.measured.outcome = q.outcome; try { if (typeof showPresses === 'function') showPresses(); } catch (e) {} }
 function jrSettle(by) {
   const P = JRT.ccPend; if (!P) return; JRT.ccPend = null;
-  slog('jrOutcome', { k: P.k, dodge: true, by, tensMax: +(P.max || 0).toFixed(2) }); jrDodge(P.k);
+  slog('jrOutcome', { k: P.k, dodge: true, by, tensMax: +(P.max || 0).toFixed(2) }); jrDodge(P.k); jrPressOutcome(P.k, true);
 }
 /* a confirm read from the bar hiding (or, for Do Nothing, from the Strategies screen closing: jrScreenClosed) */
 function jrHide(tH, upMs) {
@@ -660,6 +662,16 @@ function jrResyncK(tC) {
 }
 /* the lock from a Jr. Troopa Charge (chgStartTracker hands it here): start the tracker from it, or, with a carry from an
  * earlier Charge, check the carry against it (the carried states stepped coin-only to this Charge's frame 0, -2..+2) */
+/* v112 (x1425 / x1436 partnerless: the T1 Charge's lock landed after T1's Do Nothing, whose rearm found the reader still searching
+ * and did nothing; the reader then stayed 'locked' and the T2 Charge was never read: T2 planned from the T1 carry alone): a lock that
+ * lands after a rearm confirm has passed arms the reader for the next Charge at once */
+function jrLateRearm() {
+  if (!JRT.on || !(CHG.prof && CHG.prof.id === 'jr') || CHG.state !== 'locked') return;
+  const k0 = JRT.lockK != null ? JRT.lockK : 0, S = JRS();
+  for (let j = k0; j < Math.min(JRT.k, S.length); j++) if (S[j].rearm) {
+    if (S.slice(j + 1, JRT.k).some(x => x.charge)) return;     // that Charge has gone by already (unread)
+    slog('jrLateRearm', { k: j, lockK: k0, at: JRT.k }); chgReset(); return; }
+}
 function jrLock(seed, qs, qw) {
   if (JRT.trigSeen !== CHG.trig && CHG.trig) { JRT.trigSeen = CHG.trig; jrBurst(CHG.trig); }
   if (!JRT.on) { slog('jrLockIgnored', { why: 'the fight was restarted after this Charge' }); return; }      // v86.1
@@ -691,7 +703,7 @@ function jrStartFrom(k, seed, qs, qw) {
   CHG.jrInner = true; try { chgStartTracker(seed, qs, qw); } finally { CHG.jrInner = false; }
   Object.assign(zw, { fight: 'jr', imps: null, shifts: null, tapLate: 4 });
   // a plan beeping from the old tracker: its frame in the new clock (zwTick checks it against the new states)
-  const P = st.plan; if (old && P && P.mix && P.mix.zw && P.zwAbs != null) { P.zwAbs = Math.round(P.zwAbs + (old.t0 - zw.t0) / zw.rate); P.zwKey = null; P.relock = true; }     // v106: zwTick may replan it (relock)
+  const P = st.plan; if (old && P && P.mix && P.mix.zw && P.zwAbs != null) { P.zwAbs = Math.round(P.zwAbs + (old.t0 - zw.t0) / zw.rate); P.zwKey = null; P.relock = true; P.seedNote = false; P.relockDone = false; }     // v106: zwTick may replan it (relock). v112 (x1434 / x1420 / x1425 T2: a "Seed changed" too late to move the beeps set seedNote, and zwTick then never looked at the plan again: the T2 Charge's relock kept beeping a frame the new states gave 14%): a relock scores the plan again
   // v85: this Charge's own confirm is frame -13 of the new clock (the rays' frame 0 = confirm + 13): jrPlanFloor counts from it
   // v87 (console log 2f22d4dc, T3): on Ultra Boots too. v85-v86.1 left Ultra Boots' Charge confirm in the old clock: after the T3
   // lock (cross-check agreed, a new clock) jrPlanFloor counted the Bomb's earliest frame from 872 old-clock frames, i.e. ~1050
@@ -746,8 +758,11 @@ function jrPress(inp) {
   const g = P.target + d + (c >= f ? 1 : -1), inG = g >= P.w.start && g <= P.w.end, edge = inG !== inWin && Math.abs(c - f) > 0.5 - PRESS_EDGE;
   // v110: the lever's own record (its learned correction), not the global Beep offset's
   { const lk = typeof leverKey === 'function' ? leverKey(PROF().id) : null; if (onBeeps && lk) leverAdd(lk, err - (P.bias || 0)); else if (onBeeps) { presses.push(err); while (presses.length > 8) presses.shift(); try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {} } }
-  V.pressNote = null; P.measured = { frame: f, c, err, inWin, works: inWin, likely: false, tObs: inp.t, onBeeps, edge };
-  slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works: inWin, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined });
+  // v112 (x1434 / x1439 / x1441 / x1425: the verdict came from a plan made before a Charge relock): 'works' is the newest states'
+  // share on the frame read (half or more), not the old plan's window; pNow the chance there (the frame read, its neighbours)
+  let works = inWin, pNow = null; try { const L = zwStates(performance.now()).list; if (L.length) { const sh = zwShare(L, f - 1, f + 1, PROF()); works = sh[1] >= 0.5; pNow = +(0.25 * sh[0] + 0.5 * sh[1] + 0.25 * sh[2]).toFixed(3); } } catch (e) {}
+  V.pressNote = null; P.measured = { frame: f, c, err, inWin, works, likely: false, tObs: inp.t, onBeeps, edge, p: P.mix.p, pNow, k: inp.k };
+  slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined, pNow: pNow != null ? pNow : undefined });
   st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
   if (typeof showPresses === 'function') showPresses();
 }

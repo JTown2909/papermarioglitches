@@ -864,6 +864,7 @@ function chgDecide() {
   CHG.qs = qs; CHG.state = 'locked'; slog('chargeLock', Object.assign({ qs }, CHG.info)); chgRecEnd('lock');
   chgStartTracker(a.seed >>> 0, qs, qb.w);
   chgShow();
+  if (typeof jrLateRearm === 'function') jrLateRearm();     // v112
 }
 /* v77: every Charge read is kept: charge_reads.js (chgRec*, the session's reads, the browser store, the replay) */
 /* the first-coin frame q, weighed by the turn-1 menu's coin before the Charge: frames before frame 0 draw only the coin
@@ -940,6 +941,9 @@ function chgStartTracker(seed, qs, qw) {
 }
 function chgHyps() { return zw.on && zw.src === 'charge' ? zw.parts.length : CHG.prof && CHG.prof.id === 'fb1' && typeof FB14 !== 'undefined' && FB14.on ? FB14.states.length : typeof FB2 !== 'undefined' && FB2.on ? FB2.hyps.length : null; }
 const CHG_DROP_WARN = 0.3, CHG_DROP_TEXT = '% of the pictures during this Charge read (the rays need every one): try OBS\'s hardware encoder and keep this page\'s window visible (not minimised or covered).';
+// v112 (x1425 / x1428: drops 0.43-0.62 on every Charge, lock scores ~6200 against ~7300, the warning at the end of the detail unseen):
+// the short line goes first in the detail on every step (chgDropShort), the long one stays on the Charge panel
+function chgDropShort() { const D = typeof CHG !== 'undefined' && CHG.dropWarn; return D && performance.now() - D.t < 90000 ? 'Capture dropping ' + Math.round(100 * D.share) + '% of frames: check OBS.' : ''; }
 function chgDropNote() { const D = typeof CHG !== 'undefined' && CHG.dropWarn; return D && performance.now() - D.t < 90000 ? 'Warning: the capture dropped ' + Math.round(100 * D.share) + CHG_DROP_TEXT : ''; }
 function chgShow() {
   const el = $('chg-status'); if (!el) return;
