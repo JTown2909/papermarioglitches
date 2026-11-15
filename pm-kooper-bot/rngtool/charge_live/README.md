@@ -97,6 +97,10 @@ fb1149 on v110) and their clips (numbers only; no clip, frame or picture committ
 clock (confirms on the console's frames within 1, the revives from the held states), x1133's HP drop and T6 plan with its marker,
 the partnerless rearm, six6, the markers and their words, the (oo) press text, the labels, the edge wording. Page hook
 `window.__tot.v111.ev` (tests). VERSION v111; version checks and default build paths moved.
+Changed: test_console_1108 (a hit state is held at its death frame while the outcome is pending: the shifts stay apart that way).
+
+Full `run_suite.sh` on the final v111 build (scratchpad/timeout_timer_v111 and timeout_timer; the maze TORCH=1 run skipped): fail only
+the known torch_core, hw_v77, route_replay, session_plans, capture_replay.
 
 # Time Out Timer v110: works straight after opening (the runner's defaults, per-fight corrections, a learned correction per lever); the Final Bowser input path 3-6x lighter; T5 a tracked step; the route list's star column, the Duplighosts' wording, the Normal Boots Goombario Final Bowser route and Ultra Boots Phase 1 (both untested) (Nov 15)
 
