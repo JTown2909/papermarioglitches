@@ -1089,9 +1089,6 @@ function mixPlan(C) {
   const type = wtype(); let target, w;
   if (type === 'best') {
     const pk = ppPick(share, null, a, b, from, W, sc, 'safe3');     // v83: the perfect press (zwChoose)
-    // v109 (console jrg0753, Normal Boots wait mode: the runner sat on Goombario's Charge screen 3-5 s each turn): where the beeped
-    // press is a wait (the Charge confirm held until the beep), the earliest frame within PP_WAIT_TOL of the pick with the press spread
-    if (prof.lever === 'wait' && pk.ok && !share4) { const okE = c => (share[c - a] || 0) >= 0.5; for (let c = from; c < pk.target; c++) if (okE(c) && sc(c) >= sc(pk.target) - PP_WAIT_TOL) { let s0 = c, e0 = c; while (s0 - 1 >= a && okE(s0 - 1)) s0--; while (e0 + 1 <= b && okE(e0 + 1)) e0++; pk = Object.assign({}, pk, { target: c, run: { start: s0, end: e0, length: e0 - s0 + 1 }, earlier: pk.target - c }); break; } }
     target = pk.target; w = pk.run;
     if (share[target - a] < num('zwedge')) {
       st.msg = 'No edge: ' + g.length + ' Spiny Flip outcomes are still possible and no frame in the next ' + num('zwwin') + ' s works for enough of them with a perfect press (best ' + Math.round(share[target - a] * 100) + '%; a blind press is 31%). Press Time Out normally, or show a shine or two in this menu and it plans again.';
@@ -1415,6 +1412,9 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
   let target = null, w = null, none = null, pk = null;
   if (type === 'best') {
     pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
+    // v109 (console jrg0753, Normal Boots wait mode: the runner sat on Goombario's Charge screen 3-5 s each turn): where the beeped
+    // press is a wait (the Charge confirm held until the beep), the earliest frame within PP_WAIT_TOL of the pick with the press spread
+    if (prof.lever === 'wait' && pk.ok && !share4) { const okE = c => (share[c - a] || 0) >= 0.5; for (let c = from; c < pk.target; c++) if (okE(c) && sc(c) >= sc(pk.target) - PP_WAIT_TOL) { let s0 = c, e0 = c; while (s0 - 1 >= a && okE(s0 - 1)) s0--; while (e0 + 1 <= b && okE(e0 + 1)) e0++; pk = Object.assign({}, pk, { target: c, run: { start: s0, end: e0, length: e0 - s0 + 1 }, earlier: pk.target - c }); break; } }
     target = pk.target; w = pk.run;
     if (honest(share[target - a] || 0, 'b3') < num('zwedge')) none = 'edge';
   } else {

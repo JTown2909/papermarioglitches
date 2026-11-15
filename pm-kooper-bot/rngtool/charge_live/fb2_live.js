@@ -345,7 +345,7 @@ function fb2PlanT7(cScr) {
     // the next frame where 7 bounces work for most states, looked for up to FB2_T7_AHEAD frames on
     if (!FB2.t7.next || FB2.t7.next.from > from || (FB2.t7.next.at != null && FB2.t7.next.at < from + W) || (FB2.t7.next.at == null && from - FB2.t7.next.from > 60)) { let at = null; if (S.length <= 64) for (let x = from + W + 1; x <= from + W + FB2_T7_AHEAD && at == null; x++) { let v = 0; for (const o of S) if (fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph) >= 7) v += o.w / tot; if ((1 - dz) * v >= num('zwedge')) at = x; } FB2.t7.next = { from, at }; }
     const nx = FB2.t7.next && FB2.t7.next.at != null ? ' Waiting for the next 7-bounce window, in about ' + Math.max(0, (FB2.t7.next.at - W - from) * fb2Rate() / 1000).toFixed(0) + ' s: stay on the target screen for its beeps.' : '';
-    st.msg = 'No edge yet: no target-A frame in the next ' + num('zwwin') + ' s gives 7 bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, 6+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + ').' + (nx || ' Press Power Bounce normally.');
+    st.msg = 'No edge, press normally' + (nx ? ' or wait' : '') + ': no target-A frame in the next ' + num('zwwin') + ' s gives 7 bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, 6+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + ').' + (nx || ' Press Power Bounce normally.');
     fb2Show(); render(); return true;
   }
   FB2.t7.plan = plan;

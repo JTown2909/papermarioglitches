@@ -162,6 +162,14 @@ the Normal Boots ones included: jr_live's press read and carry)
   fight's bounce (13 confirms against the Ultra sequence's 11), for every fight after until a reload. `JRS()` keeps the finished
   fight's sequence until `jrReset`, the panel's reads are guarded, and the loop survives any such error anyway.
 
+## 8e. Normal Boots Hallway (hwg0759)
+- The T1 Close Call (+0.63, read "works false", dodged) and T2 Time Out (0.83, +0.33) worked. `jrEnd` after Time Out said "the fight
+  is over (Power Bounce confirmed)": the Hallway sequence ends at Time Out (T3-T5 are not tracked). The message now says so.
+- (aa) not in v109 (planned for v110): T3 / T4 steps carried (Maple Syrup, Goombario's Charge confirms, Bowser's turns), T4's
+  Super Charge rays relocking, T5's Power Bounce 6+ from the carry. Goombario's Charge pins nothing by itself: its sparkles are
+  modelled draws (`nb_gch`: energy_in_out on +14 / +17, the same random effect as Mario's Charge but not read from the picture),
+  so its confirm frame feeds the carry as an input; only Mario's Super Charge rays are read to find the seed.
+
 ## 9. UI
 - (r) A star left of every turn the page times (a beeped lever), outside the clickable chip; the turn texts are unchanged.
 - (i) Erase log erases at once (no confirm, no undo); (s) Reset seed / Erase log say "Seed reset ✓" / "Log erased ✓" for 1.5 s.
@@ -185,9 +193,18 @@ the Normal Boots ones included: jr_live's press read and carry)
 ## Tests
 `test_v109.js` (in run_suite.sh): the solid rule, the short-close thresholds, jr0701 T5 replayed (gap / short close / the bounce
 screen), jr0706's revive carry and plan, the Final Bowser step rules (re-close, T3's Charge reader, base 70, early T6 close, T6
-re-arm, step back), pressShow / strip state / Press check colour, the stars, Erase log and the buttons, and the refine / stop / T6-T7
-tab rules in the source. test_v106's Erase log check: one click, no confirm. VERSION v109; version checks and the page tests'
-default build moved to v109. Route texts unchanged.
+re-arm, step back), pressShow / strip state / Press check colour, the stars, Erase log and the buttons, the log going on after Erase
+log, the capture watchdog (loop restart, banner, pageError), a whole Normal Boots fight with no exception in the picture path, the
+Normal Boots T6 -> T7 step, the partnerless route, and the refine / stop / T6-T7 tab / wait-mode rules in the source. Changed:
+test_v106 (Erase log: one click, no confirm), test_fb14_v92 (a close 1 s after the step's own: lastStepClose cleared),
+test_console_1107 (the star before a turn's chip), test_route_texts (the partnerless route). VERSION v109; version checks and the
+page tests' default build moved to v109.
+
+Full `run_suite.sh` on the v109 build (scratchpad/timeout_timer_v109 and timeout_timer): fail only the known torch_core, hw_v77,
+route_replay, session_plans, capture_replay (and the maze TORCH=1 hang, stopped). It also failed test_zw_mix (the wait-mode rule
+had been put into mixPlan, a ReferenceError on every Time Out plan: moved into zwChoose; it was in commits 93bd58e-bdcb141 on
+origin for a while), test_console_1107 (the star), test_console_v95 (the T7 text kept "No edge, press normally"), and under load
+test_strip_geometry / test_beeps_window; after the fixes these and test_v109, test_v106, test_route_texts pass alone.
 
 # Time Out Timer v108: a beep series keeps its target to the confirm; the T6 outcome read before T7; the post-hit fresh lock's menu coin; the emulator harness back (Nov 14)
 

@@ -284,7 +284,7 @@ function jrConfirm(k, t, h, src) {
   // the Charge watcher arms again for the next Charge (its lock is in the tracker already)
   if (JRS()[k].rearm && ['locked', 'nolock', 'failed', 'notseen'].includes(CHG.state)) chgReset();
   jrGo(k + 1);
-  if (k === JRS().length - 1) jrEnd('the fight is over (Power Bounce confirmed)');
+  if (k === JRS().length - 1) jrEnd(JRS() === HW_SEQ_NB ? 'the tracked part is over (Time Out confirmed; T3-T5 untracked, v110)' : 'the fight is over (' + (JRS()[k].what || 'last confirm') + ' confirmed)');     // v109 (hwg0759: the Hallway's Time Out was logged as the Power Bounce)
 }
 const jrRate = () => (zw.on && zw.fight === 'jr' ? zw.rate : chgRate());
 /* a dodge seen: the states whose roll hits are ruled out (likelihood 0), and the background ("none of the tracked states is
