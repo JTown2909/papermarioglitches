@@ -1,3 +1,198 @@
+# Time Out Timer v110: works straight after opening (the runner's defaults, per-fight corrections, a learned correction per lever); the Final Bowser input path 3-6x lighter; T5 a tracked step; the route list's star column, the Duplighosts' wording, the Normal Boots Goombario Final Bowser route and Ultra Boots Phase 1 (both untested) (Nov 15)
+
+From the runner's console logs of Nov 15 (logs1115) and the emulator harness (numbers only; no clip, frame or picture committed).
+
+## 00. (gg) v109 "it is skipping steps" (log v109a, Ultra Boots Final Bowser)
+- 1025744: Jammin' Jelly's flash (base 90, 0.77 s after the Jelly's bar hide) triggered the reader on T3's step; v109's "T3 reads
+  T4's Charge" moved the route to T4 on the raw trigger; 229 ms later the reader judged it no Charge (`chargeFalseTrigger`
+  shapeBad 4) but the step stayed, and T3's Do Nothing close (1030744) was taken as T4's (T4 skipped too). Now: on T3 the step's
+  first bar hide (3 s or more into the step: the Jelly's) blocks any burst within 3 s of it (`fb14BurstJelly`); and a burst that
+  moved the route from a lever step and is then judged no Charge moves it back (`fb14BurstRolledBack`, the last burst restored).
+  A real T4 Charge after a missed T3 Do Nothing (v109 (o)) still moves the route (its hide is the step's second).
+- 981777: the log erased with the route on T1's Cloud Nine step from the attempt before; the new attempt's T1 Charge moved it to
+  T2. Now a burst on T1's lever step more than 60 s after T1's Charge (`FB14_NEWATTEMPT1`; T1's Charge -> T2's is about 30 s) is
+  the next attempt's T1 Charge: the tracker resets and the route goes to T1 (`fb14NewAttempt`, "a burst on T1's lever long after
+  T1's Charge"). The 120 s rule (any step) stays.
+- T2 (carried lock, plan 800, p 0.64, a 3-frame window, pressed 801 "works ✓", Bowser hit): a wrong-state case like section 1's;
+  the carried states drew the rays but the coin had little to say (no fix; noted for the lock work).
+- test_v110 section 4 (the log's T3 timing, the rollback, the stale T1 step, a T2 Charge 30 s after T1's still moving the route).
+
+## 00b. (hh) log v109b ("turn 2 locked perfectly, but failed ... then the bounce never activated")
+- T7 (the main bug): T6 dodged (`fb2Dodged`, 2877 states), then about 55 T7 replans at doubt 1 to the T7 confirm. The bar stays
+  up through Bowser's T6 turn (24 s) and the 3 shines seen in it fit no state (the turn after the Close Call test is not in the
+  model's coin, or its flashes read as shines): `fb2Prune` dropped every state on them. The coin now counts from the T6 outcome
+  read (else 15 s after the confirm). Replayed (the log's T6 Charge read, confirm, shines, bar): 1951 states doubt 0.40 at 1265.0 s
+  (a T7 plan: 7+ 0.45 with a perfect press, 0.23 with the spread), 93 states doubt 0.02 at 1268.0 s ("No edge": no 7 window in
+  reach then); v109: 0 states, doubt 1 throughout (test_v110 5).
+- T2: "No edge" (0.48 / 0.40), then a replan beeped 808 (1 frame, pp 0.506 just over blind 0.495, 0.41 with the press spread);
+  pressed on 808, Bowser hit. The realistic chance must now clear blind too (`fb14UnderBlind` realistic).
+- T3: the Jelly false burst of (gg) again (12 -> 13 on the raw trigger, two false triggers): the (gg) fix covers it.
+- T4: "fresh, fits 6134, states 0": T3's close had been taken as T4's Do Nothing before any lock (the false burst above) and was
+  replayed onto the new lock at F -507, before its Charge: every state dropped. A pending confirm from before the lock's Charge
+  is now dropped (`fb14PendDropped`), and a lock that would end with no state keeps its fits (`fb14LockKeptFits`). (That Charge
+  came after the Peach Beam: it was T6's, read on T4's step after the runner clicked back.)
+
+## 00c. (jj) log jr1012 (Ultra Jr., jrfix 0)
+- The revive carry did not engage: T5's Do Nothing read -2.00 (src screen), every carried state's roll at the read frames (-2..+1)
+  dodged, Mario died (the "1" of 10 445 frames later): `jrReviveNone`, the carry ended, the bounce planned before the outcome
+  stood unreplanned. Now when no state dies at the read frames but the death is seen, every state goes through the revive
+  (`jrReviveAll`; the menu's coin weighs them) and the bounce plan is dropped for a replan, as with dead states. Not replayed on
+  this log (no time left in v110): needs a replay of jr1012's T5 lock, inputs and shines.
+- Timing: reads -1.83 (T3 Bomb, dodged though read as a miss), -1.31 (T4 Syrup, worked), -2.00 (T5 Do Nothing, died). Per lever with
+  the earlier logs (true = read + s): Bomb jr0706 1-frame dodge s 0.29..1.29, jr0701 -0.25 dodged (3 frames), jr1012 dodged where
+  the read said miss (s about +0.3 or more); Syrup jr0706 1-frame dodge s -0.23..0.77, jr0701 -0.71 died on the 60/40 window,
+  jr1012 -1.31 worked; Do Nothing jr0706 +0.51 died and jr1012 -2.00 died (s between 0 and 1.5). One s for all Jr. levers still fits
+  everything at 0.29..0.77; jr1012 alone leans later (about +1 for the Bomb) but its windows are not in the log. -0.5 kept; per-lever
+  values need the clips' input display against the reads (not done in v110).
+
+## 0. No settings to adjust (0a / 0b / 0c)
+- (0b) Defaults = the runner's settings in all 11 logs of the day (they were identical): **off -4.5, voff -4, zoom 1.5 s,
+  Duplighosts route Charge, Duplighosts goal "4 if 2+ frame window"** (the HTML had 0 / 0 / 3 s / RTA / Auto); every other
+  setting already matched. Stored settings still win (the runner's page keeps his own), so nothing is migrated.
+- (0a) Built-in press-read corrections per fight (`BUILTIN_FIX`; true frame = read - value, as the Settings corrections, which
+  now default to 0 and add on top: the runner's stored jrfix 0 now means "the built-in value"):
+  - **Jr. Troopa -0.5** (Ultra, partnerless and Normal Boots Jr.: jr_live's press read and carry, `jrFix()`). Re-fit on every beeped
+    Jr. press of the day (read with correction 0, true = read + s): the 1-frame Close Calls bound s: jr0706 T3 -0.79 dodged (s in
+    0.29..1.29), T4 -0.27 dodged (-0.23..0.77), T5 +0.51 died (s > -0.01 or < -1.01), jrg0753 T2 -0.40 dodged (-0.10..0.90); together
+    s 0.29..0.77, centre +0.53. The rest agree at s = 0.5: jr0701 T4 -0.71 died on the 60/40 alternating window (lands on the 40%
+    frame), jrg0753 T4 -1.35 / T5 -1.44 dodged where the neighbour frames work for most states, jr0701 T3 -0.25 dodged (3 frames).
+    jrg0744's two Close Calls were wait-mode Charge confirms 112-115 frames before the beep (not presses on the beeps).
+  - **Hallway 0**: hwg0759 T1 +0.63 dodged on a frame the read called a miss (s <= -0.13 if 1-frame) and Time Out +0.33 worked:
+    two presses, against -0.5 if anything; the Normal Boots Hallway (seq nbhw) uses 0, not the Jr. value.
+  - **Final Bowser 0** (v109: 13 presses, mean +0.28, sd 0.96: no bias beyond the spread), **Duplighosts 0** (no presses that day),
+    **Time Out 0** (one press, +0.33, worked).
+  - The beep side stays one offset (off): the corrections are on the read side because the reads, not the presses, were off
+    (true Jr. presses sit at about 0 against the beeps once corrected).
+- (0c) Learned corrections per lever: every lever now has its own record (`leverKey`: jr = every Jr. Close Call and Power Bounce,
+  hw = Hallway Close Call / Time Out / Spiny Flip, dup = the Duplighosts' Do Nothing, fb14 / fb14sk as before, fb2 T6 on fb14's),
+  the last 8 presses on the beeps, -mean x n / (n + 4), at most 1.5 frames, 0 until 4 presses: a fresh page starts at the built-in
+  values. The zero-wait plans (Jr., Hallway Normal Boots, Duplighosts), the Ultra Hallway Time Out and the generic planner shift
+  their beeps by it; jr_live records its presses in it (with the built-in correction, so the learned part starts near 0). Those
+  presses no longer go into the global Calibrate list (the Beep offset's), as Final Bowser's did since v87.
+
+## 1. Final Bowser lock quality
+- Live claims against Bowser's outcome on the pressed frame (logs1115, T1-T4, 19 presses): claimed 0.5-0.6: 1 of 5 missed
+  (fb0709 T2 pressed +1.86 off a 2-frame window, fb0722 T2 coin-warned, fb0727 T3 6 states, fb0731 T3 1-frame); 0.6-0.7: 5 of 6
+  (one unknown); 0.7+: 7 of 7. The v109 rules (fb14UnderBlind, the 1-frame anchor rule) already turn the first group's shapes
+  into "No edge" / 2-frame picks; v110 changes no claim.
+- The T1 coin split's 1200 cap (`fb14SplitCoinOut kept 1200 of 3104-40396` in every T1 lock of the day): measured, not raised.
+  - Offline console replays of all six FB logs (`chgReplay` of the kept Charge reads, the logged inputs, shines and bar
+    stretches; the share of the states for which the pressed frame works, against the outcome): combos 1200 / 4800, cap
+    12000 / 30000, splits 48 / 200: log-likelihood -27.1 / -27.7 / -25.1 / -25.1 over 19 presses; at T1 (the cleanest replay) the
+    pressed frame's share moved by at most 0.05 (fb0718 T1, a hit: 0.79 / 0.75 / 0.78). No consistent gain.
+  - Emulator (`fb14_e2e.py` SKIP=1 RUNNER=patient GUARD=1 TRUTH=1 VCLOCK=1 PLANCHECK=1 KEEP=1 MARIO_HP=10, b13, T1, Xvfb :95
+    800x600x24): 1234abcd live: the true split was combination 1701 of 29712, cut by the 1200 cap (`fb14TruthLock inFresh false`);
+    the same kept frames fed again (paired, `FB14CFG`): the true combination ranked 297 / 3 / 75 / 759 on four runs (1200 / 2400 /
+    4800 / 4800 + cap 24000), in the fresh set every time, plan claims 0.74-0.78; 2b7e1516: in the lock (rank 9 of 1296). The read
+    itself (which pictures land) moves the rank far more than the budget does; both plans' frames made Bowser miss (PLANCHECK).
+  - So the budgets stay 48 / 1200 / 12000; `window.__fb14cfg` (`fb14K`: combos, maxh, maxc, av) and `FB14CFG` (test_fb14_page.js)
+    are kept as diagnostics for the next run of the harness.
+
+## 2. Lag
+- `fb14Input` (each confirm) cloned every state x every shift (12000 x 5-7) and keyed each with a long string for the cap. Now
+  only the (state, shift) pairs the cap can keep are cloned (the threshold is lowered while merges leave the cap short: the same
+  states as before, test_v110 1), and the key is a 53-bit hash of the same fields (`fb14Key`). fb0718 T1 replayed (12000 states,
+  same machine): Cloud Nine 339 -> 108 ms, the skip 457 -> 90 ms, a Do Nothing 495 -> 74 ms. `fbRi` keeps its divisors.
+- `fb14Prefetch`: between ticks the states are stepped toward the same horizon the next tick / confirm uses, at most 4 ms a
+  picture, so a plan or confirm finds them there (stepping 200 frames of 12000 states was 220-270 ms inside the plan).
+- Not moved off the thread: the plan's share runs (300 sampled states over the window, 140-250 ms per (re)plan). A Worker needs
+  the states on its side (structured clone of 12000 objects per input) or an async plan path the tests and the beep series rules
+  do not have yet.
+
+## 3. (cc) Final Bowser T5 (Peach Beam) as a step
+- T5 has a step ("Peach Beam: nothing to time", no star; the turn text unchanged). The route enters it when T4's screen closes; it
+  has no Charge reader (the v109 base-70 guard stays); it goes on to T6 once the bar, after a hide 3 s or more into the step (the
+  Peach Beam's confirm: the bar is up from T4's confirm through Bowser's T4 turn into the Peach Beam menu, 16 s in fb0731), has
+  been back 30 frames (`fb14T5Watch`, `fb14T5Hide` / `fb14T5Done`). The T6 step index moved by one.
+- Bowser's T5 action as evidence: **not usable with the current model.** From the Peach Beam confirm to the T6 Charge's rays the
+  page models only how many random numbers are drawn (FB14_T5: 8540-9420 = frames + steps, t5_steps.py: Close Call 8654-8764,
+  Bowser's hit 9116-9351), not where his T5 AI draw falls in it, and the draws after it depend on the attack's animation. The T6
+  Charge lock then pins the seed exactly (fb0731: 4 hit pairs, 2 states), so his attack could only prune the 1806 pre-lock
+  candidates, not raise the T6 / T7 chance. Needed to use it: the T5 turn frame by frame in the emulator (the Peach Beam's draws per
+  frame, Bowser's T5 AI frame and each attack's draws: a debug-core log like t14_log.py for T5).
+
+## 4. (dd) The visible random outcomes, by fight
+| fight | outcome | used | what it tells | to use it |
+|---|---|---|---|---|
+| all | the coin's shine (HUD) | yes, every carry | the coin phase and a few bits a shine | - |
+| all | Charge / Super Charge rays | yes (the locks) | the seed (32 bits) | - |
+| Final Bowser T1-T4 | his attack: fire / claw / slam (`fb14Attack`) | yes (fb14Evidence) | ~1-1.5 bits a turn | - |
+| Final Bowser T1-T4 | the lightning bolts (`fb14Bolt`) | yes (soft, v103) | the phase pair | - |
+| Final Bowser T1-T4 | Close Call / hit (HP watch) | yes (`fb14Hit`, the missed turns) | 1 bit a turn | - |
+| Final Bowser T5 | his attack after the Peach Beam | no | ~1.5 bits, but no frame model of T5 | the T5 emulator log (section 3) |
+| Final Bowser T6 | Close Call / hit (`fb2HpWatch`) | yes (v108) | 1 bit | - |
+| Final Bowser T7 / Jr. / Hallway | Power Bounce bounces (cap count) | no (the fight is over) | - | - |
+| Jr. Troopa | Close Call dodge / death (`jrOutcome`) | yes | 1 bit a turn | - |
+| Jr. Troopa | his attack choice | n/a (one attack) | - | - |
+| Hallway Bowser | his attack (claw / slam / fire / Spiny) | partly (the Close Call outcome; the HP roll hwHpCheck) | ~1 bit | his attack read from the picture (as fb14Attack); not built |
+| Duplighosts | which ones copied (the 4 outcomes) | yes (the Do Nothing's outcome ends the fight's plan) | 4 bits, after the lever only | - |
+| all | damage numbers | no | none (damage is fixed, no random part on this route) | - |
+| all | sparkle / particle effects (Charge, Syrup, Whacka) | modelled as draws, not read | (their counts are fixed) | - |
+| Normal Boots FB | Star Shield choice (fbnbAi) | no (route untested) | ~1 bit a turn | the route's clips (section 6) |
+None of the unused ones is cheap and reliable today: the Hallway attack read needs a classifier on Hallway clips (the FB one
+reads FB's arena), the T5 attack needs the T5 model. Nothing new was added in v110.
+
+## 5. The route list
+- The star column (the runner's screenshot: a long Duplighosts line wrapped and its star sat above the box): each turn is a no-wrap
+  flex row, the star (or the same blank spacer) a fixed 1.1em column, the box takes the rest and wraps inside (test_v110 3:
+  star.right <= box.left and the star inside the box's height for every row, all boxes on one left edge, at 1280 and 360 px).
+- (ee) Duplighosts (Charge route), the runner's wording: "T1: Charge; Do Nothing" (starred) and "T2: Jump x2; Power Bomb" (no
+  step). The Normal Boots Duplighosts section differs and is unchanged: "T1: Charge; Bombette Do Nothing on the beep - 3+ Transform
+  (4 ideal: 3 costs 2 damage)", "T2: Power Bomb; Jump x2 on the one that did not transform", "T3: Jump x1".
+
+## 6. (bb) Normal Boots Goombario Final Bowser (Settings: Final Bowser route (Normal Boots) -> Goombario; untested)
+- The runner's texts verbatim (Phase 1 T1-T3, Phase 2 T1-T8; test_route_texts.js); the timed turns (Phase 2 T2-T8) starred, their
+  steps say "untested: not beeped yet" and beep nothing. The v85 cap route stays the default.
+- Needed to model it (console clips with the session log, input display and status bar visible): one whole phase 2 of the route,
+  ideally two, one with a Close Call missed; at least the T2 Super Charge (the read in this arena with Goombario out), Goombario's
+  Charge box A and Bowser's attack after it on 3+ turns, the T4 Headbonk turn, the T5 Jammin' Jelly and the wave, and the T8 Power
+  Bounce with its count. Or in the emulator: the route from a phase-2 Normal Boots state with Goombario (fb2_route/nb_p2_state.py).
+
+## 7. (ff) Ultra Boots Laki Final Bowser, Phase 1 (untested)
+- Shown as "Ultra Boots Laki Final Bowser", "Phase 1:" T1 / T2 (starred) / T3, then "Phase 2:" over the unchanged T1-T7 (texts
+  pinned). Phase 1 is text lines, not steps: steps there would hold the route on Phase 1 with no reader that knows Phase 1's
+  Charge, and the Phase 2 T1 Charge (the lock everything hangs on) would be read only after a click. Nothing is beeped.
+- Damage (formula of hw_ub_cc: 3 + charge + rush - defence 1, one less a bounce, at least 1; NOT seen on console): Phase 1 T2 with
+  one Charge (+3, no Danger): 5,4,3,2,1,1,..; Phase 2 T7 (README fb2_route: a 15 first hit): 15,14,13,...
+  | Phase 1 cap | 3 | 4 | 5 | 6 | 7 | 8 |
+  |---|---|---|---|---|---|---|
+  | Phase 1 damage | 12 | 14 | 15 | 16 | 17 | 18 |
+  | T7 damage needed (the runner: 3 + 7 kills exactly, so 96 in all) | 84 | 82 | 81 | 80 | 79 | 78 |
+  | T7 cap needed (6 bounces = 75, 7 = 84) | 7 | 7 | 7 | 7 | 7 | 7 |
+  By the formula no Phase 1 cap lets T7 need fewer than 7 (a 6 at T7 needs 21 from Phase 1); the T2 step says so ("aim 3+").
+  If Phase 1's bounces hit harder than this (another Charge, Power Rush in Danger, a different defence), the table changes: one
+  console clip of Phase 1 T2 with the damage numbers settles it. The runner's "aim high" default is not built (nothing is beeped).
+- Carrying Phase 1 into Phase 2: not possible now (the Star Beam and the phase change are not modelled; Phase 2 T1's Charge
+  locks fresh as before). Needed: Phase 1 renders / clips (its Charge read in that arena, Bowser's Phase 1 turns, the Star Beam).
+
+## 8. Not done
+- (ii) strip markers (not built: out of this version's budget). The runner's spec, for the next version: at most one marker, above
+  the aimed frame's cell, on every strip (Jr., Duplighosts, Time Out, fb14, fb2): a gold ★ when the plan is confident (realistic
+  p >= 0.80 and a window of 2+ frames), a gold coin when it is a coin flip (p < 0.60 or a 1-frame window, likelyText's "coin flip"),
+  nothing in between. Duplighosts: ★ if 3+ is confident, ringed white if the 4 is too; a gold coin if 3+ is a coin flip; a
+  white-ringed coin instead of the ★ if 3+ is confident but the 4 a coin flip (p4 < 0.60, pp4 < 0.75 or a 1-frame white box), the
+  status saying "3+ SOLID 94% · 4 is a coin flip (26%)". dup1015 (1 frame, p 0.53, p4 0.26, pp4 0.48): the gold coin. One test.
+- (3) aa, Normal Boots Hallway T3-T5 carry: Time Out's draws and Bowser's stopped turns after it (T3 / T4) are not in the core
+  (TURNS has no to_nb), so the carry cannot step through T2's Time Out; needs a debug-core log of T2 Time Out -> T5 Power Bounce
+  on boss_2302_goomba (or console clips of T3-T5 with the log). T5 keeps its coin plan.
+- (5) the Time Out "outside the window" wording.
+
+## Tests
+`test_v110.js` (in run_suite.sh): a fresh page's defaults, built-in and learned corrections (cap, per lever, Normal Boots Jr. vs
+Hallway), fb14Input's pre-filter against clone-all-then-cap, the T5 step (order, no reader, the move to T6, no star), the star
+column at 1280 / 360 px, the Normal Boots Goombario route, Phase 1, the Duplighosts lines. Changed: test_route_texts (the new
+texts), test_v109 (the Duplighosts default and a text-only starred turn), test_v107 (jrfix through jrFix), test_console_1107
+(the Duplighosts T1 text), test_fb14_page.js (FB14CFG, diagnostic). VERSION v110; version checks and default builds moved.
+Changed for the new defaults / corrections: test_press_lever (every lever keyed), test_plan_keep, test_dup_plan, test_nb_route
+(the old defaults set where they test them), test_console_1108b / test_console_1110 (jrfix 0.5 cancels the built-in, their reads
+are pinned raw; the press goes to the lever's record), test_nb_cc_page (BUILTIN_FIX.jr 0 for the test), test_console_1112 (T5's
+step), test_v108 (the dodge read's time), test_fb14_v101-v105 (version and settings patterns).
+
+Full `run_suite.sh` on the v110 build (scratchpad/timeout_timer_v110 and timeout_timer; the maze TORCH=1 run skipped): fail only the
+known torch_core, hw_v77, route_replay, session_plans, capture_replay, plus 13 tests that pinned the old defaults or raw Jr. reads
+(listed above), all passing after their updates when rerun on the final build (with test_v106-v110, test_route_texts, test_jr_plan,
+test_jr_restart, test_console_1107, test_fb2_v97).
+
 # Time Out Timer v109: Jr. Troopa's missed Do Nothing and the T5 revive carried, solid windows; Final Bowser step tracking (one confirm per screen, T3 -> T4's Charge, no Peach Beam trigger), the press on the strip (Nov 15)
 
 From the runner's console logs of Nov 15 (logs1115: jr0701, jr0706, fb0709, fb0713, fb0718, fb0722, fb0727; clips read for numbers

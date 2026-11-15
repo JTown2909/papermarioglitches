@@ -76,8 +76,8 @@ const mk = (P, s) => { const S = F.fbNew({ s, nc: P + 400, f: P - 5, c: new Uint
 }
 // 5. the page
 { const pg = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8');
-  ok(/<select id="s-fbc9"><option value="skip">[^<]*default/.test(pg) && /'fbhp', 'fbc9'\]/.test(pg), 'Settings: "Final Bowser T1: Confirm Cloud Nine on the beep", default the skip, kept with the settings');
-  ok(/fb14sk: 'tot-fb14skip-v101'/.test(pg) && /LEVER_LEARN = \{ fb14: true, fb14sk: true \}/.test(pg), 'the skip\'s presses in their own store (tot-fb14skip-v101), learned like the Do Nothing lever');
+  ok(/<select id="s-fbc9"><option value="skip">[^<]*default/.test(pg) && /'fbhp', 'fbc9'(, '[a-z]+')*\]/.test(pg), 'Settings: "Final Bowser T1: Confirm Cloud Nine on the beep", default the skip, kept with the settings');
+  ok(/fb14sk: 'tot-fb14skip-v101'/.test(pg) && /LEVER_LEARN = \{ fb14: true, fb14sk: true[,}]/.test(pg), 'the skip\'s presses in their own store (tot-fb14skip-v101), learned like the Do Nothing lever');
   ok(/if \(!P \|\| P\.sk \|\|/.test(pg), 'a skip plan is not cancelled when the step\'s screen is gone (its screen is the message)');
   ok(/'T1: Charge; Cloud Nine'/.test(pg), 'the T1 turn text is unchanged');
   ok(/const VERSION = 'v1(0[1-9]|[1-9]\d)'/.test(pg), 'page version v101 or later'); }

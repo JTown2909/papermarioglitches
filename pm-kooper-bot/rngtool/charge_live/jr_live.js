@@ -367,7 +367,11 @@ function jrReviveCarry(k) {
   // T3 / T4 deaths: the next Charge locks again, as before)
   const nbw = JRS() === JR_SEQ_NB && !!inp && !!inp.wait && s && s.ccP != null;
   if (!s || !inp || !(nbw || (s.cc && ((JRS() === JR_SEQ && s.revive == null) || JRS() === JR_SEQ_PL)))) return false;
-  const dead = zw.parts.filter(p => p.cc && p.cc[k] === false); if (!dead.length) { slog('jrReviveNone', { k }); return false; }
+  // v110 (jj, log jr1012 T5: the Do Nothing read 2 frames early, every state's roll at the read frame -2..+1 dodged, Mario died:
+  // jrReviveNone, the carry ended and the bounce planned before the outcome was never replanned): no state that dies at the read
+  // frames means the press was further off than they reach; the death is seen, so every state goes through the revive (the menu's
+  // coin then weighs them)
+  let dead = zw.parts.filter(p => p.cc && p.cc[k] === false); if (!dead.length) { if (!zw.parts.length) { slog('jrReviveNone', { k }); return false; } slog('jrReviveAll', { k, states: zw.parts.length }); dead = zw.parts.slice(); }
   const out = [], seen = new Map(); let n0 = 0;
   for (const p of dead) {
     const fd = (nbw ? inp.c + (p.sh || 0) + R.NB_K.none + s.ccP : inp.c + (p.sh || 0) + s.cc) + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
@@ -391,7 +395,7 @@ function jrReviveCarry(k) {
 function jrApply(inp, re) {
   const s = JRS()[inp.k];
   if (inp.cancel) { const g = JRT.inputs.find(x => x.k === inp.k && !x.cancel && x.c != null); inp.G = g ? g.c : null; }
-  const c = inp.cancel && inp.rel != null && inp.G != null ? inp.G + inp.rel : Math.round(zwF(inp.t, inp.h + num('pfix') + num('jrfix')));
+  const c = inp.cancel && inp.rel != null && inp.G != null ? inp.G + inp.rel : Math.round(zwF(inp.t, inp.h + num('pfix') + jrFix()));
   inp.c = c;
   zwSeen(performance.now());
   if (zw.visFrom != null && (zw.visTo == null || zw.visTo < c - 4)) zw.visTo = c - 4;
@@ -673,17 +677,22 @@ function jrEarlyPlan(t) {
  * T3 Bomb (its screen not watched) and T5 Do Nothing (the step moved before the measure) had none. The tracker's frame is
  * the one the Close Call outcomes have fitted; the target screen read ran ~3 frames later on T4 / T6 in that log. A press
  * more than 5 frames off the beeps (or after the beeps were stopped) is logged but kept out of the press spread. */
+/* v110: the Jr. Troopa press-read correction = the built-in value (page_template.html BUILTIN_FIX.jr, -0.5: logs1115) + the
+ * Settings fine-tune (jrfix, default 0); the Normal Boots Hallway (seq nbhw, Goombario's Close Call and Time Out) has its own
+ * (BUILTIN_FIX.hw, 0) */
+function jrFix() { const hw = JRS() === (typeof HW_SEQ_NB !== 'undefined' ? HW_SEQ_NB : null); return (typeof builtinFix === 'function' ? builtinFix(hw ? 'hw' : 'jr') : 0) + num('jrfix'); }
 function jrPress(inp) {
   const P = st.plan, s = JRS()[inp.k];
   if (!P || !P.mix || !P.mix.zw || P.zwAbs == null || P.measured || !s || !jrSeqProf(s) || PROF().id !== jrSeqProf(s) || !(zw.on && zw.fight === 'jr')) return;
   if (s.cancel && PROF().lever === 'cancel' && !inp.cancel) return;      // v85: Goombario's Charge confirm is not the beeped press (its box A is)
   const rate = zw.rate; if (inp.t - inp.h * rate < (P.tMade || 0)) return;      // the plan came after the press
-  const c = zwF(inp.t, inp.h + num('pfix') + num('jrfix')), f = Math.round(c), err = c - P.zwAbs, onBeeps = Math.abs(err) <= 5 && !P.stopped;
+  const c = zwF(inp.t, inp.h + num('pfix') + jrFix()), f = Math.round(c), err = c - P.zwAbs, onBeeps = Math.abs(err) <= 5 && !P.stopped;
   const d = f - P.zwAbs, inWin = P.target + d >= P.w.start && P.target + d <= P.w.end;
   // v90 (log 1c4d37ef T5: read 212.6 on the one-frame window 213, "works", and Mario was hit): a reading within PRESS_EDGE of
   // a window edge cannot tell the two frames apart (the picture's vblank; the console reading's own spread): logged as edge
   const g = P.target + d + (c >= f ? 1 : -1), inG = g >= P.w.start && g <= P.w.end, edge = inG !== inWin && Math.abs(c - f) > 0.5 - PRESS_EDGE;
-  if (onBeeps) { presses.push(err); while (presses.length > 8) presses.shift(); try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {} }
+  // v110: the lever's own record (its learned correction), not the global Beep offset's
+  { const lk = typeof leverKey === 'function' ? leverKey(PROF().id) : null; if (onBeeps && lk) leverAdd(lk, err - (P.bias || 0)); else if (onBeeps) { presses.push(err); while (presses.length > 8) presses.shift(); try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {} } }
   V.pressNote = null; P.measured = { frame: f, c, err, inWin, works: inWin, likely: false, tObs: inp.t, onBeeps, edge };
   slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works: inWin, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined });
   st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);

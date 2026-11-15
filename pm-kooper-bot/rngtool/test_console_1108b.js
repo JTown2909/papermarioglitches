@@ -30,7 +30,7 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); const url = 'http://127.0.0.1:' + srv.address().port + '/';
   const b = await chromium.launch(), errs = [];
   const open = async () => { const p = await b.newPage({ viewport: { width: 1300, height: 1400 } }); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50' })); } catch (e) {} });
+    await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ jrfix: '0.5' /* v110: cancels the built-in Jr. -0.5 (these reads are pinned raw) */, duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50' })); } catch (e) {} });
     await p.goto(url); return p; };
   // ---- 1. the Jr. Troopa Charge reads
   const A = readLog(LOGA), D = readLog(LOGD);
@@ -69,7 +69,7 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
     check(r.on && /T3/.test(r.step || ''), '2. the tracker from the T1 lock carried to T3 (' + r.step + ')');
     check(r.floor === 866 + 110 + 45 + 10, '2. the earliest planned frame: the Charge confirm 866 + 110 (the menu) + 45 (the lead) + 10 = ' + r.floor);
     check(r.plan && r.plan.early && r.plan.logEarly && r.plan.target >= r.floor, '2. planned before the target screen showed (v81: no plan until the screen, which came after the runner\'s confirm): frame ' + (r.plan && r.plan.target) + ', ' + (r.plan && Math.round(r.plan.p * 100)) + '%, doubt ' + (r.plan && r.plan.doubt) + ', first beep in ' + (r.plan && r.plan.firstBeepIn) + ' ms');
-    check(r.press && Math.abs(r.press.err) < 0.6 && r.press.onBeeps && r.press.k === 5 && r.pushed === 1, '2. the T3 Bomb press is measured at its bar-hide confirm and goes into the spread (' + JSON.stringify(r.press) + ')');
+    check(r.press && Math.abs(r.press.err) < 0.6 && r.press.onBeeps && r.press.k === 5 && r.pushed === 0, '2. the T3 Bomb press is measured at its bar-hide confirm and goes into its lever\'s own record (v110), not the global spread (' + JSON.stringify(r.press) + ')');
     const r2 = await p.evaluate(J => {
       const T = window.__tot, trigT = performance.now() - 940 * 33.367;
       T.jrTrackerAt(parseInt(J.seed, 16), J.qs, trigT, 0); for (const k of [1, 2, 3, 4]) T.jrConfirmClock(k, J.c[k]);

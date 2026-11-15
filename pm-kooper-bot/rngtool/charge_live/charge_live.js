@@ -293,7 +293,7 @@ function chgFrame(t, present) {
   if (chgP().shape) { const n = 3 + (t - CHG.trig.t) / FRAME, BRS = chgP().bright();
     if (n >= 5 && n <= 27) { let lo = 1e9, hi = -1e9; for (let k = Math.max(3, Math.floor(n - 1.5)); k <= Math.min(45, Math.ceil(n + 1.5)); k++) { lo = Math.min(lo, BRS[k - 3]); hi = Math.max(hi, BRS[k - 3]); }
       const d = m - CHG.trig.base; if (d < lo - 10 || d > hi + 10 + (chgP().shapeUp || 0) * Math.abs(hi)) CHG.shapeBad++; } }
-  if ((dt > 330 && dt < 400 && m < CHG.trig.base + 15) || CHG.shapeBad > 3) { slog('chargeFalseTrigger', { m: +m.toFixed(1), shapeBad: CHG.shapeBad || 0 }); CHG.state = 'armed'; CHG.ring = CHG.frames.slice(-16); CHG.frames = []; return; }
+  if ((dt > 330 && dt < 400 && m < CHG.trig.base + 15) || CHG.shapeBad > 3) { slog('chargeFalseTrigger', { m: +m.toFixed(1), shapeBad: CHG.shapeBad || 0 }); if (typeof fb14FalseBurst === 'function') fb14FalseBurst(); CHG.state = 'armed'; CHG.ring = CHG.frames.slice(-16); CHG.frames = []; return; }
   if (chgP().early && !CHG.early && dt > (CHG_EARLY_N - 3 + 1.5) * FRAME) { if (typeof FB14 !== 'undefined' && FB14.t6 && chgP().id === 'fb2') CHG.early = { narrow: true }; else { CHG.early = { t }; setTimeout(chgEarly, 0); } }   // stage 1 while the rays go on
   if (dt > CHG_N * FRAME) { chgBackResolve(); CHG.state = 'maps'; CHG.tEnd = t; CHG.taps = []; CHG.pres = []; setTimeout(chgSolve, 0); }
 }

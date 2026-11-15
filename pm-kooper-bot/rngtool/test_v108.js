@@ -11,14 +11,14 @@
  *    Bowser's hit and the revive is not used (fb14MenuAfterHit); after a hit, also when under FB14_FEWMIN fits survive it.
  * usage: node test_v108.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1114] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v109/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v110/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {
   if (!fs.existsSync(PAGE)) { console.log('(skipped: no page at ' + PAGE + ')'); console.log('all ok'); return; }
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e) + (process.env.STK ? e.stack : ''))); await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }, set || { prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' }); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v109', 'page version v108');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v110', 'page version v108');
 
   // ---- 1. beeps: the fb1548 T4 shape (3 beeps 500 ms apart)
   const r = await p.evaluate(async () => {
@@ -79,7 +79,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
         FB2.pObs = 161.5; X.setP(161.5); out.pL = +FB2.t7.pLucky.toFixed(3);
         FB2.taps = [X.pic(rel(2549697)) - 4.8]; FB2.vis = []; FB2.visFrom = null;
         const c = X.pic(rel(2558994) + 50), S0 = X.v108.prune(c); out.d0 = +S0.doubt.toFixed(3); out.none = X.planT7At(c);
-        X.v108.outcome('dodge', { test: true }); const S1 = X.v108.prune(c); out.d1 = +S1.doubt.toFixed(3); out.dodge = X.planT7At(c);
+        X.v108.outcome('dodge', { test: true }); FB2.t7.outT = t0;     /* (v110: the coin counts from the outcome read; here all of it, as v108) */ const S1 = X.v108.prune(c); out.d1 = +S1.doubt.toFixed(3); out.dodge = X.planT7At(c);
         out.panel = document.getElementById('fb2-status') ? document.getElementById('fb2-status').textContent : '';
         X.v108.outcome('hit'); FB2.t7.outcome = null; X.v108.outcome('hit', { test: true }); out.hit = X.planT7At(c);
         return out; }, cap);

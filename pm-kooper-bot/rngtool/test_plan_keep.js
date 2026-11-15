@@ -3,6 +3,7 @@
 const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  await p.addInitScript(() => { try { localStorage.setItem('tot-settings', JSON.stringify({ duproute: 'rta', off: '0', voff: '0', zoom: '3', dupgoal: 'auto' })); } catch (e) {} });     // (v110: the pre-v110 defaults this test was written on)
   await p.goto('file:///tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer/timeout_timer_standalone.html');
   const r = await p.evaluate(async () => {
     const T = window.__tot, R = T.R, F = 33.43; let s = 0x2468ace0, f = 0; const sh = [];

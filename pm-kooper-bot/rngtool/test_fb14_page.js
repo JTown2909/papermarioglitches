@@ -25,6 +25,7 @@ const fs = require('fs');
   await p.addInitScript(() => {
     localStorage.setItem('tot-boxes', JSON.stringify({ coin: { x: 1080 / 1280, y: 40 / 720, w: 40 / 1280, h: 52 / 720 }, target: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 } }));
   });
+  if (process.env.FB14CFG) await p.addInitScript(c => { window.__fb14cfg = JSON.parse(c); }, process.env.FB14CFG);     // (diagnostic, v110: a lock budget, fb14K)
   if (process.env.V105T) await p.addInitScript(t => { window.__v105t = JSON.parse(t); }, process.env.V105T);     // (diagnostic, v105: a known true aura to score)
   await p.goto(base + '/tot.html');
   const out = await p.evaluate(async ({ dbg, base, M, crate, cpus, t5, vclock, verify }) => {

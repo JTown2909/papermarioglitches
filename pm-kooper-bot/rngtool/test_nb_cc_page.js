@@ -21,6 +21,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { if (!sessionStorage.getItem('nbinit')) { sessionStorage.setItem('nbinit', '1'); localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ boots: 'normal' })); } });
   await p.goto('file://' + PAGE);
+  await p.evaluate(() => { window.__tot.v110.BUILTIN_FIX.jr = 0; });     // (v110: this test's reads are pinned raw, before the built-in Jr. correction)
   const r = await p.evaluate(({ N }) => {
     const T = window.__tot, R = T.R, K = R.NB_K, out = { version: T.VERSION, jr: [], hw: [], wait: [] };
     let rs = 0x9e3779b9; const rnd = n => { rs = (Math.imul(rs, 1103515245) + 12345) >>> 0; return rs % n; };
@@ -176,7 +177,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     return out;
   }, { N });
   console.log('version ' + r.version);
-  check(r.version === 'v109', 'version v100');
+  check(r.version === 'v110', 'version v100');
   const agg = {}; const add = (k, t, planned) => { const A = agg[k] = agg[k] || { n: 0, planned: 0, landed: 0, win: 0, pp: 0, p: 0, sp: 0, inWin: 0, head: 0, conf: 0 }; A.n++; if (!planned) return;
     A.planned++; if (t.lucky) A.landed++; else if ((t.pp || 0) >= 0.95) A.conf++; A.win += t.win || 0; A.pp += t.pp || 0; A.p += t.p || 0; A.sp += t.sp || 0; if (t.K == null || (t.K >= 73 && t.K <= 132)) A.inWin++; if (t.head || t.head === undefined) A.head++; };
   for (const row of r.jr) { check(row.started, 'jr ' + row.seed.toString(16) + ': tracker started'); for (const t of row.turns) add(t.what.split(' ')[0] === 'T5' ? 'Jr T5 Headbonk' : 'Jr ' + t.what + ' box A', t, t.P != null || t.planned); }

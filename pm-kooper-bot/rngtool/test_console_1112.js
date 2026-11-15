@@ -11,7 +11,7 @@
  * usage: node test_console_1112.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
-const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v109/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || process.env.PAGE || SP + '/timeout_timer_v110/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1112.json'), 'utf8'));
 let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
 const fwd = s => (Math.imul(s, 0x5D588B65) + 1) >>> 0;
@@ -31,7 +31,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(F => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50' })); localStorage.setItem('tot-fb14press-v90', JSON.stringify(F)); } catch (e) {} }, FIX.leverStoreV90);
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v109', 'page version v106');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v110', 'page version v106');
   // ---- 2. the learned correction
   const r2 = await p.evaluate(() => { const T = window.__tot, X = window.__fb14, out = { old: T.leverBias('fb14'), n0: T.leverList('fb14').length };
     for (let i = 0; i < 8; i++) T.leverAdd('fb14', -3.6); out.after = T.leverBias('fb14'); out.n = T.leverList('fb14').length; X.reset(); X.FB14.t0 = 1000; X.FB14.rate = 33.367; out.pt = X.pressT(900);
@@ -59,7 +59,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const r5 = await p.evaluate(() => { const T = window.__tot, F2 = window.__fb2, RT = T.RT(), l4 = RT.findIndex(s => s.fb14 === 4), k6 = RT.findIndex(s => s.turn === 'fb2_k'), p7 = RT.findIndex(s => s.turn === 'fb2_pb');
     T.setStep(k6); const prof = T.chgProfNow() && T.chgProfNow().id; F2.FB2.on = false; F2.FB2.plan = null; T.makePlan(); const msg = document.getElementById('headline').textContent + ' ' + (window.__fb14.msg() || '');
     F2.seenK(80, 'popup'); return { l4, k6, p7, prof, msg, after: T.step(), pre: (RT[k6].pre || []).map(x => x.id), pre7: (RT[p7].pre || []).length }; });
-  check(r5.k6 === r5.l4 + 1 && r5.p7 === r5.k6 + 1, '5. the route: T4\'s Do Nothing, then T6\'s own step, then T7\'s Power Bounce (' + r5.l4 + ', ' + r5.k6 + ', ' + r5.p7 + ')');
+  check(r5.k6 === r5.l4 + 2 && r5.p7 === r5.k6 + 1, '5. the route: T4\'s Do Nothing, T5\'s Peach Beam step (v110), then T6\'s own step, then T7\'s Power Bounce (' + r5.l4 + ', ' + r5.k6 + ', ' + r5.p7 + ')');
   check(r5.prof === 'fb2' && r5.pre.includes('fb2_charge') && r5.pre7 === 0, '5. T6\'s step reads the T6 Charge with the fb2 profile (its pre: the Charge); T7 has none');
   check(/WAIT on Lakilester's Strategies screen/.test(r5.msg) && !/HOLD/.test(r5.msg), '5. on T6 before the lock (v97): wait on the Strategies screen, no HOLD ("' + r5.msg.slice(0, 90) + '")');
   check(r5.after === r5.k6, '5. v97: the popup closing keeps the route on T6 (the Do Nothing confirm moves it: test_fb2_v97.js)');

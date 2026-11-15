@@ -39,7 +39,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   check(like[1] > like[0] && like[2] === 0 && like[3] === 0, '2. the copies fit the v87 reading (+1) best, and rule out a 2-frame misread');
   const v87 = A.map(a => a.err + 1), mean = v87.reduce((x, y) => x + y, 0) / v87.length;
   console.log('  Duplighost presses as v87 reads them: ' + v87.map(x => x.toFixed(2)).join(', ') + ' (mean ' + mean.toFixed(2) + ')');
-  check(JSON.stringify(r.keys) === JSON.stringify([null, null, 'fb14', null, null, null, null, null]), '3. only Final Bowser\'s levers keep a learned correction ' + JSON.stringify(r.keys));
+  check(JSON.stringify(r.keys) === JSON.stringify(['dup', 'dup', 'fb14', 'jr', 'jr', 'jr', 'jr', 'hw']), '3. v110: every fight\'s lever keeps its own learned correction (dup / fb14 / jr / hw) ' + JSON.stringify(r.keys));
   // v93: the Final Bowser lever learned nothing; v96: the readings are borne out, it learns again (README v96)
   check(Math.abs(r.fb0) < 0.01 && Math.abs(r.fb3) < 0.01 && Math.abs(r.fb1 - 1.2) < 0.01 && Math.abs(r.fbMax - 1.5) < 0.01, '3. v96: Final Bowser learns its correction again (README v96): 0 after 3 presses at -2.4, +1.2 after 4, at most +1.5 (' + r.fb1 + ', ' + r.fbMax + ')');
   check(r.plan && r.plan.prof === 'dup3' && Math.abs(r.plan.dt) < 0.01, '3. a Duplighost plan beeps on the global offset alone (' + JSON.stringify(r.plan) + ')');

@@ -266,7 +266,12 @@ function fb2SetK(k, how, k0) {      // the popup A on frame k (k0..k when pictur
  * of them. Returns the states with their weights (w) and the background's share (doubt, as zwDoubt). */
 function fb2Prune(upto) {
   const T7 = FB2.t7; if (!T7) return [];
-  const vis = FB2.vis.concat(FB2.visFrom != null ? [[FB2.visFrom, upto - 4]] : []).map(([a, b]) => [a, Math.min(b, upto - 4)]).filter(([a, b]) => b > a), taps = FB2.taps.filter(x => x < upto);
+  // v110 (hh, log v109b: the T6 Close Call dodged, then about 55 T7 replans at doubt 1 and no plan): the bar stays up through
+  // Bowser's T6 turn after the Do Nothing (24 s there) and the coin seen in it (3 shines) fits no state: the turn after the Close
+  // Call test is not in the model's coin (or its flashes read as shines). The coin counts from the T6 outcome read (the dodge seen,
+  // 16 s after the confirm there), else FB2_T7_COIN_MS after the confirm; replayed: 93 states, doubt 0.02-0.37
+  const okC = typeof CHG !== 'undefined' && CHG.trig, cut = okC && T7.outT != null ? fb2Pic(T7.outT) : okC && FB2.pT != null ? fb2Pic(FB2.pT + FB2_T7_COIN_MS) : -1e9;
+  const vis = FB2.vis.concat(FB2.visFrom != null ? [[FB2.visFrom, upto - 4]] : []).map(([a, b]) => [Math.max(a, cut), Math.min(b, upto - 4)]).filter(([a, b]) => b > a), taps = FB2.taps.filter(x => x < upto && x >= cut);
   const Wd = 5.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - ZW_PMISS) / Wd, Lmiss = ZW_PMISS, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE);
   const near = (x, f) => x - f >= -2 && x - f <= 3.5, out = []; let mx = 0, tot0 = 0;
   for (const o of T7.states) {
@@ -289,7 +294,7 @@ function fb2Prune(upto) {
  * tens place on the steady bar, the "1" of 10 before the confirm; blank for 10 frames after it = a hit; the "1" steady for
  * FB2_DODGE_N frames from FB2_DODGE_MS after the confirm (past the Close Call test, P + 68, and the attack's damage) = a dodge.
  * A dodge drops the hit branch from the background (the states are conditioned on it); a hit leaves no modelled T7 state. */
-const FB2_DODGE_MS = 3200, FB2_DODGE_N = 30, FB2_HIT_N = 10;
+const FB2_DODGE_MS = 3200, FB2_DODGE_N = 30, FB2_HIT_N = 10, FB2_T7_COIN_MS = 15000;
 function fb2HpWatch(t, present) {
   if (FB2.pT == null || !FB2.t7 || FB2.t7.outcome || typeof jrTens !== 'function' || typeof JRT === 'undefined') return;
   const TT = window.__fb2TensTest;     // (tests only: the tens read stubbed, the bar steady)
@@ -304,7 +309,7 @@ function fb2HpWatch(t, present) {
 }
 /* the T6 outcome seen (the HP watch, or tests / the runner): 'dodge' | 'hit' | 'unread' */
 function fb2Outcome(o, info) {
-  const T7 = FB2.t7; if (!T7 || T7.outcome) return; T7.outcome = o;
+  const T7 = FB2.t7; if (!T7 || T7.outcome) return; T7.outcome = o; T7.outT = performance.now();
   slog(o === 'dodge' ? 'fb2Dodged' : o === 'hit' ? 'fb2HitSeen' : 'fb2OutcomeUnread', Object.assign({ pLucky: +(T7.pLucky || 0).toFixed(3), states: T7.states.length }, info || {}));
   if (o === 'hit') { T7.hit = true; if (st.plan && st.plan.prof === 'fb2') { cancelBeeps(); st.plan = null; } }
   fb2Show();

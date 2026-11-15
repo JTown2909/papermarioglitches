@@ -16,7 +16,7 @@
  *    the route's stars, Erase log at once, the buttons' feedback.
  * usage: node test_v109.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1115] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v109/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1115';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v110/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1115';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null; };
 (async () => {
@@ -24,7 +24,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set, presses) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(([s, pr]) => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); if (pr) localStorage.setItem('tot-presses', JSON.stringify(pr)); } catch (e) {} }, [set || { prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'charge', duproute: 'charge' }, presses || null]); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v109', 'page version v109');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v110', 'page version v109');
 
   // ---- 1. the solid window (synthetic jr0701 T4 shape)
   const s1 = await p.evaluate(() => {
@@ -144,7 +144,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
       out.fail = T.v109.pressShow(P, 793.86, 'Final Bowser T2, Do Nothing'); out.state2 = T.stripState();
       T.st.plan = { tMade: performance.now(), tab: [true], first: 0, w: { start: 0, end: 0, length: 1 }, target: 0, rate: 33.4, tPress: performance.now() + 3000 }; out.after = T.stripData().src; T.st.plan = null;
       // the route's stars
-      const lis = [...document.querySelectorAll('#route-list li')]; out.stars = lis.filter(li => li.querySelector('.rngstar') && li.querySelector('.rngstar').textContent === '★').map(li => li.querySelector('[data-i]').textContent);
+      const lis = [...document.querySelectorAll('#route-list li')]; out.stars = lis.filter(li => li.querySelector('.rngstar') && li.querySelector('.rngstar').textContent === '★').map(li => (li.querySelector('[data-i]') || li.lastElementChild).textContent);     // (v110: a text-only timed turn has no chip)
       out.starOutside = lis.every(li => !li.querySelector('[data-i] .rngstar'));
       // Erase log / Reset seed
       let asked = 0; window.confirm = () => { asked++; return true; }; T.SLOG.push({ t: 1, ev: 'x' }); document.getElementById('erase-log').click(); out.erased = T.SLOG.map(e => e.ev).join(); out.asked = asked;
@@ -157,7 +157,8 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     ok(r.src === 'press' && Math.abs(r.hit - 769.7) < 1e-9 && /working frame ✓/.test(r.state.text), '6. after the route moves on the strip keeps the window and the frame hit: "' + r.state.text.slice(0, 90) + '"');
     ok(r.fail === false && /failing frame ✗/.test(r.state2.text), '6. a press off the window (fb0709 T2 794 on 791-792): red ✗');
     ok(r.after === 'plan', '6. the next plan replaces it');
-    const want = ['T1: Do Nothing; Do Nothing - 4 Transform', 'T3: Charge; Bomb', 'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T2: Time Out; Spiny Flip', 'T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', 'T3: Jammin\' Jelly; Do Nothing', 'T4: Charge; Do Nothing - Block Wave', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7'];
+    const want = ['T1: Charge; Do Nothing', 'T3: Charge; Bomb',     // (v110: the Duplighosts Charge route is the default)
+       'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T2: Time Out; Spiny Flip', 'T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', 'T3: Jammin\' Jelly; Do Nothing', 'T4: Charge; Do Nothing - Block Wave', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7'];
     ok(want.every(w => r.stars.includes(w)) && !r.stars.some(s => /Whacka|T1: Charge; Bomb|Spiny Flip - Danger/.test(s)) && r.starOutside, '6. a star left of every timed turn, outside the chip (' + r.stars.length + ': ' + r.stars.join(' | ').slice(0, 200) + ')');
     ok(r.erased === 'logErased' && r.asked === 0 && r.eraseLabel === 'Log erased ✓' && r.eraseCls && r.resetLabel === 'Seed reset ✓', '6. Erase log at once (no confirm), "Log erased ✓" / "Seed reset ✓" for 1.5 s');
     await q.close();
@@ -216,7 +217,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
       return out;
     });
     console.log('7', JSON.stringify(r).slice(0, 900));
-    const PLT = ['T1: Charge; Do Nothing', 'T2: Charge; Do Nothing - Close Call', 'T3: Maple; Do Nothing - Close Call', 'T4: Charge; Do Nothing - Close Call', 'T5: Charge; Do Nothing - Close Call', 'T6: Whacka; Do Nothing', 'T7: Bounce x6'], i0 = r.turns.indexOf(PLT[0]);
+    const PLT = ['T1: Charge; Do Nothing', 'T2: Charge; Do Nothing - Close Call', 'T3: Maple; Do Nothing - Close Call', 'T4: Charge; Do Nothing - Close Call', 'T5: Charge; Do Nothing - Close Call', 'T6: Whacka; Do Nothing', 'T7: Bounce x6'], i0 = r.turns.indexOf(PLT[1]) - 1;     // (v110: the Duplighosts' T1 reads the same as the partnerless T1)
     ok(r.opt && i0 >= 0 && PLT.every((t, j) => r.turns[i0 + j] === t) && /Partnerless/.test(r.head || ''), '7. the partnerless route is a Jr. Troopa route option and shows its 7 turns under its header (' + r.turns.slice(i0, i0 + 7).join(' | ') + ')');
     ok(r.k1 === 2 && r.stepT2 === 3, '7. T1\'s Do Nothing read from its Strategies box moves the route to T2');
     ok(r.plans.length === 4 && r.plans.every(x => x.target != null && !x.none && x.p > 0.3), '7. T2-T5\'s Do Nothing Close Calls planned from a known seed (' + r.plans.map(x => x.target + ' ' + (x.p || 0).toFixed(2)).join(', ') + ')');
