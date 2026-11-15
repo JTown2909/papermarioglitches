@@ -162,6 +162,18 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     ok(r.erased === 'logErased' && r.asked === 0 && r.eraseLabel === 'Log erased ✓' && r.eraseCls && r.resetLabel === 'Seed reset ✓', '6. Erase log at once (no confirm), "Log erased ✓" / "Seed reset ✓" for 1.5 s');
     await q.close();
   }
+  // ---- 6b. after Erase log the page logs on (log 07-48-18: one event, then nothing); a capture with no pictures says so
+  {
+    const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50' });
+    const r = await q.evaluate(async () => { const T = window.__tot, ref = T.SLOG; document.getElementById('erase-log').click(); T.setStep(3); T.setStep(4);
+      const after = T.SLOG.map(e => e.ev), same = ref === T.SLOG;
+      T.V.stream = { getVideoTracks: () => [{ readyState: 'live', muted: false }] }; T.V.camOn = true; T.V.lastFrameT = performance.now() - 4000; await new Promise(r => setTimeout(r, 1300));
+      const st = T.SLOG.find(e => e.ev === 'captureStalled'), b = document.getElementById('cap-banner'); const out = { after, same, st: st && st.why, msg: !b.hidden && document.getElementById('cap-banner-msg').textContent, btn: !!document.getElementById('cap-restart') };
+      T.V.stream = null; T.V.camOn = false; return out; });
+    ok(r.same && r.after.join() === 'logErased,step,step', '6b. after Erase log the same log goes on (' + r.after.join() + ')');
+    ok(/no new picture/.test(r.st || '') && /Not seeing the game/.test(r.msg || '') && r.btn, '6b. a capture with no pictures for 3 s: captureStalled (' + r.st + '), the red banner with Restart capture ("' + (r.msg || '').slice(0, 70) + '")');
+    await q.close();
+  }
   // ---- 7. the partnerless route (unit level: Mario's own Do Nothing is not modelled from the emulator; see README v109)
   {
     const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'pl', duproute: 'charge' });

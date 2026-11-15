@@ -38,7 +38,8 @@ async function startCam() {
     return;
   }
   const track = V.stream.getVideoTracks()[0];
-  track.addEventListener('ended', stopCam);
+  track.addEventListener('ended', () => { V.camEnded = 'the capture track ended'; stopCam(); });     // v109: the page's watchdog says so
+  V.camOn = true; V.camEnded = null; V.camT = performance.now();
   V.video.srcObject = V.stream; await V.video.play().catch(() => {});
   $('cam-start').disabled = true; $('cam-stop').disabled = false; $('cap-target').disabled = false;
   const st0 = track.getSettings ? track.getSettings() : {};
@@ -69,10 +70,14 @@ function frameTime(now, meta) {
   const pn = performance.now(), ok = x => typeof x === 'number' && x > 0 && Math.abs(x - pn) < 1000;
   return ok(meta.captureTime) ? meta.captureTime : ok(meta.expectedDisplayTime) ? meta.expectedDisplayTime : now;
 }
+// v109 (logs 07-48-18 / 07-49-56: after the Normal Boots Jr. fight's end not one event for two fights): an exception in onFrame
+// skipped schedule(), and the picture loop was dead until a reload. The next frame is always scheduled; an error is logged once
+// per message (frameError) and counted.
+function frameSafe(t) { try { onFrame(t); } catch (e) { const m = String(e && e.message || e); V.frameErrs = (V.frameErrs || 0) + 1; if (V.frameErrMsg !== m) { V.frameErrMsg = m; try { slog('frameError', { msg: m.slice(0, 200), at: String(e && e.stack || '').split('\n').slice(0, 3).join(' | ').slice(0, 300), n: V.frameErrs }); } catch (x) {} } } }
 function schedule() {
   if (!V.stream) return;
-  if (V.video.requestVideoFrameCallback) V.video.requestVideoFrameCallback((now, meta) => { if (V.force !== 'bg') { V.lastVfc = performance.now(); onFrame(frameTime(now, meta)); } schedule(); });
-  else requestAnimationFrame(() => { V.lastVfc = performance.now(); onFrame(performance.now()); schedule(); });
+  if (V.video.requestVideoFrameCallback) V.video.requestVideoFrameCallback((now, meta) => { try { if (V.force !== 'bg') { V.lastVfc = performance.now(); frameSafe(frameTime(now, meta)); } } finally { schedule(); } });
+  else requestAnimationFrame(() => { try { V.lastVfc = performance.now(); frameSafe(performance.now()); } finally { schedule(); } });
 }
 function dims() { return V.src ? [V.src.displayWidth, V.src.displayHeight] : [V.video.videoWidth, V.video.videoHeight]; }
 function region(b) { const [w, h] = dims(); return [b.x * w, b.y * h, Math.max(1, b.w * w), Math.max(1, b.h * h)]; }

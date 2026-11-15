@@ -217,7 +217,7 @@ function jrHide(tH, upMs) {
   if (s.strat && JRT.stratAt != null && Math.abs(tH - JRT.stratAt) < 2000) { slog('jrHideAfterNothing', { at: Math.round(tH) }); return; }   // Do Nothing was read from its screen
   // v109: at 10 HP (after a revive) Do Nothing hides no bar and neither does Jr. Troopa's turn: a hide while Do Nothing is still
   // expected is the next confirm (the Power Bounce); the Do Nothing was missed (jrStepGap)
-  if (s.strat && JRT.hp10[JRT.k] && JRT.k + 1 < JRS().length) jrStepGap(JRT.k + 1, 'bar hid with Do Nothing unread (10 HP)');
+  if (s.strat && (JRT.hp10[JRT.k] || s.id === 'jr_nothing_hit') && JRT.k + 1 < JRS().length) jrStepGap(JRT.k + 1, 'bar hid with Do Nothing unread (no roll)');     // (jrg0744 NB T6 too: Do Nothing after Whacka, no roll)
   const s2 = JRS()[JRT.k];
   slog('jrHide', { k: JRT.k, id: s2.id, at: Math.round(tH), upMs: Math.round(upMs) });
   jrConfirm(JRT.k, tH, s2.hide, 'bar');
@@ -359,11 +359,15 @@ const JR_REVIVE_D = [[932, 0.02], [933, 0.1], [934, 0.14], [935, 0.38], [936, 0.
 const JR_REVIVE_DEATH = 27, JR_REVIVE_MENU = 399, JR_REVIVE_BG = 0.15;
 function jrReviveCarry(k) {
   const s = JRS()[k], inp = JRT.inputs.filter(x => x.k === k && x.c != null).pop();
-  if (!s || !s.cc || s.revive != null || !inp || JRS() !== JR_SEQ) return false;
+  // v109 (jrg0744, Normal Boots: T2 / T4 deaths, the carry ended, T3 / T5 had nothing to plan from): also the Normal Boots route in
+  // wait mode (the roll on P + 29, P = the Charge confirm + 133) and the partnerless route; the Bombette route only after T5 (its
+  // T3 / T4 deaths: the next Charge locks again, as before)
+  const nbw = JRS() === JR_SEQ_NB && !!inp && !!inp.wait && s && s.ccP != null;
+  if (!s || !inp || !(nbw || (s.cc && ((JRS() === JR_SEQ && s.revive == null) || JRS() === JR_SEQ_PL)))) return false;
   const dead = zw.parts.filter(p => p.cc && p.cc[k] === false); if (!dead.length) { slog('jrReviveNone', { k }); return false; }
   const out = [], seen = new Map(); let n0 = 0;
   for (const p of dead) {
-    const fd = inp.c + (p.sh || 0) + s.cc + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
+    const fd = (nbw ? inp.c + (p.sh || 0) + R.NB_K.none + s.ccP : inp.c + (p.sh || 0) + s.cc) + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
     const q = zwClone(p); while (q.g < fd) { if (q.pause && q.g === q.pauseAt) { q.S.nc += q.pause; q.g += q.pause; continue; } R.frameEv(q.S, q.g, q.ev); q.g++; }
     n0++;
     const mAll = new Set(zw.taps.map((t, i) => i).filter(i => zw.taps[i] < fm));

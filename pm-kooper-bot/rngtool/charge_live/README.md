@@ -121,6 +121,29 @@ only, nothing committed but numbers).
 - test_v109 section 7: the option, the 7 turns, T1's Do Nothing moving the route, T2-T5's Close Calls and T7's bounce planned from
   a known seed (unit level, jrPlanAt).
 
+## 8c. (v) Normal Boots Jr. Troopa (jrg0744, wait mode, Jr. Troopa correction 0 in this log too; jrfix applies to every Jr. profile,
+the Normal Boots ones included: jr_live's press read and carry)
+- T2 / T4: the page read Goombario's Charge confirm at c 111 / 110, 115 / 112 frames before the beeped frame (225 / 222): in wait
+  mode that confirm is the lever, and it came 0.3-0.6 s after the plan, 2.5 s before its first beep. The bar hid then (the log's
+  reads, two of two); the runner did not wait. The strip now says, on a wait-mode plan, "HOLD on Goombario's Charge target screen:
+  confirm it on the 3rd beep, not before".
+- `jrCarryEnds why death`: at 3 HP a missed Close Call is a death (the Life Shroom revive; the "1" of 10 HP read 427 / 441 frames
+  after the confirm), not a plain hit: the label is right. The carry now goes on through the revive on this route too (wait mode:
+  the roll on the confirm + 133 + 29, death 27 later, then the 933-939 steps), so T3 / T5 can plan from it (Maple / Goombario's
+  Charge at 10 HP, no roll) - not checked on console.
+- T6 -> T7 by hand (Whacka, then Do Nothing unread): the 2-frame Strategies rule and `jrStepGap` (a hide while a no-roll Do Nothing
+  is expected is the next confirm; a step by hand puts a kept short close in, or says the carry is lost) as jr0701.
+
+## 8d. (w) After Erase log, nothing (logs 07-48-18, 07-49-56)
+- Both logs hold only `logErased` (and hand steps) through whole fights on the clip. `eraseLog` only empties the log's arrays (the
+  same arrays: test_v109 6b logs on after it). The jrg0744 log before them ends at jrEnd (2701.2 s) and the next erase counted 2
+  events more: the page stopped reading pictures right at that fight's end, before any erase. shared/capture.js's loop called
+  `onFrame` and then scheduled the next frame: one exception in `onFrame` ended the loop until a reload. Now the next frame is
+  always scheduled and an error is logged once per message (`frameError`, with the first stack lines), so the next log names it.
+- A watchdog (`capWatch`): with a capture started (not stopped by hand), no new picture for 3 s, or the track ended / not live:
+  a red "Not seeing the game - ..." banner with Restart capture, and `captureStalled` (why, readyState, muted, the last picture's
+  age, document.hidden, frame errors). Which exception it was is not known (not reproduced from the logs).
+
 ## 9. UI
 - (r) A star left of every turn the page times (a beeped lever), outside the clickable chip; the turn texts are unchanged.
 - (i) Erase log erases at once (no confirm, no undo); (s) Reset seed / Erase log say "Seed reset ✓" / "Log erased ✓" for 1.5 s.

@@ -127,6 +127,7 @@ details[open] summary { margin-bottom: 10px; }
 
 <div class="layout">
 <main>
+<div id="cap-banner" hidden role="alert" style="position:sticky; top:0; z-index:50; background:#c62828; color:#fff; font-weight:700; padding:8px 14px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; border-radius:6px"><span id="cap-banner-msg">Not seeing the game – capture stopped (reload / restart capture).</span><button class="b" id="cap-restart" style="background:#fff; color:#c62828">Restart capture</button></div>
   <header>
     <h1>Paper Mario Any% <span>(No ACE)</span> (RNG Manipulation)</h1>
     <div class="tag">JP · Duplighosts · Jr. Troopa · Hallway Bowser · Final Bowser · <span id="ver">v82</span></div>
@@ -1828,6 +1829,21 @@ function logFileName(d) { const z = n => String(n).padStart(2, '0'); return 'pm-
  * page's frame blocks dialogs (it returns at once), a second click within 4 s instead. v109: no confirm, at once. */
 function eraseLog() { const n = SLOG.length, c = typeof CHG_CAPS !== 'undefined' ? CHG_CAPS.length : 0; SLOG.length = 0; if (typeof CHG_CAPS !== 'undefined') CHG_CAPS.length = 0; if (typeof chgCapTitle === 'function') chgCapTitle(); slog('logErased', { events: n, captures: c }); return { events: n, captures: c }; }
 // v109 (the runner: the confirm() cost time mid-run): Erase log erases at once, no dialog, no undo
+/* v109 (logs 07-48-18 / 07-49-56, Normal Boots Jr.: after the fight before, not one event in two whole fights, the page not seeing the
+ * game; an exception in onFrame stopped the picture loop for good (shared/capture.js now always schedules the next frame) or the
+ * capture died): a watchdog. With a capture started (and not stopped by hand), no picture for 3 s, or the track ended / not live:
+ * a red banner "Not seeing the game" with Restart capture, and captureStalled logged once per stall with the reason */
+function capWatch() {
+  if (!V.camOn) return;
+  const now = performance.now(), tr = V.stream && V.stream.getVideoTracks ? V.stream.getVideoTracks()[0] : null, last = V.lastFrameT || V.camT || now;
+  const why = V.camEnded || (!V.stream ? 'the capture stopped' : tr && tr.readyState && tr.readyState !== 'live' ? 'the capture track is ' + tr.readyState : now - last > 3000 ? 'no new picture for ' + Math.round((now - last) / 1000) + ' s' + (tr && tr.muted ? ' (track muted)' : '') + (document.hidden ? ' (this page is hidden)' : '') : null);
+  const b = document.getElementById('cap-banner');
+  if (why && !V.stalled) { V.stalled = now; slog('captureStalled', { why, readyState: tr ? tr.readyState : null, muted: tr ? !!tr.muted : null, lastFrameMs: Math.round(now - last), hidden: document.hidden, frameErrs: V.frameErrs || 0 }); }
+  if (why && b) { b.hidden = false; const m = document.getElementById('cap-banner-msg'); if (m) m.textContent = 'Not seeing the game – ' + why + '. Nothing is read meanwhile (reload / restart capture).'; }
+  if (!why && b && !b.hidden) b.hidden = true;
+}
+setInterval(capWatch, 1000);
+{ const r = document.getElementById('cap-restart'); if (r) r.onclick = () => { slog('captureRestart', {}); try { stopCam(); } catch (e) {} V.camOn = false; V.stalled = null; V.lastFrameT = null; const b = document.getElementById('cap-banner'); if (b) b.hidden = true; startCam(); }; }
 // v109 (s): a pressed Reset seed / Erase log shows it for 1.5 s (a class and the label; no dialog, no focus change)
 function btnDone(id, text) { const b = document.getElementById(id); if (!b) return; if (b._done) clearTimeout(b._done); else b._label = b.textContent; b.classList.add('done'); b.textContent = text; b._done = setTimeout(() => { b.classList.remove('done'); b.textContent = b._label; b._done = null; }, 1500); }
 { const b = document.getElementById('erase-log'); if (b) b.onclick = () => { eraseLog(); btnDone('erase-log', 'Log erased ✓'); }; }
@@ -1962,6 +1978,7 @@ function stripState(d) {
   if (sc) return sc.ok ? { cls: 'stale', text: 'Seed changed – new window (a shine ruled the old one out). Follow the new beeps.' } : { cls: 'stale', text: 'Seed changed – too late to move the beeps; the planned frame still works for ' + Math.round(100 * (P && P.mix && P.mix.pNow != null ? P.mix.pNow : 0)) + '%.' };
   if (P) {
     const left = P.tPress - now, typ = P.type && WTYPE[P.type] ? WTYPE[P.type].name : 'best chance', ch = P.mix ? ' · ' + (likelyText(P.mix, /^jrpb5/.test(P.prof || '') ? '6+' : 'all 4') ? likelyText(P.mix, /^jrpb5/.test(P.prof || '') ? '6+' : 'all 4') + ' · ' : '') + ppText(P.mix, P.prof) : '';
+    if (left > -400 && PROF().lever === 'wait') return { cls: 'plan', text: 'HOLD on Goombario\'s Charge target screen: confirm it on the 3rd beep, not before (' + (P.beeps || nBeeps()) + ' beeps)' + ch };     // v109 (jrg0744 T2 / T4: confirmed 3.4 s before the beeps)
     if (left > -400) return { cls: 'plan', text: 'Beeping: ' + (P.beeps || nBeeps()) + ' beeps, press on the last · ' + typ + (P.mix && P.mix.pp != null ? '' : ' · ' + P.w.length + '-frame window') + ch };
     return { cls: 'plan', text: onTarget() ? 'Window passed – planning the next one' : 'Window passed' };
   }
@@ -2167,6 +2184,7 @@ function hudWatch(t, present) {
 }
 function onFrame(t) {
   if (!dims()[0]) return;
+  V.lastFrameT = performance.now(); if (V.stalled) { slog('captureResumed', { afterMs: Math.round(V.lastFrameT - V.stalled) }); V.stalled = null; V.camEnded = null; }
   V.frames++; if (t - V.fpsT > 1000) { V.fps = V.frames * 1000 / (t - V.fpsT); V.frames = 0; V.fpsT = t; }
 /*@include shared/coin_detect.frag.js*/
   if (steady) V.steadyT = t;
@@ -2391,7 +2409,7 @@ $('cap-target').onclick = () => {
   V.ref = ref; storeTarget();
   camMsg('Target screen saved. The page will plan and beep whenever it sees this screen with a locked seed.');
 };
-$('cam-start').onclick = startCam; $('cam-stop').onclick = stopCam;
+$('cam-start').onclick = startCam; $('cam-stop').onclick = () => { V.camOn = false; stopCam(); };     // v109: a stop by hand is no stall
 // segments follow the coin: when it comes back after being hidden, the gap is a new segment
 /* hiddenMs: how long the coin was gone. A short gap (a room load with C-up held) cannot hide other random numbers;
  * a long one (C-up closed through a room with enemies, a battle, a cutscene) can. */
