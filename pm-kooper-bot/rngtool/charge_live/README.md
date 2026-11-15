@@ -75,6 +75,9 @@ Plans carry each cell's realistic chance (zwPlan, fb14, fb2 T6): a red cell with
 
 ## Tests
 `test_v112.js` (in run_suite.sh; fixtures/console_1115_v112.json, numbers only). VERSION v112; version checks and default build paths moved.
+Full `run_suite.sh` on the v112 build (scratchpad/timeout_timer_v112 and timeout_timer): fail only the known torch_core, hw_v77, route_replay,
+session_plans, capture_replay (test_dup_plan, which failed on the first all-4 rule, passes after it was limited to run2; rerun with test_v112
+and test_lock_badge on the final build). The maze TORCH=1 run and the two log replays rc 0.
 
 # Time Out Timer v111: a Close Call hit is a death on every Jr. route (the carry held through it), the partnerless Charges read again, an unread no-roll Do Nothing taken from Jr. Troopa's hit, the 6 run on the partnerless T7, the strip's star / coin markers, the per-lever timing from the clips, short route labels (Nov 15)
 
