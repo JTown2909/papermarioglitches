@@ -111,5 +111,5 @@ These totals still give the current route 46 < 50 at its 3/3 caps, so some damag
 Chances (6 s windows): current/A unplanned 3/3-route kill condition 78% (T3 5+ 45.8%, or T3 = 4 and T4 4+), planned
 (T3 5+ 96.5%) ~99%; C's (7+, 6+) 39% x 70% = 27%, or (8+, 5+) 21% x 96.5% = 20%: about 35-40% together.
 Overall no hit and kill: current ~93% x ~99% (planned PBs); **A ~72%** (77.5% T1 Close Call x 93%); **B: no kill on T5**;
-**C ~17% in Danger** (77.5% x 95% Lullaby-model x ~37%, or 13% blind).
+**C ~27% in Danger** (77.5% x 95% with a Lullaby model x ~37%; 21% with a blind Lullaby).
 Clip that settles the gap: one current-route Hallway on console showing every damage number (T3/T4 Power Bounce, T5 Jump).
