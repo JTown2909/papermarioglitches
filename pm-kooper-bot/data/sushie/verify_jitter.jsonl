@@ -1,0 +1,111 @@
+{"recipe": "A", "test": "frames", "seg": 0, "d": -2, "res": "water", "x": 271.1146, "z": 508.2904}
+{"recipe": "A", "test": "frames", "seg": 0, "d": -1, "res": "water", "x": 274.332, "z": 511.5028}
+{"recipe": "A", "test": "frames", "seg": 0, "d": 1, "res": "water", "x": 280.7668, "z": 517.9276}
+{"recipe": "A", "test": "frames", "seg": 0, "d": 2, "res": "water", "x": 283.9842, "z": 521.14}
+{"recipe": "A", "test": "frames", "seg": 1, "d": -2, "res": "water", "x": 271.1245, "z": 521.15}
+{"recipe": "A", "test": "frames", "seg": 1, "d": -1, "res": "water", "x": 274.337, "z": 517.9326}
+{"recipe": "A", "test": "frames", "seg": 1, "d": 1, "res": "no_reaction", "x": 280.7618, "z": 511.4978}
+{"recipe": "A", "test": "frames", "seg": 1, "d": 2, "res": "no_reaction", "x": 283.9743, "z": 508.2804}
+{"recipe": "A", "test": "frames", "seg": "f", "d": -2, "res": "no_reaction", "x": 278.978, "z": 513.2844}
+{"recipe": "A", "test": "frames", "seg": "f", "d": -1, "res": "no_reaction", "x": 278.978, "z": 513.2844}
+{"recipe": "A", "test": "frames", "seg": "f", "d": 1, "res": "water", "x": 276.1208, "z": 516.1461}
+{"recipe": "A", "test": "frames", "seg": "f", "d": 2, "res": "water", "x": 274.6922, "z": 517.5769}
+{"recipe": "A", "test": "angle", "d": -3, "res": "no_reaction", "x": 278.2059, "z": 513.9799}
+{"recipe": "A", "test": "angle", "d": -2, "res": "no_reaction", "x": 278.1782, "z": 514.2573}
+{"recipe": "A", "test": "angle", "d": -1, "res": "SWIM_ON_LAND", "x": 277.6094, "z": 514.2656}
+{"recipe": "A", "test": "angle", "d": 1, "res": "water", "x": 277.4761, "z": 515.1987}
+{"recipe": "A", "test": "angle", "d": 2, "res": "water", "x": 277.0343, "z": 515.0485}
+{"recipe": "A", "test": "angle", "d": 3, "res": "water", "x": 276.9832, "z": 515.3226}
+{"recipe": "A", "test": "ref_angle", "d": 222, "res": "water", "x": 283.0458, "z": 520.2342}
+{"recipe": "A", "test": "ref_angle", "d": 228, "res": "water", "x": 274.6919, "z": 512.0146}
+{"recipe": "A", "test": "ref_angle", "d": 232, "res": "water", "x": 274.5173, "z": 512.1893}
+{"recipe": "A", "test": "ref_angle", "d": 240, "res": "water", "x": 274.1082, "z": 512.5984}
+{"recipe": "A", "test": "ref_angle", "d": 270, "res": "water", "x": 275.5709, "z": 511.1357}
+{"recipe": "A", "test": "rest", "d": 1, "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "rest", "d": 4, "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "rest", "d": 8, "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "cdown_wait", "d": 1, "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "cdown_wait", "d": 15, "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "cdown_wait", "d": 90, "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "diveout", "d": [40, 3], "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "diveout", "d": [40, 30], "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "diveout", "d": [120, 3], "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "A", "test": "diveout", "d": [120, 30], "res": "SWIM_ON_LAND", "x": 277.5494, "z": 514.7152}
+{"recipe": "B", "test": "frames", "seg": 0, "d": -2, "res": "water", "x": 271.9897, "z": 508.199}
+{"recipe": "B", "test": "frames", "seg": 0, "d": -1, "res": "water", "x": 275.2071, "z": 511.4114}
+{"recipe": "B", "test": "frames", "seg": 0, "d": 1, "res": "water", "x": 281.6419, "z": 517.8362}
+{"recipe": "B", "test": "frames", "seg": 0, "d": 2, "res": "water", "x": 284.8593, "z": 521.0486}
+{"recipe": "B", "test": "frames", "seg": 1, "d": -2, "res": "water", "x": 271.9997, "z": 521.0587}
+{"recipe": "B", "test": "frames", "seg": 1, "d": -1, "res": "water", "x": 275.2121, "z": 517.8412}
+{"recipe": "B", "test": "frames", "seg": 1, "d": 1, "res": "no_reaction", "x": 281.637, "z": 511.4064}
+{"recipe": "B", "test": "frames", "seg": 1, "d": 2, "res": "no_reaction", "x": 284.8494, "z": 508.189}
+{"recipe": "B", "test": "frames", "seg": 2, "d": -2, "res": "water", "x": 269.3308, "z": 514.6238}
+{"recipe": "B", "test": "frames", "seg": 2, "d": -1, "res": "water", "x": 273.8777, "z": 514.6238}
+{"recipe": "B", "test": "frames", "seg": 2, "d": 1, "res": "no_reaction", "x": 282.9714, "z": 514.6238}
+{"recipe": "B", "test": "frames", "seg": 2, "d": 2, "res": "no_reaction", "x": 287.5183, "z": 514.6238}
+{"recipe": "B", "test": "frames", "seg": 3, "d": -2, "res": "no_reaction", "x": 278.4245, "z": 510.077}
+{"recipe": "B", "test": "frames", "seg": 3, "d": -1, "res": "no_reaction", "x": 278.4245, "z": 510.077}
+{"recipe": "B", "test": "frames", "seg": 3, "d": 1, "res": "water", "x": 278.4245, "z": 519.1707}
+{"recipe": "B", "test": "frames", "seg": 3, "d": 2, "res": "water", "x": 278.4245, "z": 523.7176}
+{"recipe": "B", "test": "frames", "seg": "f", "d": -2, "res": "no_reaction", "x": 281.637, "z": 511.4064}
+{"recipe": "B", "test": "frames", "seg": "f", "d": -1, "res": "no_reaction", "x": 281.637, "z": 511.4064}
+{"recipe": "B", "test": "frames", "seg": "f", "d": 1, "res": "water", "x": 275.2121, "z": 517.8412}
+{"recipe": "B", "test": "frames", "seg": "f", "d": 2, "res": "water", "x": 271.9997, "z": 521.0587}
+{"recipe": "B", "test": "angle", "d": -3, "res": "SWIM_ON_LAND", "x": 278.4087, "z": 513.9924}
+{"recipe": "B", "test": "angle", "d": -2, "res": "SWIM_ON_LAND", "x": 278.4154, "z": 514.1501}
+{"recipe": "B", "test": "angle", "d": -1, "res": "SWIM_ON_LAND", "x": 278.4221, "z": 514.3671}
+{"recipe": "B", "test": "angle", "d": 1, "res": "SWIM_ON_LAND", "x": 278.4221, "z": 514.9005}
+{"recipe": "B", "test": "angle", "d": 2, "res": "water", "x": 278.4154, "z": 515.1176}
+{"recipe": "B", "test": "angle", "d": 3, "res": "water", "x": 278.4087, "z": 515.2751}
+{"recipe": "B", "test": "ref_angle", "d": 222, "res": "water", "x": 283.921, "z": 520.1428}
+{"recipe": "B", "test": "ref_angle", "d": 228, "res": "water", "x": 275.567, "z": 511.9233}
+{"recipe": "B", "test": "ref_angle", "d": 232, "res": "water", "x": 275.3925, "z": 512.0979}
+{"recipe": "B", "test": "ref_angle", "d": 240, "res": "water", "x": 274.9833, "z": 512.507}
+{"recipe": "B", "test": "ref_angle", "d": 270, "res": "no_reaction", "x": 276.446, "z": 511.0443}
+{"recipe": "B", "test": "rest", "d": 1, "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "rest", "d": 4, "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "rest", "d": 8, "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "cdown_wait", "d": 1, "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "cdown_wait", "d": 15, "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "cdown_wait", "d": 90, "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "diveout", "d": [40, 3], "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "diveout", "d": [40, 30], "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "diveout", "d": [120, 3], "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "B", "test": "diveout", "d": [120, 30], "res": "SWIM_ON_LAND", "x": 278.4245, "z": 514.6238}
+{"recipe": "C", "test": "frames", "seg": 0, "d": -2, "res": "water", "x": 271.8955, "z": 508.3004}
+{"recipe": "C", "test": "frames", "seg": 0, "d": -1, "res": "water", "x": 275.1129, "z": 511.5128}
+{"recipe": "C", "test": "frames", "seg": 0, "d": 1, "res": "water", "x": 281.5478, "z": 517.9376}
+{"recipe": "C", "test": "frames", "seg": 0, "d": 2, "res": "water", "x": 284.7652, "z": 521.15}
+{"recipe": "C", "test": "frames", "seg": 1, "d": -2, "res": "water", "x": 275.1179, "z": 517.9426}
+{"recipe": "C", "test": "frames", "seg": 1, "d": -1, "res": "water", "x": 275.1179, "z": 517.9426}
+{"recipe": "C", "test": "frames", "seg": 1, "d": 1, "res": "no_reaction", "x": 281.5428, "z": 511.5078}
+{"recipe": "C", "test": "frames", "seg": 1, "d": 2, "res": "no_reaction", "x": 284.7552, "z": 508.2904}
+{"recipe": "C", "test": "frames", "seg": 2, "d": -2, "res": "water", "x": 269.2366, "z": 514.7252}
+{"recipe": "C", "test": "frames", "seg": 2, "d": -1, "res": "water", "x": 273.7835, "z": 514.7252}
+{"recipe": "C", "test": "frames", "seg": 2, "d": 1, "res": "no_reaction", "x": 282.8772, "z": 514.7252}
+{"recipe": "C", "test": "frames", "seg": 2, "d": 2, "res": "no_reaction", "x": 287.4241, "z": 514.7252}
+{"recipe": "C", "test": "frames", "seg": "f", "d": -2, "res": "no_reaction", "x": 279.759, "z": 513.2944}
+{"recipe": "C", "test": "frames", "seg": "f", "d": -1, "res": "no_reaction", "x": 279.759, "z": 513.2944}
+{"recipe": "C", "test": "frames", "seg": "f", "d": 1, "res": "water", "x": 276.9017, "z": 516.1561}
+{"recipe": "C", "test": "frames", "seg": "f", "d": 2, "res": "water", "x": 275.4731, "z": 517.5869}
+{"recipe": "C", "test": "angle", "d": -3, "res": "no_reaction", "x": 279.0027, "z": 514.6212}
+{"recipe": "C", "test": "angle", "d": -2, "res": "no_reaction", "x": 278.9683, "z": 514.7411}
+{"recipe": "C", "test": "angle", "d": -1, "res": "SWIM_ON_LAND", "x": 278.3928, "z": 514.5322}
+{"recipe": "C", "test": "angle", "d": 1, "res": "SWIM_ON_LAND", "x": 278.2594, "z": 514.9321}
+{"recipe": "C", "test": "angle", "d": 2, "res": "no_reaction", "x": 277.8244, "z": 514.5647}
+{"recipe": "C", "test": "angle", "d": 3, "res": "no_reaction", "x": 277.78, "z": 514.6812}
+{"recipe": "C", "test": "ref_angle", "d": 222, "res": "water", "x": 283.8268, "z": 520.2442}
+{"recipe": "C", "test": "ref_angle", "d": 228, "res": "water", "x": 275.4729, "z": 512.0247}
+{"recipe": "C", "test": "ref_angle", "d": 232, "res": "water", "x": 275.2983, "z": 512.1993}
+{"recipe": "C", "test": "ref_angle", "d": 240, "res": "water", "x": 274.8892, "z": 512.6084}
+{"recipe": "C", "test": "ref_angle", "d": 270, "res": "no_reaction", "x": 276.3518, "z": 511.1457}
+{"recipe": "C", "test": "rest", "d": 1, "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "rest", "d": 4, "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "rest", "d": 8, "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "cdown_wait", "d": 1, "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "cdown_wait", "d": 15, "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "cdown_wait", "d": 90, "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "diveout", "d": [40, 3], "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "diveout", "d": [40, 30], "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "diveout", "d": [120, 3], "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}
+{"recipe": "C", "test": "diveout", "d": [120, 30], "res": "SWIM_ON_LAND", "x": 278.3304, "z": 514.7252}

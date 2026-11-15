@@ -3430,3 +3430,152 @@ corner (x 700–749) gives none, and the west pillar was not tested.
 
 Not done yet: how to reach those speeds in this room (the pra_01/pra_02 setups reached 22–122 with stop-and-go
 pushes against a pillar), and the statue-top / statue-2 part of the route.
+
+## Toad Town Sushie swim on land (mac_00 east dock)
+
+The "swim on land" glitch in Toad Town: Mario ends up riding Sushie on the ground and can swim around town and into
+other maps. Tested on the east dock in mac_00 (the one in the clip: the diamond-shaped wooden dock south-west of the
+east entrance). All numbers are JP 1.0.
+
+**Two stages.** Both are needed:
+1. **C-down at the dock lands Sushie inside the dock** (the "pocket"). Mario ends up standing on the dock top, riding
+   Sushie, who is hidden under the planks. In the clip this is the end state (x 268.5946, z 504.3095, y bobbing
+   14.1–15.6). The emulator gives the same spot from the clip's standing position. Sushie is now riding "on land" (the
+   dock top), but the dock and the low grass strip behind it are boxed in by the 10-unit step up to the town
+   (collider 95, y 10–20), so she can't leave.
+2. **Dive out under the step.** Hold up-right until Mario stops against the step, then press C-down. Sushie dives under
+   the step (there is no floor under the strip, so the dive goes down to about y −60). She surfaces on the y=20 ground
+   and keeps riding. From there Mario swims anywhere in mac_00, and through the east exit into mac_01 still riding.
+
+So the clip's end state is not a dead end. It is stage 1 done; the run only needed stage 2.
+
+### Why it works (`world/partner/sushie.c`, `UseAbility`)
+
+- **C-down starts Sushie only while `gCollisionStatus.curWall` is a dock-wall collider** (surface type 4). Standing
+  still, `curWall` comes from a short test along Mario's facing (`targetYaw`). Facing straight at the SW dock wall
+  (225°), it reaches about 26.0 units.
+- **Sushie's direction comes from a ray, not from Mario's facing.** The ray starts at Mario and points away from the
+  centre of the dock-wall collider's bounding box (298.5, 517.5). The yaw is the normal of whichever dock-wall triangle
+  it hits. Sushie's target is Mario + 40 units along that normal.
+- **East dock (collider 102):** the NW side (normal 315°) and the SW side (225°) are two-sided walls, y 0–100.
+  - Near the west corner (238, 510), the ray can pass the corner on the NW side while Mario is touching the SW wall.
+    Sushie then jumps NW.
+  - If Mario is 31.0–33.4 units from the NW wall line, the target lands at most about 9 units outside that wall.
+    The NPC wall push-out then puts Sushie 25 units inside, under the dock top. That is the pocket.
+  - Hit anything else and the target is plain water: normal boarding.
+- **No direct way onto the town ground.** Every dock-wall normal points into water or out of bounds. The shore line
+  (x − z = −166) is parallel to the NW normal, so stage 1 can only ever reach the pocket.
+- **The centre dock (collider 101) has a pocket 3.6 times bigger, but it is useless.** The pocket spot is
+  dw 31.25–35.5 from the west wall and ds 22.75–25.75 from the south wall, facing 170–190° (`grid_centre`). But the
+  water floor (y 0) runs under that dock, so the dive stops at y 5 and the 7-unit step still blocks. Checked with a
+  RAM-placed pocket (diagnostic).
+- **The west dock (103)** is a mirror of the east one and was not tested.
+
+### Stage 1 window (where to stand)
+
+`sushie_grid.py` places Mario with RAM writes (diagnostic only), idles, then presses C-down.
+
+**Grids run:**
+- `grid_east_coarse`: 3-unit steps over the dock's NW and SW bands, facing 180–345°. 8,486 C-downs, 1 pocket.
+- `grid_east_fine05`: 0.5-unit steps.
+- `grid_east_yaw02`: 0.2 units × facing 217–233°.
+- `grid_east_hud01`: 0.1 units at facing 225°.
+
+**The pocket region is a thin triangle of 2.2 square units:**
+- dnw ≥ 31.0 (the push-in limit)
+- dsw ≤ 26.0 (the reach)
+- dnw ≤ 1.283·dsw (the ray must pass the corner on the NW side)
+
+Here dnw = (x + z − 748)/√2 and dsw = (x − z + 272)/√2.
+
+On the practice-ROM HUD (`grid_east_hud01`, every 0.1-unit cell):
+
+| z | x range |
+|---|---|
+| 513.6 | 278.3 |
+| 514.0 | 277.9 – 278.7 |
+| 514.4 | 277.5 – 279.1 |
+| 514.8 | 277.1 – 279.5 (widest) |
+| 514.9 | 277.3 – 279.6 |
+| 515.0 | 278.1 – 279.7 |
+| 515.2 | 279.7 – 279.9 |
+
+The biggest box that fits is **x 277.6–279.0, z 514.3–514.9**. The clip's spot (278.7936, 515.0436) is inside, 0.05
+units from the edge.
+
+**Other windows:**
+- **Facing:** 213–237° (down-left ±12°). The facing is the direction of the last stick input. The hammer does not turn
+  Mario (tested: B with the stick held on the same frame, or during the swing). The hammer is not needed.
+- **C-down timing:** any frame while Mario stands still (1–90 frames tested). C-down while walking (mashing on the way
+  in) gave 0 pockets in 960 tries (`creep_mash`): Mario takes one more step before Sushie starts.
+
+**What a fail looks like:**
+- **Nothing happens:** too far from the SW wall (dsw > 26, x − z above about −235.2), or facing outside 213–237°. Free
+  retry.
+- **Sushie swims out on the water:** normal boarding. Mario was too close to the NW wall (x + z < 791.8), or too close
+  to the SW wall for his distance from the NW wall, so the ray hits the SW wall. Press C-down/B against the dock to get
+  off, then set up again.
+
+**Creeping in (`creep_tap`):** start out of reach, then tap down-left (light tilt, one frame), and C-down after each
+tap. Each tap keeps x + z constant and moves dsw by at least 1.97. The band is at most 1.84 wide, so a tap can skip
+over it.
+- Best rate: about 50%, on the line dnw 31.2–31.8 (x + z ≈ 792.1–793.0) at the lightest tilt.
+- A skipped band gives water.
+
+### Inputs-only setups from a wall reference (`sushie_recipe_search.py`, `sushie_verify.py`)
+
+**Reference R:** on the dock, hold up-left 3 s into the NW wall, then down-left 2 s into the SW wall. Mario stops at
+(256.4711, 510.0869), dnw 13.11, dsw 13.00.
+
+From R, holds at full tilt (stick ≥ 75), with the stick released between holds. Each frame of running moves exactly
+4.5469 units. Then a light down-left tap, which sets the facing, then C-down:
+
+| Recipe | Holds after R | Final tap | Stands at (x, z) | Margin to the edge |
+|---|---|---|---|---|
+| A | down-right 4 f, up-right 3 f | down-left, light, 1 f | 277.5494, 514.7152 | 0.30 |
+| B | down-right 2, up-right 3, right 2, down 1 | down-left, full, 1 f | 278.4245, 514.6238 | 0.63 |
+| C | down-right 2, up-right 1, right 3 | down-left, light, 1 f | 278.3304, 514.7252 | 0.44 |
+
+All three reach swim on land in a full replay from the east-entrance state (walk to the dock, R, the recipe, stage 2).
+
+**Jitter (`verify_jitter.jsonl`):**
+- **Hold lengths:** ±1 or ±2 frames on any hold: 0% for all three (water or nothing). Every hold is frame-exact.
+- **Stick angle offset on all holds:**
+  - A: works only at −1°.
+  - B: works from −3° to +1°.
+  - C: works at ±1°. At ±2–3° nothing happens (safe).
+- **R's second push:** anything other than exactly 225° shifts R by up to several units (pushing at 222° slides along
+  the wall). Every recipe fails. On console, R is not a reliable reference.
+- **Timing:** rest frames between holds (1–8), the wait before C-down (1–90 frames) and the stage-2 variants: 100%.
+
+**Bottom line:** stage 1 is a position trick with a 2.2 square-unit target. There is no timing in it, but no
+full-tilt / wall-push recipe is reliable without the HUD. With the practice-ROM HUD, line up inside the box above,
+make the last input a light down-left tap, then C-down. A miss is either free (nothing happens) or costs a dismount.
+
+### Stage 2 window (`sushie_diveout.py`, `diveout.json`)
+
+From the pocket: hold the stick at **30–60°** (up-right notch ±15°) for **at least 40 frames** (1.3 s; Mario rides to
+the step at about (344, 429) and stops). Then press C-down for 3–30 frames while still holding up-right. There is no
+late limit (steering up to 180 frames before the press tested). Keep holding up-right for about a second while Sushie
+surfaces on the grass.
+
+**Fails:**
+- C-down while Sushie still faces the NW dock wall (pressing before turning, or holding straight up early): Mario hops
+  back onto the dock (dismount). Cheap to redo.
+- Stick at 0–25° or 65–90° with a short steer: Sushie dives but stays inside.
+
+### Files
+
+- `dump_collision_mac00.py` → `data/mac00_collision.json`. Dock-wall colliders: 101 (centre), 102 (east), 103 (west).
+- `sushie_mkbase.py`: base states (inputs only after the room state) at the dock, at R, and at the centre dock.
+- `sushie_grid.py`: the diagnostic C-down map (RAM placement).
+- `sushie_creep.py`: tap and mash creeping (RAM placement of the start point only).
+- `sushie_recipe_search.py`: the inputs-only recipes from R.
+- `sushie_diveout.py`: the stage-2 sweep.
+- `sushie_verify.py`: full inputs-only replays and the jitter test.
+
+**Data:** `data/sushie/*.jsonl` (numbers only).
+
+**Start state:** `make_state_room.py PRA_MAP=mac_00 PRA_AREA=1 PRA_ENTRY=1 PARTNER=7` (RAM writes for the warp and for
+making Sushie the partner, standing in for a save with Sushie). The story flags are chapter 1, but the dock collision
+does not depend on them. Everything after that is controller input, apart from the scripts marked diagnostic.
