@@ -3580,3 +3580,134 @@ surfaces on the grass.
 **Start state:** `make_state_room.py PRA_MAP=mac_00 PRA_AREA=1 PRA_ENTRY=1 PARTNER=7` (RAM writes for the warp and for
 making Sushie the partner, standing in for a save with Sushie). The story flags are chapter 1, but the dock collision
 does not depend on them. Everything after that is controller input, apart from the scripts marked diagnostic.
+
+### Real-time setup with cardinal inputs (`sushie_rta.py`)
+
+#### The runner's method, read off the clip
+
+`sushie_clip_inputs.py` reads the clip's input display; the B, Z and C-down states were read by eye from contact
+sheets. Frames below are clip frames at 30 fps.
+
+1. **Travel (frames 23–118):** run from the east entrance at about stick (−51, −67), a 217° diagonal, then
+   down-left, with a hop near the dock.
+2. **Into the corner (frames 132–147):** light Left, stick x about −4. Mario stops in the dock's west corner at
+   (254.0358, 513.0358), with x − z = −259.00. He is resting against the SW (lower-left) edge.
+3. **Light Right for 12 frames (frames 160–171):** stick x about 9, about 2.07 units per frame, reaching
+   x 278.7936.
+4. **A 1-frame light Down tap:** z 513.0358 → 515.0436 (+2.008).
+5. **Neutral Z, then down-left, with B pressed (frames 219–233).** Spinning with a neutral stick and then pressing B
+   turns Mario to face the stick direction without moving him. This is the "spin and hammer". It sets the 225° facing
+   that the C-down needs.
+6. **C-down (frame 239).**
+
+#### Two game facts the setups rely on
+
+- **Analog stick:**
+  - The deadzone is 4. A magnitude of 5 already walks (2.0078 per frame), and each step of magnitude adds
+    0.0078 per frame.
+  - Running starts at magnitude 60. Magnitude 75 and up runs at exactly 4.5469 per frame.
+  - Off-axis error snaps to an exact cardinal: up to 4 units at full tilt (about 3°), up to about 8° at light
+    tilt. A 5° error at full tilt still moves Mario 2.2° off-axis.
+  - So **light-tilt cardinal moves are exact**. Full-tilt moves drift: 2.2° over 27 units shifts z by 1.
+- **Spin-and-hammer facing (`spinham2`):** press Z with the stick neutral. From the next frame, hold down-left. Press
+  B any time from that frame up to 8 frames later. Release the stick during the swing. Every combination tested left
+  Mario unmoved and facing 225°. If down-left is already held on the Z frame, Mario spin-dashes instead. Down-left
+  only needs to be within 213–237°, so a sloppy diagonal is fine. **This is the only diagonal in the setup, and it
+  can't be removed:** a cardinal facing only reaches about 18 units, and the pocket needs 24–26.
+
+#### Why there is no ±3-frame window for the position
+
+- The pocket triangle is at most 2.6 units wide along x and 1.46 along z.
+- One frame of the lightest walk is 2.008 units. So any timed move that ends inside the pocket is a 1-frame window.
+- The setup gets around this by making a miss on one side harmless:
+  - **Too far right** (x − z above −235.2) is out of reach. C-down does nothing.
+  - **Too far left** is water.
+- So: walk past the pocket on the harmless side, then step back one light Left tap at a time, with a check after
+  each tap. At the right height, the pocket is up to 2.5 units wide along x, which is wider than a tap.
+
+**What height means:** z, the height on screen. At z 514.65–514.95 the pocket is at least 2.3 units wide along x.
+At z 515.0 it is 1.7, and at 515.1 it is 1.0.
+
+**The corner reset fixes the height:**
+- After Down a moment, Left until stopped and light Left, Mario sits exactly on x − z = −259.00.
+- z still lands anywhere in 512.56–513.08, depending on where the last step stops (`reset_hist`; full tilt, light
+  tilt and repeated settles all give the same 0.5 spread).
+- Then one lightest Down tap (+2.008) gives z 514.57–515.09. Only the top 0.1 of that is the bad height, which is
+  where the misses below come from.
+
+#### Setup 1 (recommended): walk past and creep back (check-first)
+
+1. **Get onto the dock** any way (keep your own travel).
+2. **Corner reset:** Down for a moment (touch the lower-left edge), Left until Mario stops, then light Left for about
+   1 s. All three are unlimited holds.
+3. **Light Right for at least 12 frames.** 12 is the fastest; there is no upper limit. Every 2 extra frames costs one
+   more loop below.
+4. **One light Down tap.** Barely past the deadzone, 1 frame.
+5. **Loop:**
+   1. Z (stick neutral), then down-left, then B.
+   2. After the hammer, C-down.
+   3. If nothing happens, one light Left tap, then repeat the loop.
+
+   The loop is 1–4 iterations for N = 12–15. Each loop is about 1.1 s as scripted (about 0.7 s if tight).
+6. **Stage 2, all cardinal:** hold Right at least 20 frames, then Up at least 20 frames, then C-down while still
+   holding Up. Keep holding Up while Sushie dives under the step and surfaces on the grass.
+   - 100% for Right 20–90 and Up 20–60 frames, with ±5° on both, from 5 pocket landings.
+   - The old Up-then-Right order failed when Right was 5° off: Sushie dove the wrong way, under the SE wall.
+
+**Results:**
+
+| Run | Setup | Trials | Swim on land / pocket | Water | Nothing happens |
+|---|---|---|---|---|---|
+| Full replay from the entrance (`rta_creep_*.jsonl`) | 1, N = 12–15 | 102 | 96 (94%) | 5 | 1 |
+| RAM-placed starts (`rta_placed_walk`) | 1, N = 12–18 | 174 | 168 (97%) | 6 | 0 |
+| RAM-placed starts (`rta_placed_walkfirst`) | 1, tap-first, N ≥ 13 | 80 | 78 | 2 | 0 |
+
+- The full replay samples Left 58–72 frames, Down 115–140, ±5° on every full-tilt hold, light magnitudes 5–30,
+  hammer timing and stage-2 lengths. Every miss is water, with z ≥ 515.07 (the bad top of the reset spread).
+- The 1 "nothing happens" ran out of loop iterations in the script.
+- With N = 11, all 26 trials go into the water. N = 12 is the lower bound.
+
+**Cost:** from the corner to the C-down that works:
+
+| N | Frames |
+|---|---|
+| 12 | about 46 |
+| 13 | about 86 |
+| 14 | about 113 |
+| 15 | about 150 |
+
+The runner's clip took 92 frames from the corner to C-down; the method itself needs about 46.
+
+#### Setup 2 (baseline): the runner's method
+
+Light Right exactly 12, Down tap, face, C-down once.
+
+| N | Result |
+|---|---|
+| 12 | 36 of 40 trials work (90%); the misses are water |
+| 11 | water, 54 of 55 (1 pocket) |
+| 13 or more | nothing happens (safe; carry on with setup 1's loop) |
+
+So the baseline has a 1-frame window. Under ±1-frame jitter it works about 31% of the time (and goes into the water
+33%). Under ±2 it works about 18%. The full replay with N = 11–13 gave 5 successes out of 30. Setup 1 is the same
+method with "hold longer, then creep back" added, which turns that 1-frame window into an open-ended one.
+
+#### Setup 3 (not recommended): full-tilt Right 6–7 frames, then creep
+
+56 of 80 work (70%). The ±5° error on a full-tilt hold shifts z, so this is worse than light tilt.
+
+#### Texture cues
+
+- The camera follows Mario.
+- From the 640x480 reference shots (not committed), the dock fence moves about 1.8 px per unit of Mario's x.
+- So a sprite-to-texture alignment is good to about ±1 unit. That is enough to judge "walked past the spot" in step
+  3, but not the 0.1–0.4 unit precision the pocket needs.
+- The wall reset is the only exact reference, and it fixes x − z, not z.
+
+**Files:**
+- `sushie_rta.py`: the full replays, setups creep and base.
+- `sushie_rta_placed.py`: the RAM-placed start variant.
+- `sushie_diveout_cardinal.py`: the stage-2 cardinal windows.
+- `sushie_clip_inputs.py`: reads the clip's input display.
+- `sushie_record_rta.py`: renders frames for the setup-1 video.
+- **Data:** `data/sushie/rta_*.jsonl` and `clip_inputs.txt`.
