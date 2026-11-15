@@ -1618,7 +1618,7 @@ function zwPlanChance(P, S) {
   const pid = PROF().id, b3 = ZW_BLIND[pid] != null ? ZW_BLIND[pid] : 0.31;
   return { p: (1 - S.doubt) * v + S.doubt * b3, pStates: v, pp: (1 - S.doubt) * sh[D] + S.doubt * b3, doubt: S.doubt };
 }
-const ZW_RELOCK_GAIN = 0.1;
+const ZW_RELOCK_GAIN = 0.1, ZW_SNAP_D = 8;     // v114: the press-judging snapshot spans the planned frame +-8
 function zwRelockReplan(P, ch) {
   const msg0 = st.msg; zwPlan('relock');      // (st.plan still P: an early plan's floor holds)
   const N = st.plan !== P ? st.plan : null, pOld = ch ? ch.p : 0, pNew = N && N.mix ? N.mix.p : null;
@@ -1630,6 +1630,10 @@ function zwTick(now) {
   if (!zw.on || (ZWD.t && now - ZWD.t < 250)) return; ZWD.t = now;
   ZWD.S = zwStates(now);
   const P = st.plan; if (!P || !P.mix || !P.mix.zw || P.seedNote) return;
+  // v114 (x1820 T3 / T4: pressed inside the window, dodged, judged 'failing' at 0.25): the press is read ~0.3 s after it, when the
+  // states have been stepped past its frame (zwShare counts no frame before a state's g). The newest states' shares around the
+  // planned frame are kept here while every one of those frames is still ahead; the Jr. press is judged on them
+  if (P.zwAbs != null && ZWD.S.list.length && (!P.shSnap || P.shSnap.key !== ZWD.S.key)) { const a = P.zwAbs - ZW_SNAP_D; if (ZWD.S.list.every(q => q.g <= a)) P.shSnap = { a, sh: Array.from(zwShare(ZWD.S.list, a, a + 2 * ZW_SNAP_D, PROF())), key: ZWD.S.key, doubt: ZWD.S.doubt }; }
   if (P.tPress < now - 300 || ZWD.S.key === P.zwKey) return;
   P.zwKey = ZWD.S.key;
   const ch = zwPlanChance(P, ZWD.S), pk = x => (x.pp != null ? x.pp : x.p), good = !!ch && ch.doubt < 0.5 && pk(ch) >= num('zwedge') && pk(ch) >= pk(P.mix) - 0.15;     // v83: re-scored as planned, on the perfect press

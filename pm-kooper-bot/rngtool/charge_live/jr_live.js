@@ -762,7 +762,10 @@ function jrPress(inp) {
   { const lk = typeof leverKey === 'function' ? leverKey(PROF().id) : null; if (onBeeps && lk) leverAdd(lk, err - (P.bias || 0)); else if (onBeeps) { presses.push(err); while (presses.length > 8) presses.shift(); try { localStorage.setItem('tot-presses', JSON.stringify(presses)); } catch (e) {} } }
   // v112 (x1434 / x1439 / x1441 / x1425: the verdict came from a plan made before a Charge relock): 'works' is the newest states'
   // share on the frame read (half or more), not the old plan's window; pNow the chance there (the frame read, its neighbours)
-  let works = inWin, pNow = null; try { const L = zwStates(performance.now()).list; if (L.length) { const sh = zwShare(L, f - 1, f + 1, PROF()); works = sh[1] >= 0.5; pNow = +(0.25 * sh[0] + 0.5 * sh[1] + 0.25 * sh[2]).toFixed(3); } } catch (e) {}
+  // v114 (x1820): judged on the newest states' snapshot taken while the frames were ahead (P.shSnap, zwTick), not on the states at
+  // the read (stepped past the press: every earlier frame counted 0, the chance one frame late); no snapshot: the plan's window
+  let works = inWin, pNow = null; const SS = P.shSnap;
+  if (SS && f - 1 >= SS.a && f + 1 < SS.a + SS.sh.length) { const g = x => SS.sh[x - SS.a] || 0; works = g(f) >= 0.5; pNow = +(0.25 * g(f - 1) + 0.5 * g(f) + 0.25 * g(f + 1)).toFixed(3); }
   V.pressNote = null; P.measured = { frame: f, c, err, inWin, works, likely: false, tObs: inp.t, onBeeps, edge, p: P.mix.p, pNow, k: inp.k, fr: P.target + d, w: { start: P.w.start, end: P.w.end } };     // v113: the plan's frame and window for the press table
   slog('press', { prof: PROF().id, step: routeStep, err: +err.toFixed(2), inWin, works, likely: false, near: [], onBeeps, src: inp.src, k: inp.k, edge: edge || undefined, pNow: pNow != null ? pNow : undefined });
   st.lastPress = Object.assign({ target: P.target, seedBL: P.seedBL, rate: P.rate }, P.measured);
