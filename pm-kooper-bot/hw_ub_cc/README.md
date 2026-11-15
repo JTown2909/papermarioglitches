@@ -89,3 +89,27 @@ and Lullaby turns), `lullaby_log.py`, `b_route.py` (B end to end, `STAR=lullaby`
 Data (numbers only): `data/b_t1_sweep_12345678.json`, `data/b_pb_t5_2468ace0.txt` (20 Power Bounces at charge 6),
 `data/lullaby_rolls_2468ace0.txt` (later lines of the first long run were dropped: their replayed values were misaligned;
 the two re-runs are exact), `data/timeout_turns.jsonl` (the first line's T3+ menus were wrong; its debuff timeline is right).
+
+## Update: the runner's loadout (Power Bounce, Charge, Power Rush, Close Call; Ultra Boots; Lakilester Super)
+Measured (`dmg_check.py`, `tr`-style probes; states built with `BADGES=e4,10a,...` DIAGNOSTIC setups):
+- **Badge 0x10A = Jump Charge: +2 per use** (gBattleStatus+0x97 = 2 after one use; 0x10C S.Jump Charge = 3), 1 FP.
+  0x10B / 0x10D are the hammer charges (no Jump menu entry): the old "10d = Power Rush" note in the Final Bowser setup
+  is wrong. Power Rush's id was **not found** (0x100-0x128 scanned with a T1 jump at 2 vs 10 HP: no Danger bonus), so
+  Power Rush is taken from the game's description: **+2 to every Mario hit at 5 HP or less** (not to partner hits).
+- Power Bounce hit k = max(1, 3 + charge + 2 - 1 - (k-1)); the Ultra jump's second hit is one less than its first
+  (measured 2, 1 at no charge). Spiny Flip 3. Bowser 50 HP, def 1.
+
+| Route (all Mario attacks in Danger) | damage | needs to kill on its last turn |
+|---|---|---|
+| current / A (identical attacks): Spiny Flip x5 = 15, T3 PB (charge 2) 6,5,4,3,2,1, T4 PB 4,3,2,1,1, T5 Jump 4+3 | 3/3 caps: 46 | PB total 28: T3 4+ and T4 4+, or T3 5+ and T4 3+ |
+| B: T5 PB at charge 4: 8,7,6,5,4,3,2,1,1.. + Bomb (2 / 3 / 4 at Normal / Super / Ultra rank, assumed Bomb 3/4/5 - def) | 8 hits: 36 + Bomb <= 40 | cannot reach 46 (or 50) on T5 at any cap or rank |
+| C: Spiny x4 = 12, T3 PB (charge 2) 6,5,4,3,2,1,1, T4 PB 4,3,2,1,1,1 | 6/5 caps: 44 | to match current's 46: (T3 7+, T4 6+) or (T3 8+, T4 5+); to 50: impossible |
+
+These totals still give the current route 46 < 50 at its 3/3 caps, so some damage is still missing from the model
+(most likely the Power Rush assumption); the ranking does not depend on it: A deals exactly what current deals; B is
+10+ short of current; C is 2 short at its planned caps.
+Chances (6 s windows): current/A unplanned 3/3-route kill condition 78% (T3 5+ 45.8%, or T3 = 4 and T4 4+), planned
+(T3 5+ 96.5%) ~99%; C's (7+, 6+) 39% x 70% = 27%, or (8+, 5+) 21% x 96.5% = 20%: about 35-40% together.
+Overall no hit and kill: current ~93% x ~99% (planned PBs); **A ~72%** (77.5% T1 Close Call x 93%); **B: no kill on T5**;
+**C ~17% in Danger** (77.5% x 95% Lullaby-model x ~37%, or 13% blind).
+Clip that settles the gap: one current-route Hallway on console showing every damage number (T3/T4 Power Bounce, T5 Jump).
