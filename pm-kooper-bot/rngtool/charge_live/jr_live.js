@@ -73,6 +73,13 @@ const HW_SEQ_NB = [
  * death (zwInconsistent in the revive) had no new lock and T3-T7 planned nothing): rearm on the confirm before each later Charge.
  * T7: Bounce x6 is the goal (no Bomb after it on this route): the route step's six6 aims at the 6+ run whatever it costs on 5+
  * (ppPick 'six6'; v110 took the 6 run only within PP_SIX_TOL of the 5+ pick, as the Bombette route's T6 where a 5 is finished by the Bomb). */
+/* v112 (logs x1027 / x1420: the coin fit no state after T6, zwInconsistent at 776 / 1891, T7 planned nothing): T6's Whacka was the
+ * Bombette route's jr_whacka, whose Jr. Troopa hit on +190 belongs to a turn where Whacka is the last action. Here Bombette's Do
+ * Nothing follows it and the hit hangs off that (jr_nothing_hit, +53): the hit was counted twice. Emulator (pl_route_log.py, 4
+ * seeds, Bombette out doing nothing, Ultra Boots, Power Bounce / Charge / Power Rush / Close Call): T6 draws = Whacka's 22 x
+ * [359, 10, 10] on +118 and the hit's 10 x 359 on Do Nothing + 53, nothing else; the page core matched every frame from the T1
+ * Charge to the T7 Power Bounce confirm with nb_whacka (the same draws, no hit) and broke at Whacka + 191 with jr_whacka. The bar
+ * hides 3 frames after the Whacka A (as every Mario action); Bombette's menu opens 153 frames after it. */
 const JR_SEQ_PL = [
   { id: 'jr_charge', t: 'T1', charge: true, hide: 3 },
   { id: 'jr_nothing_hit', t: 'T1', hide: 3, strat: true, what: 'Do Nothing', rearm: true },
@@ -84,7 +91,7 @@ const JR_SEQ_PL = [
   { id: 'jr_nothing_cc', t: 'T4', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 9, rearm: true },
   { id: 'jr_charge', t: 'T5', charge: true, hide: 3 },
   { id: 'jr_nothing_cc', t: 'T5', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true },
-  { id: 'jr_whacka', t: 'T6', hide: 3, rearm: true },
+  { id: 'nb_whacka', t: 'T6', hide: 3, rearm: true },     // v112: Whacka's sparkles only (jr_whacka adds Jr. Troopa's hit on +190: Whacka is T2's last action on the Bombette route)
   { id: 'jr_nothing_hit', t: 'T6', hide: 3, strat: true, what: 'Do Nothing' },
   { id: 'jr_pb', t: 'T7', hide: 3, prof: 'jrpb5', what: 'Power Bounce' } ];
 const JR_SEQS = { ultra: JR_SEQ, nbjr: JR_SEQ_NB, nbhw: HW_SEQ_NB, ultrapl: JR_SEQ_PL };
