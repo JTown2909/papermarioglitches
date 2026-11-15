@@ -113,3 +113,38 @@ Chances (6 s windows): current/A unplanned 3/3-route kill condition 78% (T3 5+ 4
 Overall no hit and kill: current ~93% x ~99% (planned PBs); **A ~72%** (77.5% T1 Close Call x 93%); **B: no kill on T5**;
 **C ~27% in Danger** (77.5% x 95% with a Lullaby model x ~37%; 21% with a blind Lullaby).
 Clip that settles the gap: one current-route Hallway on console showing every damage number (T3/T4 Power Bounce, T5 Jump).
+
+## Correction (reconciled with the runner's numbers): the "Charge" is 0x10C (+3), Power Rush 0x10D (+2)
+Decomp (`src/item_table.yaml`, `dmg_player.c`, `btl_states_actions.c`, `bombette.c`) and the emulator agree:
+- Item ids: 0x10A Jump Charge (+2/use, `jump_charge_1`), **0x10C S.Jump Charge (+3/use)**, **0x10D Power Rush**, 0x112 Close Call.
+  The runner's 10,9,8,7,6,5 after two Charges = 3 + **6** + 2 - 1: their Charge is the +3 one (0x10C, 4 FP here). The
+  previous section used +2 (0x10A) and was wrong; the first section's states already had 0x10C.
+- Power Rush: +2 to every jump/hammer hit when the turn **begins** at <= 5 HP (the flag is set in begin_turn, so an HP
+  write in the menu does not turn it on; that is why the id scan above saw nothing). Emulator, state
+  `boss_2302_run10c_menu.st` (DIAGNOSTIC setup `BADGES=e4,10c,10d,112`, Bombette Super): T1 Charge, Bowser's hit leaves
+  Danger, T2 Power Bounce 7,6,5,4 (= 3+3+2-1; 5,4,3,.. without the badge).
+- Damage = base + charge + rush - defence (1), then + powerBounceCounter (0, -1, -2, ..), min 1.
+- Bomb (full meter) by rank: Normal 5 / Super 6 / Ultra 7, minus 1 = **4 / 5 / 6**; the runner's 5 = Super rank (assumed).
+
+| Route (Mario in Danger from T2; all routes) | damage | kills on its last turn when |
+|---|---|---|
+| current / A: Spiny x5 15, T3 PB 7,6,5 (+4,3..), T4 PB 4,3,2 (+1..), T5 Jump 4+4 | caps 3/3: **50** | always (3 is the minimum cap) |
+| B: T5 PB 10,9,8,7,6,5,4,3 + Bomb 5 | 6 hits 45+5 = **50**; 8 hits 52 alone | cap 6+ (planned 69.6% in 6 s) |
+| C: Spiny x4 12, T3 PB 7,6,5,4,3,2,1, T4 PB 4,3,2,1,1 | caps 6/5: **50** | T3 6+ and T4 5+ (or T3 7+, T4 4+): planned about 67% |
+
+B with a 4-5 cap: 39-45 + Bomb leaves 5-11 HP; Bowser took no action on T5 after Time Out (3/3 runs), and on T6 Mario
+moves first (Jump 4+4 + Bomb 5 = 13), so he dies on T6 with no Close Call, one turn later. A 3 cap (rare at a planned
+frame) leaves 18: T6 is not enough and his T6 attack needs a Close Call.
+
+Overall (6 s windows, sd 1.3 presses):
+- current (Ultra Shroom): 93% no hit (T1 hit taken; Time Out or later Close Calls), kill on T5 certain.
+- **B: 88% x 96% = 84% no hit**; kill on T5 70%, else T6 (+1 turn) with no extra Close Call.
+- A: 77.5% x 93% = 72%, kill on T5 certain.
+- C: Danger 38% (blind Lullaby) / 49% (with a Lullaby model); at 10 HP 49% / 64%.
+Ranking: B (fastest, 84%) > A (72%) > C. B needs the page changes listed above (Do Nothing Close Call profile on T1,
+Time Out from the carry, a T5 Power Bounce 6+ profile for Ultra Boots at charge 6 with Power Rush: rolls +74/+101/+128/+155,
+limits 130/84/54/35; its hit-effect draw counts follow the damage 10,9,8,.. and still need logging).
+Emulator check of B (`STATE=states/boss_2302_run10c_menu.st b_route.py 2468ace0 8`, Mario at 10 HP for T1 only, then in
+Danger from Bowser's hit): T5 Power Bounce **10, 9, 8, 7, 6, 5** at the 6-cap delays (D4, D6), Bowser left at **5 HP** =
+one Super-rank Bomb (the script's Bomb input did not fire, so the Bomb itself is from `bombette.c`, not measured);
+5 caps leave 10, 4 caps 16 (`data/b_pb_t5_runner_badges_2468ace0.txt`).

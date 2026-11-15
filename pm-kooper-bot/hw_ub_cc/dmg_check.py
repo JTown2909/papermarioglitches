@@ -17,7 +17,7 @@ T1PB = os.environ.get('T1PB')   # T1PB=1: skip the T1 Charge turn, Power Bounce 
 if T1PB: r.e.w8(PLAYER_DATA + 2, H); fp1 = fp0; r.idle(10)   # DIAGNOSTIC: Mario's HP H
 else:
   r.idle(10); r.charge(0, 0, sub); r.wait_state((14,)); fp1 = r.e.s8(PLAYER_DATA + 5); r.idle(20); r.do_nothing(0); r.wait_state((13,)); r.idle(20)
-  r.e.w8(PLAYER_DATA + 2, H)                                           # DIAGNOSTIC: Mario's HP for T2 (Danger or not)
+  if H > 0: r.e.w8(PLAYER_DATA + 2, H)                                 # DIAGNOSTIC: Mario's HP for T2 (H 0: keep what Bowser's T1 hit left)
 if os.environ.get('ADDBADGE'):                                       # DIAGNOSTIC: badge added to the equipped list mid-battle
     for i in range(64):
         if r.e.u16(PLAYER_DATA + 0x208 + 2 * i) == 0: r.e.w16(PLAYER_DATA + 0x208 + 2 * i, int(os.environ['ADDBADGE'], 16)); break

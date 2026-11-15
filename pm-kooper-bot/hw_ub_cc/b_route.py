@@ -12,7 +12,8 @@ from hwlib import *
 
 seed = int(sys.argv[1], 16); NPB = int(sys.argv[2]); PER = int(sys.argv[3]) if len(sys.argv) > 3 else 27
 PB_RA = 'pbroll'
-r = Run('br'); r.load(STATE_BOMB); r.e.w8(PLAYER_DATA + 2, 10)   # DIAGNOSTIC: Mario's HP 10 (survive T1's hit)
+r = Run('br'); r.load(os.environ.get('STATE', STATE_BOMB))   # STATE=...: another Bombette state (e.g. the runner's badges)
+r.e.w8(PLAYER_DATA + 2, 10)   # DIAGNOSTIC: Mario's HP 10 (survive T1's hit; the hit leaves him in Danger)
 r.seed(seed)
 info = {}
 def nothing():
