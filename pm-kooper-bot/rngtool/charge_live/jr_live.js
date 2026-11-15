@@ -69,15 +69,19 @@ const HW_SEQ_NB = [
 /* v109, the partnerless route (ENDGAME_JR_PL): Mario's action, then Do Nothing; the Close Calls on T2-T5's Do Nothing (+26, taken
  * as Bombette's: not checked), Jr. Troopa's hit with no roll on T1 / T6 (Mario over 5 HP), a death's revive leaves the next turn
  * at 10 HP (no roll). */
+/* v111 (logs jr1126 / jr1128 / x1024: the T2 / T4 / T5 Charges were never read, CHG stayed 'locked' from T1, so a carry lost to a
+ * death (zwInconsistent in the revive) had no new lock and T3-T7 planned nothing): rearm on the confirm before each later Charge.
+ * T7: Bounce x6 is the goal (no Bomb after it on this route): the route step's six6 aims at the 6+ run whatever it costs on 5+
+ * (ppPick 'six6'; v110 took the 6 run only within PP_SIX_TOL of the 5+ pick, as the Bombette route's T6 where a 5 is finished by the Bomb). */
 const JR_SEQ_PL = [
   { id: 'jr_charge', t: 'T1', charge: true, hide: 3 },
-  { id: 'jr_nothing_hit', t: 'T1', hide: 3, strat: true, what: 'Do Nothing' },
+  { id: 'jr_nothing_hit', t: 'T1', hide: 3, strat: true, what: 'Do Nothing', rearm: true },
   { id: 'jr_charge', t: 'T2', charge: true, hide: 3 },
   { id: 'jr_nothing_cc', t: 'T2', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 5 },
   { id: 'nb_syrup', t: 'T3', hide: 3, menu: 160 },
-  { id: 'jr_nothing_cc', t: 'T3', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 7 },
+  { id: 'jr_nothing_cc', t: 'T3', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 7, rearm: true },
   { id: 'jr_charge', t: 'T4', charge: true, hide: 3 },
-  { id: 'jr_nothing_cc', t: 'T4', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 9 },
+  { id: 'jr_nothing_cc', t: 'T4', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true, revive: 9, rearm: true },
   { id: 'jr_charge', t: 'T5', charge: true, hide: 3 },
   { id: 'jr_nothing_cc', t: 'T5', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true },
   { id: 'jr_whacka', t: 'T6', hide: 3, rearm: true },
@@ -123,7 +127,7 @@ function jrReset(why) {
   // PREVIOUS Charge's time: the restart consumed T1 with a stale burst)
   const seen = typeof CHG !== 'undefined' && CHG ? CHG.trig || null : null;
   if (JRT.bar) JRT.bar.held = null;
-  Object.assign(JRT, { on: false, k: 0, anchor: null, chargeK: null, inputs: [], dead: null, hp10: {}, out: {}, ccPend: null, snap: null, lockK: null, cross: null, t0: null, trigSeen: null, hides: [], hist: [], why: why || null, ccSnap: null, recon: null, lost: null, lastLock: null, lostF: null, shineTry: 0, shineRec: null, seq: null, cancel: null });
+  Object.assign(JRT, { on: false, k: 0, anchor: null, chargeK: null, inputs: [], dead: null, hp10: {}, out: {}, ccPend: null, snap: null, lockK: null, cross: null, t0: null, trigSeen: null, hides: [], hist: [], why: why || null, ccSnap: null, recon: null, lost: null, lastLock: null, lostF: null, shineTry: 0, shineRec: null, seq: null, cancel: null, hpd: null });
   JRT.trigSeen = seen;
   if (zw.on && zw.fight === 'jr') zw.on = false;
 }
@@ -166,6 +170,7 @@ function jrFrame(t, present) {
   }
   nbCancelWatch(t, present);
   jrOutcomeWatch(t, present);
+  jrHpDropWatch(t, present);
   jrTick(t);
   jrShineTry();
 }
@@ -206,6 +211,31 @@ function jrOutcomeWatch(t, present) {
     if (P.n >= 6) { JRT.ccPend = null; slog('jrOutcome', { k: P.k, frames: Math.round(fr), dodge: false, by: 'HP 10', tens: +v.toFixed(2) }); jrDeath(P.k, Math.round(fr)); return; }
   }
   if (fr > JRS()[P.k].next + JR_DEATH + 60) jrSettle('time');
+}
+/* v111 (log x1133, Ultra Bombette T5 at 10 HP after the T4 revive: the Strategies box was up ~0.5 s while the T5 Charge's lock
+ * search ran and its close was never read; the Power Bounce's hide was then taken with Do Nothing missed (jrStepGap) and T6's
+ * bounce never planned): on a no-roll Do Nothing (10 HP: Jr. Troopa's hit cannot miss) still unread, Jr. Troopa's hit shows on the
+ * status bar: Mario's HP leaves 10, its tens place goes blank. Clips (the Strategies close as the page read it -> the first blank
+ * picture of the tens place, in frames of zw.rate, 33.4 ms): jr1126 T1 54.8 / T3 52.9 / T5 54.3 / T6 55.8, jr1128 T1 52.9 / T4 51.4,
+ * x1024 T1 53.3 / T6 53.9, x1027 T1 53.2 / T6 51.9: mean 53.4, sd 1.3 (Jr. Troopa's hit draws on +53, jr_nothing_hit). The Do
+ * Nothing goes in at that drop - 53.4 frames, its frame spread over -3..+3 (JR_HPDROP_SHIFTS): the coin on the next menu weighs them. */
+const JR_HPDROP = 53.4, JR_HPDROP_SHIFTS = [-3, -2, -1, 0, 1, 2, 3].map(d => [d, Math.exp(-d * d / (2 * 1.3 * 1.3))]).map((x, i, a) => [x[0], x[1] / a.reduce((u, y) => u + y[1], 0)]);
+function jrHpDropWatch(t, present) {
+  const H = JRT.hpd || (JRT.hpd = { k: -1, lit: 0, low: 0, t0: 0 });
+  const k = JRT.k, s = JRT.on && k < JRS().length ? JRS()[k] : null;
+  if (!s || !s.strat || !(JRT.hp10[k] || s.id === 'jr_nothing_hit') || !jrStepNow() || RT()[routeStep].cat !== 'S' || JRT.ccPend) { H.k = -1; return; }
+  if (H.k !== k) Object.assign(H, { k, lit: 0, low: 0, t0: 0 });
+  const B = JRT.bar; if (!present || !B.since || t - B.since < 3 * FRAME) { H.low = 0; return; }
+  const v = jrTens();
+  if (v >= JR_TENS_MIN) { H.lit++; H.low = 0; return; }
+  if (H.lit < 6) { H.lit = 0; return; }
+  if (!H.low) H.t0 = t; H.low++;
+  if (H.low < 2) return;
+  const prev = JRT.inputs.filter(x => x.k < k && x.t != null).pop(), tc = H.t0 - JR_HPDROP * jrRate();
+  H.k = -2;
+  if (prev && tc < prev.t + 300) { slog('jrHpDropIgnored', { k, at: Math.round(H.t0), why: 'too close to the last confirm' }); return; }
+  slog('jrHpDrop', { k, at: Math.round(H.t0), confirmAt: Math.round(tc) });
+  JRT.stratAt = tc; jrConfirm(k, tc, R.PROFILES.jrcc_nothing.vanish, 'hpdrop', JR_HPDROP_SHIFTS);
 }
 function jrSettle(by) {
   const P = JRT.ccPend; if (!P) return; JRT.ccPend = null;
@@ -258,11 +288,11 @@ function jrScreenClosed(tObs) {
   JRT.stratAt = tObs; slog('jrStrategiesClosed', { k: JRT.k, at: Math.round(tObs) });
   jrConfirm(JRT.k, tObs, R.PROFILES.jrcc_nothing.vanish, 'screen'); return true;
 }
-function jrConfirm(k, t, h, src) {
+function jrConfirm(k, t, h, src, shifts) {
   if (JRT.ccPend && JRT.ccPend.k < k) jrSettle('next confirm');
   if (JRT.cancel && !JRT.cancel.done && JRT.cancel.k < k) nbCancelSeen(null, 'next confirm');     // v85: the bar's return was missed
   const s = JRS()[k]; let id = s.id; if (s.hit && JRT.hp10[k] && !s.cancel) id = s.hit;
-  const inp = { k, id, t, h, src };
+  const inp = { k, id, t, h, src }; if (shifts) inp.shifts = shifts;
   // v85: Goombario's Charge. Wait mode (or the T1 Charge, no roll): the box runs out (P = +133), so this confirm decides it
   // and both go in now; cancel mode: the box A comes later (nbCancelSeen), planned here (nbCancelPlan)
   const roll = !!(s.ccP || s.ai) && !JRT.hp10[k], pid = roll ? s.cancel : s.hit || s.cancel;
@@ -343,7 +373,7 @@ function jrShineRecOk() {
   return n >= JR_RECON_TAPS && !top.err;
 }
 function jrDeath(k, fr) {
-  JRT.out[k] = 'death';
+  JRT.out[k] = 'death'; if (JRT.ccPend && JRT.ccPend.k <= k) JRT.ccPend = null;     // v111: the outcome is in (jrHoldTo holds no more)
   // the next turn's Close Call turn is at 10 HP (the revive): no roll there, its 10-HP draws instead
   const nx = JRS()[k].revive; if (nx != null) JRT.hp10[nx] = true;
   JRT.dead = JRS()[k].t + ': Mario was hit (10 HP after the Life Shroom, read ' + fr + ' frames after the confirm): the revive breaks the carry';
@@ -360,6 +390,22 @@ function jrDeath(k, fr) {
  * follows the death but menus (T5 -> T6's Power Bounce; T3 / T4 deaths need no carry: the next Charge locks again). */
 const JR_REVIVE_D = [[932, 0.02], [933, 0.1], [934, 0.14], [935, 0.38], [936, 0.14], [937, 0.1], [938, 0.05], [939, 0.05], [940, 0.02]];
 const JR_REVIVE_DEATH = 27, JR_REVIVE_MENU = 399, JR_REVIVE_BG = 0.15;
+/* v111 (logs x1024 T5, jr1126 T4, jr1128 T3: Mario died on the Close Call; the shines of the death and the revive, read before the
+ * "1" of 10 HP showed, fit none of the carried states (they model a dodge), zwInconsistent emptied the carry and the revive had
+ * nothing to start from: jrReviveNone / a revive from the wrong states). While a Close Call's outcome is pending, a state whose roll
+ * kills Mario is held at its death frame (the roll + 27): the coin after it says nothing about it; a dodge drops it, a death
+ * revives it from there (jrReviveCarry steps it to that frame anyway). On every Jr. route a Close Call roll happens only in Danger
+ * (Ultra Bombette 2 HP, partnerless 3 HP, Normal Boots 3 HP) and Jr. Troopa's hit (7) is a KO there: the status bar reads n/10 ->
+ * 0/10 -> the Life Shroom's 10/10 in every clip (jr1126 T2 / T4, jr1128 T3, x1024 T5, x1133 T4), so a hit is a death; a turn at
+ * 10 HP has no roll (hp10). */
+function jrDeathF(p, k) {
+  const s = JRS()[k], inp = JRT.inputs.filter(x => x.k === k && x.c != null).pop();
+  if (!s || !inp || !p.cc || p.cc[k] !== false) return null;
+  const nbw = JRS() === JR_SEQ_NB && !!inp.wait && s.ccP != null;
+  if (!nbw && !s.cc) return null;
+  return (nbw ? inp.c + (p.sh || 0) + R.NB_K.none + s.ccP : inp.c + (p.sh || 0) + s.cc) + JR_REVIVE_DEATH;
+}
+function jrHoldTo(p) { const P = JRT.ccPend; if (!P || zw.fight !== 'jr') return Infinity; const f = jrDeathF(p, P.k); return f == null ? Infinity : f; }
 function jrReviveCarry(k) {
   const s = JRS()[k], inp = JRT.inputs.filter(x => x.k === k && x.c != null).pop();
   // v109 (jrg0744, Normal Boots: T2 / T4 deaths, the carry ended, T3 / T5 had nothing to plan from): also the Normal Boots route in
@@ -374,7 +420,7 @@ function jrReviveCarry(k) {
   let dead = zw.parts.filter(p => p.cc && p.cc[k] === false); if (!dead.length) { if (!zw.parts.length) { slog('jrReviveNone', { k }); return false; } slog('jrReviveAll', { k, states: zw.parts.length }); dead = zw.parts.slice(); }
   const out = [], seen = new Map(); let n0 = 0;
   for (const p of dead) {
-    const fd = (nbw ? inp.c + (p.sh || 0) + R.NB_K.none + s.ccP : inp.c + (p.sh || 0) + s.cc) + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
+    const fd0 = jrDeathF(p, k), fd = fd0 != null ? fd0 : (nbw ? inp.c + (p.sh || 0) + R.NB_K.none + s.ccP : inp.c + (p.sh || 0) + s.cc) + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
     const q = zwClone(p); while (q.g < fd) { if (q.pause && q.g === q.pauseAt) { q.S.nc += q.pause; q.g += q.pause; continue; } R.frameEv(q.S, q.g, q.ev); q.g++; }
     n0++;
     const mAll = new Set(zw.taps.map((t, i) => i).filter(i => zw.taps[i] < fm));

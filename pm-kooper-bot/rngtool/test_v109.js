@@ -16,7 +16,7 @@
  *    the route's stars, Erase log at once, the buttons' feedback.
  * usage: node test_v109.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1115] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v110/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1115';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v111/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1115';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null; };
 (async () => {
@@ -24,7 +24,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set, presses) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(([s, pr]) => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); if (pr) localStorage.setItem('tot-presses', JSON.stringify(pr)); } catch (e) {} }, [set || { prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'charge', duproute: 'charge' }, presses || null]); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v110', 'page version v109');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v111', 'page version v109');
 
   // ---- 1. the solid window (synthetic jr0701 T4 shape)
   const s1 = await p.evaluate(() => {

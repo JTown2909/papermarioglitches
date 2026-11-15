@@ -34,7 +34,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     out.dodge = S0.map(q => T.jrClasses(q.s, q.nc, q.g, 170, 210, 'jrcc_bomb').map((v, i) => (v ? 170 + i : null)).filter(x => x != null));
     start3(); T.jrConfirmClock(5, C[5]);
     T.jrStatesAt(C[5] + 250);         // the tracker stepped on as the page does between the confirms (it merged states here)
-    out.split = T.zw.parts.map(q => ({ s: q.S.s >>> 0, cc: q.cc && q.cc[5] }));
+    out.split = T.zw.parts.map(q => ({ s: q.S.s >>> 0, cc: q.cc && q.cc[5], g: q.g }));
     const n0 = T.SLOG.length; T.jrConfirmClock(6, C[6]);
     const L = T.SLOG.slice(n0); out.t3 = { outcome: L.find(e => e.ev === 'jrOutcome'), dodge: L.find(e => e.ev === 'jrDodge'), recover: L.some(e => e.ev === 'jrRecover'), dead: T.zw.dead,
       allDodge: T.zw.parts.every(q => q.cc && q.cc[5] === true), parts: T.zw.parts.length, reconOk: T.jrReconOk() };
@@ -119,7 +119,8 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   check(FIX.t3.dodgeModel.lag0.includes(188) && FIX.t3.dodgeModel.lag1.includes(188), 'the confirm read (188) dodges in both lags: the model allows what the runner got');
   const sameS = new Set(r.split.map(x => x.s)).size, mixed = r.split.some(x => x.cc) && r.split.some(x => !x.cc);
   console.log('  after the T3 confirm, stepped on: ' + r.split.length + ' states over ' + sameS + ' RNG states, outcomes ' + r.split.map(x => (x.cc ? 'D' : 'h')).join(''));
-  check(mixed && sameS < r.split.length, 'shifts with different outcomes share an RNG state after the roll and stay apart');
+  const held = r.split.filter(x => !x.cc).every(x => r.split.filter(y => y.cc).every(y => x.g < y.g));     // v111: a hit state is held at its death while the outcome is pending (jrHoldTo)
+  check(mixed && (sameS < r.split.length || held), 'shifts with different outcomes share an RNG state after the roll and stay apart (v111: the hit ones held at their death frame: ' + held + ')');
   console.log('  T3 outcome: ' + JSON.stringify(r.t3));
   check(r.t3.outcome && r.t3.outcome.dodge && r.t3.dodge && r.t3.dodge.left > 0 && !r.t3.dead && r.t3.allDodge && !r.t3.recover, 'the Close Call keeps the states that dodge (v79: left 0)');
   // 2

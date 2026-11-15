@@ -1,3 +1,103 @@
+# Time Out Timer v111: a Close Call hit is a death on every Jr. route (the carry held through it), the partnerless Charges read again, an unread no-roll Do Nothing taken from Jr. Troopa's hit, the 6 run on the partnerless T7, the strip's star / coin markers, the per-lever timing from the clips, short route labels (Nov 15)
+
+From the runner's console logs of Nov 15 (logs1115: x1024, x1027 on v109; jr1126, jr1128, x1133, x1135, dup1138-dup1143, fb1145,
+fb1149 on v110) and their clips (numbers only; no clip, frame or picture committed). Page frames below are zw.rate frames (33.4 ms).
+
+## 1. Hit or death (jr1126 / jr1128 / x1024 / x1133)
+- Every Close Call hit of the day was a KO and a Life Shroom revive: the status bar read 3/10 -> 0/10 -> 7..10/10 (jr1126 T2 at
+  clip 18-32 s, T4 at 50-64 s; jr1128 T3; x1024 T5) and 2/10 -> 0 on the Bombette route (x1133 T4). A roll happens only in Danger
+  (partnerless and Normal Boots 3 HP, Bombette 2 HP) and Jr. Troopa's hit (7) cannot leave Mario standing there; a turn at 10 HP
+  has no roll (hp10). So the v110 jrReviveCarry on jr1126 T2 was right in kind; what broke was the carry before it:
+- The death's and the revive's shines (read before the "1" of 10 HP, 441-445 frames after the confirm) fit none of the carried
+  states, which model a dodge: zwInconsistent emptied the carry (x1024 T5 at 1721, jr1126 T4 at 1385, jr1128 at the revive) and the
+  outcome found nothing to revive (jrReviveNone) or 2 states. Now a state whose roll kills Mario on a pending Close Call is held at
+  its death frame (roll + 27, `jrHoldTo`, zwUpdate): a dodge drops it, a death revives it (`jrDeathF`). Replayed (test_v111 1):
+  jr1126 revives from 12 then 268 states (v110: 2, then jrReviveNone), jr1128 from 3, x1024 from 16 (v110: jrReviveNone).
+- Partnerless: the T2 / T4 / T5 Charges were never read (CHG stayed 'locked' from T1: no `rearm` in JR_SEQ_PL), so a lost carry had
+  no new lock and T3-T7 planned nothing. The confirm before each later Charge rearms the reader now.
+- x1133 (Bombette, T5 at 10 HP after the T4 revive): the Strategies box was up ~0.5 s while the T5 Charge's lock search ran and its
+  close was never read; the Power Bounce's hide then took Do Nothing as missed (jrStepGap: the 5 -> 7 "jump" was the bounce itself,
+  then the fight's end) and T6 never planned. On an unread no-roll Do Nothing, Jr. Troopa's hit blanks the HP tens place a fixed
+  time after it (clips: 53.4 frames, sd 1.3, n 10, from the page's Strategies close to the first blank tens picture): `jrHpDrop`
+  puts the Do Nothing in at that time, spread -3..+3 frames for the coin. Replayed: T6 plans 5+ 97% (test_v111 3).
+- Not fixed: x1027 T7 "beepsStopped late" on a 13-frame window was the coin fitting no state 1.8 s before the beep (zwInconsistent
+  at 1891 after T6's Whacka + Do Nothing at 10 HP): the partnerless T6 draws (Mario's own Do Nothing, Jr. Troopa's hit with no roll)
+  are still Bombette's; replayed on v111 the same. Needs the emulator run of that turn.
+
+## 2. Why on-target presses got hit, and the per-lever timing
+- The hits are the plans' odds, not a timing bias: the 12 partnerless presses dodged 8 times where the plans' chances sum to 8.7
+  (jr1126 T2 p 0.57 on 1 frame and T4 0.69 from unverified revive states; jr1128 T3 0.69 on 1 frame).
+- Clips with the input display (jr1012, jr1019, x1024, x1027, dup1010, dup1015; the v110 clips have none): the page's read against
+  the A press seen on the display (read - A, a constant display latency included):
+  | lever | n | read - A mean | sd |
+  |---|---|---|---|
+  | Do Nothing (Strategies close: jrcc_nothing) | 10 | -3.53 | 0.30 |
+  | Bomb (bar hide) | 2 | -4.21 | 0.83 |
+  | Maple Syrup (bar hide) | 2 | -3.12 | 0.36 |
+  | Duplighosts Do Nothing (Strategies close) | 2 | -3.34 | 0.17 |
+  The reads follow the A within 0.3 frame; the levers sit within one frame of each other (n 2 for the bar levers).
+- Raw reads against the target (read - target, no built-in correction; v110 reads less its -0.5), every beeped press of the day:
+  | lever | n | mean | sd |
+  |---|---|---|---|
+  | jrcc_bomb | 6 | -0.57 | 0.68 |
+  | jrcc_syrup | 6 | -0.78 | 0.67 |
+  | jrcc_nothing (Bombette and partnerless) | 16 | -0.54 | 0.78 |
+  | Normal Boots gch / Headbonk | 4 | -0.88 | 0.60 |
+  | jrpb5 | 3 | -0.36 | 0.86 |
+  | dup3 | 7 | -0.45 | 0.81 |
+- The outcome fit (32 Jr. presses with an outcome; P(dodge) = p inside the window, 0.3 outside, read noise 0.45 frame): one s for
+  all levers +0.35 (95% -0.15..+0.90); per lever Do Nothing 0.00 (-0.85..+1.45), Bomb +0.50 (-0.45..+1.40), Syrup +0.20
+  (-1.10..+1.45), Normal Boots +0.80 (-0.50..+2.35). No lever's own value is supported over the shared one: **every Jr. lever keeps
+  the built-in -0.5; Duplighosts keeps 0** (all six v110 / v109 Duplighosts presses gave 3: dup1138, 1139, 1141, 1142, 1143 read 3
+  from the clips; the 4s were coin flips, p4 0.17-0.52).
+- jr1012 (-1.3..-2.0 raw) against x1135 (-0.3..+0.1 raw): the input display has jr1012's A presses about 0.9 frame earlier against
+  the beeps than x1024 / x1027's: the runner pressed early that run; the built-in is applied once, on the read side (`jrFix`, true =
+  read + 0.5), and moves no beep. The learned per-lever correction (v110) already moves the Duplighosts' beeps 0.3 frame later from
+  the runner's last 5 presses (mean -0.55).
+- Press check: "Last press" read the global list, which since v110 no longer gets the Jr. / Duplighosts presses (it showed x1027's
+  -1.50 on every later press): it shows the press just made now.
+
+## 3. Partnerless T7: the 6 run; the route's marks
+- T7 (`six6` on the step): the plan picks on the 6+ map itself (its widest run, the middle), not the 5+ pick with the 6 run only
+  within PP_SIX_TOL (the Bombette route's T6, where a 5 is finished by the Bomb).
+- The Settings option is "Ultra Boots Partnerless" (no "untested"); T1's step no longer says untested. Confirmed: the T1 lock in
+  this arena, the Do Nothing read each turn, the route moving on by itself. Not confirmed: the Close Call frame (+26, Bombette's)
+  and the T6 draws (section 1).
+
+## 4. (ii) The strip markers (the runner's spec)
+- At most one marker above the beeped frame on every strip that draws a plan (Jr., Duplighosts, Time Out, fb14, fb2): a gold ★ when
+  the realistic chance is >= 0.80 on a 2+ frame window, a gold coin when < 0.60 or 1 frame (or no frame working for every state),
+  nothing in between. Duplighosts: ★ ringed white when the 4 is confident too; a white-ringed coin when 3+ is confident and the 4 a
+  coin flip (p4 < 0.60, pp4 < 0.75 or a 1-frame all-4 window: dup1139); a plain coin when 3+ is a coin flip (dup1015). The status
+  line says the same ("★ SOLID 97%", "3+ SOLID 85% · 4 is a coin flip (41%)", "coin flip (42%, no frame works for every state)").
+- fb1145 T6 (win 0, p 0.42) and fb1149 T6 (win 0, p 0.38) now show the coin and "no frame works for every state".
+- (oo) part: a press on a working frame of a plan under 0.80 says "a working frame for 60% of the states ✓ (not certain)" and
+  "you ✓ 60%" on the strip (fb1149 T3: pressed 1352 of a green 1351-1353 on a 0.60 plan, Bowser hit). Not done: shading each cell by
+  its chance (the planners hand the strip only the >= 0.5 map; fb2's win-0 T6 strip is therefore all red), and the lock badge's
+  "seed confidence" against the planned chance.
+
+## 5. (3) "it aimed for the first possible frame" (jr1019 T3 / T5)
+- Replayed at the plans' times (the replay's targets are not the console's frames: it plans from the same states at the log's time
+  but its earliest frame differs): T3's target sat in the middle of a 3-frame green run of the strip (the >= 0.5 map across the
+  states) while the plan counted 1 frame (its neighbours are below the best's tolerance); T5's target sat on the second frame of a
+  2-frame green run. The green the strip draws (half the weight or more) is wider than the window the plan counts (the gold bars):
+  "centred" on the strip and centred in the plan's window differ by design. Not changed; the cell shading above would show it.
+
+## 6. Smaller
+- Route pickers: Jr. Troopa "Ultra Boots Bombette" / "Ultra Boots Bombette (old shine lock)" / "Ultra Boots Partnerless";
+  Duplighosts "Ultra Boots Spiny Surge (no lock)" / "Ultra Boots Bombette"; Final Bowser (Normal Boots) "Normal Boots Power Bounce
+  cap" / "Normal Boots Goombario (untested)". Headings and turn lines unchanged.
+- (5) Time Out wording: an edge press says "on the edge of the window: the video cannot tell ..." without "outside the window".
+- Not done in v111: (nn) the Ultra Boots Laki Phase 1 tracker (needs Phase 1 clips: its Charge read in that arena, the Phase 1 cap
+  damage; Phase 1 stays text lines, so it traps nothing); fb1145 T6's beeps / T7 count from the clip's audio; the Normal Boots
+  Hallway carry (aa).
+
+## Tests
+`test_v111.js` (in run_suite.sh; fixtures/console_1115_jr.json, numbers only): jr1126 / jr1128 / x1024 / x1027 replayed at their own
+clock (confirms on the console's frames within 1, the revives from the held states), x1133's HP drop and T6 plan with its marker,
+the partnerless rearm, six6, the markers and their words, the (oo) press text, the labels, the edge wording. Page hook
+`window.__tot.v111.ev` (tests). VERSION v111; version checks and default build paths moved.
+
 # Time Out Timer v110: works straight after opening (the runner's defaults, per-fight corrections, a learned correction per lever); the Final Bowser input path 3-6x lighter; T5 a tracked step; the route list's star column, the Duplighosts' wording, the Normal Boots Goombario Final Bowser route and Ultra Boots Phase 1 (both untested) (Nov 15)
 
 From the runner's console logs of Nov 15 (logs1115) and the emulator harness (numbers only; no clip, frame or picture committed).

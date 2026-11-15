@@ -342,9 +342,9 @@ details[open] summary { margin-bottom: 10px; }
         </div></details>
       </div>
     <p class="note" style="margin:0">Duplighosts → Jr. Troopa → Hallway Bowser → Final Bowser · click a step to jump there · ★ = planned press</p>
-    <label class="f" style="margin:0">Duplighosts route<select id="s-duproute"><option value="rta">RTA: Spiny Surge (no lock)</option><option value="charge" selected>Charge lock: Mario Charge, Bombette Do Nothing</option></select><small id="duproute-note"></small></label>
-    <label class="f" style="margin:0">Jr. Troopa route<select id="s-jrroute"><option value="charge">Charge lock: T1 Super Charge, beeps on T3-T6</option><option value="shine">Old: a shine lock carried through the turns (v72)</option><option value="pl">Ultra Boots Partnerless: Charge; Do Nothing - Close Call T2-T5, Bounce x6 (v109, untested)</option></select></label>
-    <label class="f" style="margin:0">Final Bowser route (Normal Boots)<select id="s-fbnbroute"><option value="cap">Phase 2 as you like, then a high Power Bounce cap (v85)</option><option value="goomba">Normal Boots Goombario Final Bowser (v110, untested: not beeped yet)</option></select></label>
+    <label class="f" style="margin:0">Duplighosts route<select id="s-duproute"><option value="rta">Ultra Boots Spiny Surge (no lock)</option><option value="charge" selected>Ultra Boots Bombette</option></select><small id="duproute-note"></small></label>
+    <label class="f" style="margin:0">Jr. Troopa route<select id="s-jrroute"><option value="charge">Ultra Boots Bombette</option><option value="shine">Ultra Boots Bombette (old shine lock)</option><option value="pl">Ultra Boots Partnerless</option></select></label>
+    <label class="f" style="margin:0">Final Bowser route (Normal Boots)<select id="s-fbnbroute"><option value="cap">Normal Boots Power Bounce cap</option><option value="goomba">Normal Boots Goombario (untested)</option></select></label>
 </aside>
 </div>
 
@@ -585,16 +585,19 @@ const ENDGAME_JR = { h: 'Jr. Troopa', turns: [
  * his action then Do Nothing (the Strategies box, read as Bombette's), Jr. Troopa's attack after it. T2-T5's Do Nothing is the
  * Close Call lever (Mario in Danger), T7 the Power Bounce (6 run, ppPick6). The carry (JR_SEQ_PL, jr_live.js) reuses the measured
  * pieces: the Super Charge, Maple Syrup (nb_syrup), Whacka's Bump (jr_whacka), Jr. Troopa's hit with no roll (jr_nothing_hit) and
- * the Do Nothing Close Call on +26 (jr_nothing_cc). NOT CHECKED: Mario's own Do Nothing was never run in the emulator or seen on
- * console; its Close Call frame is taken as Bombette's (+26), and whether Jr. Troopa's turn hides the bar after it is not known. */
+ * the Do Nothing Close Call on +26 (jr_nothing_cc). v111, seen on console (x1024, x1027, jr1126, jr1128): the T1 Charge lock in this
+ * arena, Mario's Do Nothing read from its Strategies box every turn, the route moving on by itself, Mario at 3 HP on T2-T5 (a hit
+ * is a KO and the Life Shroom, 10 HP after it). Outcomes against the plans: 8 dodges of 12 presses, the plans' chances summing to
+ * 8.7. Still not checked: the Close Call frame (+26, Bombette's) and T6's Whacka + hit at 10 HP (x1027: the coin fit no state
+ * 1.8 s before T7's beep). */
 const ENDGAME_JR_PL = { h: 'Jr. Troopa: Ultra Boots Partnerless', pl: true, turns: [
-  { text: 'T1: Charge; Do Nothing', steps: [{ label: 'Super Charge (its rays lock the seed), then Do Nothing (no Close Call yet: untested route, see Settings)', cat: 'S', chg: 'jr', jr: 1, seq: 'ultrapl' }] },
+  { text: 'T1: Charge; Do Nothing', steps: [{ label: 'Super Charge (its rays lock the seed), then Do Nothing (no Close Call yet: Mario over 5 HP)', cat: 'S', chg: 'jr', jr: 1, seq: 'ultrapl' }] },
   { text: 'T2: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 3, seq: 'ultrapl' }] },
   { text: 'T3: Maple; Do Nothing - Close Call', steps: [{ label: 'Maple Syrup, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 5, seq: 'ultrapl' }] },
   { text: 'T4: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 7, seq: 'ultrapl' }] },
   { text: 'T5: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 9, seq: 'ultrapl' }] },
   { text: 'T6: Whacka; Do Nothing', steps: [{ label: 'Whacka\'s Bump, then Do Nothing (nothing to time)', cat: 'S', chg: 'jr', jr: 11, seq: 'ultrapl' }] },
-  { text: 'T7: Bounce x6', steps: [{ label: 'Power Bounce on the beep → 6', cat: 'K', prof: 'jrpb5', chg: 'jr', jr: 12, seq: 'ultrapl' }] } ] };
+  { text: 'T7: Bounce x6', steps: [{ label: 'Power Bounce on the beep → 6', cat: 'K', prof: 'jrpb5', chg: 'jr', jr: 12, seq: 'ultrapl', six6: true }] } ] };
 /* The Duplighosts on the Charge-lock route (dup_charge/README.md), selectable in the route panel instead of the RTA turn
  * above (Settings key duproute): T1 Mario's Super Charge (no Z: Mario first), whose rays lock the seed (charge_live.js,
  * profile dup), then Bombette's Do Nothing on the beep. That A is the only lever: each Duplighost rolls RandInt(1000) <
@@ -1217,7 +1220,7 @@ function zwUpdate(to) {
   // one is evidence against it (its Poisson factor; the states are charged per predicted shine instead)
   if (zw.bg) { const a = zw.bgTo != null ? zw.bgTo : Math.max(0, zw.f0 || 0); if (to > a) { let n = 0; for (let f = Math.ceil(a); f < to; f++) if (zwVisible(f)) n++; zw.bg *= Math.exp(-ZW_RHO * n); zw.bgTo = to; } }
   for (const p of zw.parts) {
-    if (!zwStep(p, to, L)) continue;
+    if (!zwStep(p, zw.fight === 'jr' && typeof jrHoldTo === 'function' ? Math.min(to, jrHoldTo(p)) : to, L)) continue;     // v111: a Jr. state that died on a pending Close Call is held at its death
     if (to > p.evMax && !p.S.inst.length && !(p.S.extra && p.S.extra.size) && p.g >= (p.pauseAt || 0) + (p.pause || 0)) {
       // Jr. Troopa: a Close Call's outcome (p.cc, jr_live.js) is part of the state. The confirm shifts -2..+1 meet in one
       // RNG state after the roll (the roll and the coin draw swap, the count is the same) while their rolls differ: merged
@@ -1455,7 +1458,10 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
   const sc = scOf(share), sc4 = share4 ? scOf(share4) : null, type = wtype(), honest = (p, k) => (adj ? (1 - adj.d) * p + adj.d * adj[k] : p);
   let target = null, w = null, none = null, pk = null;
   if (type === 'best') {
-    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
+    const six6 = /^jrpb5n?$/.test(prof.id) && isRoute() && RT()[routeStep] && RT()[routeStep].six6;     // v111: the partnerless T7 needs the 6 (no Bomb after it)
+    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');
+    // v111: the partnerless T7 picks on the 6+ map itself (its widest run, the middle), whatever the 5+ chance does beside it
+    if (six6 && share4) { const P6 = ppPick(share4, null, a, b, from, W, sc4, 'free', later, true); if (P6.ok) pk = Object.assign({}, P6, { six: true, run4: P6.run }); }     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
     // v109 (console jrg0753, Normal Boots wait mode: the runner sat on Goombario's Charge screen 3-5 s each turn): where the beeped
     // press is a wait (the Charge confirm held until the beep), the earliest frame within PP_WAIT_TOL of the pick with the press spread
     if (prof.lever === 'wait' && pk.ok && !share4) { const okE = c => (share[c - a] || 0) >= 0.5; for (let c = from; c < pk.target; c++) if (okE(c) && sc(c) >= sc(pk.target) - PP_WAIT_TOL) { let s0 = c, e0 = c; while (s0 - 1 >= a && okE(s0 - 1)) s0--; while (e0 + 1 <= b && okE(e0 + 1)) e0++; pk = Object.assign({}, pk, { target: c, run: { start: s0, end: e0, length: e0 - s0 + 1 }, earlier: pk.target - c }); break; } }
@@ -1862,7 +1868,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v110';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v111';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2022,17 +2028,52 @@ function lockBadgeShow() {
   return B;
 }
 /* what the strip shows, in words (the strip's state line and the overlay on stale or waiting frames) */
+/* v111 (ii), the runner's spec: at most one marker above the beeped frame, on every strip (Jr., Duplighosts, Time Out, fb14, fb2):
+ * a gold ★ when the plan is confident (the realistic chance, with the press spread, >= 0.80 and a window of 2+ frames), a gold
+ * coin when it is a coin flip (< 0.60, or a 1-frame window), nothing in between. Duplighosts (3+ with the all-4 on top): ★ ringed
+ * white when the 4 is confident too; a white-ringed coin instead of the ★ when 3+ is confident but the 4 a coin flip (p4 < 0.60,
+ * pp4 < 0.75 or a 1-frame all-4 window: dup1139, p4 0.41 on 1 frame); a plain coin when 3+ itself is a coin flip (dup1015). */
+const MARK_SOLID = 0.80, MARK_COIN = 0.60, MARK_COIN_PP4 = 0.75;
+function stripMarker(P) {
+  const m = P && P.mix; if (!m || m.p == null) return null;
+  const pc = x => Math.round(100 * x) + '%', win = m.win != null ? m.win : (P.w && P.w.length) || 0;
+  const solid = m.p >= MARK_SOLID && win >= 2, coin = m.p < MARK_COIN || win <= 1;
+  const dup = P.prof === 'dup3' || (P.mix && P.mix.goal != null && m.p4 != null && /^dup/.test(P.prof || ''));
+  if (dup && m.p4 != null) {
+    const aimed4 = (m.win4 || 0) > 0 || m.p4 >= 0.2;
+    if (solid) {
+      if (!aimed4) return { kind: 'star', ring: false, text: '★ 3+ SOLID ' + pc(m.p) };
+      if (m.p4 >= MARK_SOLID && (m.win4 || 0) >= 2 && !(m.pp4 != null && m.pp4 < MARK_COIN_PP4)) return { kind: 'star', ring: true, text: '★ 3+ SOLID ' + pc(m.p) + ' · 4 SOLID ' + pc(m.p4) };
+      if (m.p4 < MARK_COIN || (m.pp4 != null && m.pp4 < MARK_COIN_PP4) || (m.win4 || 0) <= 1) return { kind: 'coin', ring: true, text: '3+ SOLID ' + pc(m.p) + ' · 4 is a coin flip (' + pc(m.p4) + ')' };
+      return { kind: 'star', ring: false, text: '★ 3+ SOLID ' + pc(m.p) };
+    }
+    if (coin) return { kind: 'coin', ring: false, text: '3+ is a coin flip (' + pc(m.p) + ')' };
+    return null;
+  }
+  if (solid) return { kind: 'star', ring: false, text: '★ SOLID ' + pc(m.p) };
+  if (coin) return { kind: 'coin', ring: false, text: 'coin flip (' + pc(m.p) + (win === 1 ? ', 1 frame' : win < 1 ? ', no frame works for every state' : '') + ')' };
+  return null;
+}
+function drawMarker(ctx, M, x, y, gold, white) {
+  if (!M) return;
+  if (M.kind === 'star') {
+    ctx.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 3 : 7, a = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(x + r * Math.cos(a), y + r * Math.sin(a)); } ctx.closePath();
+    ctx.fillStyle = gold; ctx.fill();
+  } else { ctx.beginPath(); ctx.arc(x, y, 6, 0, 2 * Math.PI); ctx.fillStyle = gold; ctx.fill(); ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 2 * Math.PI); ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1; ctx.stroke(); }
+  if (M.ring) { ctx.beginPath(); ctx.arc(x, y, 8.5, 0, 2 * Math.PI); ctx.strokeStyle = white; ctx.lineWidth = 2; ctx.stroke(); }
+}
 function stripState(d) {
   const now = performance.now(), P = st.plan, sc = st.seedChange && now - st.seedChange.t < 4000 ? st.seedChange : null;
-  if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press (' + d.label + '): frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? 'a working frame ✓' : 'a failing frame ✗') + '. Shown until the next plan beeps.' };     // v109
+  if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press (' + d.label + '): frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? (d.p != null && d.p < MARK_SOLID ? 'a working frame for ' + Math.round(100 * d.p) + '% of the states ✓ (not certain)' : 'a working frame ✓') : 'a failing frame ✗') + '. Shown until the next plan beeps.' };     // v109
   if (!PROF().rolls.length) return { cls: 'wait', text: 'Nothing to time on this step: just play it.' };
   if (P && P.stopped) return { cls: 'stale', text: (zw.dead ? 'Seed lost' : 'Beeps stopped') + ' – the coin ruled the planned frame out. Press normally.', overlay: zw.dead ? 'Seed lost – beeps stopped' : 'Beeps stopped' };
   if (P && d.stale) return { cls: 'stale', text: 'Seed lost – showing old prediction. Press normally.', overlay: 'Seed lost – old prediction' };
   if (sc) return sc.ok ? { cls: 'stale', text: 'Seed changed – new window (a shine ruled the old one out). Follow the new beeps.' } : { cls: 'stale', text: 'Seed changed – too late to move the beeps; the planned frame still works for ' + Math.round(100 * (P && P.mix && P.mix.pNow != null ? P.mix.pNow : 0)) + '%.' };
   if (P) {
     const left = P.tPress - now, typ = P.type && WTYPE[P.type] ? WTYPE[P.type].name : 'best chance', ch = P.mix ? ' · ' + (likelyText(P.mix, /^jrpb5/.test(P.prof || '') ? '6+' : 'all 4') ? likelyText(P.mix, /^jrpb5/.test(P.prof || '') ? '6+' : 'all 4') + ' · ' : '') + ppText(P.mix, P.prof) : '';
-    if (left > -400 && PROF().lever === 'wait') return { cls: 'plan', text: 'HOLD on Goombario\'s Charge target screen: confirm it on the 3rd beep, not before (in ' + Math.max(0, left / 1000).toFixed(1) + ' s, ' + (P.beeps || nBeeps()) + ' beeps)' + ch };     // v109 (jrg0744 T2 / T4: confirmed 3.4 s before the beeps)
-    if (left > -400) return { cls: 'plan', text: 'Beeping: ' + (P.beeps || nBeeps()) + ' beeps, press on the last · ' + typ + (P.mix && P.mix.pp != null ? '' : ' · ' + P.w.length + '-frame window') + ch };
+    if (left > -400 && PROF().lever === 'wait') return { cls: 'plan', text: 'HOLD on Goombario\'s Charge target screen: confirm it on the 3rd beep, not before (in ' + Math.max(0, left / 1000).toFixed(1) + ' s, ' + (P.beeps || nBeeps()) + ' beeps)' + (stripMarker(P) ? ' · ' + stripMarker(P).text : '') + ch };     // v109 (jrg0744 T2 / T4: confirmed 3.4 s before the beeps)
+    const mk = stripMarker(P), mt = mk ? ' · ' + mk.text : '';     // v111 (ii): the marker's words
+    if (left > -400) return { cls: 'plan', text: 'Beeping: ' + (P.beeps || nBeeps()) + ' beeps, press on the last · ' + typ + mt + (P.mix && P.mix.pp != null ? '' : ' · ' + P.w.length + '-frame window') + ch };
     return { cls: 'plan', text: onTarget() ? 'Window passed – planning the next one' : 'Window passed' };
   }
   if (d.src === 'zw' && d.doubt) return { cls: 'stale', text: 'Lock doubtful – the coin fits the tracked states badly (missed or extra shines). Press normally.', overlay: 'Lock doubtful' };
@@ -2106,14 +2147,17 @@ function drawStrip() {
   if (d.src === 'press' && d.hit != null) {     // v109: the frame the press landed on, green (works) / red
     const xh = X(d.hit + 0.5), cH = d.works ? css('--run3') : css('--run1');
     ctx.fillStyle = bg; ctx.fillRect(xh - 4, Y0 - 16, 8, CH + 32); ctx.fillStyle = cH; ctx.fillRect(xh - 2.5, Y0 - 16, 5, CH + 32);
-    ctx.font = '700 12px ' + css('--mono'); ctx.textAlign = 'center'; ctx.fillText(d.works ? 'you ✓' : 'you ✗', Math.max(24, Math.min(W - 24, xh)), Y0 - 18); ctx.textAlign = 'left';
+    ctx.font = '700 12px ' + css('--mono'); ctx.textAlign = 'center'; ctx.fillText(d.works ? (d.p != null && d.p < MARK_SOLID ? 'you ✓ ' + Math.round(100 * d.p) + '%' : 'you ✓') : 'you ✗', Math.max(24, Math.min(W - 24, xh)), Y0 - 18); ctx.textAlign = 'left';
     if (d.target != null) { const xm = X(d.target + 0.5); ctx.fillStyle = gold; ctx.fillRect(xm - 1, Y0 - 8, 2, CH + 16); }
   }
+  V.stripMarker = null;
   if (d.target != null && st.plan && d.src !== 'press') {   // the aimed frame: a marker in the middle of its cell (press when it reaches the now-line)
     const xm = X(d.target + 0.5); ctx.globalAlpha = d.stale ? 0.4 : 1;
     ctx.fillStyle = bg; ctx.fillRect(xm - 3, Y0 - 2, 6, CH + 4);
     ctx.fillStyle = gold; ctx.fillRect(xm - 1.5, Y0 - 12, 3, CH + 24);
-    ctx.beginPath(); ctx.moveTo(xm - 7, Y0 - 20); ctx.lineTo(xm + 7, Y0 - 20); ctx.lineTo(xm, Y0 - 11); ctx.closePath(); ctx.fill();
+    const MK = stripMarker(st.plan); V.stripMarker = MK ? { kind: MK.kind, ring: MK.ring, x: xm, frame: d.target } : null;     // v111 (ii) (tests read V.stripMarker)
+    if (MK) { ctx.beginPath(); ctx.moveTo(xm - 5, Y0 - 12); ctx.lineTo(xm + 5, Y0 - 12); ctx.lineTo(xm, Y0 - 5); ctx.closePath(); ctx.fill(); drawMarker(ctx, MK, Math.max(10, Math.min(W - 10, xm)), Y0 - 18, gold, '#ffffff'); }
+    else { ctx.beginPath(); ctx.moveTo(xm - 7, Y0 - 20); ctx.lineTo(xm + 7, Y0 - 20); ctx.lineTo(xm, Y0 - 11); ctx.closePath(); ctx.fill(); }
     ctx.globalAlpha = 1;
   }
   // time ticks relative to now (or to the aim once planned)
@@ -2644,7 +2688,7 @@ function measurePress(tObs) {
 function pressShow(P, c, label) {
   if (!P || !P.tab || !P.tab.length || P.first == null || c == null) return null;
   const f = Math.round(c), works = !!P.tab[f - P.first];
-  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: null, first: P.first, tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now() };
+  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: null, first: P.first, tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: P.mix && P.mix.p != null ? P.mix.p : null };     // v111 (oo): the plan's chance, for the ✓
   slog('pressShow', { label, target: P.target, c: +c.toFixed(2), works });
   return works;
 }
@@ -2671,12 +2715,13 @@ function showPresses() {
     if (LL.works == null) { $('press-msg').textContent = 'Press check: ' + head + rest; return; }     // v109: coloured as the other fights' presses
     $('press-msg').innerHTML = '<span style="color:#fff; background:' + (LL.works ? 'var(--run3)' : 'var(--run1)') + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head.replace(/[<>&]/g, '') + '</span><br>' + rest.charAt(1).toUpperCase() + rest.slice(2); return; }
   if (!presses.length && !(P || st.lastPress)) { $('press-msg').textContent = 'Press check: after you confirm on the target screen (with the beeps running), this says how early or late you pressed, measured against the middle of the aimed frame.'; return; }
-  const last = presses.length ? presses[presses.length - 1] : (P || st.lastPress || { err: 0 }).err, r = x => Math.round(x * 10) / 10;
+  // v111: the press just made first (its own lever's record since v110: the global list no longer gets the Jr. / Duplighosts presses)
+  const last = (P || st.lastPress) ? (P || st.lastPress).err : presses.length ? presses[presses.length - 1] : 0, r = x => Math.round(x * 10) / 10;
   const avg = presses.length ? presses.reduce((a, b) => a + b, 0) / presses.length : 0;
   const spread = presses.length ? Math.sqrt(presses.reduce((a, b) => a + (b - avg) * (b - avg), 0) / presses.length) : 0;
   const dir = x => Math.abs(x) < 0.5 ? 'on time' : (Math.abs(r(x)) + ' frames ' + (x > 0 ? 'late' : 'early'));
   const fr = q => q.edge ? 'on the edge of the window: the video cannot tell whether it ' + (q.inWin ? 'worked' : 'missed') : q.works ? 'a working frame' : q.likely ? 'a failing frame by the video, but a working one is within ' + PRESS_TOL + ' frames' : 'a failing frame';
-  const head = P && !P.onBeeps ? 'Pressed ' + Math.abs(Math.round(P.err)) + ' frames ' + (P.err < 0 ? 'before' : 'after') + ' the beeps: ' + fr(P) : 'Last press: ' + dir(last) + (P ? (P.inWin ? ' (inside the window, ' : ' (outside the window, ') + fr(P) + ')' : '');
+  const head = P && !P.onBeeps ? 'Pressed ' + Math.abs(Math.round(P.err)) + ' frames ' + (P.err < 0 ? 'before' : 'after') + ' the beeps: ' + fr(P) : 'Last press: ' + dir(last) + (P ? (P.edge ? ' (' : P.inWin ? ' (inside the window, ' : ' (outside the window, ') + fr(P) + ')' : '');     // v111 (5): an edge press is neither
   let s = '';
   const lq = P || st.lastPress;
   if (lq && lq.likely) s += 'The page counts it as worked (the next shines check it). Did the outcome come out right (all 4 copied, the Close Call dodged)? Then your capture reads presses about ' + Math.abs(r(lq.err)) + ' frames ' + (lq.err < 0 ? 'early' : 'late') + ': set Press check correction to ' + (Math.round((num('pfix') + lq.err) * 2) / 2) + ' (now ' + num('pfix') + '). ';
@@ -2760,7 +2805,7 @@ function autoPlan() {
 })();
 drawIdlePreview();
 applyProfile(); requestAnimationFrame(loop);
-window.__tot = { VERSION, v107: { likelyText: (m, t) => likelyText(m, t) }, v110: { BUILTIN_FIX, builtinFix: k => builtinFix(k), leverKey: id => leverKey(id), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), LEVER_MAX, LEVER_STORE, jrFix: () => (typeof jrFix === 'function' ? jrFix() : null), fbnbRoute: () => fbnbRoute(), endgameNow: () => endgameNow(), rerender: () => applyProfile() }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), seriesActive: n => seriesActive(n), BEEP_QUIET_MS, zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id, w) => leverPressNote(l, e, id, w), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
+window.__tot = { VERSION, v111: { ev: src => eval(src) }, v107: { likelyText: (m, t) => likelyText(m, t) }, v110: { BUILTIN_FIX, builtinFix: k => builtinFix(k), leverKey: id => leverKey(id), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), LEVER_MAX, LEVER_STORE, jrFix: () => (typeof jrFix === 'function' ? jrFix() : null), fbnbRoute: () => fbnbRoute(), endgameNow: () => endgameNow(), rerender: () => applyProfile() }, v106: { setStep: i => setStep(i), eraseLog: () => eraseLog(), logFileName: d => logFileName(d), SLOG, playBeeps: (t, n, g) => playBeeps(t, n, g), stopBeeps: (w, p, P) => stopBeeps(w, p, P), cancelBeeps: o => cancelBeeps(o), inFlight: n => beepsInFlight(n), lateTurnTick: n => lateTurnTick(n), seriesHold: t => seriesHold(t), seriesActive: n => seriesActive(n), BEEP_QUIET_MS, zwTick: n => { ZWD.t = 0; zwTick(n); }, st: () => st, BEEP_STOP_MS, ppPick6: (...a) => ppPick6(...a), chgDropNote: () => chgDropNote(), CHG: () => CHG, relockGain: ZW_RELOCK_GAIN }, leverPressNote: (l, e, id, w) => leverPressNote(l, e, id, w), showPresses: () => showPresses(), makePlan: () => makePlan(), planScreenLost: (t, now) => planScreenLost(t, now), autoPlan: () => autoPlan(), zwMaxAhead: ZW_MAX_AHEAD, ARENA, arenaMoveOk: (i, A, t) => arenaMoveOk(i, A, t), arenaNote: (i, t) => arenaNote(i, t), arenaReset: t => arenaReset(t), chgArenaClass: (L, br, lbr) => chgArenaClass(L, br, lbr), leverKey, leverList: k => leverList(k), leverBias: k => leverBias(k), leverAdd: (k, e) => leverAdd(k, e), dupGoalNow: () => dupGoal(), bootsNow: () => bootsNow(), routeOddsLines: () => routeOddsLines(), ppPick: (...a) => ppPick(...a), ppText: (...a) => ppText(...a), PP_TOL, lockBadge: () => lockBadgeShow(), lockBadgeState: () => lockBadgeState(), lockFB: () => ({ FB14, FB2 }), HWHP, hwHpReset: () => hwHpReset(), hwHpHyps: r => hwHpHyps(r), hwHpShares: () => hwHpShares(), hwHpFrame: (t, pr) => hwHpFrame(t, pr), HWHP_MIN, HWHP_DIE,
   zwInput: (id, t, v, imps) => zwInput(id, t, v, imps), zwUpdate: h => zwUpdate(h), zwStatesAtT: h => zwStatesAt(h), zwTapF: f => zw.taps.push(f), VAN,
   hwTrackerAt: (seed, qs, trigT) => { chgReset(); Object.assign(CHG, { prof: CHG_PROF.hw, trig: { t: trigT }, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'hw'; },
   JRT, JR_SEQ, v109: { frameParts: (t, pr) => { const err = []; for (const [n, f] of [['chgFrame', () => chgFrame(t, pr)], ['jrFrame', () => jrFrame(t, pr)], ['jrEarlyPlan', () => jrEarlyPlan(t)], ['hwHpFrame', () => hwHpFrame(t, pr)], ['fb14Frame', () => fb14Frame(t, pr)], ['drawStrip', () => drawStrip()], ['render', () => render()], ['chgShow', () => chgShow()]]) { try { f(); } catch (e) { err.push(n + ': ' + e.message + ' @ ' + String(e.stack).split('\n').slice(1, 3).join(' / ')); } } return err; }, chgProfNow: () => (typeof chgProfNow === 'function' ? (chgProfNow() || {}).id || null : null), CHG_PROF: typeof CHG_PROF !== 'undefined' ? CHG_PROF : null, closeMinMs: () => closeMinMs(), jrStepGap: (k, w) => jrStepGap(k, w), jrDeath: (k, f) => jrDeath(k, f), jrReviveCarry: k => jrReviveCarry(k), JR_REVIVE_D, pressShow: (P, c, l) => pressShow(P, c, l), FB_RECLOSE_MS, PP_SOLID_TOL, PP_WAIT_TOL, zwChoose: (...a) => zwChoose(...a), ppPick: (...a) => ppPick(...a) }, jrPlanAt, jrNoLockMsg, jrDodge, jrReconOk: () => jrReconOk(), jrZw: () => jrZw(), jrShineAt: h => { JRT.shineTry = -1; return jrShineSearch(h); },
