@@ -34,11 +34,13 @@ info['t4'] = dict(mario=mario_hp(r.e), status=bowser_status(r.e), bowser=r.bowse
 t5 = snap('t5'); runs = []
 for D in range(NPB):
     r.load(t5); r.seq(r.moves(-2 if SL else 1) + [(A, 0, 20), (0, DOWN, 10), (A, 0, 15), (A, 0, 1)], D, 'pb'); dc = r.marks['pb']
-    hp_tr = []; prev = r.bowser_hp()[0]
+    hp_tr = []; prev = r.bowser_hp()[0]; stl = [(0, bowser_status(r.e))]
     for i in range(40 + PER * 12):
-        k = r.f - dc; r.step(A if k >= 47 and (k - 47) % PER == 0 else 0)
+        k = r.f - dc; r.step(A if k >= 47 and (k - 47) % PER == 0 and k < 47 + PER * 9 else 0)
         h = r.bowser_hp()[0]
         if h != prev: hp_tr.append((k, prev - h)); prev = h
+        if bowser_status(r.e) != stl[-1][1]: stl.append((k, bowser_status(r.e)))
+    print('  status during/after the Power Bounce', stl, 'state', bstate(r.e), file=sys.stderr, flush=True)
     rl = [(x[0], x[3]) for x in rolls_after(r, dc) if x[1] == PB_RA]
     bomb = None
     if r.bowser_hp()[0] > 0 and r.wait_state((14,), cap=600) == 14:      # Bombette's Bomb (mash through its meter)

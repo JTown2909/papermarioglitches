@@ -35,7 +35,9 @@ Every script writes Mario's HP / gRandSeed at the menu (DIAGNOSTIC, labelled in 
 - **Power Bounce vs Hallway Bowser, Ultra Boots** (`b_route.py`): cap rolls every 27 frames from confirm +74 (hits on
   +48, +75, ...), pass if v <= 130, 84, 54, 35, 23, 15, 9; hits = 2 + passes. Damage 3 + charge - 1, one less per bounce,
   minimum 1: charge 6 (two Charges): 8,7,6,5,4,3,2,1 (8 hits = 36, 7 = 35, 6 = 33); charge 3: 5,4,3,2,1,1,1.
-  Against the **sleeping** Bowser (`STAR=lullaby b_route.py`) the thresholds are the same (6 runs). Charge = 4 FP here.
+  Against the **sleeping** Bowser (`STAR=lullaby b_route.py`, 14 runs) the thresholds are the same and the damage is the same;
+  the hits do not wake him (debuff 6 kept through the bounces; it ends on his T3 phase countdown, and that phase had no attack).
+  So Lullaby covers T2 + T3, and C must kill on T4 (awake for T4's enemy phase). Charge = 4 FP here.
 - Partners cannot use items in this game (TTYD added that); no partner menu position opened an item list (`partner_item.py`).
 
 ## Chances (`hw_sim.js odds` / `pb`; best frame with a normal press spread sd 1.3 over -4..+4, 1000 seeds)
