@@ -3688,9 +3688,17 @@ Light Right exactly 12, Down tap, face, C-down once.
 | 11 | water, 54 of 55 (1 pocket) |
 | 13 or more | nothing happens (safe; carry on with setup 1's loop) |
 
-So the baseline has a 1-frame window. Under ±1-frame jitter it works about 31% of the time (and goes into the water
-33%). Under ±2 it works about 18%. The full replay with N = 11–13 gave 5 successes out of 30. Setup 1 is the same
-method with "hold longer, then creep back" added, which turns that 1-frame window into an open-ended one.
+**Correction (Speedy Spin).** The runs above were done without Speedy Spin, and the runner plays with it equipped.
+With `SPEEDY=1` (Speedy Spin equipped by a labelled diagnostic RAM write), 80 trials each:
+
+| Setup | Swim on land | Water |
+|---|---|---|
+| Runner's method (N = 12, any light-tilt strength) | 77 of 80 (96%) | 3 |
+| Setup 1, creep (N = 12–14) | 76 of 80 (95%) | 4 |
+
+The earlier "about 31%" figure assumed the runner can't hold exactly 12 frames. It was never a measurement of the runner's
+method, and they say it works every time when done right. With Speedy Spin, setup 1 is no better and is slower
+(it needed 2–3 checks in 57 of 80 trials). **Use the runner's method.**
 
 #### Setup 3 (not recommended): full-tilt Right 6–7 frames, then creep
 

@@ -9,7 +9,8 @@ SETUP creep (recommended):  light Right N frames (N >= 12), light Down tap,
 SETUP base (the runner's clip method):  light Right N frames (12 exact), light Down tap, face, C-down once.
 Dive-out (cardinal):  Right >= 20 frames, then Up >= 20 frames, C-down while holding Up, keep holding Up.
 Success = riding Sushie (action 33, actingPartner 7) on the y=20 ground (Sushie y > 4) outside the dock.
-usage: sushie_rta.py SETUP PART NTRIALS NLIST [seed]   -> data/sushie/rta_SETUP_PART.jsonl"""
+usage: [SPEEDY=1] sushie_rta.py SETUP PART NTRIALS NLIST [seed]   -> data/sushie/rta_SETUP_PART[_speedy].jsonl
+The runner plays with Speedy Spin equipped: SPEEDY=1 equips it (DIAGNOSTIC setup RAM write, badge 287)."""
 import sys, os, math, random, json
 from emu import *
 from pm import *
@@ -33,9 +34,11 @@ def check():
     face(); step(D_CBUTTON, (0, 0)); step(0, (0, 0), 3)
     return player(e)['action'] == 33
 os.makedirs('data/sushie', exist_ok=True)
-out = open('data/sushie/rta_%s_%d.jsonl' % (SETUP, k), 'w')
+SPEEDY = bool(os.environ.get('SPEEDY'))
+out = open('data/sushie/rta_%s_%d%s.jsonl' % (SETUP, k, '_speedy' if SPEEDY else ''), 'w')
 for t in range(NT):
     e.load('states/mac00_e1.st'); F[0] = 0
+    if SPEEDY: e.w16(PLAYER_DATA + 0xB4, 287); e.w16(PLAYER_DATA + 0x208, 287)   # DIAGNOSTIC setup: Speedy Spin owned + equipped
     L1 = random.randint(58, 72); step(0, st(270 + J(), 80), L1)
     step(0, st(180 + J(), 80), random.randint(115, 140))
     step(0, st(270 + J(), 80), random.randint(35, 60))
@@ -70,6 +73,6 @@ for t in range(NT):
                 if q['action'] == 33 and e.s8(PSTAT + 3) == 7 and s['y'] > 4 and q['x'] - q['z'] > -150:
                     land = F[0]; break
             if land: res = 'SWIM_ON_LAND'
-    rec = dict(L1=L1, c0=c0, n=n, mag=round(mr, 1), res=res, checks=checks, spot=spot, f_clip=f_clip,
+    rec = dict(speedy=SPEEDY, L1=L1, c0=c0, n=n, mag=round(mr, 1), res=res, checks=checks, spot=spot, f_clip=f_clip,
                f_land=(land if res == 'SWIM_ON_LAND' else None))
     out.write(json.dumps(rec) + '\n'); out.flush()
