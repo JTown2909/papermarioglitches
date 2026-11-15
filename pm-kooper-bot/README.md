@@ -3573,6 +3573,7 @@ surfaces on the grass.
 - `sushie_recipe_search.py`: the inputs-only recipes from R.
 - `sushie_diveout.py`: the stage-2 sweep.
 - `sushie_verify.py`: full inputs-only replays and the jitter test.
+- `sushie_record.py`: renders one recipe-A replay (walk in, R, recipe, pocket, dive-out, ride into mac_01) as frames with the glide64 plugin on Xvfb, for a captioned video (not committed).
 
 **Data:** `data/sushie/*.jsonl` (numbers only).
 
