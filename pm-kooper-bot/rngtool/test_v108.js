@@ -11,14 +11,14 @@
  *    Bowser's hit and the revive is not used (fb14MenuAfterHit); after a hit, also when under FB14_FEWMIN fits survive it.
  * usage: node test_v108.js [PAGE=...] [LOGS=/tmp/claude-0/pm/logs1114] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v113/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v114/timeout_timer_standalone.html', LOGS = process.env.LOGS || '/tmp/claude-0/pm/logs1114';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {
   if (!fs.existsSync(PAGE)) { console.log('(skipped: no page at ' + PAGE + ')'); console.log('all ok'); return; }
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e) + (process.env.STK ? e.stack : ''))); await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }, set || { prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' }); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v113', 'page version v108');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v114', 'page version v108');
 
   // ---- 1. beeps: the fb1548 T4 shape (3 beeps 500 ms apart)
   const r = await p.evaluate(async () => {
@@ -81,14 +81,14 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
         const c = X.pic(rel(2558994) + 50), S0 = X.v108.prune(c); out.d0 = +S0.doubt.toFixed(3); out.none = X.planT7At(c);
         X.v108.outcome('dodge', { test: true }); FB2.t7.outT = t0;     /* (v110: the coin counts from the outcome read; here all of it, as v108) */ const S1 = X.v108.prune(c); out.d1 = +S1.doubt.toFixed(3); out.dodge = X.planT7At(c);
         out.panel = document.getElementById('fb2-status') ? document.getElementById('fb2-status').textContent : '';
-        X.v108.outcome('hit'); FB2.t7.outcome = null; X.v108.outcome('hit', { test: true }); out.hit = X.planT7At(c);
+        X.v108.outcome('hit'); if (FB2.t7) { FB2.t7.outcome = null; X.v108.outcome('hit', { test: true }); } out.hit = X.planT7At(c); out.backup = !!(X.v114 && X.v114.backupOn());
         return out; }, cap);
       console.log('   fb1548 T6 -> T7 replay: ' + JSON.stringify(r3).slice(0, 700));
       ok(r3.states === 4 && Math.abs(r3.pL - 0.531) < 0.1, '2. fb1548 T6 replayed: the T6 Charge locks on 4 states as live, pLucky ' + r3.pL + ' (live 0.531)');
       ok(r3.d0 > 0.15 && r3.d1 < 0.05, '2. the doubt before the dodge is seen is mostly the hit branch (' + r3.d0 + '), with the dodge seen ' + r3.d1);
       ok(r3.none && r3.none.none === 'edge' && r3.dodge && !r3.dodge.none && r3.dodge.pp7 >= 0.4, '2. T7 (d ' + (r3.dodge && r3.dodge.d) + '): "No edge" (' + (r3.none && r3.none.pp7 && r3.none.pp7.toFixed(3)) + ') before, a plan with the dodge seen (7+ ' + (r3.dodge && r3.dodge.pp7 && r3.dodge.pp7.toFixed(3)) + ' perfect press, zwedge 0.4)');
       ok(/Close Call worked \(seen\)/.test(r3.panel), '2. the FB2 panel says the Close Call worked (seen)');
-      ok(r3.hit && r3.hit.none === 'hit', '2. a hit seen: no T7 plan (the dodge branch only is modelled)');
+      ok(r3.backup && !(r3.hit && r3.hit.d != null), '2. a hit seen: no T7 plan; v114: the route goes to the backup ending (its T7 Charge locks again)');
     }
     await p2.close(); }
   // ---- 4. the post-hit fresh lock: the menu coin's window across Bowser's hit and the revive is not used (logs1114 replays:
