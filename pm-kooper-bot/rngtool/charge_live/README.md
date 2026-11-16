@@ -1,3 +1,73 @@
+# Time Out Timer v114: Final Bowser T6 Close Call failure read from Mario's HP number (never a dodge), the runner's backup ending (T7 Charge; Do Nothing - No Wave, Danger / T8 Bounce x5) modelled in the emulator, the backup T7 Charge lock (Nov 16)
+
+From the runner's console log and clip fb1810 (logs1115, v112/v113 page) and the emulator (`fb2_route/t6hit_log.py`; numbers only; no clip,
+frame, picture or state committed).
+
+## 1. fb1810 T6: the failed Close Call was logged as a dodge
+- The clip: Mario at 1/10 HP (Danger), Do Nothing (the Strategies box's last picture at clip 94.27 s), Fire Breath's 9: the units digit
+  1 -> 0 at 96.85 s (2.6 s after the confirm), the Life Shroom, 10/10 at 109.75 s. v108's watch waited for the "1" of 10 before the
+  confirm (a 10 HP premise that no Close Call turn has: Close Call needs Danger, the tens place is blank) and took the revive's 10 for
+  the dodge 16 s after the confirm (`fb2Dodged afterMs 16000`); T7 then had no fitting state (`fb2NoEdge` doubt 0.88).
+- **`fb2HpWatch` (v114)**: the whole HP number against the pictures before the confirm: the tens place (`JR_TENS`) and three columns
+  of the units place (`FB2_HPBOX`, white share). The clip's values: units "1" 0.08 / 0.71 / 0.59, "0" 0.40 / 0.70 / 0.59, the
+  revive's "10" lights the tens place (0.48); no other change on the bar from 93 s to 114 s (lightning, the fire). A change by 0.15 on
+  8 steady pictures = a hit (`fb2HitSeen`); the same number (within 0.08) on 30 steady pictures from 3.8 s on = a dodge; a change
+  within 22 s of the confirm withdraws a dodge (`fb2HitLate` -> hit): a hit is never kept as a dodge.
+- Replayed: the clip fed frame by frame through the page (the T6 lock as the console's, the confirm at its logged time, the HP read
+  from the pictures): `fb2HitSeen` 2645 ms after the confirm, no `fb2Dodged`. test_v114 1 does the same from the fixture's numbers
+  (2745 ms).
+- **The T6 read offset** (c 169.96 on the plan's 169, window 168-169): the console's 12 lock states put Fire Breath and a failed roll
+  at P 169 (2 states) and at P 170 (2 other states), the rolls lucky elsewhere around them; with console lag 0 / 1 both readings fit
+  the outcome equally, so the hit says nothing about a read offset. The press was the window's next frame (+0.96); T2-T4 of the same
+  log read -0.09 / -0.89 / -1.13 against their targets. The offset (`fb14Van('S')`) and the learned correction (-0.5) are unchanged.
+
+## 2. The backup ending
+- Route (the runner's wording; `test_route_texts` pinned): "T6: Charge; Do Nothing - Close Call failed, Life Shroom", "T7: Charge;
+  Do Nothing - No Wave, Danger", "T8: Bounce x5". Hidden until the page reads the T6 hit (`fb2Backup`, `FB2B.on`); then they stand in
+  for the main T6 / T7 (route panel), the route moves to the backup T7 step (Super Charge, then Do Nothing on the beep) and the Charge
+  reader re-arms (`chgReset`). A step back to T1-T6 or another fight ends it (`fb2BackupOff`).
+- **Emulator** (`t6hit_log.py`, JP, debug core; the T6 menu from a t6dn_log-style build whose T5 ended on Fire Breath's 9 at 1 HP, as
+  the console; DIAGNOSTIC: its debuff / daze cleared at the T6 menu (t6dn_log's own pick leaves Jump unselectable), gRandSeed at the
+  menus):
+  - T6 hit (Claw or Fire): Mario 0, the Life Shroom, 10/10 at the T7 menu 473 frames after the Do Nothing; the charges kept (12);
+    no Star Rod cast after the revive.
+  - T7 (Mario 10 HP, Lakilester up, 15 charges after the Super Charge; 90 Do Nothing frames over 5 seeds): Bowser's AI on P + 13:
+    RandInt(100) < 15: the Star Rod's power cast again (no attack: 10 HP, no Danger; 13 cast, 15 not); else RandInt(100) < 75: the
+    Draining Shockwave (10 -> 4, the charges gone; the clip's T7); else RandInt(110) < 20: the wave too; < 30: an attack that KOs
+    Mario (no Life Shroom left); else RandInt(80) < 20 (allowed): Body Slam, 8 (2 HP, charges kept); else RandInt(60) < 20 (allowed):
+    Claw, 9 (1 HP); else Fire Breath, a KO. The aim is Body Slam or Claw: 5 of 90 frames (5.6%) blind. Their draws on to the T8 menu
+    are fixed (Claw: AI + 64 the target roll and 10 stars, + 223 6 stars, T8 menu + 279; Body Slam: + 69 10 stars, + 74 two
+    RandInt(2), + 127 / 133 / 139 6 stars, menu + 212): `fb2AI7` reproduces every run's outcome and, for Body Slam / Claw, the seed
+    after the T8 menu (test_v114 3).
+  - T8: the first Power Bounce hit 18 in Danger at 15 charges (18 + 17 + 16 + 15 + 14 = 80: 5 bounces end the fight at the route's 80
+    HP); `fb2model.py` dmg0 18 = the emulator's roll sequences 6 / 6, the page's `fb2PB` the same (test_v114 4), and from the true T7
+    state through the Claw to the T8 target frames 6 / 6 (test_v114 5).
+- **On the page**: the backup T7 is a T6-like step (`fb2PlanP` / `fb2SetP` with `fb2AI7`, aim "a Body Slam / Claw (no wave, Mario in
+  Danger)", blind 8%; Bowser's T6 attack on the hit branch forbids the same one on T7, `FB2B.atk6`), T8 is `fb2PlanT7` with first hit
+  18 and goal 5 (4+ as the second band); the T7 coin counts from the confirm (the turn is modelled to the T8 menu). The HP watch is off
+  on the backup (its attack is meant to hit).
+- **The backup T7 Charge lock** (fb1810's T7 Charge, the clip fed to the page; 3 runs): FB2's search locked 5f018a3e once (2.42x) and
+  found nothing clear twice (1.03-1.15); the same pictures one frame earlier lock 5f018a3e (3531, 2.73x), and so does T1-T4's fb1 read
+  (4826, 1.98x). On the backup T7 a no-lock is searched again on the pictures shifted -1, +1, -2, +2 frames (`chargeShiftAssist`, the
+  clock moved with the shift). At the runner's T7 Do Nothing (box gone on clip 120.50 s, c 195.55) the locked states give the wave 93%
+  (fire 5%, the cast 2%): the clip shows the wave (10 -> 4). A plan from the earliest frame on those states (46-804 of them on the
+  replays) is "No edge" (best 35% with a perfect press): with this many states no Do Nothing frame gives Body Slam / Claw for enough
+  of them, so the page says so instead of beeping. On the true emulator state the plan beeps the Claw frame (test_v114 5).
+- Not seen on console yet: a backup T7 beep and a T8 press (fb1810's clip ends on the T8 menu). The Life Shroom revive's draws are not
+  carried: the T7 Charge locks afresh.
+
+## Not done in v114
+- Final Bowser Phase 1 tracker (fbp1_1448): needs a Phase 1 battle state in the emulator (the route's battle 2304 with the Star Beam
+  only, its T1 Charge read in that arena, the Power Bounce cap rolls without Quick Jump, the Star Beam cutscene into Phase 2). Not built.
+- Phase 2 reads after a real Phase 1 (fbp2_1451): the T1 read (Mario 17.1 px right, dxWorld 5.98) still does not lock with any Mario
+  shift (replayed with dxWorld 0 / 3 / 6 / 9: 1369-2564, ratio 1.01-1.11); T2 locks on its re-read (6594, 2.09x, as live). Needs the
+  emulator's Phase 1 -> 2 transition (Mario's position and the camera after the Star Beam cutscene).
+
+## Tests
+`test_v114.js` (in run_suite.sh; fixtures/console_1115_fb1810.json, numbers only: the clip's HP numbers by time, the T6 lock's states,
+90 emulator T7 runs, 6 T8 runs). VERSION v114; version checks and default build paths moved; test_v108 2 (a T6 hit now goes to the
+backup ending), test_route_texts (the backup lines).
+
 # Time Out Timer v112: the partnerless T6 measured (T7 plans), a Charge relock replans a frozen plan, the T1 lock rearms the reader, Duplighosts' all-4 beep and "hit the 4", one Final Bowser route menu, the strip's chance shading, coin-flip press wording (Nov 15)
 
 From the runner's console logs of Nov 15 on v111 (logs1115: x1420, x1425, x1428, x1434, x1436, x1439, x1441, d1416, d1423; v109/v110 x1027,
