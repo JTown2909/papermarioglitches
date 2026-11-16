@@ -79,19 +79,20 @@ function fb2AI(S0, E, ph, slamOk, clawOk, dn) {
   return { lucky: cc[1] < 30, cc: cc[1], atk, T, menu: T + MN[atk], S };
 }
 /* v114: Bowser's turn after the backup T7's Do Nothing (fb2_route/t6hit_log.py sweep7; Mario 10 HP after the Life Shroom, Lakilester up,
- * 15 charges). AI on P + 13: RandInt(100) < FB2B_RECAST: the Star Rod's power cast again (no attack, Mario stays at 10: no Danger);
- * else RandInt(100) < 75: the Draining Shockwave (Mario 10 -> 4, the charges gone); else RandInt(110) < FB2B_X3: an attack that
- * KOs Mario (no Life Shroom left); else RandInt(80) < 20 (Body Slam allowed): Body Slam, 8 (Mario at 2: Danger, charges kept); else
+ * 15 charges). AI on P + 13: RandInt(100) < FB2B_RECAST (13 cast, 15 not, in 90 runs): the Star Rod's power cast again (no attack, Mario stays at 10: no Danger);
+ * else RandInt(100) < 75: the Draining Shockwave (Mario 10 -> 4, the charges gone); else RandInt(110) < 20: the wave too, < FB2B_X3:
+ * an attack that KOs Mario (no Life Shroom left); else RandInt(80) < 20 (Body Slam allowed): Body Slam, 8 (Mario at 2: Danger, charges kept); else
  * RandInt(60) < 20 (Claw allowed): Claw, 9 (Mario at 1); else Fire Breath, a KO. The aim: Body Slam or Claw. Their draws on to the
  * T8 menu are fixed (FB2B_HIT, frames after the AI; FB2B_MENU: the T8 menu), so the carry runs on to the T8 Power Bounce. */
-const FB2B_RECAST = 10, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new Array(10).fill(359)), 223: new Array(6).fill(359) },
+const FB2B_RECAST = 15, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new Array(10).fill(359)), 223: new Array(6).fill(359) },
   slam: { 69: new Array(10).fill(359), 74: [2, 2], 127: new Array(6).fill(359), 133: new Array(6).fill(359), 139: new Array(6).fill(359) } }, FB2B_MENU = { claw: 279, slam: 212 };
 function fb2AI7(S0, E, ph, slamOk, clawOk) {
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null }, ri = m => { const r = R.randInt(S.s, m); S.s = r[0]; return r[1]; };
   for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
   let atk;
-  if (ri(100) < FB2B_RECAST) atk = 'recast'; else if (ri(100) < 75) atk = 'wave'; else if (ri(110) < FB2B_X3) atk = 'ko';
-  else if (ri(80) < 20 && slamOk) atk = 'slam'; else atk = ri(60) < 20 && clawOk ? 'claw' : 'fire';
+  if (ri(100) < FB2B_RECAST) atk = 'recast';
+  else if (ri(100) < 75) atk = 'wave';
+  else { const v3 = ri(110); if (v3 < 20) atk = 'wave'; else if (v3 < FB2B_X3) atk = 'ko'; else if (ri(80) < 20 && slamOk) atk = 'slam'; else atk = ri(60) < 20 && clawOk ? 'claw' : 'fire'; }
   if (E === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([E, c >= 70]); }
   S.s = R.adv(S.s);
   const good = atk === 'slam' || atk === 'claw'; let T = E;
