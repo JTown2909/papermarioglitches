@@ -7,7 +7,7 @@
  *     open / closed state is remembered over a reload.
  * usage: node test_lock_badge.js [PAGE] */
 const { chromium } = require('playwright');
-const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer/timeout_timer_standalone.html';
+const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v114/timeout_timer_standalone.html';
 let fails = 0, n = 0; const check = (ok, msg) => { n++; if (!ok) { fails++; console.log('FAIL ' + msg); } };
 (async () => {
   const b = await chromium.launch(); const errs = [];
@@ -61,7 +61,7 @@ let fails = 0, n = 0; const check = (ok, msg) => { n++; if (!ok) { fails++; cons
     'tracker off': 'no', 'fb14 no lock': 'no', 'fb14 locked': 'ok', 'fb14 doubt': 'doubt', 'fb2 no lock': 'no', 'fb2 locked': 'ok' };
   const TEXT = { ok: 'LOCKED', no: 'NOT LOCKED', doubt: 'DOUBTFUL' };
   for (const k in want) check(S[k] && S[k].state === want[k] && S[k].text === TEXT[want[k]] && S[k].cls === 'lockb ' + want[k], `badge "${k}": ${S[k] && S[k].text} (want ${TEXT[want[k]]})`);
-  check(r.version === 'v113', 'version v100');
+  check(r.version === 'v114', 'version v100');
   const badges = new Set(r.states.map(x => x.badge)), strips = new Set(r.states.map(x => x.strip));
   check(badges.size === 1, 'the badge never moves or resizes: ' + [...badges].join(' | '));
   check(strips.size === 1, 'the strip never moves: ' + [...strips].join(' | '));

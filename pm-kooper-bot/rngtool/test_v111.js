@@ -11,7 +11,7 @@
  *  6. The route pickers' short labels; an edge press says neither inside nor outside.
  * usage: node test_v111.js [PAGE=...] */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v113/timeout_timer_standalone.html';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v114/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1115_jr.json'), 'utf8'));
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {
@@ -89,7 +89,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       return out;
     });
     console.log(JSON.stringify(r).slice(0, 1600));
-    ok(r.ver === 'v113', '0. page version v111');
+    ok(r.ver === 'v114', '0. page version v111');
     const want = r.rearm.filter(x => x[2] && x[0] > 0);
     ok(want.length === 3 && want.every(x => x[1]), '2. partnerless: the confirm before each later Charge (T2, T4, T5) rearms the reader ' + JSON.stringify(r.rearm.filter(x => x[1] || x[2])));
     ok(r.afterT1 !== 'locked' && r.k === 2, '2. after T1\'s Do Nothing the Charge reader is armed again for T2\'s Charge (state ' + r.afterT1 + ')');

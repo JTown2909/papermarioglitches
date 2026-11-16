@@ -24,6 +24,19 @@ const FB2_DELTA = { slam: 52, claw: 62, fire: 55 }, FB2_MENU = { slam: 101, claw
 const FB2_LAGS = [[0, 0.75], [1, 0.25]], FB2_BEEPS = 3, FB2_GAP = 300, FB2_DMG0 = 15, FB2_HP = 80, FB2_MAXH = 4000;
 const FB2_TH = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 60 / 100); t.push(c); } return t; })();
 var FB2 = { on: false };      // var: charge_live.js calls fb2Reset (via chgReset) before this file has run
+/* v114: the runner's backup ending after a failed T6 Close Call (console fb1810): T6 "Close Call failed, Life Shroom", T7 "Charge;
+ * Do Nothing - No Wave, Danger", T8 "Bounce x5". FB2B lives outside FB2 (chgReset -> fb2Reset clears FB2 for the T7 Charge's
+ * lock); the route shows the backup lines while it is on (fb2BackupOn), its T7 / T8 steps carry b7 / b8. */
+var FB2B = { on: false };
+const fb2BackupOn = () => !!(FB2B && FB2B.on);
+/* fb2_route/t6hit_log.py (emulator, JP): after the T7 Super Charge Mario has 15 charges; the T8 Power Bounce's first hit is 18 in
+ * Danger (6 / 6 roll sequences exact with fb2model.py dmg0 18), so 18 + 17 + 16 + 15 + 14 = 80: 5 bounces end the fight */
+const FB2B_DMG0 = 18, FB2B_GOAL = 5;
+// (FB2 is reset when the backup starts, so every FB2 lock / plan while it is on belongs to the backup T7 / T8)
+const fb2Dmg0 = () => (fb2BackupOn() ? FB2B_DMG0 : FB2_DMG0), fb2Goal = () => (fb2BackupOn() ? FB2B_GOAL : 7);
+/* the step's words (T6 main / the backup T7) */
+const fb2Txt = () => (fb2BackupOn() ? { turn: 'T7', goal: 'a Body Slam / Claw (no wave, Mario in Danger)', blind: 'a Body Slam / Claw about 8%', b: 0.08 } : { turn: 'T6', goal: 'Close Call', blind: 'Close Call about 30%', b: 0.3 });
+const fb2Leg = () => { const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; return s && s.b7 ? 'b7' : s && s.b8 ? 'b8' : 'main'; };
 function fb2Reset() { if (!FB2) return; Object.assign(FB2, { rate: typeof chgRate === 'function' && typeof consoleRate === 'function' ? chgRate() : null, on: false, hyps: null, plan: null, plans: [], pObs: null, kObs: null, kSeen: null, kHow: null, t7: null, popup: null, why: null, taps: [], vis: [], visFrom: null, pT: null, hpw: null }); fb2Show(); }
 const fb2nb = (f, p1, p2) => (FB2_P130.includes((f + p1) % 130) ? 1 : 0) + (FB2_P220.includes((f + p2) % 220) ? 1 : 0);
 /* the window patterns (bolt counts on rays frames 0..47 = confirm + 13..60) and the phase pairs behind each */
@@ -65,6 +78,29 @@ function fb2AI(S0, E, ph, slamOk, clawOk, dn) {
   S.s = R.adv(S.s);
   return { lucky: cc[1] < 30, cc: cc[1], atk, T, menu: T + MN[atk], S };
 }
+/* v114: Bowser's turn after the backup T7's Do Nothing (fb2_route/t6hit_log.py sweep7; Mario 10 HP after the Life Shroom, Lakilester up,
+ * 15 charges). AI on P + 13: RandInt(100) < FB2B_RECAST (13 cast, 15 not, in 90 runs): the Star Rod's power cast again (no attack, Mario stays at 10: no Danger);
+ * else RandInt(100) < 75: the Draining Shockwave (Mario 10 -> 4, the charges gone); else RandInt(110) < 20: the wave too, < FB2B_X3:
+ * an attack that KOs Mario (no Life Shroom left); else RandInt(80) < 20 (Body Slam allowed): Body Slam, 8 (Mario at 2: Danger, charges kept); else
+ * RandInt(60) < 20 (Claw allowed): Claw, 9 (Mario at 1); else Fire Breath, a KO. The aim: Body Slam or Claw. Their draws on to the
+ * T8 menu are fixed (FB2B_HIT, frames after the AI; FB2B_MENU: the T8 menu), so the carry runs on to the T8 Power Bounce. */
+const FB2B_RECAST = 15, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new Array(10).fill(359)), 223: new Array(6).fill(359) },
+  slam: { 69: new Array(10).fill(359), 74: [2, 2], 127: new Array(6).fill(359), 133: new Array(6).fill(359), 139: new Array(6).fill(359) } }, FB2B_MENU = { claw: 279, slam: 212 };
+function fb2AI7(S0, E, ph, slamOk, clawOk) {
+  const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null }, ri = m => { const r = R.randInt(S.s, m); S.s = r[0]; return r[1]; };
+  for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
+  let atk;
+  if (ri(100) < FB2B_RECAST) atk = 'recast';
+  else if (ri(100) < 75) atk = 'wave';
+  else { const v3 = ri(110); if (v3 < 20) atk = 'wave'; else if (v3 < FB2B_X3) atk = 'ko'; else if (ri(80) < 20 && slamOk) atk = 'slam'; else atk = ri(60) < 20 && clawOk ? 'claw' : 'fire'; }
+  if (E === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([E, c >= 70]); }
+  S.s = R.adv(S.s);
+  const good = atk === 'slam' || atk === 'claw'; let T = E;
+  if (good) { const H = FB2B_HIT[atk]; T = E + FB2B_MENU[atk];
+    for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0]; for (const m of H[f - E] || []) ri(m);
+      if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
+  return { lucky: good, cc: null, atk, T, menu: T, S };
+}
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
  * 7th ends the fight at 80 HP: 15 + 14 + ... + 9 = 84) */
 function fb2PB(S0, f0, d, ph) {
@@ -73,7 +109,7 @@ function fb2PB(S0, f0, d, ph) {
   for (let f = d; f < d + 71 + 27 * 20; f++) {
     for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
     if (f === d + 71 + 27 * k && k === hit - 1) { const r = R.randInt(S.s, 100); S.s = r[0]; if (r[1] > FB2_TH[k]) return k + 2; k++; }
-    if (f === d + 45 + 27 * hit) { const dm = Math.max(1, FB2_DMG0 - hit); for (let i = dm >= 9 ? 11 : dm >= 5 ? 10 : dm >= 3 ? 8 : 6; i; i--) S.s = R.randInt(S.s, 359)[0]; hit++; dmg += dm; if (dmg >= FB2_HP) return hit; }
+    if (f === d + 45 + 27 * hit) { const dm = Math.max(1, fb2Dmg0() - hit); for (let i = dm >= 9 ? 11 : dm >= 5 ? 10 : dm >= 3 ? 8 : 6; i; i--) S.s = R.randInt(S.s, 359)[0]; hit++; dmg += dm; if (dmg >= FB2_HP) return hit; }
     if (f === S.nc) { const r = R.randInt(S.s, 100); S.s = r[0]; S.nc += r[1] >= 70 ? 48 : 24; }
     S.s = R.adv(S.s);
   }
@@ -86,7 +122,8 @@ function fb2PBWin(S0, f0, D0, W, ph) {
   return out;
 }
 /* Bowser's attack flags at T6: a Body Slam or a Claw on T5 forbids that attack on T6 (fb2_route README section 4) */
-function fb2Flags() { const v = ($('s-fb2t5') || {}).value || 'any'; return v === 'slam' ? [[false, true, 1]] : v === 'claw' ? [[true, false, 1]] : v === 'fire' ? [[true, true, 1]] : [[true, true, 1 / 3], [false, true, 1 / 3], [true, false, 1 / 3]]; }
+function fb2Flags() { if (fb2BackupOn() && FB2B.atk6) { const A = FB2B.atk6, out = []; for (const [a, w] of Object.entries(A)) if (w > 0) out.push([a !== 'slam', a !== 'claw', w]); if (out.length) return out; }     // v114: the backup T7: Bowser's T6 attack (the hit's) forbids that one
+  const v = ($('s-fb2t5') || {}).value || 'any'; return v === 'slam' ? [[false, true, 1]] : v === 'claw' ? [[true, false, 1]] : v === 'fire' ? [[true, true, 1]] : [[true, true, 1 / 3], [false, true, 1 / 3], [true, false, 1 / 3]]; }
 /* ---- clock: confirm-relative logic frames from the Charge trigger (the picture of rays frame 3 = confirm + 16) ---- */
 /* v72: on the console's frame time (consoleRate, as the Hallway tracker since v70; 33.427 ms until the shines measure it),
  * fixed for the fight at the trigger (FB2.rate, fb2Reset). v71 ran this clock on 33.367 ms (59.94 Hz): ~0.25 frame late at
@@ -121,7 +158,7 @@ const fb2Bias = () => (typeof fb14Bias === 'function' ? fb14Bias() : 0);
 const fb2DnPressT = k => fb2PressT(k) + fb2Bias() * fb2Rate();
 function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
   if (kAt == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
-  const t0 = performance.now(), H = FB2.hyps, F = fb2Flags(), now = performance.now(), bias = fb2Bias();
+  const t0 = performance.now(), H = FB2.hyps, b7 = fb2BackupOn(), F = fb2Flags(), now = performance.now(), bias = fb2Bias();
   // v102 (console log fb0449 T6: planned 1.6 s ahead, its 3 beeps 300 ms apart: "the beeps seemed to glitch by speeding up"): the
   // T6 countdown is the runner's own (Settings: Beeps, Beep spacing, Lead time; playBeeps, earliestPress), never squeezed: the
   // first frame is the first whose press time leaves the whole countdown ahead, as T1-T4 and T7
@@ -130,7 +167,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   for (const h of H) for (const [so, co, wf] of F) {
     const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, P0 + FB2_DNAI, h.ph);
     const L = new Uint8Array(P1 - P0 + 1);
-    for (let P = P0; P <= P1; P++) { const r = fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); L[P - P0] = r.lucky ? 1 : 0; fb2Frame1(S, P + FB2_DNAI, h.ph); }
+    for (let P = P0; P <= P1; P++) { const r = b7 ? fb2AI7(S, P + FB2_DNAI, h.ph, so, co) : fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); L[P - P0] = r.lucky ? 1 : 0; fb2Frame1(S, P + FB2_DNAI, h.ph); }
     rows.push({ h, w: h.w * wf, L });
   }
   const luck = (row, P) => row.L[Math.max(0, Math.min(P1 - P0, P - P0))];
@@ -140,10 +177,10 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   const a = kFirst - 1, b = kFirst + W + 1, sh = []; for (let k = a; k <= b; k++) sh.push(k >= kFirst && k <= kFirst + W ? ppk(k) : 0);
   const pk = ppPick(sh, null, a, b, kFirst, W, pcc, 'safe3');
   let k = pk.target; if (k == null || !(k >= kFirst)) { k = kFirst; for (let x = kFirst; x <= kFirst + W; x++) if (pcc(x) > pcc(k)) k = x; }
-  const pl = { k, p: pcc(k), pp: ppk(k), win: pk.ok ? pk.run.length : 0, blind: 0.3, kFirst, W, bias: +bias.toFixed(2), lever: 'nothing', ms: Math.round(performance.now() - t0), states: rows.length };
+  const pl = { k, p: pcc(k), pp: ppk(k), win: pk.ok ? pk.run.length : 0, blind: fb2Txt().b, kFirst, W, bias: +bias.toFixed(2), lever: 'nothing', ms: Math.round(performance.now() - t0), states: rows.length };
   pl.tPress = fb2DnPressT(k);
   // the edge rule (zwedge), as every plan: a Close Call share under it is no plan (Do Nothing whenever you like)
-  if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no Do Nothing frame gives Close Call for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind: 0.3, kFirst, pp: pl.pp, p: pl.p, lever: 'nothing' }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; if (st.plan && st.plan.prof === 'fb2') st.plan = null; st.msg = 'No edge: ' + nl.none + '. Do Nothing whenever you like (Close Call about 30%).'; slog('fb2PlanP', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), kFirst }); fb2Show(); if (typeof render === 'function') render(); return nl; }     // v99: the No edge text at once (v98 left it to makePlan, which the T6 step never reached)
+  if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no Do Nothing frame gives ' + fb2Txt().goal + ' for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind: fb2Txt().b, kFirst, pp: pl.pp, p: pl.p, lever: 'nothing' }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; if (st.plan && st.plan.prof === 'fb2') st.plan = null; st.msg = 'No edge: ' + nl.none + '. Do Nothing whenever you like (' + fb2Txt().blind + ').'; slog('fb2PlanP', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), kFirst }); fb2Show(); if (typeof render === 'function') render(); return nl; }     // v99: the No edge text at once (v98 left it to makePlan, which the T6 step never reached)
   if (kAt != null) return pl;
   cancelBeeps(); playBeeps(pl.tPress);
   FB2.plan = pl; FB2.plans = (FB2.plans || []).concat([Object.assign({ tMade: now }, pl)]); slog('fb2PlanP', pl);
@@ -165,18 +202,19 @@ function fb2Confirm(tObs) {
   slog('fb2Confirm', { c: +c.toFixed(2), planned: P ? P.k : null, err: P ? +(c - P.k).toFixed(2) : null });
   if (P && Math.abs(c - P.k) <= 5 && typeof fb14PressAdd === 'function') { const L = fb14PressAdd(c - P.k - (P.bias || 0)); slog('fb2PressBias', { n: L.length, bias: +fb2Bias().toFixed(2) }); const SP = st.plan && st.plan.prof === 'fb2' && st.plan.target === P.k ? st.plan : null, wk = typeof pressShow === 'function' ? pressShow(SP, c, 'Final Bowser T6, Do Nothing') : null; if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T6, Do Nothing', c - P.k, 'fb14', wk); }
   FB2.pObs = c; FB2.pT = tObs; FB2.hpw = null; cancelBeeps(); if (st.plan && st.plan.prof === 'fb2') st.plan = null;
-  if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex(x => x.turn === 'fb2_pb'); if (i >= 0) { slog('fb2StepByConfirm', { from: routeStep, to: i }); setStep(i); } }
+  if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex((x, j) => j > routeStep && x.turn === 'fb2_pb'); /* v114: the next one (T7 main / T8 backup) */ if (i >= 0) { slog('fb2StepByConfirm', { from: routeStep, to: i }); setStep(i); } }
   if (FB2.on) fb2SetP(c);
 }
 function fb2SetP(c) {
-  const F = fb2Flags(), out = [], shifts = typeof FB14_SHIFTS_S !== 'undefined' ? FB14_SHIFTS_S : [[0, 1]], F0 = Math.round(c);
+  const b7 = fb2BackupOn(), F = fb2Flags(), out = [], shifts = typeof FB14_SHIFTS_S !== 'undefined' ? FB14_SHIFTS_S : [[0, 1]], F0 = Math.round(c);
   for (const h of FB2.hyps) for (const [l, wl] of FB2_LAGS) for (const [d, wd] of shifts) for (const [so, co, wf] of F) {
     const P = F0 + d - l, S = { s: h.s, nc: h.nc, coins: [] }; fb2Idle(S, 61, P + FB2_DNAI, h.ph);
-    const a = fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l, P, a, w: h.w * wl * wd * wf });
+    const a = b7 ? fb2AI7(S, P + FB2_DNAI, h.ph, so, co) : fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l, P, a, w: h.w * wl * wd * wf });
   }
   const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + (o.a.lucky ? o.w : 0), 0) / tot;
   const atk = {}; out.forEach(o => { atk[o.a.atk] = (atk[o.a.atk] || 0) + o.w / tot; });
-  FB2.t7 = { states: out.filter(o => o.a.lucky), pLucky: luck, atk };
+  const hitAtk = {}, hw = out.reduce((x, o) => x + (o.a.lucky ? 0 : o.w), 0); out.forEach(o => { if (!o.a.lucky) hitAtk[o.a.atk] = (hitAtk[o.a.atk] || 0) + o.w / (hw || 1); });
+  FB2.t7 = { states: out.filter(o => o.a.lucky), pLucky: luck, atk, hitAtk };
   slog('fb2P', { c: +c.toFixed(2), pLucky: +luck.toFixed(3), atk, planned: FB2.plan && FB2.plan.k }); fb2Show();
 }
 /* the K plan: lucky per hypothesis x flags for every logic K, then the best time frame k in the rest of the window */
@@ -241,6 +279,7 @@ function fb2Frame(t, present) {
   }
   // the coin through Bowser's turn and the T7 menu
   fb2HpWatch(t, present);
+  if (!CHG.trig) return;      // v114: a hit read just now started the backup (chgReset)
   if (present && FB2.visFrom == null) FB2.visFrom = fb2Pic(t) + 30;
   if (!present && FB2.visFrom != null) { FB2.vis.push([FB2.visFrom, fb2Pic(t) - 4]); FB2.visFrom = null; }
 }
@@ -270,7 +309,7 @@ function fb2Prune(upto) {
   // Bowser's T6 turn after the Do Nothing (24 s there) and the coin seen in it (3 shines) fits no state: the turn after the Close
   // Call test is not in the model's coin (or its flashes read as shines). The coin counts from the T6 outcome read (the dodge seen,
   // 16 s after the confirm there), else FB2_T7_COIN_MS after the confirm; replayed: 93 states, doubt 0.02-0.37
-  const okC = typeof CHG !== 'undefined' && CHG.trig, cut = okC && T7.outT != null ? fb2Pic(T7.outT) : okC && FB2.pT != null ? fb2Pic(FB2.pT + FB2_T7_COIN_MS) : -1e9;
+  const okC = typeof CHG !== 'undefined' && CHG.trig, cut = okC && T7.outT != null ? fb2Pic(T7.outT) : okC && FB2.pT != null ? fb2Pic(FB2.pT + (fb2BackupOn() ? 0 : FB2_T7_COIN_MS)) : -1e9;     // v114: the backup T7's turn is modelled to the T8 menu (fb2AI7): its coin counts from the confirm
   const vis = FB2.vis.concat(FB2.visFrom != null ? [[FB2.visFrom, upto - 4]] : []).map(([a, b]) => [Math.max(a, cut), Math.min(b, upto - 4)]).filter(([a, b]) => b > a), taps = FB2.taps.filter(x => x < upto && x >= cut);
   const Wd = 5.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - ZW_PMISS) / Wd, Lmiss = ZW_PMISS, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE);
   const near = (x, f) => x - f >= -2 && x - f <= 3.5, out = []; let mx = 0, tot0 = 0;
@@ -294,18 +333,55 @@ function fb2Prune(upto) {
  * tens place on the steady bar, the "1" of 10 before the confirm; blank for 10 frames after it = a hit; the "1" steady for
  * FB2_DODGE_N frames from FB2_DODGE_MS after the confirm (past the Close Call test, P + 68, and the attack's damage) = a dodge.
  * A dodge drops the hit branch from the background (the states are conditioned on it); a hit leaves no modelled T7 state. */
-const FB2_DODGE_MS = 3200, FB2_DODGE_N = 30, FB2_HIT_N = 10, FB2_T7_COIN_MS = 15000;
+const FB2_DODGE_MS = 3800, FB2_DODGE_N = 30, FB2_HIT_N = 8, FB2_T7_COIN_MS = 15000, FB2_HP_CHG = 0.15, FB2_HP_SAME = 0.08, FB2_LATE_MS = 22000;
+/* v114 (console fb1810 T6: the Close Call failed at 1/10 HP, Fire Breath's 9 took Mario to 0, the Life Shroom revived him to 10/10
+ * 15.4 s after the confirm, and v108's watch called it a dodge 16 s after the confirm: it waited for the "1" of 10, which Mario at
+ * Danger never shows before the confirm; the revive's 10 was that "1"). The Close Call is a Danger turn (1-5 HP: the tens place is
+ * blank), so the watch now compares Mario's whole HP number with the picture before the confirm: the tens place (JR_TENS) and the
+ * units place's three columns (FB2_HPBOX, 320-space; fb1810's clip: the units "1" reads 0.08 / 0.71 / 0.59, the "0" after the hit
+ * 0.40 / 0.70 / 0.59, the revive's "10" lights the tens place 0.48). A change (any part by FB2_HP_CHG) on FB2_HIT_N steady
+ * pictures = a hit (fb1810: 2.65 s after the confirm); the same number (every part within FB2_HP_SAME) on FB2_DODGE_N steady
+ * pictures from FB2_DODGE_MS on, with no change seen since the confirm = a dodge. A dodge is withdrawn when the number changes
+ * within FB2_LATE_MS of the confirm (fb2HitLate): a hit is never kept as a dodge. */
+const FB2_HPBOX = [[61, 27, 67, 36], [68, 27, 70, 36], [70, 27, 72, 36], [72, 27, 74, 36]];
+function fb2HpVec(t) {
+  if (window.__fb2HpTest) return window.__fb2HpTest(t);           // (tests: the 4 shares)
+  if (window.__fb2TensTest) return [window.__fb2TensTest(t), 0, 0, 0];      // (v108 tests: the tens place only)
+  const [SX, OX, SY, OY] = chgMap();
+  return FB2_HPBOX.map(([x0, y0, x1, y1]) => { const g = sample({ x: (OX + x0 * SX) / 1280, y: (OY + y0 * SY) / 720, w: (x1 - x0) * SX / 1280, h: (y1 - y0) * SY / 720 }, 6, 12); let n = 0;
+    for (let i = 0; i < g.length; i += 4) if (g[i] > 150 && g[i + 1] > 150 && g[i + 2] > 150) n++; return n / (g.length / 4); });
+}
+const fb2HpDiff = (v, r) => Math.max(...v.map((x, i) => Math.abs(x - r[i])));
 function fb2HpWatch(t, present) {
-  if (FB2.pT == null || !FB2.t7 || FB2.t7.outcome || typeof jrTens !== 'function' || typeof JRT === 'undefined') return;
-  const TT = window.__fb2TensTest;     // (tests only: the tens read stubbed, the bar steady)
-  const W = FB2.hpw || (FB2.hpw = { seen10: false, tenRun: 0, blankRun: 0, ok: 0 }), B = TT ? { since: -1e9 } : JRT.bar;
-  if (!present || !B || !B.since || t - B.since < 6 * FRAME) { W.tenRun = 0; W.blankRun = 0; return; }
-  if (t - FB2.pT > 25000) { fb2Outcome('unread', { seen10: W.seen10, frames10: W.ok }); return; }
-  const v = TT ? TT(t) : jrTens(), one = v >= JR_TENS_MIN; W.tenRun = one ? W.tenRun + 1 : 0; W.blankRun = one ? 0 : W.blankRun + 1;
-  if (W.tenRun >= 6) W.seen10 = true;
-  if (!W.seen10) return;
-  if (W.blankRun >= FB2_HIT_N) { fb2Outcome('hit', { afterMs: Math.round(t - FB2.pT), tens: +v.toFixed(2) }); return; }
-  if (one && t >= FB2.pT + FB2_DODGE_MS) { W.ok++; if (W.ok >= FB2_DODGE_N) fb2Outcome('dodge', { afterMs: Math.round(t - FB2.pT), frames10: W.ok }); }
+  if (fb2BackupOn()) return;      // v114: the backup T7's attack is meant to hit (Danger); the coin tells its branch
+  if (typeof JRT === 'undefined' && !window.__fb2HpTest && !window.__fb2TensTest) return;
+  const TT = window.__fb2HpTest || window.__fb2TensTest, B = TT ? { since: -1e9 } : JRT.bar;
+  const W = FB2.hpw || (FB2.hpw = { pre: [], ref: null, chg: 0, ok: 0, changed: false });
+  if (!present || !B || !B.since || t - B.since < 6 * FRAME) { W.chg = 0; return; }
+  const v = fb2HpVec(t);
+  if (FB2.pT == null) { W.pre.push(v); if (W.pre.length > 10) W.pre.shift(); return; }      // before the confirm: the number to compare with
+  const T7 = FB2.t7; if (!T7) return;
+  const late = T7.outcome === 'dodge' && t - FB2.pT < FB2_LATE_MS;
+  if (T7.outcome && !late) return;
+  if (!W.ref) {      // the median of the pictures before the confirm, else of the first ones after it (before the test, P + 68)
+    if (W.pre.length < 3 && t < FB2.pT + 1500) { W.pre.push(v); return; }
+    if (W.pre.length < 3) { fb2Outcome('unread', { why: 'no HP picture before the test' }); return; }
+    W.ref = [0, 1, 2, 3].map(i => W.pre.map(x => x[i]).sort((a, b) => a - b)[W.pre.length >> 1]);
+  }
+  if (t - FB2.pT > 25000 && !T7.outcome) { fb2Outcome('unread', { ok: W.ok }); return; }
+  const d = fb2HpDiff(v, W.ref);
+  if (d > FB2_HP_CHG) { W.chg++; if (W.chg >= 2) W.ok = 0; } else W.chg = 0;
+  if (W.chg >= FB2_HIT_N) {
+    const info = { afterMs: Math.round(t - FB2.pT), hp: v.map(x => +x.toFixed(2)), ref: W.ref.map(x => +x.toFixed(2)) };
+    if (late) fb2HitLate(info); else fb2Outcome('hit', info);
+    return;
+  }
+  if (late) return;
+  if (d <= FB2_HP_SAME && t >= FB2.pT + FB2_DODGE_MS) { W.ok++; if (W.ok >= FB2_DODGE_N) fb2Outcome('dodge', { afterMs: Math.round(t - FB2.pT), frames: W.ok }); }
+}
+/* v114: the HP number changed after a dodge was read (within FB2_LATE_MS of the confirm): it was a hit */
+function fb2HitLate(info) {
+  const T7 = FB2.t7; if (!T7) return; T7.outcome = null; slog('fb2HitLate', info); fb2Outcome('hit', info);
 }
 /* the T6 outcome seen (the HP watch, or tests / the runner): 'dodge' | 'hit' | 'unread' */
 function fb2Outcome(o, info) {
@@ -313,6 +389,17 @@ function fb2Outcome(o, info) {
   slog(o === 'dodge' ? 'fb2Dodged' : o === 'hit' ? 'fb2HitSeen' : 'fb2OutcomeUnread', Object.assign({ pLucky: +(T7.pLucky || 0).toFixed(3), states: T7.states.length }, info || {}));
   if (o === 'hit') { T7.hit = true; if (st.plan && st.plan.prof === 'fb2') { cancelBeeps(); st.plan = null; } }
   fb2Show();
+  if (o === 'hit' && !fb2BackupOn() && fb2Leg() === 'main' && typeof isRoute === 'function' && isRoute() && RT()[routeStep] && /^fb2_(k|pb)$/.test(RT()[routeStep].turn || '')) fb2Backup(info);     // on the main T6 / T7 steps only
+}
+/* v114: the T6 Close Call failed: the route switches to the backup ending (its T7 step: the T7 Super Charge locks the seed again).
+ * The T6 states are dropped (chgReset -> fb2Reset): the T7 Charge is read from scratch, as T6's was. */
+function fb2Backup(info) {
+  if (FB2B.on || typeof RT !== 'function') return; const i7 = RT().findIndex(x => x.b7); if (i7 < 0) return;
+  Object.assign(FB2B, { on: true, tHit: performance.now(), info: info || null, atk6: FB2.t7 && FB2.t7.hitAtk ? Object.assign({}, FB2.t7.hitAtk) : null });
+  slog('fb2Backup', Object.assign({ to: i7 }, info || {}));
+  if (typeof chgReset === 'function') chgReset('backup T7');
+  setStep(i7);
+  st.msg = 'Close Call failed on T6 (Mario was hit): backup ending. After the Life Shroom: T7 Super Charge, then wait on Lakilester\'s Strategies screen for the Do Nothing beep.'; if (typeof render === 'function') render();
 }
 /* v95 (log 906bfb29: Close Call not equipped, popup closed on k 77 with pLucky 0.134, and the T7 plan went on with the 13%
  * as if Mario had dodged): the T7 states are the dodge branch only. A hit (no roll when Close Call is not equipped:
@@ -323,19 +410,19 @@ function fb2Outcome(o, info) {
 function fb2PlanT7(cScr) {
   if (cScr == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
   if (!FB2.on || !FB2.t7) return false;
-  if (FB2.t7.hit) { FB2.t7.plan = { none: 'hit' }; if (cScr != null) return FB2.t7.plan; if (FB2.t7.hitMsg !== true) { FB2.t7.hitMsg = true; slog('fb2NoEdge', { why: 'hit' }); } st.msg = 'No edge: Bowser hit Mario on T6 (the Close Call missed; the page models the dodge only). Press Power Bounce normally.'; fb2Show(); render(); return true; }
-  const now = performance.now(), cNow = cScr != null ? cScr : fb2Pic(now + num('vlag')), S = fb2Prune(cNow);
-  if (!S.length || S.doubt >= 0.5) { st.msg = 'No edge: the FB2 states the page kept do not fit what it saw in Bowser\'s turn (the coin, or the popup frame). Press Power Bounce normally.'; FB2.t7.plan = { none: 'no state fits' }; slog('fb2NoEdge', { doubt: S.doubt != null ? +S.doubt.toFixed(3) : null }); fb2Show(); render(); return true; }
+  if (FB2.t7.hit) { FB2.t7.plan = { none: 'hit' }; if (cScr != null) return FB2.t7.plan; if (FB2.t7.hitMsg !== true) { FB2.t7.hitMsg = true; slog('fb2NoEdge', { why: 'hit' }); } st.msg = 'No edge: Bowser hit Mario on T6 (the Close Call missed). Press Power Bounce normally.'; fb2Show(); render(); return true; }
+  const G = fb2Goal(), TN = fb2BackupOn() ? 'T8' : 'T7', now = performance.now(), cNow = cScr != null ? cScr : fb2Pic(now + num('vlag')), S = fb2Prune(cNow);
+  if (!S.length || S.doubt >= 0.5) { st.msg = 'No edge: the FB2 states the page kept do not fit what it saw in Bowser\'s turn (the coin' + (fb2BackupOn() ? ', or not a Body Slam / Claw' : ', or the popup frame') + '). Press Power Bounce normally.'; FB2.t7.plan = { none: 'no state fits' }; slog('fb2NoEdge', { doubt: S.doubt != null ? +S.doubt.toFixed(3) : null }); fb2Show(); render(); return true; }
   const tot = S.reduce((a, o) => a + o.w, 0), W = Math.max(0, Math.round(Math.max(1, num('zwwin')) * 1000 / fb2Rate()));
   let from = Math.ceil(cNow + num('lead') * 1000 / fb2Rate() + 1);
   if (cScr == null) for (let i = 0; i < 300 && fb2PressT(from) < earliestPress(now); i++) from++;   // every beep still ahead
   const s7 = new Array(W + 1).fill(0), s6 = new Array(W + 1).fill(0);
   for (const o of S) { const b = []; for (let x = from - 1; x <= from + W + 1; x++) b.push(fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph));
-    for (let k = 0; k <= W; k++) for (const [d, q] of PRESS_ERR) { s7[k] += o.w * q * (b[k + 1 + d] >= 7 ? 1 : 0); s6[k] += o.w * q * (b[k + 1 + d] >= 6 ? 1 : 0); } }
+    for (let k = 0; k <= W; k++) for (const [d, q] of PRESS_ERR) { s7[k] += o.w * q * (b[k + 1 + d] >= G ? 1 : 0); s6[k] += o.w * q * (b[k + 1 + d] >= G - 1 ? 1 : 0); } }
   // v83, the perfect press: the 7-bounce share on each frame itself (no spread), the centre of the widest run of frames
   // that give 7 for the states (ppPick); with no such frame, the best 7 frame as before. Spread-weighted p7 / p6 logged.
   const e7 = new Array(W + 3).fill(0), e6 = new Array(W + 3).fill(0);
-  for (const o of S) for (let x = from - 1; x <= from + W + 1; x++) { const v = fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph); if (v >= 7) e7[x - from + 1] += o.w / tot; if (v >= 6) e6[x - from + 1] += o.w / tot; }
+  for (const o of S) for (let x = from - 1; x <= from + W + 1; x++) { const v = fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph); if (v >= G) e7[x - from + 1] += o.w / tot; if (v >= G - 1) e6[x - from + 1] += o.w / tot; }
   let k = 0; for (let i = 1; i <= W; i++) if (s7[i] + 0.1 * s6[i] > s7[k] + 0.1 * s6[k] + 1e-12) k = i;
   const pk = ppPick(e7, e6, from - 1, from + W + 1, from, W, x => (s7[x - from] || 0) / tot, 'safe3'); if (pk.ok) k = pk.target - from;
   const d = from + k, dz = S.doubt || 0, plan = { d, p7: (1 - dz) * s7[k] / tot, p6: (1 - dz) * s6[k] / tot, pp7: (1 - dz) * e7[k + 1], pp6: (1 - dz) * e6[k + 1], win: pk.ok ? pk.run.length : 0, doubt: +dz.toFixed(3), states: S.length, tPress: fb2PressT(d) };   // the background's share counts as no 7 (blind 7 is ~7%)
@@ -348,9 +435,9 @@ function fb2PlanT7(cScr) {
     if (was) st.plan = null; cancelBeeps();
     // v109 (console fb0731 T7: 9 s of "No edge" before a 7 window, the runner did not know whether the page was waiting or broken):
     // the next frame where 7 bounces work for most states, looked for up to FB2_T7_AHEAD frames on
-    if (!FB2.t7.next || FB2.t7.next.from > from || (FB2.t7.next.at != null && FB2.t7.next.at < from + W) || (FB2.t7.next.at == null && from - FB2.t7.next.from > 60)) { let at = null; if (S.length <= 64) for (let x = from + W + 1; x <= from + W + FB2_T7_AHEAD && at == null; x++) { let v = 0; for (const o of S) if (fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph) >= 7) v += o.w / tot; if ((1 - dz) * v >= num('zwedge')) at = x; } FB2.t7.next = { from, at }; }
-    const nx = FB2.t7.next && FB2.t7.next.at != null ? ' Waiting for the next 7-bounce window, in about ' + Math.max(0, (FB2.t7.next.at - W - from) * fb2Rate() / 1000).toFixed(0) + ' s: stay on the target screen for its beeps.' : '';
-    st.msg = 'No edge, press normally' + (nx ? ' or wait' : '') + ': no target-A frame in the next ' + num('zwwin') + ' s gives 7 bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, 6+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + ').' + (nx || ' Press Power Bounce normally.');
+    if (!FB2.t7.next || FB2.t7.next.from > from || (FB2.t7.next.at != null && FB2.t7.next.at < from + W) || (FB2.t7.next.at == null && from - FB2.t7.next.from > 60)) { let at = null; if (S.length <= 64) for (let x = from + W + 1; x <= from + W + FB2_T7_AHEAD && at == null; x++) { let v = 0; for (const o of S) if (fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph) >= G) v += o.w / tot; if ((1 - dz) * v >= num('zwedge')) at = x; } FB2.t7.next = { from, at }; }
+    const nx = FB2.t7.next && FB2.t7.next.at != null ? ' Waiting for the next ' + G + '-bounce window, in about ' + Math.max(0, (FB2.t7.next.at - W - from) * fb2Rate() / 1000).toFixed(0) + ' s: stay on the target screen for its beeps.' : '';
+    st.msg = 'No edge, press normally' + (nx ? ' or wait' : '') + ': no target-A frame in the next ' + num('zwwin') + ' s gives ' + G + ' bounces for enough of the ' + S.length + ' FB2 states (best ' + Math.round(100 * plan.pp7) + '% with a perfect press, ' + (G - 1) + '+ ' + Math.round(100 * plan.pp6) + '%' + (dz ? '; ' + Math.round(100 * dz) + '% that none of them is the game\'s' : '') + ').' + (nx || ' Press Power Bounce normally.');
     fb2Show(); render(); return true;
   }
   FB2.t7.plan = plan;
@@ -370,4 +457,4 @@ function fb2Show() {
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
-window.__fb2 = { v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
+window.__fb2 = { v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
