@@ -71,6 +71,10 @@ frame, picture or state committed).
 `test_v114.js` (in run_suite.sh; fixtures/console_1115_fb1810.json, numbers only: the clip's HP numbers by time, the T6 lock's states,
 90 emulator T7 runs, 6 T8 runs). VERSION v114; version checks and default build paths moved; test_v108 2 (a T6 hit now goes to the
 backup ending), test_route_texts (the backup lines).
+Full `run_suite.sh` on the v114 build (scratchpad/timeout_timer_v114; run from a copy of rngtool whose default page paths point there,
+the shared timeout_timer folder being another run's): fail only the known torch_core, hw_v77, route_replay, session_plans,
+capture_replay (test_core, test_fix_proposal and test_zw_tolerant failed only in the copy, for its missing ../data and git; they pass
+in the worktree / with the data). test_press_sim needs /dev/shm/pmbot/vid3_truth.json (absent, as before).
 
 # Time Out Timer v112: the partnerless T6 measured (T7 plans), a Charge relock replans a frozen plan, the T1 lock rearms the reader, Duplighosts' all-4 beep and "hit the 4", one Final Bowser route menu, the strip's chance shading, coin-flip press wording (Nov 15)
 
