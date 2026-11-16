@@ -70,6 +70,11 @@ const CHG_BRIGHT_FB1 = [9.6, 15.4, 24.6, 32.1, 39.0, 44.7, 45.4, 45.5, 45.7, 47.
  * Final Bowser Charge starts from a lit arena, base 81-85 (fb1) / 81-96 (fb2) at every console lock of Nov 9-15; false triggers
  * read 30-63. Under CHG_FB_BASEMIN it is no Charge */
 const CHG_FB_BASEMIN = 70;
+/* v114 (console fb1810, the backup T7 Charge after the Life Shroom): FB2's search found nothing clear on 2 of 3 replays of the clip
+ * (ratio 1.03-1.15); the same pictures placed one frame earlier lock 5f018a3e (3531, 2.73x), as T1-T4's fb1 read of them does
+ * (4826, 1.98x). On the backup T7 a no-lock is searched again on the pictures shifted by -1, +1, -2, +2 frames (chgSolve), the
+ * clock moved with the shift. window.__fb2Wide (tests): force the backup's search either way. */
+const chgFb2Wide = () => (window.__fb2Wide != null ? !!window.__fb2Wide : typeof fb2BackupOn === 'function' && fb2BackupOn());
 const CHG_PROF = {
   hw: { id: 'hw', turn: 'hw_spiny', cams: () => CHG_CAMS, mario: () => CHG_MARIO, bright: () => CHG_BRIGHT, bolts: false, early: false, offs: [24, 25], effects: [0, 1], trigLo: 5, trigHi: 25, trigN: true, tol: () => 1.5, trigMin: 250, trigMax: 1000, baseMin: 30, shape: true },
   fb2: { id: 'fb2', turn: 'fb2_pb', cams: () => CHG_CAMS_FB2 || CHG_CAMS, mario: () => CHG_MARIO_FB2 || CHG_MARIO, bright: () => CHG_BRIGHT_FB2 || CHG_BRIGHT, bolts: true, early: true, offs: [24, 25, 26, 27], effects: [0], baseMin: CHG_FB_BASEMIN, trigLo: 7.5, trigHi: 20, tol: tb => 1.5 + 0.08 * Math.abs(tb), trigMin: 0, trigMax: 4000 },
@@ -522,7 +527,7 @@ function chgMarioWide(G) {
 function chgCentre(G) {
   let sh = chgMarioShift([G[CHG_N + 2], G[CHG_N + 3], G[0], G[1]].map(f => f && f.Y));
   if (!(sh.ncc >= CHG_NCC_MIN) && chgP().trigMin) { const w = chgMarioShift(chgMarioWide(G)); if (w.ncc > sh.ncc) sh = Object.assign(w, { wide: true }); }
-  const dxw = Math.abs(sh.dx) >= 3 && sh.ncc > 0.6 ? sh.dx * (chgP().dxK || 0.37) : 0;
+  const dxw = window.__chgDxw != null ? window.__chgDxw : Math.abs(sh.dx) >= 3 && sh.ncc > 0.6 ? sh.dx * (chgP().dxK || 0.37) : 0;     // __chgDxw: tests / offline checks only
   const c = chgP().cams().centre; return { sh, dxw, cen: [c[0] + dxw, c[1], c[2]] };
 }
 /* FB2: stage 1 from frames 0..22 while the rays go on (chgSearch waits for the full maps before the joint stage) */
@@ -618,6 +623,14 @@ if (window.__chgDebug) {
       if (!ok && SW) { const r3 = await streamTry(); if (r3) { res = r3; ok = true; } }      // v89: the carry missed (Bowser's hit): the stream window next
       if (!ok) { CHG.tSearch = performance.now(); res = await chgSearch(maps); }
     } else if (E) { E.give(maps); res = await CHG.searchP; } else res = await chgSearch(maps);
+    // v114 (console fb1810): on the backup T7 a no-lock is searched again on the pictures one / two frames off (chgFb2Wide)
+    if (chgP().id === 'fb2' && chgFb2Wide() && !chgLockOk(res)) {
+      const A = { tries: [] }, t1a = performance.now();
+      for (const d of [-1, 1, -2, 2]) { if (typeof fbShiftG !== 'function') break; const r2 = await chgSearch(chgMaps(fbShiftG(G, d), cen, CHG_N)), a2 = r2.top[0];
+        A.tries.push({ d, seed: a2 ? (a2.seed >>> 0).toString(16).padStart(8, '0') : null, score: a2 ? Math.round(a2.sc) : null, ok: chgLockOk(r2) });
+        if (chgLockOk(r2)) { res = r2; A.shift = d; CHG.trig.t += d * FRAME; CHG.trig.n -= d; CHG.G = fbShiftG(G, d); break; } }
+      A.ms = Math.round(performance.now() - t1a); CHG.info.shiftAssist = A; if (!CHG.replay) slog('chargeShiftAssist', A);
+    }
     CHG.res = res; CHG.tLock = performance.now(); CHG.attMs = CHG.tLock - t0; CHG.info.searchMs = Math.round(CHG.tLock - CHG.tSearch); CHG.info.lockAfterRaysMs = Math.round(CHG.tLock - CHG.tEnd);
     if (res.fb2) CHG.info.stage = res.fb2.times;
     chgDecide();
@@ -821,6 +834,12 @@ function chgRetryStop(why) {
 /* lock: the best seed's score must be clearly above the rest (true seeds 2900-8300 at 2.1-5.4x the runner-up on the
  * route clips, live under load included; no-lock bests 750-1500 at 1.0-1.2x) */
 const CHG_MIN = 2000, CHG_RATIO = 1.8;
+/* would chgDecide lock on this result (v114: the backup T7's fb1 assist; fb1: its own result, with no FB2 skipping) */
+function chgLockOk(r, plain) {
+  const T = r && r.top, a = T && T[0]; if (!a) return false;
+  const b = !plain && r.fb2 ? (T.slice(1).find(x => x.sc > -1e29) || { sc: a.sc / (CHG_RATIO * 1.0001) }) : (T[1] || { sc: 1 });
+  return !!r.stream || (a.sc >= CHG_MIN && a.sc / b.sc >= CHG_RATIO);
+}
 function chgDecide() {
   const T = CHG.res.top, a = T[0], fb2 = !!CHG.res.fb2;
   // FB2: candidates whose best case could not reach 1/CHG_RATIO of the best were skipped (score -1e30): below that ratio

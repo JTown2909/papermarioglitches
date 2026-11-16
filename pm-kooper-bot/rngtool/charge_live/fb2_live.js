@@ -279,6 +279,7 @@ function fb2Frame(t, present) {
   }
   // the coin through Bowser's turn and the T7 menu
   fb2HpWatch(t, present);
+  if (!CHG.trig) return;      // v114: a hit read just now started the backup (chgReset)
   if (present && FB2.visFrom == null) FB2.visFrom = fb2Pic(t) + 30;
   if (!present && FB2.visFrom != null) { FB2.vis.push([FB2.visFrom, fb2Pic(t) - 4]); FB2.visFrom = null; }
 }

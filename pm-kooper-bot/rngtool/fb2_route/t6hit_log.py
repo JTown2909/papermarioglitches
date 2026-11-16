@@ -49,6 +49,16 @@ def to_menu(r, cap=3000, want=(13,)):
 def charges(e): return e.s8(BSTATUS + 0x97)
 
 
+def atk6(r, E):
+    """Bowser's T6 attack from the AI draws logged on frame E (RandInt 100, 80, maybe 60; Body Slam and Claw allowed)"""
+    from rngsim import rand_int
+    row = r.rows[E]; s = row['s0']; v = []
+    for nm, mx in row['d']:
+        s, x = rand_int(s, mx)
+        if nm == 'evt': v.append(x)
+    return 'slam' if len(v) > 1 and v[1] < 20 else 'claw' if len(v) > 2 and v[2] < 20 else 'fire'
+
+
 def items(e): return [e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10) if e.s16(PLAYER_DATA + 0x1B4 + 2 * i) > 0]
 
 
@@ -80,8 +90,8 @@ def run(out, seed, js):
         M6, P6 = turn(r, TURNS[5][1]['wheel'], P, 'nothing6')
         k, hmin = to_menu(r)
         hp7 = e.s8(PLAYER_DATA + 2)
-        if hmin <= 0: break
-        print('P %d: dodged (hp %d)' % (P6, hp7), flush=True)
+        if hmin <= 0 and (os.environ.get('ATK6') is None or atk6(r, M6 + P6 + 13) == os.environ['ATK6']): break
+        print('P %d: %s (hp %d, T6 attack %s)' % (P6, 'hit' if hmin <= 0 else 'dodged', hp7, atk6(r, M6 + P6 + 13)), flush=True)
     else:
         print('no hit'); return
     t7m = r.f
