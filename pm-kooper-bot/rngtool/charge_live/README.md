@@ -57,8 +57,12 @@ frame, picture or state committed).
   carried: the T7 Charge locks afresh.
 
 ## Not done in v114
-- Final Bowser Phase 1 tracker (fbp1_1448): needs a Phase 1 battle state in the emulator (the route's battle 2304 with the Star Beam
-  only, its T1 Charge read in that arena, the Power Bounce cap rolls without Quick Jump, the Star Beam cutscene into Phase 2). Not built.
+- Final Bowser Phase 1 tracker (fbp1_1448): not built. A Phase 1 battle state exists now in the emulator (scratch, not committed:
+  `boss_battle_start_setup.py 2304` with STARBEAM=1, the route's badges / items; Bowser in his Star Rod aura, Phase 1 T1 Charge; Do
+  Nothing and T2 Power Bounce; Do Nothing play through), but its T3 Star Beam ends the battle and returns to the field the setup
+  starts from (nok_13): the Phase 1 -> 2 cutscene lives in the final room's own scripts, which this setup does not enter, so the
+  Phase 2 start after a real Phase 1 (and the Power Bounce cap rolls against Phase 1 Bowser, whose HP the setup does not reproduce)
+  could not be measured. Needs a state in the real final room (kkj) before the fight.
 - Phase 2 reads after a real Phase 1 (fbp2_1451): the T1 read (Mario 17.1 px right, dxWorld 5.98) still does not lock with any Mario
   shift (replayed with dxWorld 0 / 3 / 6 / 9: 1369-2564, ratio 1.01-1.11); T2 locks on its re-read (6594, 2.09x, as live). Needs the
   emulator's Phase 1 -> 2 transition (Mario's position and the camera after the Star Beam cutscene).
