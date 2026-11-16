@@ -22,7 +22,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
 (async () => {
   if (!fs.existsSync(PAGE)) { console.log('(skipped: no page at ' + PAGE + ')'); console.log('all ok'); return; }
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
-  const open = async (set, presses) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(([s, pr]) => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); if (pr) localStorage.setItem('tot-presses', JSON.stringify(pr)); } catch (e) {} }, [set || { prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'charge', duproute: 'charge' }, presses || null]); await p.goto('file://' + PAGE); return p; };
+  const open = async (set, presses) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(([s, pr]) => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify(s)); if (pr) localStorage.setItem('tot-presses', JSON.stringify(pr)); } catch (e) {} }, [set || { prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'charge', duproute: 'charge' }, presses || null]); await p.goto('file://' + PAGE); return p; };
   const p = await open();
   ok(await p.evaluate(() => window.__tot.VERSION) === 'v114', 'page version v109');
 
@@ -132,7 +132,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
 
   // ---- 6. the press on the strip, plans' frames, refine / stop rules, stars, buttons
   {
-    const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50', fbc9: 'skip' });
+    const q = await open({ prof: 'endgame', off: '-4.5', vlag: '50', fbc9: 'skip', jrroute: 'charge' });
     const r = await q.evaluate(() => {
       const T = window.__tot, L = T.RT(), i2 = L.findIndex(s => s.fb14 === 2), out = {};
       T.setStep(i2);

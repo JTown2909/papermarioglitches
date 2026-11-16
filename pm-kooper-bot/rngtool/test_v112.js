@@ -15,7 +15,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
 (async () => {
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(s => { try { localStorage.clear(); if (s) localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, set || null);
+    await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); if (s) localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, set || null);
     await p.goto('file://' + PAGE); return p; };
   const replay = async (name, extra) => {
     const L = Object.assign({}, FIX[name], extra && extra.at ? { at: extra.at } : {}), p = await open(L.settings); extra = extra && extra.t ? extra.t : extra;

@@ -15,7 +15,7 @@ const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console
 let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) fails++; };
 (async () => {
   const b = await chromium.launch(), errs = [], p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-  await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ jrfix: '0.5' /* v110: cancels the built-in Jr. -0.5 (these reads are pinned raw) */, duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50', prof: 'endgame' })); localStorage.setItem('tot-fb14press', JSON.stringify([-2.54, -2.2, -0.51])); } catch (e) {} });
+  await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify({ jrfix: '0.5' /* v110: cancels the built-in Jr. -0.5 (these reads are pinned raw) */, duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50', prof: 'endgame' })); localStorage.setItem('tot-fb14press', JSON.stringify([-2.54, -2.2, -0.51])); } catch (e) {} });
   await p.goto('file://' + PAGE);
   const r = await p.evaluate(async () => {
     const T = window.__tot, out = { version: T.VERSION };

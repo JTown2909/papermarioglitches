@@ -18,7 +18,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   const b = await chromium.launch(), errs = [];
   const replay = async (opt) => {
   const p = await b.newPage({ viewport: { width: 1300, height: 1200 } }); p.on('pageerror', e => errs.push(String(e)));
-  await p.addInitScript(S => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(S)); } catch (e) {} }, FIX.settings);
+  await p.addInitScript(S => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify(S)); } catch (e) {} }, FIX.settings);
   await p.goto('file://' + PAGE);
   const r = await p.evaluate(([F, opt]) => {
     const T = window.__tot, CHG = T.CHG, JRT = T.JRT, FRAME = T.R.FRAME_MS || 33.367;

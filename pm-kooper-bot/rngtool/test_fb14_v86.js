@@ -19,7 +19,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); const url = 'http://127.0.0.1:' + srv.address().port + '/';
   const b = await chromium.launch(), errs = [];
   const open = async fbhp => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(h => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50', fbhp: h })); } catch (e) {} }, fbhp || 'hi');
+    await p.addInitScript(h => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify({ duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50', fbhp: h })); } catch (e) {} }, fbhp || 'hi');
     await p.goto(url); return p; };
   const p = await open();
   // ---- 1 and 2: the HP watch

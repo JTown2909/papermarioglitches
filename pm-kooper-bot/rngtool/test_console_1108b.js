@@ -30,7 +30,7 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
   await new Promise(r => srv.listen(0, '127.0.0.1', r)); const url = 'http://127.0.0.1:' + srv.address().port + '/';
   const b = await chromium.launch(), errs = [];
   const open = async () => { const p = await b.newPage({ viewport: { width: 1300, height: 1400 } }); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ jrfix: '0.5' /* v110: cancels the built-in Jr. -0.5 (these reads are pinned raw) */, duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50' })); } catch (e) {} });
+    await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify({ jrfix: '0.5' /* v110: cancels the built-in Jr. -0.5 (these reads are pinned raw) */, duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50' })); } catch (e) {} });
     await p.goto(url); return p; };
   // ---- 1. the Jr. Troopa Charge reads
   const A = readLog(LOGA), D = readLog(LOGD);

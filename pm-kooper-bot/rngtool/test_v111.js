@@ -17,7 +17,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
 (async () => {
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(s => { try { localStorage.clear(); if (s) localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, set || null);
+    await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); if (s) localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, set || null);
     await p.goto('file://' + PAGE); return p; };
   const replay = async (name, extra) => {
     const L = FIX[name], p = await open(L.settings);
@@ -99,7 +99,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     ok(/^coin \| 3\+ is a coin flip/.test(k.dup1015) && /^coin\+ring \| 3\+ SOLID 85% · 4 is a coin flip \(41%\)/.test(k.dup1139) && /^star\+ring/.test(k.dup4) && /^star \|/.test(k.dupNo4), '5. Duplighosts: dup1015 a gold coin, dup1139 a white-ringed coin ("3+ SOLID 85% · 4 is a coin flip (41%)"), 4 confident a ringed star, no 4 aimed a plain star (' + [k.dup1015, k.dup1139, k.dup4, k.dupNo4].join(' / ') + ')');
     ok(/60% of the states ✓ \(not certain\)/.test(r.pressTxt) && /a working frame ✓/.test(r.pressTxt9) && !/of the states/.test(r.pressTxt9), '5. (oo) fb1149 T3: a working frame on a 60% plan says "for 60% of the states", not a flat ✓ (' + r.pressTxt.slice(0, 110) + ')');
     ok(/^coin/.test(k.fb), '5. fb1145 T6 (win 0, p 0.42): a coin (' + k.fb + ')');
-    ok(JSON.stringify(r.labels.jr) === JSON.stringify(['Ultra Boots Bombette', 'Ultra Boots Bombette (old shine lock)', 'Ultra Boots Partnerless']) && JSON.stringify(r.labels.dup) === JSON.stringify(['Ultra Boots Spiny Surge (no lock)', 'Ultra Boots Bombette']) && JSON.stringify(r.labels.fbnb) === JSON.stringify(['Normal Boots Power Bounce cap', 'Normal Boots Goombario (untested)']), '6. short route labels ' + JSON.stringify(r.labels));
+    ok(JSON.stringify(r.labels.jr) === JSON.stringify(['Ultra Boots Partnerless', 'Ultra Boots Bombette', 'Ultra Boots Bombette (old shine lock)']) && JSON.stringify(r.labels.dup) === JSON.stringify(['Ultra Boots Spiny Surge (no lock)', 'Ultra Boots Bombette']) && JSON.stringify(r.labels.fbnb) === JSON.stringify(['Normal Boots Power Bounce cap', 'Normal Boots Goombario (untested)']), '6. short route labels ' + JSON.stringify(r.labels));
     await p.close();
   }
   const src = fs.readFileSync(path.join(__dirname, 'page_template.html'), 'utf8');

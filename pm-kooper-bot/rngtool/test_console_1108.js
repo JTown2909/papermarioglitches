@@ -22,7 +22,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
 (async () => {
   const b = await chromium.launch(), errs = [];
   const open = async () => { const p = await b.newPage({ viewport: { width: 1300, height: 1400 } }); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50' })); } catch (e) {} });
+    await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify({ duproute: 'charge', jrroute: 'charge', off: '-5', vlag: '50' })); } catch (e) {} });
     await p.goto('file://' + PAGE); return p; };
   const p = await open();
   const r = await p.evaluate(async (FIX) => {

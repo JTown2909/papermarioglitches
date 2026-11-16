@@ -3,6 +3,10 @@
 From the runner's console log and clip fb1810 (logs1115, v112/v113 page) and the emulator (`fb2_route/t6hit_log.py`; numbers only; no clip,
 frame, picture or state committed).
 
+- **Jr. Troopa default (v114)**: Ultra Boots Partnerless is the first and default route (16.4 s faster than Bombette on the runner's
+  timing). A saved Bombette choice is moved to Partnerless once (`tot-jrpl`); a later choice of Bombette is kept. Tests that pin
+  Bombette set `tot-jrpl`.
+
 ## 1. fb1810 T6: the failed Close Call was logged as a dodge
 - The clip: Mario at 1/10 HP (Danger), Do Nothing (the Strategies box's last picture at clip 94.27 s), Fire Breath's 9: the units digit
   1 -> 0 at 96.85 s (2.6 s after the confirm), the Life Shroom, 10/10 at 109.75 s. v108's watch waited for the "1" of 10 before the

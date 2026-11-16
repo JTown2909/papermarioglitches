@@ -40,7 +40,7 @@ function clipFrames() {
   let fails = 0; const check = (ok, msg) => { if (!ok) { fails++; console.log('FAIL ' + msg); } };
   const b = await chromium.launch(), p = await b.newPage(), errs = [];
   p.on('pageerror', e => errs.push(String(e)));
-  await p.addInitScript(() => { localStorage.clear(); });
+  await p.addInitScript(() => { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify({ jrroute: 'charge' })); });
   await p.goto('file://' + PAGE);
   const r = await p.evaluate(async ({ FIX }) => {
     const T = window.__tot, out = { version: T.VERSION };

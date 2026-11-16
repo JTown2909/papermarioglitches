@@ -12,7 +12,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   for (const name of ['x1803', 'x1820']) {
     const L = FIX[name], p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, L.settings);
+    await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, L.settings);
     await p.goto('file://' + PAGE);
     const r = await p.evaluate(L => {
       const T = window.__tot, E = c => T.v111.ev(c), ev = L.events.slice().sort((a, b) => a.t - b.t), res = { errs: [] };
