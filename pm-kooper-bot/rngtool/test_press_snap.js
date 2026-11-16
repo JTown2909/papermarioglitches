@@ -5,7 +5,7 @@
  * 192-193 now reads inside with v113's Bomb read).
  * usage: [PAGE=...] node test_press_snap.js */
 const fs = require('fs'), path = require('path');
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v114/timeout_timer_standalone.html';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v113/timeout_timer_standalone.html';
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_1115_v114_jr.json'), 'utf8'));
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {

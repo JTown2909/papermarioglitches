@@ -2,7 +2,7 @@
  * a press on the beeps in any fight (here Duplighosts, measurePress) leaves the strip on the plan's frames, its window and the
  * frame hit (stripState src 'press') until the next plan; the Final Bowser levers did this since v109.
  * usage: [PAGE=...] node test_press_strip.js */
-const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v114/timeout_timer_standalone.html';
+const PAGE = process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer_v113/timeout_timer_standalone.html';
 let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
 (async () => {
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [], p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
