@@ -551,8 +551,9 @@ const ENDGAME = [
   // lock it again and check the carried seed; the carry runs on to the Peach Beam and narrows the T6 Charge's search.
   // v110 (ff, the runner): shown as "Ultra Boots Laki Final Bowser", Phase 1 (text lines: not tracked yet, untested) before Phase 2
   { h: 'Final Bowser', disp: 'Ultra Boots Laki Final Bowser', turns: [
-    { text: 'T1: Charge; Do Nothing', steps: [], phase: 'Phase 1:' },
-    { text: 'T2: Bounce x5; Do Nothing', steps: [], timed: true, untested: 'Phase 1 is not tracked yet (v110): the T2 Power Bounce is not beeped (README v110 (ff): clips needed). Damage (README v110 (ff), from the formula, not seen on console): 5,4,3,2,1,1 a bounce with one Charge, so caps 3/4/5/6 deal 12/14/15/16; with T7 at 15,14,13,.. (7 bounces 84) a 3 cap and a 7 cap kill exactly, and no Phase 1 cap lets T7 need fewer than 7 (6 bounces 75 needs 21 here): aim 3+, nothing to gain past it' },
+    // v116: Phase 1's T1 Super Charge is read (the aura profile) and shown; nothing is planned or beeped there (fbp1_live.js)
+    { text: 'T1: Charge; Do Nothing', phase: 'Phase 1:', steps: [{ label: 'Phase 1 Super Charge: its rays are read and the seed shown (nothing beeped in Phase 1; the Peach battle comes before Phase 2, so Phase 2 T1 locks afresh)', cat: 'M', chg: 'fbp1', fbp1: true }] },
+    { text: 'T2: Bounce x5; Do Nothing', steps: [], timed: true, untested: 'Phase 1: only T1\'s Charge is read (v116, shown); the T2 Power Bounce is not beeped (Phase 1\'s turns are not modelled, README v116). Damage (README v110 (ff), from the formula, not seen on console): 5,4,3,2,1,1 a bounce with one Charge, so caps 3/4/5/6 deal 12/14/15/16; with T7 at 15,14,13,.. (7 bounces 84) a 3 cap and a 7 cap kill exactly, and no Phase 1 cap lets T7 need fewer than 7 (6 bounces 75 needs 21 here): aim 3+, nothing to gain past it' },
     { text: 'T3: Star Beam', steps: [] },
     { text: 'T1: Charge; Cloud Nine', phase: 'Phase 2:', steps: [{ label: 'Super Charge (hand on Mario): its rays lock the seed (Close Call equipped before the fight: T6 needs it)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'charge' },
       { label: 'Cloud Nine (hand on Mario), then A on the beep to skip its message → Bowser misses (Settings: Confirm Cloud Nine on the beep for the old lever)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'lever' }] },
@@ -1668,6 +1669,7 @@ function zwTick(now) {
 /*@include charge_live/fb2_live.js*/
 /*@include charge_live/jr_live.js*/
 /*@include charge_live/fb14_live.js*/
+/*@include charge_live/fbp1_live.js*/
 /*@include charge_live/hwcc_live.js*/
 /* v97 (the runner: "Charge; Do Nothing - Close Call"; he "didn't identify the right turn on 6"): the T6 lever is Lakilester's
  * Do Nothing, not the +3 popup (v93-v96 told him to HOLD the popup). From the step arming the headline says to wait on the
@@ -2602,7 +2604,10 @@ function hwRetry(hiddenMs) {
   // Charge. A new attempt always starts with T1's Charge, whose burst sets T1 (chgPendResolve): only that may, while the
   // Charge reader is on
   if (st.hwDone && typeof chgEnabled === 'function' && chgEnabled()) { if (!st.hwBackHeld) { st.hwBackHeld = true; slog('stepBackHeld', { from: routeStep, hiddenMs: Math.round(hiddenMs), why: 'Time Out done: the rest of the battle' }); } return; }
-  slog('stepBackToHallway', { from: routeStep, to: hi, hiddenMs: Math.round(hiddenMs) }); zw.on = false; st.hwLeft = null; setStep(hi);
+  // v116 (log 484e3220: a 39 s hide on the way into Final Bowser stepped the route back here, and the step's arenaNote then held
+  // the Phase 1 Charge 1 s later on the Hallway, "fb only 1 s after hw"): the step back keeps the Hallway's last seen time
+  const hwSeen = typeof ARENA !== 'undefined' ? ARENA.seen.hw : undefined;
+  slog('stepBackToHallway', { from: routeStep, to: hi, hiddenMs: Math.round(hiddenMs) }); zw.on = false; st.hwLeft = null; setStep(hi); if (hwSeen != null) ARENA.seen.hw = hwSeen;
 }
 function coinBack(hiddenMs) {
   if (hiddenMs != null && hiddenMs >= 3000) { (st.longHides = st.longHides || []).push({ at: performance.now() - 1000 - hiddenMs, ms: hiddenMs }); if (st.longHides.length > 20) st.longHides.shift(); }
@@ -2700,6 +2705,7 @@ function checkPress(tObs) {
     // Charge burst sets T1, a long gap (hwRetry) does, or Final Bowser's arena shows at a bar hide (chgArenaProf).
     const nx = RT()[routeStep + 1];
     if (stp && nx && /^Hallway Bowser/.test(stp.t || '') && !/^Hallway Bowser/.test(nx.t || '')) { if (!st.hwDone) slog('hallwayDone', { step: routeStep }); st.hwDone = true; }
+    else if (typeof fbp1KeepStep === 'function' && fbp1KeepStep(stp, tObs)) {}     // v116: Final Bowser Phase 1
     else { setStep(routeStep + 1); st.lastStepClose = { t: tObs, to: routeStep }; }
   }
 }
