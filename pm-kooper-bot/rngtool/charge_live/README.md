@@ -1,3 +1,98 @@
+# Time Out Timer v116: Final Bowser after a real Phase 1: the Phase 2 T1 Charge locks (stage 2 also takes each effect's own best), Phase 1's Charge read with the aura profile and shown, the route held through Phase 1 / the Peach battle (Nov 17)
+
+From the runner's console log 484e3220 (page v114, 2026-11-17 16:12) and its clip 16-06-01 (364 s, game in crop 960:540:320:0), the
+15:56 log d582b905 and the earlier fbp2_1451 (9c35f7c3). Numbers only in the repository; the kept reads (they hold pictures) are read
+from the session logs in the uploads folder by test_v116 and never copied.
+
+Clip time = log time - 1482.63 s (the Phase 1 Charge's bar hide: log 1488.591, clip 5.96 s / frame 358 when the clip is fed to the
+page; Phase 2 T1's bar hide: log 1708.474, clip 225.84 s / frame 13550; its burst is on the 1 fps sheet at 226-227 s).
+
+## What the clip shows (1 fps / 5 fps sheets, scratchpad only)
+- clip 4 s: **Final Bowser Phase 1** starts (10/10 HP, 15/15 FP, Bowser in his blue Star Rod aura). The page was on the Hallway: a
+  39 s coin hide on the way in (log 1488.0) had stepped the route back to Hallway T1 (`stepBackToHallway`), and that step's own arena
+  note then refused the Final Bowser arena 0.6 s later ("fb only 1 s after hw"). So **the read kept as "Hallway Bowser T1" (Mario
+  16.7 px right, ncc 0.74, locked 9bb456e7 on the 3rd placement, 2469 / 1.87x) is Phase 1's T1 Super Charge** read with the
+  Hallway profile, and the zero-wait Hallway tracker ran on it through Phase 1 (`zwStart` fight hw, `zwInput hw_spiny` on Phase 1's
+  next bar hide; no beep was made).
+- Phase 1 T1: Super Charge (burst 6.0-7.5 s), Lakilester's Do Nothing, Bowser's attack: 10 -> 3 HP (Danger) by 13 s.
+- Phase 1 T2 (16-24 s): Power Bounce, **6, 5, 4, 3, 2 = 20** (5 bounces; the 6th missed), then Do Nothing. v110's formula table
+  (README v110 (ff)) had 5, 4, 3, 2, 1 for one Charge: the console's first hit is one more (20 for a 5 cap, not 15). Recorded only;
+  the route's T2 line still beeps nothing.
+- Phase 1 T3 (25-29 s): Star Beam; Bowser's aura goes, the Star Rod cutscene.
+- **clip ~50-170 s: Peach's battle against Kammy** (the runner's own inputs: Peach's turns, Twink, Kammy's blocks and lightning),
+  then Peach / Twink / Star Spirits cutscenes; Phase 2 starts at ~223 s (10/10, 15/15 again), its T1 Charge at 226 s.
+
+## 1. Phase 2 T1 after a real Phase 1: why it no-locked, and the fix
+- Live (v114): no-lock on 3 placements (best 3422, 1.05x), Mario in place (0.3 px, ncc 0.89, no dx), no capture drops.
+- The read itself was fine: searched only on the stream behind the T2 lock (6cfbc1df stepped back 0..12000), it locks **9fdf5e3e at
+  6593 / 2.58x, 1401 steps before T2's 6cfbc1df** (T2 -> T4 is 2699 steps on the same stream, live). So the camera, Mario's place
+  and the pictures were not the cause.
+- The cause is the search's stage 1: A's initial rays of the true seed scored 943 (10th of the 16384 kept for A), B's only 380 (B's
+  rays faint on this Charge; no B offset 0..120 does better), so the joint initial-ray score 1323 ranked **479th** and stage 2 only
+  takes the best 300 (`CHG_M2`). On fbp2_1451 T1 (Mario 17.1 px, dx 6.0 world units, as live) the true seed, found the same way on
+  T2 4e1b8110's stream 1350 steps back (681fb2fe, 4745 / 2.1x), has A 485 and B 481, under both effects' K-th (588 / 584): stage 1
+  drops it outright, at any centre (+-0.5 / 1 unit, depth +-2 / 4, height +-2) and frame shift tried; v116 does not fix that one.
+- **Fix (`chgSearch`, aura profile only)**: besides the best 300 by the joint score, stage 2 also takes the best `CHG_M2_OWN` = 64
+  of each effect's stage-1 list by its own score (A's with B's best offset, B's at its best offset): up to 128 more candidates,
+  ~0.1-0.2 s more per attempt. The log's T1 replays to **9fdf5e3e, 6593 / 1.97x on the first placement**; T2 (6cfbc1df) and T4
+  (57d7593a) as before.
+- False locks: every kept Final Bowser T1-T4 read without carried candidates in the uploads folder (92 reads, v86-v114) replayed on
+  v116, 50 of them on v114 too: 86 lock, identical to v114 wherever both ran; every lock is the live seed except 484e3220 T1 (now
+  9fdf5e3e, the stream-proven seed). The other 5 differences from the live results are v114's too (b75b56e2 T1 and 4bc65351 T2 lock
+  on replay; a87486a0 T2, daf679b6 T4, c6469b35 T4 locked live on the carried stream, which a plain replay does not use). The two earlier no-locks that stay no-locks, 8cc2055f T1 and 39b88e3a T1, have the true seed as their
+  best (ec60ec34, 6252 steps before T4's 6debf768; 1c403dbf, 2465 before T2's cb89ffbc) at 1.76x on v114 and v116: a lock there
+  would be right, none is made.
+- d582b905 (15:56) T1 (Mario 17.1 px, locked 5b0f5e45 2.17x, doubt 0.53, "No edge"): its lock was right (T2's narrowed read found it
+  on the carried states, 3447 of 8244 matched); the doubt is the tracker's split of the aura patterns, not the read (not changed).
+
+## 2. Phase 1
+- **The seed can be read in Phase 1**: the Phase 1 Charge, replayed with the aura profile (`fbp1`, Bowser's Star Rod aura is up in
+  Phase 1 and draws as in Phase 2 T1-T4), locks **9bb456e7 at 6776 / 2.44x on the first placement** (Mario 17.1 px, dx 6.0): the
+  seed the Hallway profile found on its 3rd placement at 2469 / 1.87x. Two different draw models on the same pictures agree.
+- **It cannot be carried into Phase 2**: between the Phase 1 Charge (clip 6 s) and Phase 2 T1's (226 s) come Phase 1 T2 / T3, the
+  Star Beam cutscene, the Peach battle (~110 s of the runner's inputs with their own timing, Kammy's random blocks and lightning, every
+  hit's stars) and two more cutscenes. No model of any of it exists and the time varies run to run, so Phase 2 T1 locks afresh.
+- **What Phase 1 has to manipulate**: T1 (Charge; Do Nothing: Bowser's attack is meant to hit, 10 -> 3 for Danger) and T2's Power
+  Bounce cap (6, 5, 4, 3, 2 here). Planning either needs Phase 1's draws from the Charge to the bounce rolls (Bowser's Phase 1 AI and
+  attack, the T2 menu, the Power Bounce against Phase 1 Bowser) measured in the emulator, which still has no state in the real final
+  room (README v114). Not built: nothing is planned or beeped in Phase 1.
+- **On the page (v116)**: the Ultra Boots Laki route's Phase 1 T1 line has a step (`fbp1`): its Super Charge is read with the aura
+  profile, the seed (or "no clear seed") shown on the status line and logged (`fbP1Read`), the read kept, and the route moves to
+  Phase 2 T1's Charge step. That step arms no read and ignores screen closes for 90 s after the Phase 1 Charge (`FBP1_HOLD`: Phase 1
+  T2 / T3 and the Star Beam's flash; the clip's Phase 2 Charge came 220 s later); a screen close on the Phase 1 step never moves the
+  route. A Hallway -> Final Bowser arena move goes to the Phase 1 step. Before v116 a Phase 1 Charge read on Phase 2 T1's step was
+  taken as Phase 2 T1's lock (`fb14StepByBurst`, the T1 Cloud Nine plan built on Phase 1's seed) until the real T1 Charge reset it.
+- **The step back to the Hallway** (`hwRetry`) keeps the Hallway's last seen time, so the arena gate measures Final Bowser from the
+  Hallway's real end, not from the step back (484e3220).
+- Caution: a practice attempt from a Phase 2 save started on the Phase 1 step would have its T1 Charge taken as Phase 1's; click the
+  Phase 2 T1 line for that.
+- Fed the clip (scratchpad frames, 60 fps, the runner's settings) to the page on the Phase 1 step: 9bb456e7 (6695, 2.44x) on the
+  first placement, the route on Phase 2 T1's Charge step, no beep. The v114 page fed the same frames on Phase 2 T1's step took the
+  Charge as T1's lock (`fb14Lock` turn 1, fresh). Phase 2 T1 fed from clip 220 s (the headless feed drops 18-26% of the pictures, so
+  runs differ): v116 locked 9fdf5e3e twice, once more on its 2nd placement, and once no-locked with 9fdf5e3e best at 1.68x; v114 locked
+  it once and no-locked once (best 1.0-1.1x, noise). No run locked another seed.
+
+## 3. The Hallway T1 read of this log
+Not a Hallway Charge: Phase 1's (section 2). Mario 16.7 px right is where Phase 1 has him (the aura profile places him at 17.1 px,
+dx 6.0, ncc 0.85), and the Hallway profile has no aura draws, hence the weak score and the 3 placements.
+
+## Not done in v116
+- Phase 1 T1 / T2 plans (needs the emulator's Phase 1 draws; see above). The Phase 1 lock is shown only.
+- fbp2_1451 T1 (true seed under both stage-1 K-ths): a stage-1 change (a joint A+B stage 1, or a wider K for the aura) would be
+  needed; the T2 lock 22 s later is what Phase 2 runs on there.
+- A no-lock T1 is not read again on the back stream of a later T2 lock (it would find T1's seed after the fact, too late for T1's
+  lever).
+
+## Tests
+`test_v116.js` (in run_suite.sh; no fixture: it reads the kept reads from the session logs in the uploads folder, skipped when they
+are absent). VERSION v116 and the version checks moved in a commit of their own (the default build paths left as they were: run the
+tests with PAGE= / a copy whose defaults point at the v116 build).
+Full `run_suite.sh` on the v116 build (scratchpad/timeout_timer_v116; from a copy of rngtool whose default page paths point there):
+fail only the known torch_core, hw_v77, route_replay, session_plans, capture_replay and the TORCH maze timeout. test_fix_proposal and
+test_zw_tolerant failed only in the copy (no git) and pass in the worktree; test_strip_geometry failed once under the other session's
+load (an animation-frame jump of 0.15 frame) and passes alone. The two old user-log replays at the end are missing from the uploads
+folder (rc 0, nothing read).
+
 # Time Out Timer v114: Final Bowser T6 Close Call failure read from Mario's HP number (never a dodge), the runner's backup ending (T7 Charge; Do Nothing - No Wave, Danger / T8 Bounce x5) modelled in the emulator, the backup T7 Charge lock (Nov 16)
 
 From the runner's console log and clip fb1810 (logs1115, v112/v113 page) and the emulator (`fb2_route/t6hit_log.py`; numbers only; no clip,
