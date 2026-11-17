@@ -1,3 +1,16 @@
+# Time Out Timer v115: a Charge seed on the best one's own RNG stream is not a rival (the Duplighosts T1 no-locks of 11-17 lock on their first placement); the strip keeps the white tips and dimming after a press, its % is the frame hit's; the Close Call label names no partner (Nov 17)
+
+- **`chgRunnerUp` (charge_live.js)**: the runner's two Duplighosts T1 no-locks (logs 15-42-11 / 15-42-41) had the right seed best in
+  every placement; the runner-up was that seed one RNG step back (2aa59bf8 6387 / e25f4a2b 3680 = 1.74x, under CHG_RATIO 1.8; the
+  next other seed 2150 = 2.97x). A seed within 48 steps on the best one's stream is the same answer read a draw off (the Final
+  Bowser reads already counted it so): the ratio is taken against the best seed off that stream, and the best must still beat its
+  stream neighbour by CHG_NEAR_RATIO 1.4. Both reads replay to a lock on the first placement (2aa59bf8 2.97x, 87036f20 3.63x);
+  every other kept no-lock in the session's uploads (jr / hw) stays a no-lock. The FB2 and fb1 paths are unchanged.
+- **pressShow**: keeps the plan's `tab4` (the white tips: the 6 cap, the all 4) and `chance` (the dimming); the ✓ % over the strip is
+  the chance of the frame hit (the press table's), not the plan's.
+- **jrcc_nothing**: "Jr. Troopa: Close Call on Do Nothing" (the Partnerless route has no Bombette).
+- test_v115 (reads the two kept reads from the uploads; skipped when absent: they hold pictures, never in the repository).
+
 # Time Out Timer v114: Final Bowser T6 Close Call failure read from Mario's HP number (never a dodge), the runner's backup ending (T7 Charge; Do Nothing - No Wave, Danger / T8 Bounce x5) modelled in the emulator, the backup T7 Charge lock (Nov 16)
 
 From the runner's console log and clip fb1810 (logs1115, v112/v113 page) and the emulator (`fb2_route/t6hit_log.py`; numbers only; no clip,

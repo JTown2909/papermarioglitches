@@ -148,7 +148,7 @@
     jrcc_syrup: { id: 'jrcc_syrup', name: 'Jr. Troopa: Close Call after Maple Syrup', short: 'Close Call', group: 'jr',
       effects: { 118: [].concat(...Array(10).fill([359, 10, 10])) }, rolls: [{ at: 163, max: 100, ok: v => v < 30 }], vanish: 2, minRun: 2,
       screen: 'Maple Syrup target screen (hand on Mario)', box: 'the マリオ name box in the top-left' },
-    jrcc_nothing: { id: 'jrcc_nothing', name: 'Jr. Troopa: Close Call after Bombette does nothing', short: 'Close Call', group: 'jr',
+    jrcc_nothing: { id: 'jrcc_nothing', name: 'Jr. Troopa: Close Call on Do Nothing', short: 'Close Call', group: 'jr',
       effects: {}, rolls: [{ at: 26, max: 100, ok: v => v < 30 }], vanish: STRAT_VAN, minRun: 2,   // v87: the Strategies screen greys on confirm + 2 (the page's close), goes on + 3 (console input display)
       screen: 'the Partner’s Strategies menu with the hand on なにもしない', box: 'the Strategies panel (both lines and a little below)' },
     // Power Bounce vs Jr. Troopa (chance 70: 140, 98, 68, 47, 32...): 6+ hits = the first four cap rolls pass. Rolls

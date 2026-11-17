@@ -1900,7 +1900,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v114';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v115';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2757,7 +2757,7 @@ function measurePress(tObs) {
 function pressShow(P, c, label) {
   if (!P || !P.tab || !P.tab.length || P.first == null || c == null) return null;
   const f = Math.round(c), works = !!P.tab[f - P.first];
-  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: null, first: P.first, tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: P.mix && P.mix.p != null ? P.mix.p : null };     // v111 (oo): the plan's chance, for the ✓
+  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: P.tab4 ? P.tab4.slice() : null, chance: P.chance ? P.chance.slice() : null, first: P.first,     /* v115 (runner 11-17): the white tips (the 6 cap / all 4) and the dimming stay after the press */ tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: P.chance && P.chance[f - P.first] != null ? P.chance[f - P.first] : P.mix && P.mix.p != null ? P.mix.p : null };     // v115: the chance of the frame hit (the press table's), else the plan's     // v111 (oo): the plan's chance, for the ✓
   slog('pressShow', { label, target: P.target, c: +c.toFixed(2), works });
   return works;
 }

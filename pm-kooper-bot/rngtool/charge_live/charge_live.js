@@ -834,16 +834,29 @@ function chgRetryStop(why) {
 /* lock: the best seed's score must be clearly above the rest (true seeds 2900-8300 at 2.1-5.4x the runner-up on the
  * route clips, live under load included; no-lock bests 750-1500 at 1.0-1.2x) */
 const CHG_MIN = 2000, CHG_RATIO = 1.8;
+/* v115 (the runner's Duplighosts T1 no-locks of 11-17, both on the best seed in every placement): the runner-up was the
+ * best seed one RNG step back (2aa59bf8 6387 / e25f4a2b 3680 = 1.74x; the next other seed 2150, 2.97x). A seed on the
+ * best one's own stream (48 steps either way, as the Final Bowser reads already count it) is the same answer read one
+ * draw off, not a rival: the ratio is taken against the best seed off that stream, and the best must still beat its
+ * stream neighbour by CHG_NEAR_RATIO. */
+const CHG_NEAR_RATIO = 1.4;
+function chgNearSet(a) { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; }
+function chgRunnerUp(T) {
+  const a = T[0]; if (!a) return { sc: 1 };
+  const N0 = chgNearSet(a.seed), nb = T.slice(1).find(x => N0.has(x.seed >>> 0)), b = T.slice(1).find(x => !N0.has(x.seed >>> 0)) || { sc: 1 };
+  if (nb && a.sc / nb.sc < CHG_NEAR_RATIO) return nb;
+  return nb && b.sc < nb.sc ? Object.assign({ near: true }, b) : b;
+}
 /* would chgDecide lock on this result (v114: the backup T7's fb1 assist; fb1: its own result, with no FB2 skipping) */
 function chgLockOk(r, plain) {
   const T = r && r.top, a = T && T[0]; if (!a) return false;
-  const b = !plain && r.fb2 ? (T.slice(1).find(x => x.sc > -1e29) || { sc: a.sc / (CHG_RATIO * 1.0001) }) : (T[1] || { sc: 1 });
+  const b = !plain && r.fb2 ? (T.slice(1).find(x => x.sc > -1e29) || { sc: a.sc / (CHG_RATIO * 1.0001) }) : plain ? (T[1] || { sc: 1 }) : chgRunnerUp(T);
   return !!r.stream || (a.sc >= CHG_MIN && a.sc / b.sc >= CHG_RATIO);
 }
 function chgDecide() {
   const T = CHG.res.top, a = T[0], fb2 = !!CHG.res.fb2;
   // FB2: candidates whose best case could not reach 1/CHG_RATIO of the best were skipped (score -1e30): below that ratio
-  const b = fb2 ? (T.slice(1).find(x => x.sc > -1e29) || { sc: a ? a.sc / (CHG_RATIO * 1.0001) : 1, skipped: true }) : (T[1] || { sc: 1 });
+  const b = fb2 ? (T.slice(1).find(x => x.sc > -1e29) || { sc: a ? a.sc / (CHG_RATIO * 1.0001) : 1, skipped: true }) : CHG.res.fb1 ? (T[1] || { sc: 1 }) : chgRunnerUp(T);
   CHG.info.best = a && { seed: (a.seed >>> 0).toString(16).padStart(8, '0'), q: a.q, score: Math.round(a.sc), ratio: +(a.sc / b.sc).toFixed(2) };
   if (CHG.res.s1) CHG.info.s1 = CHG.res.s1;
   if (CHG.res.fb1 && CHG.res.fb1.times) CHG.info.stage = CHG.res.fb1.times;
