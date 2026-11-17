@@ -105,6 +105,7 @@ CHG_PROF.nbhw = Object.assign({}, CHG_PROF.hw, { id: 'nbhw', turn: null });
  * the real Charge went by). */
 const CHG_NCC_MIN = 0.5;     // Mario on frame 0 (route clips and live 0.94, FB2 0.85; a capture with no Charge 0.09)
 const CHG_EARLY_N = 23;      // stage 1 and the joint stage need frames 0..21 (A's initial rays on 0..18, B's on 3..21)
+const CHG_M2_OWN = 64;     // v116: the aura profile's extra stage-2 candidates per effect, by stage 1's own score (chgSearch)
 const CHG_K = 16384, CHG_K_FB2 = 65536, CHG_M2 = 300, CHG_K_WIDE = 65536, CHG_M2_WIDE = 1000, CHG_IMPS = Array.from({ length: 136 }, (_, i) => 40 + i);   // Spiny Flip thrown with A: impact +40..+175
 const CHG_LAGS = [[0, 0.75], [1, 0.25]], CHG_QMAX = 10, CHG_QTOL = 0.02;   // console lag frames after the rays (weights); most q kept, within 2% of the best q
 const CHG_SHIFTS = [[-2, 0.15], [-1, 0.25], [0, 0.4], [1, 0.2]];     // Spiny Flip confirm vs the bar's hiding (a dropped picture reads it late)
@@ -689,6 +690,13 @@ function chgSearch(maps, opts) {
       pool.sort((a, b) => b[4] - a[4]); const seen = new Set(), top = [];
       const topV = [];
       for (const x of pool) { if (seen.has(x[2])) continue; seen.add(x[2]); top.push(x[2]); topV.push(x[5] != null ? x[5] - 24 : null); if (top.length >= (opts.wide ? CHG_M2_WIDE : CHG_M2)) break; }
+      // v116 (console 484e3220, Final Bowser T1 after a real Phase 1): the true seed's A rays ranked 10th of stage 1 (943) but B's
+      // were faint (380), so its joint score ranked 479th and the 300 sent on missed it. The aura profile also sends each
+      // effect's best CHG_M2_OWN of stage 1 by its own score (A: with B's best offset; B: its best offset), stage 2 decides.
+      if (P.aura) { stats.own = 0; const n0 = items.findIndex(x => x[0] === 1), nA = n0 < 0 ? items.length : n0;
+        const add = x => { if (seen.has(x[2])) return; seen.add(x[2]); top.push(x[2]); topV.push(x[5] != null ? x[5] - 24 : null); stats.own++; };
+        for (let i = 0; i < Math.min(nA, CHG_M2_OWN); i++) add(items[i]);
+        for (let i = nA, k = 0; i < items.length && k < CHG_M2_OWN; k++) { let b = items[i], j = i; for (; j < items.length && items[j][1] === items[i][1]; j++) if (items[j][4] > b[4]) b = items[j]; add(b); i = j; } }
       top.v = topV;      // the aura profile: B's offset the joint stage found best for each (fb1Stage2 scores v +-1 around it)
       times.joint = Math.round(performance.now() - t2);
       stage2(top, lists);
