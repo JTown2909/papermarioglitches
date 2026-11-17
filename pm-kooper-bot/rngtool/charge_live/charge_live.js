@@ -105,6 +105,7 @@ CHG_PROF.nbhw = Object.assign({}, CHG_PROF.hw, { id: 'nbhw', turn: null });
  * the real Charge went by). */
 const CHG_NCC_MIN = 0.5;     // Mario on frame 0 (route clips and live 0.94, FB2 0.85; a capture with no Charge 0.09)
 const CHG_EARLY_N = 23;      // stage 1 and the joint stage need frames 0..21 (A's initial rays on 0..18, B's on 3..21)
+const CHG_M2_OWN = 64;     // v116: the aura profile's extra stage-2 candidates per effect, by stage 1's own score (chgSearch)
 const CHG_K = 16384, CHG_K_FB2 = 65536, CHG_M2 = 300, CHG_K_WIDE = 65536, CHG_M2_WIDE = 1000, CHG_IMPS = Array.from({ length: 136 }, (_, i) => 40 + i);   // Spiny Flip thrown with A: impact +40..+175
 const CHG_LAGS = [[0, 0.75], [1, 0.25]], CHG_QMAX = 10, CHG_QTOL = 0.02;   // console lag frames after the rays (weights); most q kept, within 2% of the best q
 const CHG_SHIFTS = [[-2, 0.15], [-1, 0.25], [0, 0.4], [1, 0.2]];     // Spiny Flip confirm vs the bar's hiding (a dropped picture reads it late)
@@ -164,7 +165,7 @@ const ARENA_ORDER = { dup: 0, jr: 1, hw: 2, fb: 3 }, ARENA_MIN = { jr: 90000, hw
 const ARENA = { seen: {} };
 function arenaFightOf(i) {
   const s = RT()[i]; if (!s) return null;
-  if (s.chg === 'dup') return 'dup'; if (s.chg === 'jr' || s.jr != null) return 'jr'; if (s.fb14 || s.chg === 'fb1' || s.turn === CHG_PROF.fb2.turn || s.turn === 'fb2_k') return 'fb';
+  if (s.chg === 'dup') return 'dup'; if (s.chg === 'jr' || s.jr != null) return 'jr'; if (s.fb14 || s.fbp1 || s.chg === 'fb1' || s.turn === CHG_PROF.fb2.turn || s.turn === 'fb2_k') return 'fb';
   if (/^Hallway Bowser/.test(s.t || '') || s.turn === 'hw_spiny' || s.chg === 'nbhw') return 'hw'; return null;
 }
 function arenaNote(i, t) { const f = arenaFightOf(i); if (f) ARENA.seen[f] = t != null ? t : performance.now(); }
@@ -201,9 +202,11 @@ function chgArenaProf(P0, real) {
   // in that arena (chgBackResolve, at the end of the capture); no burst (chargeNotSeen), the route stays. A click always goes.
   if (P0 === CHG_PROF.jr && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr, held: true }); chgPendDrop('arena'); CHG.backTo = dupI; return CHG_PROF.dup; }
   if (P0 === CHG_PROF.jr && real && A.a === 'fb' && fbI >= 0 && arenaMoveOk(fbI, A)) { slog('chargeArena', { arena: 'final bowser', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); setStep(fbI); return fb1I >= 0 ? CHG_PROF.fb1 : CHG_PROF.fb2; }
-  if ((P0 === CHG_PROF.fb2 || P0 === CHG_PROF.dup || P0 === CHG_PROF.fb1) && A.a === 'hw') { slog('chargeArena', { arena: 'hallway', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); return CHG_PROF.hw; }
-  if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.dup) && real && A.a === 'fb' && fbI >= 0 && arenaMoveOk(fbI, A)) { slog('chargeArena', { arena: 'final bowser', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); chgPendDrop('arena'); setStep(fbI); return fb1I >= 0 ? CHG_PROF.fb1 : CHG_PROF.fb2; }
-  if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.fb2 || P0 === CHG_PROF.fb1) && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr, held: true }); chgPendDrop('arena'); CHG.backTo = dupI; return CHG_PROF.dup; }
+  if ((P0 === CHG_PROF.fb2 || P0 === CHG_PROF.dup || P0 === CHG_PROF.fb1 || (P0 && P0.id === 'fbp1')) && A.a === 'hw') { slog('chargeArena', { arena: 'hallway', step: routeStep, L: A.L, br: A.br, lbr: A.lbr }); return CHG_PROF.hw; }
+  // v116: from the Hallway, Final Bowser starts with Phase 1 (its step when the route has one: fbp1_live.js)
+  const p1I = CHG_PROF.fbp1 ? RT().findIndex(x => x.fbp1) : -1, fbIn = P0 === CHG_PROF.hw && p1I >= 0 ? p1I : fbI;
+  if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.dup) && real && A.a === 'fb' && fbIn >= 0 && arenaMoveOk(fbIn, A)) { slog('chargeArena', { arena: 'final bowser', step: routeStep, L: A.L, br: A.br, lbr: A.lbr, phase1: fbIn === p1I || undefined }); chgPendDrop('arena'); setStep(fbIn); return fbIn === p1I ? CHG_PROF.fbp1 : fb1I >= 0 ? CHG_PROF.fb1 : CHG_PROF.fb2; }
+  if ((P0 === CHG_PROF.hw || P0 === CHG_PROF.fb2 || P0 === CHG_PROF.fb1 || (P0 && P0.id === 'fbp1')) && real && A.a === 'dup' && dupI >= 0) { slog('chargeArena', { arena: 'duplighosts', step: routeStep, L: A.L, br: A.br, lbr: A.lbr, held: true }); chgPendDrop('arena'); CHG.backTo = dupI; return CHG_PROF.dup; }
   return P0;
 }
 const chgP = () => CHG.prof || CHG_PROF.hw;
@@ -267,7 +270,7 @@ function chgFrame(t, present) {
     if (P.trigMin && !real) { CHG.hideT = -1e12; CHG.armP = null; return; }   // not a confirm: the bar was not up
     CHG.hideT = t; CHG.armP = P; CHG.menu = CHG.menuSince ? { from: CHG.menuSince + 1000, to: t - 4 * FRAME, taps: (V.hist || []).filter(x => x > CHG.menuSince + 1000 && x < t) } : null;
   }
-  if (CHG.state === 'idle' || CHG.state === 'notseen') { const P = CHG.armP || chgProfNow(); if (t - CHG.hideT > P.trigMax) return; if (typeof fb14ArmOk === 'function' && !fb14ArmOk(P, t)) return; CHG.state = 'armed'; CHG.ring = []; CHG.means = []; CHG.prof = P; }
+  if (CHG.state === 'idle' || CHG.state === 'notseen') { const P = CHG.armP || chgProfNow(); if (t - CHG.hideT > P.trigMax) return; if (typeof fb14ArmOk === 'function' && !fb14ArmOk(P, t)) return; if (typeof fbp1ArmOk === 'function' && !fbp1ArmOk(P, t)) return; CHG.state = 'armed'; CHG.ring = []; CHG.means = []; CHG.prof = P; }
   const g = sample(chgGame(), 32, 24); let m = 0; for (let i = 0; i < g.length; i += 4) m += 0.299 * g[i] + 0.587 * g[i + 1] + 0.114 * g[i + 2]; m /= 768;
   const tg = performance.now(), last = CHG.state === 'capture' ? CHG.frames[CHG.frames.length - 1] : CHG.ring[CHG.ring.length - 1];
   // FB2: a repeated picture (same coarse brightness) reuses the raster: half the grabs. v75: only right after a fresh grab
@@ -689,6 +692,13 @@ function chgSearch(maps, opts) {
       pool.sort((a, b) => b[4] - a[4]); const seen = new Set(), top = [];
       const topV = [];
       for (const x of pool) { if (seen.has(x[2])) continue; seen.add(x[2]); top.push(x[2]); topV.push(x[5] != null ? x[5] - 24 : null); if (top.length >= (opts.wide ? CHG_M2_WIDE : CHG_M2)) break; }
+      // v116 (console 484e3220, Final Bowser T1 after a real Phase 1): the true seed's A rays ranked 10th of stage 1 (943) but B's
+      // were faint (380), so its joint score ranked 479th and the 300 sent on missed it. The aura profile also sends each
+      // effect's best CHG_M2_OWN of stage 1 by its own score (A: with B's best offset; B: its best offset), stage 2 decides.
+      if (P.aura) { stats.own = 0; const n0 = items.findIndex(x => x[0] === 1), nA = n0 < 0 ? items.length : n0;
+        const add = x => { if (seen.has(x[2])) return; seen.add(x[2]); top.push(x[2]); topV.push(x[5] != null ? x[5] - 24 : null); stats.own++; };
+        for (let i = 0; i < Math.min(nA, CHG_M2_OWN); i++) add(items[i]);
+        for (let i = nA, k = 0; i < items.length && k < CHG_M2_OWN; k++) { let b = items[i], j = i; for (; j < items.length && items[j][1] === items[i][1]; j++) if (items[j][4] > b[4]) b = items[j]; add(b); i = j; } }
       top.v = topV;      // the aura profile: B's offset the joint stage found best for each (fb1Stage2 scores v +-1 around it)
       times.joint = Math.round(performance.now() - t2);
       stage2(top, lists);
@@ -829,7 +839,7 @@ function chgRetryTime() {
 function chgRetryStop(why) {
   if (!CHG.replay) slog('chargeRetryStop', { why, alt: CHG.alt, atMs: Math.round(performance.now() - CHG.tEnd), lockByMs: Math.round(chgLockBy(chgP())), lastMs: Math.round(CHG.attMs || 0) });
   CHG.F0 = null; if (CHG.state === 'search') CHG.state = 'nolock'; chgShow();
-  if (CHG.replay) chgReplayDone({ state: 'nolock', stop: why }); else chgRecEnd('nolock');
+  if (CHG.replay) chgReplayDone({ state: 'nolock', stop: why }); else { chgRecEnd('nolock'); if (typeof fbp1Done === 'function') fbp1Done('nolock'); }
 }
 /* lock: the best seed's score must be clearly above the rest (true seeds 2900-8300 at 2.1-5.4x the runner-up on the
  * route clips, live under load included; no-lock bests 750-1500 at 1.0-1.2x) */
@@ -871,7 +881,7 @@ function chgDecide() {
       if (chgRetryTime()) { CHG.why += '; re-reading (placement ' + (CHG.alt + 2) + ')'; chgShow(); setTimeout(chgRetry, 0); return; }   // a task of its own: the page stays responsive
       chgRetryStop('time'); return;
     }
-    CHG.F0 = null; chgShow(); if (CHG.replay) chgReplayDone({ state: 'nolock' }); else chgRecEnd('nolock'); return;
+    CHG.F0 = null; chgShow(); if (CHG.replay) chgReplayDone({ state: 'nolock' }); else { chgRecEnd('nolock'); if (typeof fbp1Done === 'function') fbp1Done('nolock'); } return;
   }
   CHG.F0 = null;
   // v82 (tests): a Final Bowser read replayed into the tracker, as live (fb14Refine, fb14Lock), for the log replays
@@ -879,6 +889,7 @@ function chgDecide() {
   if (CHG.replay && CHG.replay.fb2 && fb2) { CHG.state = 'locked'; fb2Lock(CHG.res); chgReplayDone({ state: 'locked', fb2: FB2.hyps ? FB2.hyps.length : 0 }); return; }     // v108 (tests): an FB2 read replayed into the T6 tracker, as live
   if (CHG.replay) { const qs = []; if (a.qs) a.qs.forEach((s, q) => { if (s >= a.sc * (1 - CHG_QTOL)) qs.push(q); }); CHG.state = 'locked'; chgReplayDone({ state: 'locked', qsRays: qs }); return; }
   if (fb2) { CHG.state = 'locked'; CHG.qs = [a.q]; slog('chargeLock', Object.assign({ fb2: true, scored: CHG.res.fb2.scored }, CHG.info)); chgRecEnd('lock'); fb2Lock(CHG.res); chgShow(); return; }
+  if (CHG.res.fb1 && chgP().id === 'fbp1' && typeof fbp1Done === 'function') { CHG.state = 'locked'; CHG.qs = []; slog('chargeLock', Object.assign({ fbp1: true }, CHG.info)); fbp1Done('lock'); return; }     // v116: Final Bowser Phase 1 (fbp1_live.js)
   if (CHG.res.fb1) { CHG.state = 'locked'; CHG.qs = []; if (CHG.res.fb1.times) CHG.info.stage = CHG.res.fb1.times; slog('chargeLock', Object.assign({ fb1: true, hyps: CHG.res.fb1.hyps ? CHG.res.fb1.hyps.n : 0 }, CHG.info)); chgRecEnd('lock');
     // v87: a lock on the carried stream (T2 / T4 narrowed) goes to the carried states at once; the placement and the joint
     // fit (5-7 s) only when none of them drew these rays
@@ -994,6 +1005,7 @@ function chgShow() {
     (lost ? '<br><b style="color:var(--warn)">Seed lost ' + (zw.deadAt != null ? Math.round((zw.deadAt - zw.f0) * zw.rate / 100) / 10 + ' s after the Charge' : '') + ': the coin did something none of the tracked states fit (a missed or extra shine, an unseen input). Press normally; the next Charge reads it again.</b>' : '') +
     (CHG.prof && CHG.prof.id === 'dup' ? dupStatusLine(s, lost || doubt) : '') +
     (typeof JR_READY !== 'undefined' && JR_READY && ((CHG.prof && (CHG.prof.id === 'jr' || CHG.prof.id === 'nbhw')) || jrStepNow()) ? jrStatusLine(s, lost || doubt) : '') +
+    (typeof fbp1Line === 'function' ? fbp1Line() : '') +
     (I.best ? '<br><span class="note">seed ' + I.best.seed + ', q ' + (CHG.qs || [I.best.q]).join('/') + ', score ' + I.best.score + ' (' + I.best.ratio + 'x)' + (I.dxWorld ? ', Mario +' + I.dxWorld + ' units' : '') + '</span>' : '');
 }
 /* the Duplighost line of the Charge panel: the plan's chances, or what to do without a lock (dup_charge/odds.json:
