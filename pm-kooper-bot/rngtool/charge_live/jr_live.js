@@ -401,6 +401,17 @@ function jrDeath(k, fr) {
  * follows the death but menus (T5 -> T6's Power Bounce; T3 / T4 deaths need no carry: the next Charge locks again). */
 const JR_REVIVE_D = [[932, 0.02], [933, 0.1], [934, 0.14], [935, 0.38], [936, 0.14], [937, 0.1], [938, 0.05], [939, 0.05], [940, 0.02]];
 const JR_REVIVE_DEATH = 27, JR_REVIVE_MENU = 399, JR_REVIVE_BG = 0.15;
+/* v117 (console partnerless revives, fixtures/console_1118_revive.json: 8 deaths on T2 / T3 / T4 with a later Charge lock; the true
+ * pre-death state is among the carried ones in all 8, and the lock seed lies 941-948 draws past it (counted as the emulator table
+ * counts them: death -> death + 399, the menu idle after it at 1 a frame + the coin). Centres per death 941, 942, 944, 944.5,
+ * 944.5, 945, 946, 947.5: about 9 more than the emulator's 932-940 (a Bombette-route T3 death), with no tie to the turn. v116's
+ * table reached them only at the cross-check's d = +2 edge (3 of 8, weight ~0) or not at all (5 of 8): the next lock disagreed,
+ * or, with no Charge after a T5 death, the T7 Power Bounce had the wrong states). Partnerless: the console table, 938-950. The
+ * other routes have no console revive followed by a lock: the emulator table and the console one together, 932-950. */
+const JR_REVIVE_D_PL = [[938, 0.03], [939, 0.05], [940, 0.07], [941, 0.09], [942, 0.11], [943, 0.12], [944, 0.13], [945, 0.12], [946, 0.1], [947, 0.08], [948, 0.05], [949, 0.03], [950, 0.02]];
+const JR_REVIVE_D_ANY = (() => { const m = new Map(); for (const [D, w] of JR_REVIVE_D) m.set(D, w / 2); for (const [D, w] of JR_REVIVE_D_PL) m.set(D, (m.get(D) || 0) + w / 2); return [...m].sort((a, b) => a[0] - b[0]); })();
+const JR_SNAP_MAX = 2000;
+function jrReviveD() { return JRS() === JR_SEQ_PL ? JR_REVIVE_D_PL : JR_REVIVE_D_ANY; }
 /* v111 (logs x1024 T5, jr1126 T4, jr1128 T3: Mario died on the Close Call; the shines of the death and the revive, read before the
  * "1" of 10 HP showed, fit none of the carried states (they model a dodge), zwInconsistent emptied the carry and the revive had
  * nothing to start from: jrReviveNone / a revive from the wrong states). While a Close Call's outcome is pending, a state whose roll
@@ -429,14 +440,14 @@ function jrReviveCarry(k) {
   // frames means the press was further off than they reach; the death is seen, so every state goes through the revive (the menu's
   // coin then weighs them)
   let dead = zw.parts.filter(p => p.cc && p.cc[k] === false); if (!dead.length) { if (!zw.parts.length) { slog('jrReviveNone', { k }); return false; } slog('jrReviveAll', { k, states: zw.parts.length }); dead = zw.parts.slice(); }
-  const out = [], seen = new Map(); let n0 = 0;
+  const out = [], seen = new Map(), RD = jrReviveD(); let n0 = 0;
   for (const p of dead) {
     const fd0 = jrDeathF(p, k), fd = fd0 != null ? fd0 : (nbw ? inp.c + (p.sh || 0) + R.NB_K.none + s.ccP : inp.c + (p.sh || 0) + s.cc) + JR_REVIVE_DEATH, fm = fd + JR_REVIVE_MENU;
     const q = zwClone(p); while (q.g < fd) { if (q.pause && q.g === q.pauseAt) { q.S.nc += q.pause; q.g += q.pause; continue; } R.frameEv(q.S, q.g, q.ev); q.g++; }
     n0++;
     const mAll = new Set(zw.taps.map((t, i) => i).filter(i => zw.taps[i] < fm));
     let x = q.S.s >>> 0, n = 0;
-    for (const [D, wD] of JR_REVIVE_D) { while (n < D) { x = R.adv(x); n++; }
+    for (const [D, wD] of RD) { while (n < D) { x = R.adv(x); n++; }
       for (let ph = 0; ph < 48; ph++) { const key = x + ':' + (fm + ph), w = p.w * wD / 48, o = seen.get(key); if (o) { o.w += w; continue; }
         const np = { S: { s: x, nc: fm + ph, inst: [] }, g: fm, ev: new Map(), evMax: fm, pauseAt: null, pause: 0, w, m: new Set(mAll), fx: new Set(p.fx || []), err: p.err || 0, cc: p.cc ? Object.assign({}, p.cc) : null, rev: D };
         seen.set(key, np); out.push(np); } }
@@ -444,7 +455,7 @@ function jrReviveCarry(k) {
   zw.parts = out; zw.dead = false; zw.deadAt = null; zw.bg = 0; zwBgAdd(JR_REVIVE_BG);
   const lastM = Math.max(...out.map(p => p.g)); if (zw.visFrom != null && zw.visFrom < lastM) zw.visFrom = lastM;      // the coin watched from the menu on
   JRT.revive = { k, fm: lastM, states: out.length }; JRT.lost = null;
-  slog('jrReviveCarry', { k, from: n0, states: out.length, menu: lastM, d: [JR_REVIVE_D[0][0], JR_REVIVE_D[JR_REVIVE_D.length - 1][0]] });
+  slog('jrReviveCarry', { k, from: n0, states: out.length, menu: lastM, d: [RD[0][0], RD[RD.length - 1][0]] });
   return true;
 }
 /* an input in the tracker: like zwInput, with the confirm frame -2..+1 (JR_SHIFTS) and, on a Close Call confirm, whether
@@ -458,7 +469,7 @@ function jrApply(inp, re) {
   if (zw.visFrom != null && (zw.visTo == null || zw.visTo < c - 4)) zw.visTo = c - 4;
   zw.visLocked = true;
   zwUpdate(Math.min(c - 3, zwHorizon(performance.now())));
-  if (s.charge) JRT.snap = { k: inp.k, c, list: zw.parts.slice(0, 400).map(zwClone) };      // the carried states before this Charge (jrLock checks its lock on them)
+  if (s.charge) JRT.snap = { k: inp.k, c, list: zw.parts.slice().sort((a, b) => b.w - a.w).slice(0, JR_SNAP_MAX).map(zwClone) };      // v117: the heaviest JR_SNAP_MAX (v116: the first 400 in list order; a revive carry holds 2000+)      // the carried states before this Charge (jrLock checks its lock on them)
   const cc = (s.cc && inp.id === s.id) || ((inp.cancel || inp.wait) && !!(s.ccP || s.ai) && inp.pid === s.cancel);
   // a Close Call confirm: the states before it are kept, in case the outcome seen fits none of the split (jrRecover)
   if (cc) JRT.ccSnap = { k: inp.k, c, list: zw.parts.map(p => Object.assign(zwClone(p), { cc: p.cc ? Object.assign({}, p.cc) : null })) };
