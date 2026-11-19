@@ -111,16 +111,17 @@ From the runner's console logs of Nov 15 / 17 / 18 (pages v110-v116) and the cli
   it) now carries the same table to T7.
 
 ## 2. The partnerless T7 Power Bounce (j1729: planned 6+ at 0.95, doubt 0; 5 bounces on the clip)
-- The clips read the hits 13, 12, 11, 10, 9(, 8) (j1729, d1721, x1822): four Super Charges (+3) and Power Rush in Danger (+2). The
+- The clips read the hits 13, 12, 11, 10, 9(, 8) (j1729, d1721, x1822). (Not Power Rush: the runner, Nov 19, has none on Jr. Troopa,
+  only on Hallway and Final Bowser; the 13 is measured, so the tables stand.) The
   Bombette route's `jrpb5` / `jrpb6` were measured with three Charges (first hit 10: 11, 11, 10, 10 draws of 359), and a hit's draws
   follow its damage (powerbounce/README.md: 11 for 9+, 10 for 5-8). On this route hits 3 and 4 draw 11: `jrpb5p` / `jrpb6p` (same
   frames, chances), used by JR_SEQ_PL's T7 and the route step. Deaths do not reset the charge (d1721, two deaths: 13). x1420 (Nov 15)
-  read 11 first (Power Rush not counted then?); the 5+ table is the same for 11+, the 6+ differs in hit 4.
+  read 11 first (a Charge fewer?); the 5+ table is the same for 11+, the 6+ differs in hit 4.
 - j1729 replayed: the T5 lock (66b2f40a, cross-check agreed) -> the dodge (the prune is right: it drops the dying share) -> T6 (the coin
   fits the emulator's Whacka / hit model, no inconsistency) -> T7: at the runner's press (715) v116's table gives every state 6+;
   `jrpb5p` gives 6+ for 76% (the second state 5, and the -2..+1 read spread 4-6). The plan is now p4 0.73, one 6-frame, a coin
   marker (not SOLID). x1822 (6 bounces): p4 0.95, both states 6 at the press, as the clip.
-- Not done: the T7 doubt still has no term for the damage being other than 13 (Power Rush unequipped, a missed Charge); the page
+- Not done: the T7 doubt still has no term for the damage being other than 13 (a missed Charge); the page
   cannot see the charge.
 
 ## 3. Wording
