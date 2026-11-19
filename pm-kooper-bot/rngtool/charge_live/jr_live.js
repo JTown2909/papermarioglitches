@@ -95,7 +95,7 @@ const JR_SEQ_PL = [
   { id: 'jr_nothing_cc', t: 'T5', hide: 3, prof: 'jrcc_nothing', cc: 26, hit: 'jr_nothing_hit', next: 93, what: 'Do Nothing', strat: true },
   { id: 'nb_whacka', t: 'T6', hide: 3, rearm: true },     // v112: Whacka's sparkles only (jr_whacka adds Jr. Troopa's hit on +190: Whacka is T2's last action on the Bombette route)
   { id: 'jr_nothing_hit', t: 'T6', hide: 3, strat: true, what: 'Do Nothing' },
-  { id: 'jr_pb', t: 'T7', hide: 3, prof: 'jrpb5', what: 'Power Bounce' } ];
+  { id: 'jr_pb', t: 'T7', hide: 3, prof: 'jrpb5p', what: 'Power Bounce' } ];     // v117: the first hit 13 (jrpb5p), not the Bombette route's 10
 const JR_SEQS = { ultra: JR_SEQ, nbjr: JR_SEQ_NB, nbhw: HW_SEQ_NB, ultrapl: JR_SEQ_PL };
 const jrStepSeq = () => { const s = isRoute() && RT()[routeStep]; return (s && s.seq) || 'ultra'; };
 /* v109 (logs 07-48-18 / 07-49-56: the picture loop died after a Normal Boots fight): after jrEnd (JRT.on false) the sequence fell back
@@ -325,7 +325,7 @@ function jrConfirm(k, t, h, src, shifts) {
   // the Charge watcher arms again for the next Charge (its lock is in the tracker already)
   if (JRS()[k].rearm && ['locked', 'nolock', 'failed', 'notseen'].includes(CHG.state)) chgReset();
   jrGo(k + 1);
-  if (k === JRS().length - 1) jrEnd(JRS() === HW_SEQ_NB ? 'the tracked part is over (Time Out confirmed; T3-T5 untracked, v110)' : 'the fight is over (' + (JRS()[k].what || 'last confirm') + ' confirmed)');     // v109 (hwg0759: the Hallway's Time Out was logged as the Power Bounce)
+  if (k === JRS().length - 1) jrEnd(JRS() === HW_SEQ_NB ? 'the tracked part is over (Time Out confirmed; T3-T5 untracked, v110)' : (JRS()[k].what || 'the last confirm') + ' confirmed; the route ends here');     // v117: not "the fight is over": a short cap leaves Jr. Troopa standing (j1729: 5 bounces), the page does not see the fight end     // v109 (hwg0759: the Hallway's Time Out was logged as the Power Bounce)
 }
 const jrRate = () => (zw.on && zw.fight === 'jr' ? zw.rate : chgRate());
 /* a dodge seen: the states whose roll hits are ruled out (likelihood 0), and the background ("none of the tracked states is
@@ -534,7 +534,7 @@ function nbCancelSeen(tBack, why) {
   slog('nbBoxA', { k: C.k, how: inp.src, c: inp.c, G: inp.G, K: inp.G != null && inp.c != null ? inp.c - inp.G : null });
   if (C.roll) JRT.ccPend = { k: C.k, t: inp.t - inp.h * jrRate() };
   jrGo(C.k + 1);
-  if (C.k === JRS().length - 1) jrEnd('the fight is over');
+  if (C.k === JRS().length - 1) jrEnd('the last box A confirmed; the route ends here');
 }
 // makePlan on a box-A step (cancel mode): no lock / no roll -> the usual texts; before the Charge confirm -> what to do
 function nbCancelMake() {
@@ -707,6 +707,12 @@ function jrLock(seed, qs, qw) {
     slog('jrCrossCheck', { k, agree: hits.length > 0, hits: hits.slice(0, 4), states: JRT.snap.list.length });
     // agreed: go on from the new lock (its frame 0 is exact; the carry's Charge confirm is only known to -2..+1), with the
     // first coin frames the carry agrees on (test_jr_plan.js: T3 from its own lock 85% vs the carry 78% with no coin seen)
+    // v117 (console 4ae62de1 T4 death -> T5 lock: the carry agreed on the seed, but through the revive it holds every coin phase, 56
+    // first coin frames at tiny weights; the coin then fit none of them well, doubt 58%, no T7 plan): after a revive since the last
+    // lock the carry says nothing about the coin phase; the lock's own first coin frames (and weights) that the carry also has,
+    // else the lock's alone
+    const rev = JRT.revive && (!JRT.lastLock || JRT.revive.k > JRT.lastLock.k);
+    if (hits.length && rev) { const hq = new Set(hits.map(h => h.q)), both = (qs || []).filter(q0 => hq.has(q0)); jrStartFrom(k, seed, both.length ? both : qs, qw); return; }
     if (hits.length) { jrStartFrom(k, seed, [...new Set(hits.map(h => h.q))], null); return; }
   }
   jrStartFrom(k, seed, qs, qw);
@@ -783,7 +789,7 @@ function jrPress(inp) {
   try { if (typeof pressShow === 'function') pressShow(P, P.target + (c - P.zwAbs), PROF().name || PROF().short); } catch (e) {}     // v114: the strip shows where the press landed (as Final Bowser's)
   if (typeof showPresses === 'function') showPresses();
 }
-/* the fight is over or left: the tracker off (the Hallway's walk tracker can start) */
+/* the route's last confirm, or the steps left: the tracker off (the Hallway's walk tracker can start) */
 function jrEnd(why) { if (zw.on && zw.fight === 'jr') zw.on = false; JRT.on = false; slog('jrEnd', { why }); }
 /* the route moved: leaving the Jr. Troopa steps ends the fight; a step back by hand (not the page's own) starts it over */
 function jrStepChange(was) {
@@ -803,13 +809,13 @@ function jrStepChange(was) {
 function jrBlindText(prof) {
   if (R.PROFILES[prof] && R.PROFILES[prof].lever === 'cancel') return 'close Goombario\'s box whenever you like: Close Call about ' + Math.round(100 * JR_BLIND.cc) + '%';
   if (R.PROFILES[prof] && R.PROFILES[prof].lever === 'wait') return 'confirm Goombario\'s Charge whenever you like and leave his box: Close Call about ' + Math.round(100 * JR_BLIND.cc) + '%';
-  return prof === 'jrpb5' || prof === 'jrpb5n' ? 'Power Bounce whenever you like: 5+ bounces about 67.5%, 6+ about ' + Math.round(100 * JR_BLIND.p6) + '%'
+  return /^jrpb5[np]?$/.test(prof) ? 'Power Bounce whenever you like: 5+ bounces about 67.5%, 6+ about ' + Math.round(100 * JR_BLIND.p6) + '%'
     : 'press whenever you like: Close Call about ' + Math.round(100 * JR_BLIND.cc) + '%';
 }
 function jrFight() {
   const p = PROF().id, what = jrWhat(JRS().find(s => jrSeqProf(s) === p)) || 'the press';
   const bl = jrBlindText(p);
-  return { blind: /^jrpb5n?$/.test(p) ? 'blind 5+ about 67.5%, 6+ about 32%' : 'a blind ' + what + ' dodges 30%', normal: 'Play it blind: ' + bl,
+  return { blind: /^jrpb5[np]?$/.test(p) ? 'blind 5+ about 67.5%, 6+ about 32%' : 'a blind ' + what + ' dodges 30%', normal: 'Play it blind: ' + bl,
     busy: 'the turn is still being simulated. It plans in a moment; or play it blind (' + bl + ').' };
 }
 function jrNoLockMsg() {
@@ -833,7 +839,7 @@ function jrStatusLine(s, lost) {
   if (JRT.lost && zw.dead) body += 'No edge: ' + JRT.lost + ' (until the next Charge locks, or the coin finds the seed again). ';
   if (JRT.shineRec && !zw.dead) body += 'seed found again from ' + JRT.shineRec.taps + ' shines. ';
   if (JRT.cross) body += 'the ' + ((JRS()[JRT.cross.k] || {}).t || '') + ' Charge ' + (JRT.cross.agree ? 'confirmed the carried seed. ' : 'did not fit the carry: tracking from its lock. ');
-  if (P && P.mix && stp && PROF().group === 'jr') body += (/^jrpb5n?$/.test(PROF().id) ? 'Power Bounce on the beep: ' + likelyText(P.mix, '6+') + ' · ' + ppText(P.mix, PROF().id) + ' (blind 67.5% / ' + pc(JR_BLIND.p6) + '; with your press spread 5+ ' + pc(P.mix.p) + ', 6+ ' + pc(P.mix.p4 || 0) + ')' : jrWhat(JRS()[stp.jr]) + ' on the beep: Close Call. ' + likelyText(P.mix) + ' · ' + ppText(P.mix, PROF().id) + ' (blind ' + pc(JR_BLIND.cc) + '; with your press spread ' + pc(P.mix.p) + ')');
+  if (P && P.mix && stp && PROF().group === 'jr') body += (/^jrpb5[np]?$/.test(PROF().id) ? 'Power Bounce on the beep: ' + likelyText(P.mix, '6+') + ' · ' + ppText(P.mix, PROF().id) + ' (blind 67.5% / ' + pc(JR_BLIND.p6) + '; with your press spread 5+ ' + pc(P.mix.p) + ', 6+ ' + pc(P.mix.p4 || 0) + ')' : jrWhat(JRS()[stp.jr]) + ' on the beep: Close Call. ' + likelyText(P.mix) + ' · ' + ppText(P.mix, PROF().id) + ' (blind ' + pc(JR_BLIND.cc) + '; with your press spread ' + pc(P.mix.p) + ')');
   else if ((s === 'nolock' || s === 'failed' || s === 'notseen' || lost) && !(zw.on && zw.fight === 'jr' && !zw.dead)) body += 'play it blind (Close Call ' + pc(JR_BLIND.cc) + '; Power Bounce 5+ 67.5%, 6+ ' + pc(JR_BLIND.p6) + ').';
   else if (zw.on && zw.fight === 'jr') body += 'carried from the ' + ((JRS()[JRT.origin || 0] || {}).t || 'last') + ' Charge; the beeps start on each Close Call / Power Bounce target screen.';
   return head + body + (outs ? ' <span class="note">(' + outs + ')</span>' : '');
@@ -848,4 +854,4 @@ function jrPlanAt(cScr, leadS, winS, profId) {
   const top = R.TOP[prof.id], C = zwChoose(S.list, from, W, PRESS_ERR, prof, { d: S.doubt, b3: jrBlind(prof.id), b4: top ? jrBlind(top) : 0 });
   return { target: C.target, p: C.p, p6: C.p4, pp: C.pp, pp6: C.pp4, w4: C.w4, pStates: C.pStates, doubt: S.doubt, w: C.w, none: C.none, from, W, states: S.list.map(q => ({ s: q.s >>> 0, nc: q.nc, g: q.g, w: q.w })) };
 }
-const jrBlind = id => (/^jrpb5n?$/.test(id) ? JR_BLIND.p5 : /^jrpb6n?$/.test(id) ? JR_BLIND.p6 : JR_BLIND.cc);
+const jrBlind = id => (/^jrpb5[np]?$/.test(id) ? JR_BLIND.p5 : /^jrpb6[np]?$/.test(id) ? JR_BLIND.p6 : JR_BLIND.cc);

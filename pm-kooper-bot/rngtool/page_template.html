@@ -604,7 +604,7 @@ const ENDGAME_JR_PL = { h: 'Jr. Troopa: Ultra Boots Partnerless', pl: true, turn
   { text: 'T4: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 7, seq: 'ultrapl' }] },
   { text: 'T5: Charge; Do Nothing - Close Call', steps: [{ label: 'Charge, then Do Nothing on the beep → Close Call', cat: 'S', prof: 'jrcc_nothing', chg: 'jr', jr: 9, seq: 'ultrapl' }] },
   { text: 'T6: Whacka; Do Nothing', steps: [{ label: 'Whacka\'s Bump, then Do Nothing (nothing to time)', cat: 'S', chg: 'jr', jr: 11, seq: 'ultrapl' }] },
-  { text: 'T7: Bounce x6', steps: [{ label: 'Power Bounce on the beep → 6', cat: 'K', prof: 'jrpb5', chg: 'jr', jr: 12, seq: 'ultrapl', six6: true }] } ] };
+  { text: 'T7: Bounce x6', steps: [{ label: 'Power Bounce on the beep → 6', cat: 'K', prof: 'jrpb5p', chg: 'jr', jr: 12, seq: 'ultrapl', six6: true }] } ] };
 /* The Duplighosts on the Charge-lock route (dup_charge/README.md), selectable in the route panel instead of the RTA turn
  * above (Settings key duproute): T1 Mario's Super Charge (no Z: Mario first), whose rays lock the seed (charge_live.js,
  * profile dup), then Bombette's Do Nothing on the beep. That A is the only lever: each Duplighost rolls RandInt(1000) <
@@ -1203,7 +1203,7 @@ function zwVisible(f) { return zw.vis.some(([a, b]) => f >= a && f <= b) || (zw.
  * tracker whose states fit the coin badly hands the chance back to blind (zwDoubt) instead of beeping on them. v71 dropped
  * a state on any one miss or false shine: one missed shine (a busy browser) lost the true seed (clip 20-54-59, T2). */
 const ZW_PMISS = 0.02, ZW_FALSE = 1.8e-4, ZW_RHO = 0.3 / 31.2, ZW_CUT = 1e-4, ZW_MAXERR = 3, ZW_BG0 = 0.05, ZW_BGIN = 0.03;
-const ZW_BLIND = { timeout: 0.31, dup3: 0.47, dup4: 0.13, jrcc_bomb: 0.30, jrcc_syrup: 0.30, jrcc_nothing: 0.30, jrpb5: 0.675, jrpb6: 0.322, jrcc_gch: 0.30, jrcc_gchw: 0.30, jrcc_hb: 0.30, hwcc_gch: 0.30, hwcc_gchw: 0.30, jrpb5n: 0.675, jrpb6n: 0.322 };
+const ZW_BLIND = { timeout: 0.31, dup3: 0.47, dup4: 0.13, jrcc_bomb: 0.30, jrcc_syrup: 0.30, jrcc_nothing: 0.30, jrpb5: 0.675, jrpb6: 0.322, jrcc_gch: 0.30, jrcc_gchw: 0.30, jrcc_hb: 0.30, hwcc_gch: 0.30, hwcc_gchw: 0.30, jrpb5n: 0.675, jrpb6n: 0.322, jrpb5p: 0.675, jrpb6p: 0.322 };
 function zwLR() {
   const W = 1.5 + (zw.tapLate || 1.5), d = W * (ZW_RHO + ZW_FALSE);
   return { match: (1 - ZW_PMISS) / d, miss: ZW_PMISS, fals: ZW_FALSE / (ZW_RHO + ZW_FALSE) };
@@ -1457,7 +1457,7 @@ function ppPick0(share, share4, a, b, from, W, sc, goal) {
 }
 const DUP4_AIM = 0.90;     // v112: the all-4 frame is beeped when its realistic 3+ chance is this or more
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
-  goal = goal || (prof.id === 'dup3' ? dupGoal() : /^jrpb5n?$/.test(prof.id) ? 'free' : 'safe3');     // v83: Jr. Power Bounce: 6 with 5+ either side (the route's label)
+  goal = goal || (prof.id === 'dup3' ? dupGoal() : /^jrpb5[np]?$/.test(prof.id) ? 'free' : 'safe3');     // v83: Jr. Power Bounce: 6 with 5+ either side (the route's label)
   const later = lim ? 0 : Math.max(0, Math.round((num('zwlater') - num('zwwin')) * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)));      // v87
   const D = Math.max(...PD.map(x => Math.abs(x[0]))), X = lim ? 0 : 10, a = from - D, b = lim ? Math.min(lim.hi, from + W) : from + W + later + X + D, top = R.TOP[prof.id] ? R.PROFILES[R.TOP[prof.id]] : null;
   const share = zwShare(list, a, b, prof), share4 = top ? zwShare(list, a, b, top) : null;
@@ -1466,8 +1466,8 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
   const sc = scOf(share), sc4 = share4 ? scOf(share4) : null, type = wtype(), honest = (p, k) => (adj ? (1 - adj.d) * p + adj.d * adj[k] : p);
   let target = null, w = null, none = null, pk = null;
   if (type === 'best') {
-    const six6 = /^jrpb5n?$/.test(prof.id) && isRoute() && RT()[routeStep] && RT()[routeStep].six6;     // v111: the partnerless T7 needs the 6 (no Bomb after it)
-    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5n?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');
+    const six6 = /^jrpb5[np]?$/.test(prof.id) && isRoute() && RT()[routeStep] && RT()[routeStep].six6;     // v111: the partnerless T7 needs the 6 (no Bomb after it)
+    pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5[np]?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');
     // v111: the partnerless T7 picks on the 6+ map itself (its widest run, the middle), whatever the 5+ chance does beside it
     if (six6 && share4) { const P6 = ppPick(share4, null, a, b, from, W, sc4, 'free', later, true); if (P6.ok) pk = Object.assign({}, P6, { six: true, run4: P6.run }); }     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
     // v109 (console jrg0753, Normal Boots wait mode: the runner sat on Goombario's Charge screen 3-5 s each turn): where the beeped
@@ -2928,7 +2928,7 @@ window.__tot = { VERSION, v111: { ev: src => eval(src) }, v107: { likelyText: (m
   nbCancelSeenClock: P => nbCancelSeen(zw.t0 + num('vlag') + (P + NB_BACK_H + num('pfix')) * zw.rate, 'bar'),
   nbTrackerAt: (seed, qs, trigT, k, seq) => { chgReset(); jrReset(); const trig = { t: trigT }; Object.assign(JRT, { on: true, k: k || 0, t0: trigT, trigSeen: trig, seq }); jrConfirm(k || 0, trigT - 16 * FRAME, 3, 'test'); Object.assign(CHG, { prof: CHG_PROF[seq === 'nbhw' ? 'nbhw' : 'jr'], trig, taps: [], pres: [], state: 'locked', qs }); chgStartTracker(seed >>> 0, qs); return zw.on && zw.fight === 'jr'; },
   nbLockAt: (seed, qs, k) => { const c = JRT.inputs.filter(x => x.k === k && !x.cancel).pop().c, trig = { t: zw.t0 + num('vlag') + (c + 13 + 4.2) * zw.rate }; Object.assign(CHG, { prof: CHG_PROF[JRT.seq === 'nbhw' ? 'nbhw' : 'jr'], trig, taps: [], pres: [], state: 'locked', qs }); JRT.trigSeen = trig; JRT.chargeK = k; chgStartTracker(seed >>> 0, qs); return { cross: JRT.cross, t0: zw.t0, rate: zw.rate }; },
-  jrClasses: (s, nc, g, a, b, pid) => { if (pid === 'jrpb5') { const t5 = fastTable(s, nc, g, a, b, R.PROFILES.jrpb5), t6 = fastTable(s, nc, g, a, b, R.PROFILES.jrpb6); return t5.map((x, i) => (t6[i] ? 6 : x ? 5 : 4)); } return fastTable(s, nc, g, a, b, R.PROFILES[pid]).map(x => (x ? 1 : 0)); },
+  jrClasses: (s, nc, g, a, b, pid) => { if (pid === 'jrpb5' || pid === 'jrpb5p') { const t5 = fastTable(s, nc, g, a, b, R.PROFILES[pid]), t6 = fastTable(s, nc, g, a, b, R.PROFILES[R.TOP[pid]]); return t5.map((x, i) => (t6[i] ? 6 : x ? 5 : 4)); } return fastTable(s, nc, g, a, b, R.PROFILES[pid]).map(x => (x ? 1 : 0)); },
   jrLockAt: (seed, qs, k) => { const c = JRT.inputs.filter(x => x.k === k).pop().c, trig = { t: zw.t0 + num('vlag') + (c + 13 + 4.2) * zw.rate }; Object.assign(CHG, { prof: CHG_PROF.jr, trig, taps: [], pres: [], state: 'locked', qs }); JRT.trigSeen = trig; JRT.chargeK = k; chgStartTracker(seed >>> 0, qs); return { cross: JRT.cross, t0: zw.t0, rate: zw.rate }; },
   saveTarget: (key, box) => { const g = sample(box, 24, 16), ref = []; for (let i = 0; i < g.length; i += 4) ref.push((g[i] + g[i + 1] + g[i + 2]) / 3); targets[key] = { box, ref }; try { localStorage.setItem('tot-targets', JSON.stringify(targets)); } catch (e) {} if (TKEY() === key) useTarget(); return ref.length; },
   fb14Frame: (t, pr) => fb14Frame(t, pr), PROF: () => PROF(),

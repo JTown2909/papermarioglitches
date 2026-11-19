@@ -1,3 +1,48 @@
+# Time Out Timer v117: Jr. Troopa partnerless: the Life Shroom revive carry fits the console, the T7 Power Bounce on the first hit 13, "the route ends here" (Nov 18)
+
+From the runner's console logs of Nov 15 / 17 / 18 (pages v110-v116) and the clips j1729 (17-29-43), d1721 (17-21-47) and x1822 / x1420
+(Nov 15). Numbers only in the repository: `fixtures/console_1118_revive.json` (11 partnerless fights with a revive),
+`fixtures/console_1118_pb.json` (j1729, x1822 to the T7 Power Bounce). `test_v117.js`.
+
+## 1. The revive carry (`jrReviveCarry`)
+- Each revive followed by a Charge lock was replayed; the carried pre-death states, stepped to the death frame (the roll + 27), were
+  walked forward to the next lock's seed. In all 8 cases a carried dead state reaches it (so the pre-death carry is right), and the
+  draws from the death to the lock, counted as the emulator table counts them (death -> death + 399 = D draws, then the menu idle at
+  1 a frame + the coin), put D at 941-948: centres 941, 942, 944, 944.5, 944.5, 945, 946, 947.5 by death (T2 x3, T3 x2, T4 x3; no tie
+  to the turn, the HP or the frames to the menu). The emulator's table (932-940, one Bombette-route T3 death) is about 9 short: v116
+  found the lock only at the cross-check's d = +2 edge (weight ~0) or not at all. Frames and draws trade one for one here, so a late
+  menu and extra draws cannot be told apart; the carry needs only their sum.
+- Partnerless now uses `JR_REVIVE_D_PL` (938-950, peak 944); the other routes (no console revive followed by a lock) take both
+  tables (`JR_REVIVE_D_ANY`, 932-950). The cross-check snapshot holds the heaviest `JR_SNAP_MAX` (2000) states (v116: the first 400
+  in list order; a revive carry holds 600-1100).
+- After a revive the carry holds every coin phase; an agreeing lock then starts from its own first coin frames that the carry also
+  has (else its own), not from the carry's 50+ phases at tiny weights.
+- Replayed (v116 table -> v117): r1436 k3 no -> yes, r1547 k7 no -> yes, r1726 k3 no -> yes, r1726 k7 yes (d +2) -> yes, r1908 k7
+  no -> yes, r1723 k5 no -> yes, r1422 k3 yes -> yes, r1544 k5 no -> yes: 2 -> 8 of 8 (live: 3 of 8). A T5 death (no Charge after
+  it) now carries the same table to T7.
+
+## 2. The partnerless T7 Power Bounce (j1729: planned 6+ at 0.95, doubt 0; 5 bounces on the clip)
+- The clips read the hits 13, 12, 11, 10, 9(, 8) (j1729, d1721, x1822): four Super Charges (+3) and Power Rush in Danger (+2). The
+  Bombette route's `jrpb5` / `jrpb6` were measured with three Charges (first hit 10: 11, 11, 10, 10 draws of 359), and a hit's draws
+  follow its damage (powerbounce/README.md: 11 for 9+, 10 for 5-8). On this route hits 3 and 4 draw 11: `jrpb5p` / `jrpb6p` (same
+  frames, chances), used by JR_SEQ_PL's T7 and the route step. Deaths do not reset the charge (d1721, two deaths: 13). x1420 (Nov 15)
+  read 11 first (Power Rush not counted then?); the 5+ table is the same for 11+, the 6+ differs in hit 4.
+- j1729 replayed: the T5 lock (66b2f40a, cross-check agreed) -> the dodge (the prune is right: it drops the dying share) -> T6 (the coin
+  fits the emulator's Whacka / hit model, no inconsistency) -> T7: at the runner's press (715) v116's table gives every state 6+;
+  `jrpb5p` gives 6+ for 76% (the second state 5, and the -2..+1 read spread 4-6). The plan is now p4 0.73, one 6-frame, a coin
+  marker (not SOLID). x1822 (6 bounces): p4 0.95, both states 6 at the press, as the clip.
+- Not done: the T7 doubt still has no term for the damage being other than 13 (Power Rush unequipped, a missed Charge); the page
+  cannot see the charge.
+
+## 3. Wording
+- `jrEnd` at the route's last confirm logs "Power Bounce confirmed; the route ends here" (was "the fight is over (Power Bounce
+  confirmed)": a short cap leaves Jr. Troopa standing; the page does not see the fight end).
+
+## Not done / not verified
+- The revive on the Bombette / Normal Boots routes on console (their table is the union, not measured); the cause of the 9 extra
+  draws (not seen in the emulator run).
+- `test_v112` 1 now expects `jrpb5p` on the partnerless T7.
+
 # Time Out Timer v116: Final Bowser after a real Phase 1: the Phase 2 T1 Charge locks (stage 2 also takes each effect's own best), Phase 1's Charge read with the aura profile and shown, the route held through Phase 1 / the Peach battle (Nov 17)
 
 From the runner's console log 484e3220 (page v114, 2026-11-17 16:12) and its clip 16-06-01 (364 s, game in crop 960:540:320:0), the

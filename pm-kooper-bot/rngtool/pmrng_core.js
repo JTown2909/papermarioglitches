@@ -162,6 +162,18 @@
       effects: { 52: Array(11).fill(359), 79: Array(11).fill(359), 106: Array(10).fill(359) },
       rolls: [[78, 140], [105, 98], [132, 68]].map(([at, c]) => ({ at, max: 100, ok: v => v <= c })), vanish: 2, minRun: 2,
       screen: 'Power Bounce target screen (hand on Jr. Troopa)', box: 'the name box in the top-left' },
+    // v117, the partnerless route's T7 (console clips j1729 / d1721 / x1822, Nov 15-18: the hits read 13, 12, 11, 10, 9(, 8)): four
+    // Super Charges (+3 each) and Power Rush in Danger (+2) make the first hit 13 where the Bombette route's T6 (three Charges)
+    // has 10. A hit's 359-draws follow its damage (powerbounce/README.md: 11 for 9+, 10 for 5-8), so hits 3 and 4 draw 11, not 10;
+    // the same frames and chances. (x1420, Nov 15: 11, 10, 9, 8, 7, Power Rush not counted; the 5+ table is the same for 11+.)
+    jrpb6p: { id: 'jrpb6p', name: 'Jr. Troopa: Power Bounce 6+ hits (Partnerless)', short: '6+ bounces', group: 'jr',
+      effects: { 52: Array(11).fill(359), 79: Array(11).fill(359), 106: Array(11).fill(359), 133: Array(11).fill(359) },
+      rolls: [[78, 140], [105, 98], [132, 68], [159, 47]].map(([at, c]) => ({ at, max: 100, ok: v => v <= c })), vanish: 2, minRun: 2,
+      screen: 'Power Bounce target screen (hand on Jr. Troopa)', box: 'the name box in the top-left' },
+    jrpb5p: { id: 'jrpb5p', name: 'Jr. Troopa: Power Bounce 5+ hits (Partnerless, aims at 6+)', short: '5+ bounces', group: 'jr',
+      effects: { 52: Array(11).fill(359), 79: Array(11).fill(359), 106: Array(11).fill(359) },
+      rolls: [[78, 140], [105, 98], [132, 68]].map(([at, c]) => ({ at, max: 100, ok: v => v <= c })), vanish: 2, minRun: 2,
+      screen: 'Power Bounce target screen (hand on Jr. Troopa)', box: 'the name box in the top-left' },
     // Final Bowser phase 2 Power Bounce (chance 60: 120, 72, 43, 25, 15...), after the Peach Beam, Mario in Danger,
     // 4 Super Charges. Cap rolls every 27 frames from +71; hit-effect draws (11 x rand(359)) one frame before each roll.
     // NOT usable on the page yet: phase 2 also has the stage lightning (fixed schedule from the battle start), which the
@@ -216,7 +228,7 @@
   /* Duplighosts: the earliest frame in [from, to] where all 4 copy and both neighbours give 3+; returns
    * {target, window} with window = the 3+ run around it, or null */
   // base profile -> its better outcome: aim at a frame with the better outcome whose neighbours both give the base one
-  const TOP = { dup3: 'dup4', jrpb5: 'jrpb6', fbpb6: 'fbpb7', jrpb5n: 'jrpb6n' };
+  const TOP = { dup3: 'dup4', jrpb5: 'jrpb6', fbpb6: 'fbpb7', jrpb5n: 'jrpb6n', jrpb5p: 'jrpb6p' };
   function aimTop(seed, from, to, baseId) {
     const P3 = PROFILES[baseId], P4 = PROFILES[TOP[baseId]], c3 = {}, w3 = f => (f in c3 ? c3[f] : (c3[f] = works(seed, 0, f, 0, P3)));
     for (let f = from + 1; f < to; f++) {

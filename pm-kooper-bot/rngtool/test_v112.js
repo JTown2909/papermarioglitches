@@ -52,7 +52,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     const r = await replay(name, { t: [tPlan], at }), inc = r.log.filter(x => x.ev === 'zwInconsistent'), ids = r.log.filter(x => x.ev === 'jrInput' && x.k === 10).map(x => x.id), P = r.plans[0];
     console.log(name, JSON.stringify(inc), JSON.stringify(ids), JSON.stringify(P).slice(0, 400), r.errs.slice(0, 2));
     ok(!inc.length && ids[0] === 'nb_whacka', '1. ' + name + ': T6 Whacka carried without the Bombette route\'s +190 hit, no zwInconsistent (v111: at 776 / 1891 on x1420 / x1027)');
-    ok(P && P.prof === 'jrpb5' && P.step === 12 && P.p > 0.7, '1. ' + name + ': T7 plans (' + (P && P.p != null ? P.p.toFixed(2) : P && P.msg) + ', window ' + (P && P.win) + ')');
+    ok(P && P.prof === 'jrpb5p' && P.step === 12 && P.p > 0.7, '1. ' + name + ': T7 plans (v117: the partnerless table jrpb5p; ' + (P && P.p != null ? P.p.toFixed(2) : P && P.msg) + ', window ' + (P && P.win) + ')');
     if (at != null) ok(P && P.at && P.at.s5 >= 0.9 && P.at.s6 < 0.5, '1. x1420: at the runner\'s press (c ' + at + ') the states give 5 bounces, not 6 (5+ ' + (P && P.at && P.at.s5.toFixed(2)) + ', 6+ ' + (P && P.at && P.at.s6.toFixed(2)) + '; the clip: 5 bounces)');
     ok(P && P.chance > 0 && /^plan \d+%$/.test(P.badge), '4. ' + name + ': the plan carries each cell\'s chance for the strip, the badge shows the plan\'s (' + (P && P.badge) + ')');
     ok(!r.errs.length, '1. ' + name + ': no replay errors ' + r.errs.slice(0, 1).join(''));
