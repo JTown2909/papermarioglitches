@@ -83,6 +83,7 @@ async function chgCapEncode(R, fmt0) {
     pics, attempts: R.attempts, result: R.result || null, info: R.info || null };
   if (R.nOf) cap.fixed = true;
   if (R.cands && R.cands.length) cap.cands = chgB64(new Uint8Array(Uint32Array.from(R.cands).buffer));
+  if (R.stream) cap.stream = R.stream; if (R.weak) cap.weak = R.weak;     // v118: the window searched first (replay: opts.stream / opts.weak with its seed)
   return cap;
 }
 function chgB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
@@ -228,7 +229,7 @@ async function chgReplay(cap, opts) {
   const cands = cap.cands ? Array.from(new Uint32Array(chgUnB64(cap.cands).buffer)) : null;
   return new Promise(resolve => {
     Object.assign(CHG, { prof: P, trig, frames: F, Gfix, menu: null, taps: [], pres: [], tEnd: performance.now(), early: null });
-    CHG.replay = { resolve, fb14: !!opts.fb14, fb2: !!opts.fb2, maxAlts: opts.maxAlts, clock: !!opts.clock, cands, stream: opts.stream ? { seed: parseInt(opts.stream, 16) >>> 0, hi: opts.streamHi || undefined } : null, streamOnly: !!opts.streamOnly, attempts: [], t0: performance.now() };   // opts.stream (v89): the earlier lock's seed (hex)
+    CHG.replay = { resolve, fb14: !!opts.fb14, fb2: !!opts.fb2, maxAlts: opts.maxAlts, clock: !!opts.clock, cands, stream: opts.stream ? { seed: parseInt(opts.stream, 16) >>> 0, hi: opts.streamHi || undefined } : null, weak: opts.weak ? { seed: parseInt(opts.weak, 16) >>> 0, hi: opts.streamHi || undefined, ratio: null } : null, streamOnly: !!opts.streamOnly, attempts: [], t0: performance.now() };   // opts.stream (v89): the earlier lock's seed (hex); opts.weak (v118): an earlier no-lock's best (hex), on its own threshold
     if (P.early && !cands) { CHG.state = 'capture'; CHG.early = { t: performance.now() }; chgEarly(); }   // FB2: stage 1 from the early maps, as live
     CHG.state = 'maps'; chgSolve();
   });

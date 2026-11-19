@@ -49,7 +49,7 @@ const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000, FB14_HIT_N = 10, FB14_REVIV
 const FB14_MISSW = 0.01;     // v86: a state whose Bowser hit Mario on a turn the bar showed a miss (the HP read can be wrong: not 0)
 const FB14_HIDE = { jelly: 2, peach: 2 }, FB14_JSHIFTS = [[-1, 0.25], [0, 0.5], [1, 0.25]];
 var FB14 = { on: false };
-function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hitT: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null }); }
+function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hitT: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null, weak: null }); }
 fb14Reset();
 /* ---- the random numbers (fast, no arrays) ---- */
 let FBV = 0;
@@ -523,8 +523,23 @@ function fbStreamHi(S, now) { S = S || FB14.stream; if (!S) return FBS_HI; const
 function fbStreamWin(now) { const S = FB14.stream; if (!S) return null; const hi = fbStreamHi(S, now); if (performance.now() - S.t > FBS_MAXMS || hi > FBS_HIMAX) return null; return Object.assign({}, S, { hi }); }
 function fbStreamNote(seed, how) {
   FB14.stream = { seed: seed >>> 0, t: performance.now(), how, n: ((FB14.stream && FB14.stream.n) || 0) + 1 };
+  FB14.weak = null;     // v118: a lock replaces a weak stream
   slog('fbStreamNote', { seed: (seed >>> 0).toString(16).padStart(8, '0'), how });
 }
+/* v118 (console 6b0ea0f2, practice from a save: T1 and T2 no-locked, T4 locked 3ecf87c7): T2's seed 92e644c9 is 2818 steps
+ * before T4's on one stream (5949, 2.50x the best other of 12000 seeds there) and T1's 380824d5 1212 before T2's: T1's own
+ * no-lock had it as its best (3313, 1.5x on its third placement), T2's initial rays were too faint for stage 1 (A 414 / B 263
+ * under the K-th 518 / 567). A Final Bowser no-lock whose best placement read FBW_RATIO+ (and CHG_MIN) is kept as a weak
+ * stream (FB14.weak); the next Charge with no kept lock searches its window first (as placed, then one frame early) and
+ * locks there only on FBS_MIN and the full lock ratio CHG_RATIO (wrong windows: README v118). Such a lock proves the
+ * no-lock's best too (two reads on one stream). Cleared with the attempt (fb14Reset) and by any lock (fbStreamNote). */
+const FBW_RATIO = 1.3;
+function fbWeakNote(b) {
+  if (!b || !(b.score >= CHG_MIN) || !(b.ratio >= FBW_RATIO)) return;
+  FB14.weak = { seed: parseInt(b.seed, 16) >>> 0, t: performance.now(), how: 'weak', ratio: b.ratio, score: b.score, alt: b.alt };
+  slog('fbWeakNote', { seed: b.seed, score: b.score, ratio: b.ratio, alt: b.alt });
+}
+function fbWeakWin(now) { const S = FB14.weak; if (!S) return null; const hi = fbStreamHi(S, now); if (performance.now() - S.t > FBS_MAXMS || hi > FBS_HIMAX) return null; return Object.assign({}, S, { hi }); }
 function fbStreamOk() { const S = FB14.stream; return !!S && performance.now() - S.t < FBS_MAXMS; }
 /* the window's seeds (before A's base-angle draw) after the kept lock */
 function fbStreamCands(S) { S = S || FB14.stream; const out = new Array((S.hi || FBS_HI) - FBS_LO); let x = chgFwd(S.seed, FBS_LO); for (let i = 0; i < out.length; i++) { out[i] = x; x = (Math.imul(x, 0x5D588B65) + 1) >>> 0; } return out; }

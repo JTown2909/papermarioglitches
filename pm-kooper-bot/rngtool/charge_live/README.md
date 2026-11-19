@@ -1,3 +1,92 @@
+# Time Out Timer v118: Final Bowser T2 locks on the window after T1's no-lock best (a weak stream); the 17:35 practice's T1 / T2 / T4 seeds found on one stream; why Mario stands 17 px right at some T1s (Nov 19)
+
+From the runner's console log 6b0ea0f2 (page v116, 2026-11-18 17:35, Phase 2 practice from a save, no Phase 1) and its clip
+17-34-20 (75.9 s, game in crop 960:540:320:0). Numbers only in the repository; the kept reads are read from the uploads folder by
+test_v118 and never copied.
+
+## 1. The seeds of this attempt (one RNG stream)
+- Live: T1 no-lock (3 placements, best ratios 1.31 / 1.05 / 1.5), T2 no-lock (1.0 / 1.06 / 1.01), T3 hit, T4 locked 3ecf87c7
+  (2.19, prior doubt 0.49). T4's kept read replays to a no-lock on v114 and v116 (the kept pictures are WebP q 0.1, not the live
+  ones; the live read's s1 / scores differ from the replay's).
+- Every seed 0..12000 steps before T4's 3ecf87c7 scored over T2's kept pictures (fb1score, the read's own placement): **92e644c9,
+  2818 steps back, 5949; the best other 2378 (2.50x)**. Every seed 0..12000 before 92e644c9 over T1's: **380824d5, 1212 steps back,
+  4305; the best other 2726 (1.58x)**. 380824d5 is also the seed T1's own full search (all 2^32) had best on its third placement
+  live (3313, 1.5x). Two reads picking seeds 1212 steps apart on one stream out of 2^32 (and T2 -> T4 2818 on it) is the proof:
+  T1 = 380824d5, T2 = 92e644c9, T4 = 3ecf87c7 (the live lock was right).
+- Why they did not stand out: **stage 1 dropped them**. The true seeds' initial rays (A's / B's, frames 0..21) were faint: T2 A 414
+  / B 263 under the stage-1 K-th 518 / 567 (both effects: never sent to stage 2, so its full score 5949 was never computed; the
+  live best was noise at 1.0x); T1 A 355 / B 339 under 403 / 378 on the first placement. Earlier locks had the true A or B over
+  the K-th (484e3220 T4 A 472 / B 615, 935fe013 T4 703 / 647, d582b905 T1 687 / 396). On the pictures one frame later (shift -1)
+  T2's seed scores 7245 (A 466 / B 297) and T1's 5000: of 47 logged Final Bowser placements (`fb14Placement`) since v89, 29 scored
+  best one frame later, as these two. The live -1 re-read (wide stage 1) still had B under its K-th and the joint rank outside
+  the 1000 sent on.
+- Not the capture: T1 / T2 had 1-3% dropped pictures (T4, which locked, 26%), Mario was read on both, the burst levels follow the
+  profile frame for frame. One oddity in T1: two new pictures 17 ms apart at the trigger (the same level, 91.7) and the next game
+  frame's capture flagged as a repeat; the placement put the trigger on frame 4 (frame 3 empty). Not changed: the -1 / +1
+  re-reads cover it, and T1's best placement was the third.
+
+## 2. The fix: the weak stream (`fbWeakNote`, `chgSolve`)
+- A Final Bowser (fb1) read that ends with no lock keeps its best placement's seed (by ratio, from FBW_RATIO 1.3 and CHG_MIN) as a
+  weak stream (`FB14.weak`, logged `fbWeakNote`). The next Charge with no kept lock and no carried states searches that seed's
+  window first (FBS_LO..fbStreamHi, as placed, then one frame earlier: the v89 window search), and locks there only on FBS_MIN and
+  the **full lock ratio CHG_RATIO 1.8** (a strong window needs 1.5). A lock there (`fbWeakProven`) proves the no-lock's best as
+  well (two reads on one stream) and becomes the stream for the next Charge; any lock or a new attempt clears the weak one. If the
+  window does not lock, the full search runs as before (the window costs 2-4 s).
+- This log: T1 replayed ends with 380824d5 kept (1.48x, its third placement); **T2 on that window locks 92e644c9, 5949 / 2.57x,
+  1212 steps** (live it would come ~3.5 s after the rays, before T2's Do Nothing); T4 on T2's window locks **3ecf87c7, 6579 /
+  3.02x, 2818 steps** (the live seed; its plain replay is a no-lock). T1 itself still has no lock live: nothing before it to
+  search (a practice from a save: no Phase 1, no earlier lock).
+- Wrong windows (the false-lock check): every kept fb1 read in the uploads (95 reads, v86-v116) searched on 2 random weak
+  windows each, as placed and one frame earlier: **380 window searches, 0 locks, best ratio 1.28** (a weak lock needs 1.8, a
+  strong one 1.5). test_v118 3: six more over this log's T2 / T4, best 1.1.
+- Every no-lock in the uploads whose best placement read 1.3+ had the true seed as that best: 6b0ea0f2 T1 380824d5 (1.5x; its
+  first placement's 1ef97264, 1.31x, is 33 steps before it: the same answer a few draws off), 8cc2055f T1 ec60ec34 (1.78x),
+  39b88e3a T1 1c403dbf (1.76x) (both stream-proven in v116). Their next Charges on the weak window: 39b88e3a T2 cb89ffbc 5353 /
+  2.82x (2465 steps; live and plain replay lock the same seed, 2.22x), 8cc2055f T4 6debf768 6661 / 3.31x (6252 steps; the live
+  seed). The other no-locks' bests read 1.01-1.07 (b75b56e2 T1, 4bc65351 T2, 9c35f7c3 T1, 484e3220 T1, 6b0ea0f2 T2): nothing is
+  kept, nothing changes.
+- Kept reads (stored with each read from now on): `cap.stream` / `cap.weak`, the window searched first (replay with
+  `chgReplay(cap, { stream })` / `{ weak }`).
+
+## 3. Mario 17 px right at some T1s (the runner's question)
+- The clips: the battle's **entry animation** decides it. In 17-34-20 (this log) Mario **jumps in** from the upper left over
+  Lakilester and lands to the right of his home spot; in 15-59-28 (log 935fe013, Mario 0.2 px) and at Phase 2 of 16-06-01 (log
+  484e3220, after the Star Spirits cutscene, 0.3 px) he **walks in** to his home spot. Phase 1 of 16-06-01 (after the field
+  dialogue with Bowser) is a jump-in too (Mario 16.7-17.1 px). The game leaves him where he landed until his first move: T2 / T4
+  of the same fights read 0.3 / -2.4 px. Which entry a practice gets depends on how the runner starts that battle (the jump-in is
+  the entry the game uses when the battle starts with Mario jumping; it is the field start of Phase 1); the page cannot change it.
+- It is not what costs the T1 read: the page centres the rays 0.35 world units per px of Mario's shift (6.0 here), and the true
+  seed's score over T1 peaks there (dxWorld 5 / 5.5 / **6** / 6.5 / 7: 1791 / 3230 / **4306** / 3933 / 2460). 17-px T1 reads
+  locked on 8 of the 10 earlier logs with it; 0-px T1s no-locked too (484e3220, 39b88e3a). The centre is sharp (half a unit off
+  costs a quarter), so a landing that varied would hurt, but on every 17-px read so far it measured 17.0-17.2 px.
+
+## Replays (every kept fb1 read in the uploads, plain replay, v116 vs v118)
+Plain replays (no window; `chgReplay(cap)`): the 92 reads of v116's table give the same state and seed on v118 as on v116,
+attempt for attempt (86 lock, 6 no-lock; the 3 locks that differ from live are v116's documented ones: b75b56e2 T1 44a7ee8c,
+4bc65351 T2 8b09dfe1, 484e3220 T1 9fdf5e3e, all on proven streams). This log's three reads replay the same on v116 and v118
+(T1 / T2 / T4 no-lock; the T4 kept pictures are WebP q 0.1, the live lock was on the live pictures). The change is only in the
+chain (a Charge after a no-lock), replayed with `{ weak }` / `{ stream }`:
+
+| read | live (v116) | v118, as the page would run it |
+|---|---|---|
+| 6b0ea0f2 T1 | no-lock, best 380824d5 1.5x | no-lock; keeps 380824d5 (1.48x) as the weak stream |
+| 6b0ea0f2 T2 | no-lock (noise, 1.01x) | **92e644c9, 5949 / 2.57x** on T1's window (1212 steps) |
+| 6b0ea0f2 T4 | 3ecf87c7 2.19x (full search) | **3ecf87c7, 6579 / 3.02x** on T2's window (2818 steps) |
+| 8cc2055f T1 / T4 | no-lock / 6debf768 | no-lock (keeps ec60ec34) / 6debf768 3.31x on its window |
+| 39b88e3a T1 / T2 | no-lock / cb89ffbc | no-lock (keeps 1c403dbf) / cb89ffbc 2.82x on its window |
+
+## Not done in v118
+- T1 of a practice with no Phase 1 and nothing locked before it still no-locks when its initial rays are as faint as here; a
+  stage 1 that ranks by the whole Charge (or both placements together) would be needed.
+- The one-frame-late placement (29 of 47 locks) is still found by the re-reads, not tried first.
+
+## Tests
+`test_v118.js` (in run_suite.sh after test_v116; reads the kept reads of 6b0ea0f2 from the uploads folder, skipped when absent).
+VERSION not bumped (v116). On the v118 build (scratchpad/timeout_timer_v118; PAGE= or the page as argument, as each test takes
+it): test_v118, test_v116, test_v114, test_fb14_ai / chain / model / plan / v86 / v87 / v92 / v100-v105, test_lock_badge, test_core,
+test_route_texts pass. test_fb14_page is the emulator end-to-end harness (URLBASE + a manifest of emulator states; not in
+run_suite.sh): not run.
+
 # Time Out Timer v117: Jr. Troopa partnerless: the Life Shroom revive carry fits the console, the T7 Power Bounce on the first hit 13, "the route ends here" (Nov 18)
 
 From the runner's console logs of Nov 15 / 17 / 18 (pages v110-v116) and the clips j1729 (17-29-43), d1721 (17-21-47) and x1822 / x1420
