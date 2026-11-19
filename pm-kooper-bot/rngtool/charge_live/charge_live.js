@@ -239,7 +239,7 @@ function chgBackResolve() {
   const i = CHG.backTo; CHG.backTo = null; if (i == null || CHG.replay) return;
   if (routeStep !== i) { slog('chargeArenaBack', { from: routeStep, to: i }); setStep(i); }
 }
-function chgReset(why) { if (CHG.pend) chgPendDrop('reset'); if (CHG.rec && CHG.rec.attempts.length && typeof chgRecEnd === 'function') chgRecEnd('reset'); if (CHG.workers) CHG.workers.forEach(w => w.terminate()); Object.assign(CHG, { state: 'idle', ring: [], frames: [], res: null, workers: null, means: [], trig: null, why: why || null, taps: [], pres: [], spiny: null, prof: null, early: null, info: null, armP: null, G: null, F0: null, skips: null, alt: 0, forced: 0, trigT0: null, rec: null, Gfix: null, seenG: null, attShift: 0, sweep: 0, gshift: 0, backTo: null }); if (typeof fb2Reset === 'function') fb2Reset(); chgShow(); }
+function chgReset(why) { if (CHG.pend) chgPendDrop('reset'); if (CHG.rec && CHG.rec.attempts.length && typeof chgRecEnd === 'function') chgRecEnd('reset'); if (CHG.workers) CHG.workers.forEach(w => w.terminate()); Object.assign(CHG, { state: 'idle', ring: [], frames: [], res: null, workers: null, means: [], trig: null, why: why || null, taps: [], pres: [], spiny: null, prof: null, early: null, info: null, armP: null, G: null, F0: null, skips: null, alt: 0, forced: 0, trigT0: null, rec: null, Gfix: null, seenG: null, attShift: 0, sweep: 0, gshift: 0, backTo: null, weakBest: null }); if (typeof fb2Reset === 'function') fb2Reset(); chgShow(); }
 chgReset();
 let chgCv = null, chgCtx = null;
 function chgCanvas() { if (!chgCv) { chgCv = document.createElement('canvas'); chgCv.width = 640; chgCv.height = 480; chgCtx = chgCv.getContext('2d', { willReadFrequently: true }); } return chgCtx; }
@@ -589,25 +589,34 @@ if (window.__chgDebug) {
     const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };
     // the window's search: the pictures as placed, then one frame later / earlier (on console the whole Charge read one
     // frame off on both noise reads of 2026-11-09: README v89); null when it does not clear FBS_MIN / FBS_RATIO
-    const streamTry = async () => {
+    const streamTry = async (SW, weak) => {     // v118: weak (a no-lock's best, fbWeakWin): locks only on FBS_MIN and CHG_RATIO
       const rOf = r => { const T = r.top; if (!T[0]) return 0; const N0 = near(T[0].seed), b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0)); return T[0].sc / (b ? b.sc : 1); };
-      const wc = fbStreamCands(SW), t0s = performance.now(); let res0 = null, rat = 0, sh = 0; const tries = [];
+      const wc = fbStreamCands(SW), t0s = performance.now(), RQ = weak ? CHG_RATIO : FBS_RATIO; let res0 = null, rat = 0, sh = 0; const tries = [];
       for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
         const r2 = await chgSearch(d ? chgMaps(fbShiftG(G, d), cen, CHG_N) : maps, { cands: wc, stream: true }), q = rOf(r2);
         tries.push({ d, best: r2.top[0] && Math.round(r2.top[0].sc), ratio: +q.toFixed(2), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) });
         if (r2.top[0] && (!res0 || r2.top[0].sc > res0.top[0].sc)) { res0 = r2; rat = q; sh = d; }
-        if (r2.top[0] && r2.top[0].sc >= FBS_MIN && q >= FBS_RATIO) break; }
-      const ok = res0 && res0.top[0].sc >= FBS_MIN && rat >= FBS_RATIO;
+        if (r2.top[0] && r2.top[0].sc >= FBS_MIN && q >= RQ) break; }
+      const ok = res0 && res0.top[0].sc >= FBS_MIN && rat >= RQ;
       CHG.info.stream = { from: (SW.seed >>> 0).toString(16).padStart(8, '0'), hi: SW.hi || FBS_HI, ms: Math.round(performance.now() - t0s), locked: !!ok, tries };
+      if (weak) CHG.info.stream.weak = { ratio: SW.ratio, score: SW.score, alt: SW.alt };
       if (!CHG.replay) slog('chargeStream', CHG.info.stream);
       if (!ok) return null;
       const N0 = near(res0.top[0].seed); res0.top = [res0.top[0]].concat(res0.top.slice(1).filter(x => !N0.has(x.seed >>> 0)));
       res0.stream = { steps: fbStreamSteps(res0.top[0].seed, SW), ratio: +rat.toFixed(2), shift: sh }; CHG.info.stream.steps = res0.stream.steps;
+      if (weak) { res0.stream.weak = (SW.seed >>> 0).toString(16).padStart(8, '0'); if (!CHG.replay) slog('fbWeakProven', { weak: res0.stream.weak, seed: (res0.top[0].seed >>> 0).toString(16).padStart(8, '0'), steps: res0.stream.steps, ratio: res0.stream.ratio }); }
       if (sh) { CHG.trig.t += sh * FRAME; CHG.trig.n -= sh; CHG.G = fbShiftG(G, sh); }    // (as a shift re-read: the fit and the clock on the shifted pictures)
       return res0;
     };
-    if (SW && !cands) {
-      res = await streamTry();
+    // v118: no kept lock: the window after the last no-lock's best (fb14_live.js fbWeakNote), on the full lock ratio
+    const SWK = !SW && !cands && !E && chgP().id === 'fb1' && typeof fbWeakWin === 'function' ? (CHG.replay ? CHG.replay.weak : fbWeakWin()) : null;
+    if (CHG.rec && SWK) CHG.rec.weak = { seed: (SWK.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: SWK.hi || FBS_HI };
+    if (SWK) {
+      res = await streamTry(SWK, true);
+      if (!res && CHG.replay && CHG.replay.streamOnly) { CHG.state = 'nolock'; CHG.F0 = null; chgReplayDone({ state: 'nolock', streamOnly: true }); return; }
+      if (!res) { CHG.tSearch = performance.now(); res = await chgSearch(maps); }
+    } else if (SW && !cands) {
+      res = await streamTry(SW);
       if (!res && CHG.replay && CHG.replay.streamOnly) { CHG.state = 'nolock'; CHG.F0 = null; chgReplayDone({ state: 'nolock', streamOnly: true }); return; }   // (tests: the window alone)
       if (!res) { CHG.tSearch = performance.now(); res = await chgSearch(maps); }
     } else if (cands) {        // T6 with the seed carried from T1-T4: only the carried stream's stretch (fb14_live.js); the full search if it does not lock
@@ -623,7 +632,7 @@ if (window.__chgDebug) {
       if (ok) { const N0 = near(res.top[0].seed); res.top = [res.top[0]].concat(res.top.slice(1).filter(x => !N0.has(x.seed >>> 0))); }
       slog('chargeNarrow', CHG.info.narrow);
       if (CHG.narrow14) { CHG.narrow14.done = true; CHG.narrow14.ok = !!ok; if (ok) res.narrow14 = true; }
-      if (!ok && SW) { const r3 = await streamTry(); if (r3) { res = r3; ok = true; } }      // v89: the carry missed (Bowser's hit): the stream window next
+      if (!ok && SW) { const r3 = await streamTry(SW); if (r3) { res = r3; ok = true; } }      // v89: the carry missed (Bowser's hit): the stream window next
       if (!ok) { CHG.tSearch = performance.now(); res = await chgSearch(maps); }
     } else if (E) { E.give(maps); res = await CHG.searchP; } else res = await chgSearch(maps);
     // v114 (console fb1810): on the backup T7 a no-lock is searched again on the pictures one / two frames off (chgFb2Wide)
@@ -836,9 +845,12 @@ function chgRetryTime() {
   if (CHG.replay && !CHG.replay.clock) return CHG.alt < (CHG.replay.maxAlts != null ? CHG.replay.maxAlts : CHG_ALT_MAX);
   return CHG.alt < CHG_ALT_MAX && performance.now() - CHG.tEnd + (CHG.attMs || 2500) <= chgLockBy(chgP());
 }
+/* v118: a Final Bowser read that ends with no lock leaves its best placement's seed as a weak stream (fb14_live.js) */
+function chgWeakEnd() { const W = CHG.weakBest; if (!W) return; if (CHG.info) CHG.info.weak = W; if (!CHG.replay && typeof fbWeakNote === 'function') fbWeakNote(W); }
 function chgRetryStop(why) {
   if (!CHG.replay) slog('chargeRetryStop', { why, alt: CHG.alt, atMs: Math.round(performance.now() - CHG.tEnd), lockByMs: Math.round(chgLockBy(chgP())), lastMs: Math.round(CHG.attMs || 0) });
   CHG.F0 = null; if (CHG.state === 'search') CHG.state = 'nolock'; chgShow();
+  chgWeakEnd();
   if (CHG.replay) chgReplayDone({ state: 'nolock', stop: why }); else { chgRecEnd('nolock'); if (typeof fbp1Done === 'function') fbp1Done('nolock'); }
 }
 /* lock: the best seed's score must be clearly above the rest (true seeds 2900-8300 at 2.1-5.4x the runner-up on the
@@ -875,13 +887,15 @@ function chgDecide() {
   if (CHG.res.stream) CHG.info.best.stream = CHG.res.stream;
   chgRecAttempt(G, locked);
   if (!locked) {
+    // v118: the Final Bowser no-lock's best placement by ratio (fbWeakNote keeps it as a weak stream at the read's end)
+    if (CHG.res.fb1 && chgP().id === 'fb1' && CHG.info.best && !CHG.res.stream && (!CHG.weakBest || CHG.info.best.ratio > CHG.weakBest.ratio)) CHG.weakBest = Object.assign({ alt: CHG.alt || 0 }, CHG.info.best);
     CHG.state = 'nolock'; CHG.why = a ? 'no clear seed (best ' + Math.round(a.sc) + ', ' + (a.sc / b.sc).toFixed(2) + 'x the next)' : 'no candidates';
     if (!CHG.replay) slog('chargeNoLock', CHG.info);
     if (!fb2 && CHG.info.marioNcc >= CHG_NCC_MIN && CHG.F0 && !CHG.Gfix) {
       if (chgRetryTime()) { CHG.why += '; re-reading (placement ' + (CHG.alt + 2) + ')'; chgShow(); setTimeout(chgRetry, 0); return; }   // a task of its own: the page stays responsive
       chgRetryStop('time'); return;
     }
-    CHG.F0 = null; chgShow(); if (CHG.replay) chgReplayDone({ state: 'nolock' }); else { chgRecEnd('nolock'); if (typeof fbp1Done === 'function') fbp1Done('nolock'); } return;
+    CHG.F0 = null; chgShow(); chgWeakEnd(); if (CHG.replay) chgReplayDone({ state: 'nolock' }); else { chgRecEnd('nolock'); if (typeof fbp1Done === 'function') fbp1Done('nolock'); } return;
   }
   CHG.F0 = null;
   // v82 (tests): a Final Bowser read replayed into the tracker, as live (fb14Refine, fb14Lock), for the log replays
