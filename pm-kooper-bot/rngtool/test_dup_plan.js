@@ -87,7 +87,7 @@ function frames() {     // [[expected arena, clip, frame, png base64]] for the c
     return out;
   }, { FIX });
   console.log('version ' + r.version + ' | RTA step 0: ' + r.rta.step0 + ' | Charge step 0: ' + r.charge.step0 + ' (profile ' + r.charge.prof + ')');
-  check(r.version === 'v116', 'version v100');
+  check(r.version === 'v117', 'version v100');
   check(r.rta.route === 'charge' && !!r.rta.chg, 'v110: the Charge route is the default (the runner\'s setting) and its step has the Charge profile');
   check(r.charge.route === 'charge' && r.charge.chg === 'dup' && r.charge.prof === 'dup' && r.charge.n === r.rta.n, 'Charge-lock route: step 0 has the dup profile, same number of steps');
   check(/T1: Charge; Do Nothing/i.test(r.charge.list) && /Jump x2; Power Bomb/i.test(r.charge.list), 'route list shows the Charge-lock turns (v110 wording)');

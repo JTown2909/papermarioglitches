@@ -31,7 +31,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       for (let i = 0; i < 8; i++) X.leverAdd('jr', 0); out.back = X.leverBias('jr');
       return out; });
     console.log('0', JSON.stringify(r));
-    ok(r.ver === 'v116', '0. page version v110');
+    ok(r.ver === 'v117', '0. page version v110');
     ok(r.set.off === '-4.5' && r.set.voff === '-4' && r.set.zoom === '1.5' && r.set.duproute === 'charge' && r.set.dupgoal === 'run2', '0. fresh page: the runner\'s tuned defaults (' + JSON.stringify(r.set) + ')');
     ok(r.set.jrfix === '0' && r.set.pfix === '0' && r.set.fbnbroute === 'cap', '0. the Settings corrections default to 0 (fine-tune on top of the built-in values)');
     ok(r.fix.jr === -0.5 && r.fix.hw === 0 && r.fix.dup === 0 && r.fix.fb14 === 0, '0. built-in read corrections per fight: Jr. -0.5, Hallway / Duplighosts / Final Bowser 0');
