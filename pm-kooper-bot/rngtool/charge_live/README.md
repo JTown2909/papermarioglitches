@@ -1,3 +1,48 @@
+# Time Out Timer v119: the Final Bowser gap history; between two Charges the RNG runs 56.9 steps a second plus a fixed amount (Nov 19)
+
+The runner asked whether the page could keep a database of earlier observations instead of relying on the live read alone.
+A seed cannot carry from one run to the next: the RNG advances every frame, so a run a few frames different is on another
+seed. What carries is the **gap** between two Charges of one attempt.
+
+## 1. The gaps (console logs Nov 9-15, 81 Final Bowser Charge pairs on one stream, trigger to trigger)
+- Steps = 56.9 x seconds + an offset (`FBH_RATE`: the stage's one draw a frame). Of the 81: 33 have offset 98..138, 30 have
+  634..676 (the two kinds of Bowser turn between the Charges), 3 have 1153..1174, the rest are single ones (long gaps with
+  deaths and retries, 2131..11545). The capture times (the reads' `wall`) give the same families: 115..138 and 635..656.
+- So for a Charge `sec` seconds after the kept lock's trigger, almost every true gap lies within 40 steps of
+  56.9 x sec + a known offset: a few hundred seeds, where the wide window (v89) has 8500.
+
+## 2. The history (`fbHistCands`, `fbHistAdd`; fb14_live.js)
+- `FBH_BUILT` holds the 81 gaps ([steps, seconds], numbers only). Each new gap this browser proves (a fresh or carried lock
+  after a kept one, or a window lock that also clears the full lock ratio CHG_RATIO) is added to localStorage `tot-fbgaps`
+  (newest `FBH_KEEP` 300), logged `fbHistAdd`, and carried in the session log (`more.fbGaps`). A lock made on the history's
+  window alone never adds a gap: it would teach itself.
+- The window: every offset of gaps up to `FBH_MAXS` (150 s) and 1.5x this one's seconds, at 56.9 x sec, `FBH_PAD` (40) steps
+  either side, merged; at most `FBH_MAXC` (1200) seeds, the ranges with the most gaps behind them first.
+- `streamTry` (charge_live.js) searches it before the wide window, for a kept lock and for a weak stream (v118). **Every seed
+  there is fully scored** (`m2`); the wide window ranks its 8500 by their initial rays, which are the faint part of a Charge
+  (v89 / v118), and scores 300. It locks on FBS_MIN (3000) and its own ratio: `FBH_RATIO` 1.5 for a kept lock, CHG_RATIO 1.8
+  for a weak one. If it does not lock, the wide window and the full search run as before.
+- **The same-stream check.** With every seed scored, one a few steps from the true seed (it shares B's rays and every
+  respawn) can score best: on the first replay 3 of 42 history locks were 9, 44 and 52 steps off (a wrong plan). A history lock
+  now stands only when its seed's initial-ray score is the best of the 64 seeds either side; otherwise the try is dropped
+  (logged `near`) and the wide window runs. After the check: 0 off. The pictures one frame early are tried on the history's
+  window only after a miss that scored FBS_MIN (the one shifted history lock of the replays had 4405 / 1.47x as placed).
+
+## 3. Replays (the kept reads of the Nov 9-18 logs, 59 Charges with a known seed after a kept lock, each gap left out of the history)
+- Wide window alone: 40 locked, all right. History first: 38 history locks, **all right**; with the wide window after it the
+  right seed 42 times (+2: two Charges the wide window misses). Wrong windows (a random kept seed, the same pictures and
+  history): **0 locks** of 59 (best wrong ratio 1.38, best wrong score 2185, under FBS_MIN).
+- The misses are long gaps (73-267 s, deaths and retries): their offsets are new, so the history has nothing near them yet.
+  Each one the page proves from now on is learned.
+- A faint Charge (the same 59 replays with the 10 pictures after the trigger dropped, the initial rays): wide window alone 37
+  right; history first 39 right (36 of them on the history's window, all right); wrong windows 0 locks. Both runs keep 3
+  wide-window locks 7-24 steps off the true seed (same stream) after the drop: the wide window's own weakness, not changed
+  here (the same-stream check runs on the history's window only). Dropping pictures also moves the trigger's placement, so
+  these may not happen on console; not seen on the 59 as read.
+- Time: the history's window (426 seeds, T4 of 6b0ea0f2) takes 2.2 s, as long as the wide window; a miss costs that once.
+- Not done: Jr. Troopa, Hallway Bowser and the Phase 2 (fb2) Charges are carried by their own state models, not by a
+  window; the history is Final Bowser Phase 1 / practice T1-T4 only.
+
 # Time Out Timer v118: Final Bowser T2 locks on the window after T1's no-lock best (a weak stream); the 17:35 practice's T1 / T2 / T4 seeds found on one stream; why Mario stands 17 px right at some T1s (Nov 19)
 
 From the runner's console log 6b0ea0f2 (page v116, 2026-11-18 17:35, Phase 2 practice from a save, no Phase 1) and its clip

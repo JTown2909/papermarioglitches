@@ -348,7 +348,7 @@ function fb14Lock(res) {
   FB14.anchor = {};      // v96: a new lock is new evidence: its first plan sets the turn's frame again
   Object.assign(FB14, { on: true, why: null, turn, relock: null, wide: false, lockN: FB14.lockN + 1, plan: null, bg: d0.d / (1 - d0.d), bgFrom: Math.min(M + 61, menuF), how });
   FB14.doubt = d0.d; if (d0.d > ZW_BG0) slog('fb14Prior', d0);
-  if (res.top && res.top[0]) fbStreamNote(res.top[0].seed, res.stream ? 'stream' : how || 'fresh');     // v89: the next Charge's window starts here
+  if (res.top && res.top[0]) fbStreamNote(res.top[0].seed, res.stream ? 'stream' : how || 'fresh', !!(res.stream && !res.stream.hist && res.stream.ratio >= CHG_RATIO));     // v89: the next Charge's window starts here
   FB14.M[turn] = M; FB14.fresh = how === 'fresh' ? { turn, F: M + 61 } : null;     // v102: an unconfirmed fresh lock (fb14DoubtFloor)
   if (res.joint && res.joint.cur) { res.joint.cur.M = M; FB14.charges = (FB14.charges || []).filter(c => c.M !== M).concat([res.joint.cur]).slice(-2); }
   // confirms the page saw before this lock landed (a slow lock): their frames from the clock the lock has just fixed
@@ -521,8 +521,12 @@ const FBS_LO = 500, FBS_HI = 9000, FBS_RATIO = 1.5, FBS_MIN = 3000, FBS_MAXMS = 
 const FBS_PERS = 100, FBS_HIMAX = 30000;
 function fbStreamHi(S, now) { S = S || FB14.stream; if (!S) return FBS_HI; const sec = Math.max(0, ((now != null ? now : performance.now()) - S.t) / 1000); return Math.max(FBS_HI, Math.round(1.3 * FBS_PERS * sec + 2500)); }
 function fbStreamWin(now) { const S = FB14.stream; if (!S) return null; const hi = fbStreamHi(S, now); if (performance.now() - S.t > FBS_MAXMS || hi > FBS_HIMAX) return null; return Object.assign({}, S, { hi }); }
-function fbStreamNote(seed, how) {
-  FB14.stream = { seed: seed >>> 0, t: performance.now(), how, n: ((FB14.stream && FB14.stream.n) || 0) + 1 };
+function fbStreamNote(seed, how, proven) {
+  const prev = FB14.stream || FB14.weak, tt = CHG.trig && CHG.trig.t != null ? CHG.trig.t : performance.now();
+  // v119: a gap to the previous kept seed (or a weak one) goes into the history when this lock does not rest on that window
+  // alone (a fresh lock, or a window lock that also clears the full lock ratio)
+  if (prev && prev.tt != null && (how === 'fresh' || how === 'carried' || proven)) { const k = fbStreamSteps(seed, Object.assign({}, prev, { hi: FBS_HIMAX })); if (k > 0) fbHistAdd(k, (tt - prev.tt) / 1000, how); }
+  FB14.stream = { seed: seed >>> 0, t: performance.now(), tt, how, n: ((FB14.stream && FB14.stream.n) || 0) + 1 };
   FB14.weak = null;     // v118: a lock replaces a weak stream
   slog('fbStreamNote', { seed: (seed >>> 0).toString(16).padStart(8, '0'), how });
 }
@@ -536,13 +540,48 @@ function fbStreamNote(seed, how) {
 const FBW_RATIO = 1.3;
 function fbWeakNote(b) {
   if (!b || !(b.score >= CHG_MIN) || !(b.ratio >= FBW_RATIO)) return;
-  FB14.weak = { seed: parseInt(b.seed, 16) >>> 0, t: performance.now(), how: 'weak', ratio: b.ratio, score: b.score, alt: b.alt };
+  FB14.weak = { seed: parseInt(b.seed, 16) >>> 0, t: performance.now(), tt: CHG.trig && CHG.trig.t != null ? CHG.trig.t : performance.now(), how: 'weak', ratio: b.ratio, score: b.score, alt: b.alt };
   slog('fbWeakNote', { seed: b.seed, score: b.score, ratio: b.ratio, alt: b.alt });
 }
 function fbWeakWin(now) { const S = FB14.weak; if (!S) return null; const hi = fbStreamHi(S, now); if (performance.now() - S.t > FBS_MAXMS || hi > FBS_HIMAX) return null; return Object.assign({}, S, { hi }); }
 function fbStreamOk() { const S = FB14.stream; return !!S && performance.now() - S.t < FBS_MAXMS; }
 /* the window's seeds (before A's base-angle draw) after the kept lock */
 function fbStreamCands(S) { S = S || FB14.stream; const out = new Array((S.hi || FBS_HI) - FBS_LO); let x = chgFwd(S.seed, FBS_LO); for (let i = 0; i < out.length; i++) { out[i] = x; x = (Math.imul(x, 0x5D588B65) + 1) >>> 0; } return out; }
+/* v119: the gap history. Between two Final Bowser Charges of one attempt the RNG runs FBH_RATE LCG steps a second (one draw
+ * a frame) plus a fixed amount for what happened in between: of 81 console gaps (logs Nov 9-15, trigger to trigger), 33 are
+ * 56.9 x seconds + 98..138 and 30 + 634..676 (Bowser's turn kinds), the rest + 1153..1174 and single ones. FBH_BUILT holds those
+ * gaps ([steps, seconds], numbers only); each new proven gap of this browser is added to localStorage 'tot-fbgaps' (FBH_KEEP
+ * newest). Before the wide window a kept stream (or a weak one) is searched on the history's window only: every offset seen
+ * (gaps up to FBH_MAXS s and 1.5x this one's seconds) at FBH_RATE x seconds, FBH_PAD steps either side, merged, at most
+ * FBH_MAXC seeds. Each one is fully scored (the wide window ranks 8500 seeds by their faint initial rays and scores 300), so a
+ * faint Charge on a known gap still locks; it locks only on FBS_MIN and its own ratio (FBH_RATIO for a kept lock, CHG_RATIO
+ * for a weak one: wrong windows, README v119). A gap off the history is left to the wide window as before. */
+const FBH_RATE = 56.9, FBH_PAD = 40, FBH_MAXC = 1200, FBH_MAXS = 150, FBH_KEEP = 300, FBH_RATIO = 1.5, FBH_KEY = 'tot-fbgaps';
+const FBH_BUILT = [[1212,19.12],[1221,19.34],[1243,19.8],[1250,19.77],[1269,20.58],[1274,20.08],[1275,20.35],[1287,20.67],[1290,20.41],[1294,20.65],[1297,20.62],[1320,20.92],[1325,21.18],[1334,21.23],[1340,21.3],[1342,21.42],[1365,21.86],[1372,21.77],[1381,22],[1635,26.67],[1665,27.09],[1667,27.17],[1677,27.33],[1709,27.65],[1728,27.95],[1772,28.87],[1815,29.63],[1821,30.05],[1828,29.96],[1882,30.82],[1892,31.06],[1926,31.62],[2004,33.2],[2341,29.78],[2370,30.17],[2370,30.28],[2382,30.66],[2430,31.25],[2442,31.55],[2443,31.53],[2570,34],[2613,34.62],[2657,35.36],[2674,35.67],[2717,36.33],[2747,37.12],[2784,37.63],[2838,38.67],[2846,38.35],[2857,38.93],[2860,38.86],[2868,39.18],[2898,39.05],[2923,40.05],[2931,40.17],[2962,40.62],[2974,40.83],[2979,40.77],[3014,41.52],[3033,41.9],[3147,43.9],[3315,46.76],[3745,54.67],[3809,46.67],[3919,48.25],[4020,50.01],[5130,52.63],[7375,89.98],[7409,83.65],[8106,97.37],[9855,127.2],[12807,126.58],[14437,193.82],[14444,73.17],[15516,212.92],[15877,207.79],[21533,198.6],[21792,238.8],[26689,266.15],[28518,441.98],[30074,300.08]];
+function fbHistLoad() { try { const a = JSON.parse(localStorage.getItem(FBH_KEY) || '[]'); return Array.isArray(a) ? a.filter(x => Array.isArray(x) && x[0] > 0 && x[1] > 0) : []; } catch (e) { return []; } }
+function fbHistAll() { return FBH_BUILT.concat(fbHistLoad()); }
+/* a proven gap (steps, seconds trigger to trigger) into the browser's history; how: what proved it (logged) */
+function fbHistAdd(steps, sec, how) {
+  if (!(steps > 0) || !(sec > 0) || CHG.replay) return;
+  const a = fbHistLoad(); a.push([steps, +sec.toFixed(2), Math.round(Date.now() / 1000)]); while (a.length > FBH_KEEP) a.shift();
+  try { localStorage.setItem(FBH_KEY, JSON.stringify(a)); } catch (e) {}
+  slog('fbHistAdd', { steps, sec: +sec.toFixed(2), off: Math.round(steps - FBH_RATE * sec), how, n: a.length });
+}
+/* the history's window for a Charge sec seconds after the kept seed's trigger: { cands, ranges, n } or null. H: the gaps
+ * to use (tests: leave one out), else the built-in and this browser's */
+function fbHistCands(S, sec, H) {
+  if (!S || !(sec > 0)) return null;
+  const lim = Math.max(30, 1.5 * sec), offs = (H || fbHistAll()).filter(x => x[1] <= Math.min(FBH_MAXS, lim)).map(x => x[0] - FBH_RATE * x[1]);
+  if (!offs.length) return null;
+  const c = FBH_RATE * sec, iv = offs.map(o => [Math.max(FBS_LO, Math.round(c + o - FBH_PAD)), Math.round(c + o + FBH_PAD)]).filter(r => r[1] > r[0]).sort((a, b) => a[0] - b[0]), R = [];
+  for (const r of iv) { const L = R[R.length - 1]; if (L && r[0] <= L[1] + 1) { L[1] = Math.max(L[1], r[1]); L.n++; } else R.push([r[0], r[1], 1]); }
+  // too wide: the ranges with the most gaps behind them first
+  let keep = R, tot = R.reduce((t, r) => t + r[1] - r[0] + 1, 0);
+  if (tot > FBH_MAXC) { keep = []; tot = 0; for (const r of R.slice().sort((a, b) => b[2] - a[2])) { if (tot + r[1] - r[0] + 1 > FBH_MAXC) continue; keep.push(r); tot += r[1] - r[0] + 1; } keep.sort((a, b) => a[0] - b[0]); }
+  if (!keep.length) return null;
+  const cands = []; for (const [lo, hi] of keep) { let x = chgFwd(S.seed, lo); for (let i = lo; i <= hi; i++) { cands.push(x); x = (Math.imul(x, 0x5D588B65) + 1) >>> 0; } }
+  return { cands, ranges: keep.map(r => [r[0], r[1]]), n: offs.length, sec: +sec.toFixed(2) };
+}
 /* LCG steps from the kept lock to seed (within FBS_HI + 48), or -1 */
 function fbStreamSteps(seed, S) { S = S || FB14.stream; if (!S) return -1; let x = S.seed >>> 0; const t = seed >>> 0; for (let i = 0, n = Math.max(S.hi || 0, FBS_HI, FBS_HIMAX) + 48; i <= n; i++) { if (x === t) return i; x = (Math.imul(x, 0x5D588B65) + 1) >>> 0; } return -1; }
 /* v87: hold the pending Charge's input while its narrowed search may still lock on the carried stream */

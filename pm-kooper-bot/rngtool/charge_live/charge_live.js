@@ -591,19 +591,39 @@ if (window.__chgDebug) {
     // frame off on both noise reads of 2026-11-09: README v89); null when it does not clear FBS_MIN / FBS_RATIO
     const streamTry = async (SW, weak) => {     // v118: weak (a no-lock's best, fbWeakWin): locks only on FBS_MIN and CHG_RATIO
       const rOf = r => { const T = r.top; if (!T[0]) return 0; const N0 = near(T[0].seed), b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0)); return T[0].sc / (b ? b.sc : 1); };
-      const wc = fbStreamCands(SW), t0s = performance.now(), RQ = weak ? CHG_RATIO : FBS_RATIO; let res0 = null, rat = 0, sh = 0; const tries = [];
-      for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
+      const wc = fbStreamCands(SW), t0s = performance.now(), RQ = weak ? CHG_RATIO : FBS_RATIO; let res0 = null, rat = 0, sh = 0, hist = null; const tries = [];
+      // v119: the gap history's window first (fb14_live.js fbHistCands): every seed there fully scored
+      const R = CHG.replay, hsec = R ? R.histSec : SW.tt != null && CHG.trig ? (CHG.trig.t - SW.tt) / 1000 : null;
+      const HW = typeof fbHistCands === 'function' && hsec != null && !(R && R.hist === false) ? fbHistCands(SW, hsec, R && Array.isArray(R.hist) ? R.hist : null) : null;
+      if (HW) { const RH = weak ? CHG_RATIO : FBH_RATIO;
+        for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
+          chgSearch.joint = null;
+          const r2 = await chgSearch(d ? chgMaps(fbShiftG(G, d), cen, CHG_N) : maps, { cands: HW.cands, stream: true, m2: HW.cands.length, keepJoint: true }), q = rOf(r2);
+          const T0 = r2.top[0], tr = { d, hist: true, best: T0 && Math.round(T0.sc), ratio: +q.toFixed(2), seed: T0 && (T0.seed >>> 0).toString(16) }; tries.push(tr);
+          // every seed here is fully scored, so one a few steps from the true one on its stream (it shares B's rays and every
+          // respawn) can score best: console replays, 3 of 42 (9-52 steps off). Their initial rays (A's) tell them apart: the
+          // lock stands only when its seed's initial rays are the best of the 64 seeds either side of it, else the wide window
+          const J = chgSearch.joint, i0 = T0 ? HW.cands.indexOf(T0.seed >>> 0) : -1;
+          if (T0 && J && i0 >= 0) { let bj = i0; for (let i = Math.max(0, i0 - 64); i <= Math.min(HW.cands.length - 1, i0 + 64); i++) if (J[i] > J[bj]) bj = i;
+            if (bj !== i0) { tr.near = (HW.cands[bj] >>> 0).toString(16); break; } }
+          if (T0 && T0.sc >= FBS_MIN && q >= RH) { res0 = r2; rat = q; sh = d; hist = HW; break; }
+          // (the pictures one frame early only after a strong miss: replays, the one shifted lock had 4405 / 1.47x as placed;
+          // a weak or a same-stream miss goes straight to the wide window, ~2 s sooner)
+          if (!(T0 && T0.sc >= FBS_MIN)) break; } }
+      if (!hist) for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
         const r2 = await chgSearch(d ? chgMaps(fbShiftG(G, d), cen, CHG_N) : maps, { cands: wc, stream: true }), q = rOf(r2);
         tries.push({ d, best: r2.top[0] && Math.round(r2.top[0].sc), ratio: +q.toFixed(2), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) });
         if (r2.top[0] && (!res0 || r2.top[0].sc > res0.top[0].sc)) { res0 = r2; rat = q; sh = d; }
         if (r2.top[0] && r2.top[0].sc >= FBS_MIN && q >= RQ) break; }
-      const ok = res0 && res0.top[0].sc >= FBS_MIN && rat >= RQ;
+      const ok = res0 && res0.top[0].sc >= FBS_MIN && (hist || rat >= RQ);
       CHG.info.stream = { from: (SW.seed >>> 0).toString(16).padStart(8, '0'), hi: SW.hi || FBS_HI, ms: Math.round(performance.now() - t0s), locked: !!ok, tries };
+      if (HW) CHG.info.stream.histWin = { sec: HW.sec, n: HW.n, seeds: HW.cands.length, ranges: HW.ranges.length, locked: !!hist };
       if (weak) CHG.info.stream.weak = { ratio: SW.ratio, score: SW.score, alt: SW.alt };
       if (!CHG.replay) slog('chargeStream', CHG.info.stream);
       if (!ok) return null;
       const N0 = near(res0.top[0].seed); res0.top = [res0.top[0]].concat(res0.top.slice(1).filter(x => !N0.has(x.seed >>> 0)));
       res0.stream = { steps: fbStreamSteps(res0.top[0].seed, SW), ratio: +rat.toFixed(2), shift: sh }; CHG.info.stream.steps = res0.stream.steps;
+      if (hist) { res0.stream.hist = true; if (hsec != null) CHG.info.stream.off = Math.round(res0.stream.steps - FBH_RATE * hsec); }
       if (weak) { res0.stream.weak = (SW.seed >>> 0).toString(16).padStart(8, '0'); if (!CHG.replay) slog('fbWeakProven', { weak: res0.stream.weak, seed: (res0.top[0].seed >>> 0).toString(16).padStart(8, '0'), steps: res0.stream.steps, ratio: res0.stream.ratio }); }
       if (sh) { CHG.trig.t += sh * FRAME; CHG.trig.n -= sh; CHG.G = fbShiftG(G, sh); }    // (as a shift re-read: the fit and the clock on the shifted pictures)
       return res0;
@@ -675,7 +695,8 @@ function chgSearch(maps, opts) {
           parts.push(call(W[k], { type: 'joint', e, s0: S0, sc: new Float32Array(2 * idx.length), offs: P.offs }, 'joint').then(r => r.sc.forEach((v, i) => { sc[idx[i % idx.length]] += v; }))); }
         await Promise.all(parts);
         const order = cs.map((x, i) => i).sort((a, b) => sc[b] - sc[a]); times.joint = Math.round(performance.now() - tj);
-        stage2(order.slice(0, CHG_M2).map(i => cs[i]));
+        if (opts.keepJoint) chgSearch.joint = sc;     // v119: the history window's initial-ray scores (streamTry's same-stream check)
+        stage2(order.slice(0, opts.m2 || CHG_M2).map(i => cs[i]));
       } catch (err) { fail(String(err && err.message || err)); } };
     const finish = async () => {
       if (finishing) return; finishing = true; times.stage1 = Math.round(performance.now() - tS);
