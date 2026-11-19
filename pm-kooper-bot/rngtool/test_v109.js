@@ -24,7 +24,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set, presses) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(([s, pr]) => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify(s)); if (pr) localStorage.setItem('tot-presses', JSON.stringify(pr)); } catch (e) {} }, [set || { prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'charge', duproute: 'charge' }, presses || null]); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v119', 'page version v109');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v120', 'page version v109');
 
   // ---- 1. the solid window (synthetic jr0701 T4 shape)
   const s1 = await p.evaluate(() => {
@@ -153,9 +153,9 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
       return out;
     });
     console.log('6', JSON.stringify(r).slice(0, 600));
-    ok(r.works === true && /✓/.test(r.msg) && /working/.test(r.msg), '6. a Final Bowser press on a working frame: the Press check row in green with ✓ ("' + r.msg.slice(0, 80) + '")');
-    ok(r.src === 'press' && Math.abs(r.hit - 769.7) < 1e-9 && /working frame ✓/.test(r.state.text), '6. after the route moves on the strip keeps the window and the frame hit: "' + r.state.text.slice(0, 90) + '"');
-    ok(r.fail === false && /failing frame ✗/.test(r.state2.text), '6. a press off the window (fb0709 T2 794 on 791-792): red ✗');
+    ok(r.works === true && /Last press · on time ✓/.test(r.msg), '6. a Final Bowser press on a working frame: the Press check row in green with ✓ ("' + r.msg.slice(0, 80) + '")');
+    ok(r.src === 'press' && Math.abs(r.hit - 769.7) < 1e-9 && /works ✓/.test(r.state.text), '6. after the route moves on the strip keeps the window and the frame hit: "' + r.state.text.slice(0, 90) + '"');
+    ok(r.fail === false && /fails ✗/.test(r.state2.text), '6. a press off the window (fb0709 T2 794 on 791-792): red ✗');
     ok(r.after === 'plan', '6. the next plan replaces it');
     const want = ['T1: Charge; Do Nothing', 'T3: Charge; Bomb',     // (v110: the Duplighosts Charge route is the default)
        'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T2: Time Out; Spiny Flip', 'T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', 'T3: Jammin\' Jelly; Do Nothing', 'T4: Charge; Do Nothing - Block Wave', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7'];

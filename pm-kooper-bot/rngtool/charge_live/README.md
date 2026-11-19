@@ -1,3 +1,27 @@
+# Time Out Timer v120: no beeps when the best frame comes too soon for them; the last-press table cut to what matters; T5 "Peach Beam; Do Nothing" (Nov 19)
+
+## 1. Too soon for the beeps (zwPlan, `ZW_SOON_GAIN` 0.05)
+Console log 18:32 (Hallway Time Out): the plan came 1.0 s after the shine that narrowed the states, 1.44 s before its press.
+The Lead (1.5 s) left no room for 3 beeps before a better window 0.27 s earlier, so v119 beeped a 1-frame frame at 48% (the
+runner pressed 1.27 late, failed). The runner: "if there's not enough time for the 3 beeps to fit, i'd better just press it when
+i see it then. it's faster that way." zwPlan now also scores the frames from now up to the earliest beepable one; when the best
+of them beats the reachable plan by 5 points or more it says *no edge: the best frame comes too soon for 3 beeps* and beeps
+nothing. Replay of the 18:32 log: the too-soon frame 57%, the reachable one 43%: no beeps. (Not for a Jr. Troopa plan made
+before its screen, nor Goombario's box window.)
+Why the strip showed a "3" there: the strip's window outside the planned frames is the most likely state's; across the
+13 tracked states that frame worked for fewer. 18:31's plan (frame 488, 75% with the press spread) had no 3-frame window in
+reach under the states: 488 worked for 99.7% of them (replayed).
+
+## 2. The last-press table (pressTable)
+"Last press · 1 frame late" (no label, no frame number), green ✓ when the frame hit works, red ✗ when it fails, never "?".
+A gridded table with Window and Chance only (Frame and Expected dropped: the badge says whether it worked, the Chance row
+the odds); rows with nothing known are left out. The strip line after a press: "works ✓ (works 60% · fails 40%)".
+
+## 3. Console log 18:39 (Final Bowser, v119)
+T1 fresh lock at doubt 43%, a 62% 1-frame plan, pressed 1.8 late (failing frame); T2 carried, 55% 1-frame, on time, Bowser hit
+(the 45%): the carry gone, no T3 plan. **T4 locked by the gap history** (v119's first console lock: 2773 steps in 37.4 s, offset
+647, the 634-676 family; d=-1 at 1.82x), an 82% 4-frame plan, on time, worked. T6 1 frame late on a working frame.
+
 # Time Out Timer v119: the Final Bowser gap history; between two Charges the RNG runs 56.9 steps a second plus a fixed amount (Nov 19)
 
 The runner asked whether the page could keep a database of earlier observations instead of relying on the live read alone.

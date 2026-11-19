@@ -72,8 +72,8 @@ const logs = n => (globalThis.__slog || []).filter(x => x[0] === n).map(x => x[1
       T.leverPressNote('Final Bowser T2, Do Nothing', 0.83, 'fb14'); const b2 = m(); const n = JSON.parse(localStorage.getItem('tot-presses') || '[]').length;
       T.leverPressNote('Final Bowser T1, the A that skips Cloud Nine\'s message', -1.26, 'fb14sk'); return { a, b: b2, c: m(), n, ver: window.__tot.VERSION }; });
     ok(/1\.1 frames late/.test(r.a), 'before: the row shows the stored generic press (1.1 late): ' + r.a.slice(0, 60));
-    ok(/Last press \(Final Bowser T2, Do Nothing\): 0\.8 frames late/.test(r.b) && r.n === 2, 'a Final Bowser T2 press on the beeps: "' + r.b.slice(0, 70) + '", the generic presses untouched (' + r.n + ')');
-    ok(/skips Cloud Nine's message\): 1\.3 frames early/.test(r.c), 'the T1 skip: ' + r.c.slice(0, 90));
+    ok(/Last press · 0\.8 frames late/.test(r.b) && r.n === 2, 'a Final Bowser T2 press on the beeps: "' + r.b.slice(0, 70) + '", the generic presses untouched (' + r.n + ')');
+    ok(/Last press · 1\.3 frames early/.test(r.c), 'the T1 skip: ' + r.c.slice(0, 90));
     ok(/^v1(0[2-9]|[1-9]\d)$/.test(r.ver), 'page version v102+');
     // 6. T6 (console log fb0449): the countdown is the runner's (3 beeps 500 ms apart, lead 1.5 s), and a passed frame is planned again
     const C = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_v102.json'), 'utf8')), R6 = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'fb2_t6dn.json'), 'utf8')).emulatorCheck[0];

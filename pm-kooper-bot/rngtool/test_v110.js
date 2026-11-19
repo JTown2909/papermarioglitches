@@ -31,7 +31,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       for (let i = 0; i < 8; i++) X.leverAdd('jr', 0); out.back = X.leverBias('jr');
       return out; });
     console.log('0', JSON.stringify(r));
-    ok(r.ver === 'v119', '0. page version v110');
+    ok(r.ver === 'v120', '0. page version v110');
     ok(r.set.off === '-4.5' && r.set.voff === '-4' && r.set.zoom === '1.5' && r.set.duproute === 'charge' && r.set.dupgoal === 'run2', '0. fresh page: the runner\'s tuned defaults (' + JSON.stringify(r.set) + ')');
     ok(r.set.jrfix === '0' && r.set.pfix === '0' && r.set.fbnbroute === 'cap', '0. the Settings corrections default to 0 (fine-tune on top of the built-in values)');
     ok(r.fix.jr === -0.5 && r.fix.hw === 0 && r.fix.dup === 0 && r.fix.fb14 === 0, '0. built-in read corrections per fight: Jr. -0.5, Hallway / Duplighosts / Final Bowser 0');
@@ -66,7 +66,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       fr(150, true); out.early = T.step();          // the bar up from T4 (Bowser's turn), no hide yet
       fr(60, false); fr(10, true); out.mid = T.step();   // the Peach Beam's hide, the bar back only briefly
       fr(40, true); out.end = T.step();
-      const li = [...document.querySelectorAll('#route-list li')].find(l => /T5: Peach Beam - Danger/.test(l.textContent)); out.star = li ? li.querySelector('.rngstar') && li.querySelector('.rngstar').textContent : 'no li';
+      const li = [...document.querySelectorAll('#route-list li')].find(l => /T5: Peach Beam; Do Nothing - Danger/.test(l.textContent)); out.star = li ? li.querySelector('.rngstar') && li.querySelector('.rngstar').textContent : 'no li';
       return out; });
     console.log('2', JSON.stringify(r));
     ok(r.order[0] + 1 === r.order[1] && r.order[1] + 1 === r.order[2], '2. T4 -> T5 (Peach Beam) -> T6 steps');

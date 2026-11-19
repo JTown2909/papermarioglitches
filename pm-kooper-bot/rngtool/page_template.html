@@ -423,6 +423,7 @@ function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) 
  * series that has begun; only stopBeeps cuts one, with a visible STOP, and only with BEEP_STOP_MS or more left. */
 BEEP_GUARD = true;
 const BEEP_STOP_MS = 400, BEEP_QUIET_MS = 800;
+const ZW_SOON_GAIN = 0.05;     // v120: a too-soon frame this much better than the reachable plan: no beeps (zwPlan)
 function playBeeps(tPress, n, g) {
   n = n || nBeeps(); g = g || num('gapms'); const now = performance.now(), t1 = tPress - (n - 1) * g, f = beepsInFlight(now);
   if (f && Math.abs(f.tEnd - tPress) < 5) return true;      // the same series
@@ -563,7 +564,7 @@ const ENDGAME = [
     // v110 (cc, the runner): T5 is a tracked step (no star, nothing to time): entered when T4's screen closes, the T6 reader
     // disarmed on it (fb0722: the Peach Beam's flash read as T6's Charge), left for T6 when the bar comes back after the Peach
     // Beam's hide (fb14_live.js fb14T5Watch)
-    { text: 'T5: Peach Beam - Danger', steps: [{ label: 'Peach Beam: nothing to time (the T6 reader waits until the Peach Beam is over)', cat: 'M', fb5: true }] },
+    { text: 'T5: Peach Beam; Do Nothing - Danger', steps: [{ label: 'Peach Beam: nothing to time (the T6 reader waits until the Peach Beam is over)', cat: 'M', fb5: true }] },
     // v93 (runner, log a87486a0: "there is no turn 6 close call trigger"): T6 has its own step. On v92 the route went from
     // T4's Do Nothing straight to the T7 Power Bounce step (its pre held the T6 Charge); nothing told the runner to hold the
     // "+3" popup, which he closed on k 75 at once, 0.14 s before the T6 lock: no popup beep could be made
@@ -1553,6 +1554,17 @@ function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the f
   // coin now fits the roll states too well: then a frame must work under both, and a coin that favours the roll is no edge
   if (!C.none && typeof hwHpCheck === 'function') { const H = hwHpCheck(C, PD); if (H) { st.msg = H.msg + ' ' + F.normal + '.'; slog('zwNoEdgeHp', H.log); cancelBeeps(); render(); return true; } }
   if (C.none === 'window') { st.msg = 'No ' + WTYPE[type].name + ' window in the next ' + num('zwwin') + ' s of extra wait for most of the ' + S.list.length + ' possible states. ' + F.normal + ', raise Max extra wait (Settings, Advanced), or pick another window.'; slog('zwNoWindow', { type, parts: S.list.length }); render(); return true; }
+  // v120 (the runner, Hallway 18:32: the plan beeped a 48% 1-frame window 0.27 s after a better window the 3 beeps could no
+  // longer reach: "if there's not enough time for the 3 beeps to fit, i'd better just press it when i see it then. it's faster
+  // that way"): the frames from now up to the earliest beepable one are scored too; when the best of them beats the reachable
+  // plan by ZW_SOON_GAIN or more, no beeps: press normally
+  if (!win && early == null && !C.none) {
+    const back = Math.max(0, Math.min(from - S.h - 1, Math.ceil((earliestPress(now) - now) / rate)));
+    if (back > 0) { const C0 = zwChoose(S.list, from - back, W + back, PD, PROF(), adj, null, null);
+      if (!C0.none && C0.target < from && C0.p != null && C.p != null && C0.p >= C.p + ZW_SOON_GAIN) {
+        st.msg = 'No edge: the best frame (' + Math.round(100 * C0.p) + '%, ' + C0.w.length + '-frame window) comes too soon for ' + nBeeps() + ' beeps; the next one is only ' + Math.round(100 * C.p) + '%. ' + F.normal + '.';
+        slog('zwTooSoon', { soon: C0.target, pSoon: +C0.p.toFixed(3), winSoon: C0.w.length, target: C.target, p: +C.p.toFixed(3), win: C.w.length, from }); cancelBeeps(); render(); return true; } }
+  }
   const lb = leverBias(leverKey(PROF().id));      // v87: a lever's own correction (none on the zero-wait levers so far)
   // v87 (console log 2f22d4dc): no lever on this route is pressed more than a few seconds after its screen opens; an early
   // floor that pushes the press more than ZW_MAX_AHEAD past the frames the page is at is a wrong frame base, not a wait: no
@@ -1902,7 +1914,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v119';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v120';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
@@ -2100,7 +2112,7 @@ function drawMarker(ctx, M, x, y, gold, white) {
 }
 function stripState(d) {
   const now = performance.now(), P = st.plan, sc = st.seedChange && now - st.seedChange.t < 4000 ? st.seedChange : null;
-  if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press (' + d.label + '): frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? (d.p != null && d.p < MARK_SOLID ? 'a working frame for ' + Math.round(100 * d.p) + '% of the states ✓ (not certain)' : 'a working frame ✓') : 'a failing frame ✗') + '. Shown until the next plan beeps.' };     // v109
+  if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press · frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? 'works ✓' + (d.p != null && d.p < MARK_SOLID ? ' (works ' + Math.round(100 * d.p) + '% · fails ' + (100 - Math.round(100 * d.p)) + '%)' : '') : 'fails ✗') + '. Shown until the next plan beeps.' };     // v109
   if (!PROF().rolls.length) return { cls: 'wait', text: 'Nothing to time on this step: just play it.' };
   if (P && P.stopped) return { cls: 'stale', text: (zw.dead ? 'Seed lost' : 'Beeps stopped') + ' – the coin ruled the planned frame out. Press normally.', overlay: zw.dead ? 'Seed lost – beeps stopped' : 'Beeps stopped' };
   if (P && d.stale) return { cls: 'stale', text: 'Seed lost – showing old prediction. Press normally.', overlay: 'Seed lost – old prediction' };
@@ -2777,29 +2789,28 @@ function leverPressNote(label, err, id, works) {      // v102: a Final Bowser le
  * the Final Bowser levers) is shown in this one layout. The colour follows the pressed frame's realistic chance q (the press
  * spread and the seed doubt, as the strip's shading): green at MARK_SOLID+, red under 0.2, yellow between (a coin flip). A
  * known outcome (the Close Call's dodge or hit) adds a Result row and colours by it. */
+const PT_CELL = 'border:1px solid color-mix(in srgb, var(--ink) 35%, transparent); padding:3px 10px';     // v120: a gridded table (the runner: "like you would see in excel")
 function pressTable(o) {
   const pc = x => Math.round(100 * x) + '%', esc = x => String(x).replace(/[<>&]/g, '');
-  const e = o.err, ae = Math.round(Math.abs(e) * 10) / 10, when = Math.abs(e) < 0.5 ? 'on time' : ae + ' frames ' + (e > 0 ? 'late' : 'early');
-  const fTxt = o.f != null ? 'frame ' + o.f + ' · ' : '';
+  const e = o.err, ae = Math.round(Math.abs(e) * 10) / 10, when = Math.abs(e) < 0.5 ? 'on time' : ae + (ae === 1 ? ' frame ' : ' frames ') + (e > 0 ? 'late' : 'early');
   // a press on an all-4 frame (Duplighosts): where it landed, not early / late against a beep it did not aim at (d1416)
   const when4 = o.on4 ? (o.hit4 ? 'hit the 4' : 'on the 4 (edge)') + (o.off4 ? ', not the beeped frame (' + ae + ' frames ' + (e > 0 ? 'after' : 'before') + ' it)' : '') : null;
   const winTxt = o.w ? (o.w.start === o.w.end ? 'frame ' + o.w.start : o.w.start + '-' + o.w.end) : null;
   const win = o.edge ? 'on the edge of the window' + (winTxt ? ' ' + winTxt : '') + ' (the video cannot tell)' : o.inWin == null ? (winTxt ? 'window ' + winTxt : '–') : (o.inWin ? 'inside' : 'outside') + (winTxt ? ' (window ' + winTxt + (o.target != null && o.w && o.w.start !== o.w.end ? ', aimed ' + Math.round(o.target) : '') + ')' : '');
-  const frame = o.on4 ? (o.hit4 ? 'an all-4 frame (white)' : 'beside an all-4 frame (the video cannot tell)') + (o.off4 ? ', not the beeped frame' : '') : o.works == null ? '–' : o.works ? 'working (green)' : o.likely ? 'failing (red) by the video; a working one is within ' + PRESS_TOL + ' frames' : 'failing (red)';
   let q = o.q != null ? Math.max(0, Math.min(1, o.q)) : o.works == null ? null : o.works ? (o.p != null ? o.p : 1) : 0, qOf = o.q != null ? 'this frame' : 'the plan';
   const goal = o.on4 && o.hit4 ? 'all 4 copy' : (o.goal || 'works'), fail = o.failWord || 'fails';
   const chance = q == null ? '–' : goal + ' ' + pc(q) + ' · ' + fail + ' ' + pc(1 - q) + ' (' + qOf + (o.p != null && qOf === 'this frame' && Math.abs(o.p - q) >= 0.01 ? '; the plan was ' + pc(o.p) : '') + ')';
-  let good = q == null ? null : q >= MARK_SOLID ? true : q < 0.2 ? false : null;
-  if (o.on4 && o.hit4) good = true;
-  const expect = o.on4 && o.hit4 ? 'all 4 copy' : o.on4 ? 'all 4 copy, or 3+ (the video cannot tell the frames apart)' : q == null ? '–' : q >= MARK_SOLID ? goal : q < 0.2 ? fail.replace(/s$/, '') : 'coin flip (' + goal + ' ' + pc(q) + ')';
-  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win], ['Frame', frame], ['Chance', chance], ['Expected', expect]];
+  // v120 (the runner: "the last press - 1 frame late in green should be the thing saying if it worked or not"; no "?"): the
+  // badge is green when the frame hit works, red when it fails; the chance row carries the odds
+  let good = o.on4 ? (o.hit4 ? true : null) : o.works != null ? !!o.works : q == null ? null : q >= MARK_SOLID ? true : q < 0.2 ? false : null;
+  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win], ['Chance', chance]].filter(([, v]) => v !== '–');     // v120: no empty rows
   // the badge keeps the press's colour (a hit on a coin-flip plan is not a bad press); the Result row says what happened
   if (o.outcome) rows.push(['Result', o.outcome === 'dodge' ? 'dodged' : o.outcome === 'hit' ? 'hit' + (q != null && q > 0 && q < 1 ? ' (the ' + pc(1 - q) + ')' : '') : o.outcome]);
   const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--run2)', ink = good === null ? '#1b1404' : '#fff';
-  const mark = good === true ? ' ✓' : good === false ? ' ✗' : ' ?';
-  const head = 'Last press' + (o.label ? ' (' + esc(o.label) + ')' : '') + ': ' + fTxt + (when4 || when) + (o.onBeeps === false && !o.on4 ? ' (not on the beeps)' : '');
+  const mark = good === true ? ' ✓' : good === false ? ' ✗' : '';
+  const head = 'Last press · ' + (when4 || when) + (o.onBeeps === false && !o.on4 ? ' (not on the beeps)' : '');
   const html = '<span style="color:' + ink + '; background:' + col + '; font-weight:700; font-size:1.25em; display:inline-block; padding:4px 10px; border-radius:6px; margin-bottom:4px">' + head + mark + '</span>'
-    + '<table style="border-collapse:collapse; margin:2px 0 4px; font-size:0.95em">' + rows.map(([k, v]) => '<tr><td style="padding:1px 10px 1px 0; opacity:0.75">' + k + '</td><td style="padding:1px 0">' + esc(v) + '</td></tr>').join('') + '</table>';
+    + '<table style="border-collapse:collapse; margin:2px 0 6px; font-size:0.95em">' + rows.map(([k, v]) => '<tr><td style="' + PT_CELL + '; font-weight:600; background:color-mix(in srgb, var(--ink) 8%, transparent)">' + k + '</td><td style="' + PT_CELL + '">' + esc(v) + '</td></tr>').join('') + '</table>';
   return { html, good, head, text: head + mark + ' ' + rows.map(([k, v]) => k + ': ' + v).join(' / ') };
 }
 const pressGoal = pr => pr && pr.short ? (/Close Call/.test(pr.short) ? 'dodge' : pr.short.replace(/ works$/, '')) : 'works';

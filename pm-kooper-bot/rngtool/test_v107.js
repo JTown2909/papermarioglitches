@@ -13,7 +13,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   const r = await p.evaluate(() => { const L = window.__tot.v107.likelyText;
     return { v: window.__tot.VERSION, one: L({ p: 0.569, pp: 0.965, win: 1 }), three: L({ p: 0.83, pp: 0.97, win: 3 }), pb: L({ p: 0.89, p4: 0.6, win: 7 }, '6+'), none: L({ pp: 0.9 }),
       jrfix: !!document.getElementById('s-jrfix'), jrfixDef: document.getElementById('s-jrfix') && document.getElementById('s-jrfix').value }; });
-  ok(r.v === 'v119', 'page version v107');
+  ok(r.v === 'v120', 'page version v107');
   ok(r.one === 'LIKELY 57% with your press spread · 1 FRAME – coin flip', '1-frame window: "' + r.one + '"');
   ok(r.three === 'LIKELY 83% with your press spread', '3-frame window: "' + r.three + '"');
   ok(r.pb === 'LIKELY 89% (6+ 60%) with your press spread', 'Power Bounce: "' + r.pb + '"');
@@ -22,7 +22,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   // the Final Bowser lever press stays on the Press check row after the generic screen check, and shows in the T1-T4 panel
   const fbp = await p.evaluate(() => { const T = window.__tot, i = T.RT().findIndex(s => s.fb14 === 2); T.setStep(i); T.V.pressNote = 'No beep plan was running.'; T.leverPressNote('Final Bowser T2, Do Nothing', -1.06, 'fb14');
     return { row: document.getElementById('press-msg').textContent, i }; });
-  ok(fbp.i >= 0 && /Last press \(Final Bowser T2, Do Nothing\): 1\.1 frames early/.test(fbp.row), 'Final Bowser press on the Press check row over the generic note: "' + fbp.row.slice(0, 90) + '"');
+  ok(fbp.i >= 0 && /Last press · 1\.1 frames early/.test(fbp.row), 'Final Bowser press on the Press check row over the generic note: "' + fbp.row.slice(0, 90) + '"');
   const jr = fs.readFileSync(path.join(__dirname, 'charge_live', 'jr_live.js'), 'utf8'), fb = fs.readFileSync(path.join(__dirname, 'charge_live', 'fb14_live.js'), 'utf8');
   ok((jr.match(/num\('jrfix'\)/g) || []).length === 1 && (jr.match(/jrFix\(\)/g) || []).length === 3 && !/jrfix|jrFix/.test(fb), 'jrfix read by the Jr. press read and carry only (v110: through jrFix, the built-in value + the setting), never by Final Bowser');
   ok(!errs.length, 'no page errors ' + errs.join(' | '));
