@@ -743,12 +743,18 @@ function jrStartFrom(k, seed, qs, qw) {
  * T4 Bomb 160-162, both on every fight of that log; after a Close Call the menu after a dodge, JRS() next) + the beep
  * lead + 10. The doubt and edge rules are zwPlan's; a lock that lands later re-scores it (zwTick, "Seed changed"). */
 const JR_MENU_CHG = 110, JR_MENU_BOMB = 160;
+/* v120 (console 18:55, the runner: "i pressed early because there was a huge 6 frame + purple window"): the floor was the
+ * menu gap + the beeps' 1.5 s lead + 10 frames, so a plan made before the screen (whose beeps already have their lead) never took
+ * the frames the screen's first 1.8 s offer. T2 / T3 Close Calls on that log: the runner confirmed on a 5+ run at 165 frames after
+ * the Charge (the floor 165) and 206 after the Syrup (the floor 215); the plans beeped 1.6 / 1.4 s later windows. The lead is now
+ * left to the beeps (earliestFrame); the floor keeps JR_FLOOR_PAD (1 s) for reaching the screen. */
+const JR_FLOOR_PAD = 30;
 function jrPlanFloor() {
   if (!(zw.on && zw.fight === 'jr') || JRT.k < 1 || JRT.k >= JRS().length || !jrSeqProf(JRS()[JRT.k])) return null;
   const k = JRT.k, ps = JRS()[k - 1], prev = JRT.inputs.filter(x => x.k === k - 1).pop();
   if (!prev || prev.c == null || !ps) return null;
   const gap = ps.menu ? ps.menu : ps.charge ? JR_MENU_CHG : ps.next ? ps.next : ps.id === 'jr_bomb' ? JR_MENU_BOMB : null;
-  return gap == null ? null : prev.c + gap + Math.ceil(earliestPress(0) / zw.rate) + 10;
+  return gap == null ? null : prev.c + gap + JR_FLOOR_PAD;
 }
 function jrEarlyPlan(t) {
   if (V.wasOn || !jrZw() || JRT.k >= JRS().length || PROF().id !== jrSeqProf(JRS()[JRT.k]) || PROF().lever === 'cancel' || jrPlanFloor() == null) return;   // the screen up: autoPlan as before
