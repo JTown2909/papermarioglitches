@@ -1560,7 +1560,7 @@ function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the f
   // plan by ZW_SOON_GAIN or more, no beeps: press normally
   // (Time Out only: on Jr. Troopa's levers the blind odds are high and a too-soon better frame is common: the j1729 T7 replay
   // would lose a 75% plan to a 67.5% blind press)
-  if (!win && early == null && !C.none && PROF().id === 'timeout') {
+  if (!win && early == null && !C.none && PROF().id === 'timeout' && !window.__noSoon) {     // (__noSoon: tests of other rules)
     const back = Math.max(0, Math.min(from - S.h - 1, Math.ceil((earliestPress(now) - now) / rate)));
     if (back > 0) { const C0 = zwChoose(S.list, from - back, W + back, PD, PROF(), adj, null, null);
       if (!C0.none && C0.target < from && C0.p != null && C.p != null && C0.p >= C.p + ZW_SOON_GAIN) {
