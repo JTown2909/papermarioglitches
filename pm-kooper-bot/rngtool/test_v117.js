@@ -78,7 +78,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     const L = PB[name], r = await replay(L, { plan: L.plan.t, pb: L.pb }), P = r.plan || {}, m = P.mix || {};
     let sw = 0, w6 = 0, w6o = 0; for (const q of r.pb || []) { sw += q.w; if (q.cls === 6) w6 += q.w; if (q.old === 6) w6o += q.w; }
         console.log(name, JSON.stringify({ prof: P.prof, p: m.p, p4: m.p4, pp4: m.pp4, doubt: m.doubt, win4: m.win4, mk: P.mk, live: L.plan, seen: L.seen, at: L.pb, share6: sw ? +(w6 / sw).toFixed(3) : null, share6old: sw ? +(w6o / sw).toFixed(3) : null}));
-    ok(P.prof === 'jrpb5p', '2. ' + name + ': T7 plans on the partnerless table (' + P.prof + ')');
+    ok(P.prof === 'jrpb5p', '2. ' + name + ': T7 plans on the partnerless table (' + P.prof + (P.msg ? ' / ' + P.msg : '') + ')');
     if (L.seen.bounces < 6) {
       ok(m.p4 != null && m.p4 < 0.8 && P.mk !== 'star', '2. ' + name + ' (clip: ' + L.seen.bounces + ' bounces): the 6 is no longer planned as confident (p4 ' + (m.p4 && m.p4.toFixed(2)) + ', marker ' + P.mk + '; v116 live: p4 ' + L.plan.p4 + ', doubt 0)');
       ok(w6o / sw > 0.99 && w6 / sw < 0.9, '2. ' + name + ': at the runner\'s press (' + L.pb + ') v116\'s table gave every state 6+ (' + (w6o / sw).toFixed(2) + '); jrpb5p gives ' + (w6 / sw).toFixed(2) + ' (the clip: 5)');

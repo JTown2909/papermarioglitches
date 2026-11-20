@@ -134,6 +134,25 @@ const fb2Pic = t => 16 + (t - CHG.trig.t) / fb2Rate();                  // logic
 // the press for logic frame k: as Time Out's (zwPlan: 4.7 frames before the picture of that frame, minus the capture
 // delay, plus the runner's offset)
 const fb2PressT = k => CHG.trig.t + (k - 13 - 4.7 + num('off')) * fb2Rate() - num('vlag');
+/* v120 (console 18:47, the backup T7's Charge: 6.7 s to lock, then no edge): the backup T7 Charge was searched on the T6
+ * candidates (the Peach Beam carry, FB14.t6), which held no T7 seed. Between the T6 and T7 Charges the RNG runs 56.9 steps a
+ * second plus 99-117 (3 console pairs, Nov 17-19: 1329 / 21.29 s, 1345 / 21.90 s, 1344 / 21.67 s; the v119 gap rule, its
+ * 98-138 family): the T6 lock's seed and trigger are kept, and the backup T7 searches FB2_T7_OFF steps around that first. */
+const FB2_T7_OFF = [40, 180], FB2_T7_SEC = [8, 60];
+var FB2_T6 = null;
+function fb2T7CandsFrom(seed, sec) {
+  if (!(sec >= FB2_T7_SEC[0] && sec <= FB2_T7_SEC[1])) return null;
+  const lo = Math.max(1, Math.round(FBH_RATE * sec + FB2_T7_OFF[0])), hi = Math.round(FBH_RATE * sec + FB2_T7_OFF[1]), out = [];
+  let x = seed >>> 0; for (let i = 0; i < lo; i++) x = fbAdv(x);
+  for (let n = lo; n <= hi; n++) { out.push(x >>> 0); x = fbAdv(x); }
+  return out;
+}
+function fb2T7Cands() {
+  if (!FB2_T6 || !CHG.trig) return null;
+  const sec = (CHG.trig.t - FB2_T6.t) / 1000, out = fb2T7CandsFrom(FB2_T6.seed, sec);
+  slog('fb2T7Cands', { from: (FB2_T6.seed >>> 0).toString(16).padStart(8, '0'), sec: +sec.toFixed(2), cands: out ? out.length : 0 });
+  return out;
+}
 /* the lock: hypotheses from the worker's (pattern, q) pairs */
 function fb2Lock(res) {
   const P = fb2Patterns(), hy = res.fb2 && res.fb2.hyps; if (!hy || !hy.pairs.length) { FB2.why = 'no hypotheses'; fb2Show(); return; }
@@ -146,6 +165,7 @@ function fb2Lock(res) {
   const Hk = H.length > FB2_MAXH ? H.filter((h, i) => i % Math.ceil(H.length / FB2_MAXH) === 0) : H;   // too many: an even sample
   Hk.forEach(h => { h.w = 1 / Hk.length; });
   Object.assign(FB2, { on: true, hyps: Hk, pairs: hy.pairs.length, best: hy.best, kObs: null, plan: null, plans: [], t7: null, taps: [], vis: [], visFrom: null, tLock: performance.now() });
+  if (!fb2BackupOn() && res.top && res.top[0] && typeof CHG !== 'undefined' && CHG.trig) FB2_T6 = { seed: res.top[0].seed >>> 0, t: CHG.trig.t };     // v120: the backup T7's search starts from it
   slog('fb2Lock', { pairs: hy.pairs.length, hyps: H.length, states: new Set(H.map(h => h.s + ':' + h.nc)).size, kSeen: FB2.kSeen });
   // v97: the lever is Lakilester's Do Nothing (the popup A plays no part): a confirm seen before the lock is applied now
   if (FB2.pObs != null) { FB2.plan = { none: 'the lock came after the Do Nothing confirm' }; fb2SetP(FB2.pObs); } else fb2PlanP();

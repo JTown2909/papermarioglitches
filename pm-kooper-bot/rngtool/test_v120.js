@@ -49,6 +49,22 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     ok(o.soon && !o.plan && o.soon.pSoon >= o.soon.p + 0.05 && o.soon.soon < o.soon.from && /too soon for 3 beeps/.test(o.msg || ''), '3. 18:32 Time Out: no beeps, the best frame came too soon (' + JSON.stringify(o.soon) + ' | ' + (o.msg || '').slice(0, 120) + ')');
     await q.close();
   }
+  // 4. the backup T7 Charge from the T6 lock's seed (console 18:47 and two Nov 17 pairs): the candidates hold the T7 seed and lock it fast
+  { const U = '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10167305f887', L7 = [['b320f38f-pm-rng-log-2026-11-19_18-47-17.json'], ['484e3220-pm-rng-log-2026-11-17_16-12-04.json'], ['935fe013-pm-rng-log-2026-11-17_16-01-44.json']];
+    const q = await open();
+    for (const [fn] of L7) { const f = U + '/' + fn; if (!fs.existsSync(f)) { console.log('skip 4: ' + fn + ' not present'); continue; }
+      const L = JSON.parse(fs.readFileSync(f, 'utf8')), C = L.chargeCaptures, i7 = C.findIndex((c, i) => i > 0 && /^Final Bowser T7/.test(c.stepT) && /^Final Bowser T6/.test(C[i - 1].stepT));
+      const a = C[i7 - 1], c7 = C[i7], sec = (Date.parse(c7.wall) - Date.parse(a.wall)) / 1000;
+      const o = await q.evaluate(async ([c7, s6, sec]) => { const T = window.__tot, ev = T.v111.ev;
+        const cands = ev(`fb2T7CandsFrom(${parseInt(s6, 16)}, ${sec})`); if (!cands) return { none: true };
+        let bin = ''; const u8 = new Uint8Array(new Uint32Array(cands).buffer); for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+        window.__fb2Wide = true; const t0 = performance.now();
+        const r = await T.chgReplay(Object.assign({}, c7, { cands: btoa(bin) }), { maxAlts: 0 }); window.__fb2Wide = null;
+        return { n: cands.length, inC: cands.includes(parseInt(c7.result.seed, 16) >>> 0), state: r.state, seed: r.best && r.best.seed, narrow: r.info.narrow, ms: Math.round(performance.now() - t0) };
+      }, [c7, a.result.seed, sec]);
+      ok(o.inC && o.state === 'locked' && o.seed === c7.result.seed && o.narrow && o.narrow.locked, '4. ' + fn.slice(0, 8) + ' backup T7 (' + sec.toFixed(2) + ' s after T6): ' + o.n + ' candidates from the T6 seed hold ' + c7.result.seed + ', locked by the narrow search in ' + o.ms + ' ms (' + JSON.stringify(o.narrow) + ')');
+    }
+    await q.close(); }
   ok(!errs.length, 'no page errors ' + JSON.stringify(errs.slice(0, 2)));
   await b.close(); srv.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
 })();

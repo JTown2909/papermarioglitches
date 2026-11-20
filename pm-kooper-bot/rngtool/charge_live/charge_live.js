@@ -581,7 +581,7 @@ if (window.__chgDebug) {
     CHG.frames = []; CHG.G = G; CHG.state = 'search'; CHG.tSearch = E ? E.t1 : t1; chgShow();
     if (!CHG.replay) slog('chargeMaps', CHG.info);
     let res;
-    let cands = CHG.replay ? CHG.replay.cands : !E && chgP().id === 'fb2' && typeof fb14T6Cands === 'function' ? fb14T6Cands() : !E && chgP().id === 'fb1' && typeof fb14ChgCands === 'function' ? fb14ChgCands() : null;   // v87: T2 / T4 on the carried stream too
+    let cands = CHG.replay ? CHG.replay.cands : !E && chgP().id === 'fb2' && chgFb2Wide() && typeof fb2T7Cands === 'function' && (CHG.c7 = fb2T7Cands()) ? CHG.c7 : !E && chgP().id === 'fb2' && typeof fb14T6Cands === 'function' ? fb14T6Cands() : !E && chgP().id === 'fb1' && typeof fb14ChgCands === 'function' ? fb14ChgCands() : null;   // v87: T2 / T4 on the carried stream too
     // v89: no carried stream: the window after this attempt's last Charge lock (fb14_live.js fbStreamCands), on its own threshold
     const SW = !E && chgP().id === 'fb1' && typeof fbStreamCands === 'function' ? (CHG.replay ? CHG.replay.stream : typeof fbStreamWin === 'function' ? fbStreamWin() : fbStreamOk() ? FB14.stream : null) : null;   // v91: the window scaled with the time since the kept lock
     if (CHG.rec && cands) CHG.rec.cands = cands;

@@ -6,8 +6,9 @@ The Lead (1.5 s) left no room for 3 beeps before a better window 0.27 s earlier,
 runner pressed 1.27 late, failed). The runner: "if there's not enough time for the 3 beeps to fit, i'd better just press it when
 i see it then. it's faster that way." zwPlan now also scores the frames from now up to the earliest beepable one; when the best
 of them beats the reachable plan by 5 points or more it says *no edge: the best frame comes too soon for 3 beeps* and beeps
-nothing. Replay of the 18:32 log: the too-soon frame 57%, the reachable one 43%: no beeps. (Not for a Jr. Troopa plan made
-before its screen, nor Goombario's box window.)
+nothing. Replay of the 18:32 log: the too-soon frame 57%, the reachable one 43%: no beeps. Time Out only (blind 31%): on
+Jr. Troopa's levers the blind odds are high and a better too-soon frame is common (the j1729 T7 replay would have lost a 75%
+plan to a 67.5% blind press).
 Why the strip showed a "3" there: the strip's window outside the planned frames is the most likely state's; across the
 13 tracked states that frame worked for fewer. 18:31's plan (frame 488, 75% with the press spread) had no 3-frame window in
 reach under the states: 488 worked for 99.7% of them (replayed).
@@ -16,6 +17,14 @@ reach under the states: 488 worked for 99.7% of them (replayed).
 "Last press · 1 frame late" (no label, no frame number), green ✓ when the frame hit works, red ✗ when it fails, never "?".
 A gridded table with Window and Chance only (Frame and Expected dropped: the badge says whether it worked, the Chance row
 the odds); rows with nothing known are left out. The strip line after a press: "works ✓ (works 60% · fails 40%)".
+
+## 3. The backup T7 Charge from the T6 seed (fb2_live.js `fb2T7Cands`)
+Console log 18:47: the backup T7 Charge locked 6.7 s after its rays (then no edge, 19%). Its narrow search used the T6
+candidates (the Peach Beam carry, FB14.t6), which held no T7 seed; the full search at the pictures' frame failed, the shift
+assist found it a frame earlier. The T7 seed was 1344 steps after T6's lock in 21.67 s: 56.9 x 21.67 + 111, the v119 gap rule.
+The two earlier console T6 -> T7 pairs fit too (Nov 17: 1329 steps / 21.29 s, +117; 1345 / 21.90 s, +99). The T6 lock's seed
+and trigger are now kept (FB2_T6) and the backup T7 searches 56.9 x sec + 40..180 (141 seeds) first. Replays: all three lock
+by the narrow search in 0.3-0.5 s of search. T4 -> T6 does not follow the rule (the Peach Beam: 11670 steps in 36.1 s).
 
 ## 3. Console log 18:39 (Final Bowser, v119)
 T1 fresh lock at doubt 43%, a 62% 1-frame plan, pressed 1.8 late (failing frame); T2 carried, 55% 1-frame, on time, Bowser hit
