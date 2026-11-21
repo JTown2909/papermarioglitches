@@ -35,6 +35,8 @@
   rolls of their own, and the 34% Do Nothing plan had no frame at 50%); the T8 countdown said the same. The status line
   and the note now follow the FB2 plan, and the Do Nothing strip colours its best frames (as T7's), so an on-time press on the
   aimed frame no longer reads "on time ✗".
+- **Main T7 goal 6+** (the runner: "need 6 or 7 bounce"): the T7 plan, its edge and the T6 popup's tie-break count 6+ bounces
+  (FB2_GOAL7), not 7 only (the clip 09:39 run: 6+ was 40% with normal timing on the beeped frame, 7+ 27%).
 - test_v123.js; test_console_v96 / test_fb14_v86 pin the new lever rule.
 
 # Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)

@@ -33,7 +33,8 @@ const fb2BackupOn = () => !!(FB2B && FB2B.on);
  * Danger (6 / 6 roll sequences exact with fb2model.py dmg0 18), so 18 + 17 + 16 + 15 + 14 = 80: 5 bounces end the fight */
 const FB2B_DMG0 = 18, FB2B_GOAL = 5;
 // (FB2 is reset when the backup starts, so every FB2 lock / plan while it is on belongs to the backup T7 / T8)
-const fb2Dmg0 = () => (fb2BackupOn() ? FB2B_DMG0 : FB2_DMG0), fb2Goal = () => (fb2BackupOn() ? FB2B_GOAL : 7);
+const fb2Dmg0 = () => (fb2BackupOn() ? FB2B_DMG0 : FB2_DMG0), fb2Goal = () => (fb2BackupOn() ? FB2B_GOAL : FB2_GOAL7);     /* v123 (the runner: "need 6 or 7 bounce"): the main T7 plans for 6+ (6 or 7 both win on the route), the backup T8 for 5 */
+const FB2_GOAL7 = 6;
 /* the step's words (T6 main / the backup T7) */
 const fb2Txt = () => (fb2BackupOn() ? { turn: 'T7', goal: 'a Body Slam / Claw (no wave, Mario in Danger)', blind: 'a Body Slam / Claw about 8%', b: 0.08 } : { turn: 'T6', goal: 'Close Call', blind: 'Close Call about 30%', b: 0.3 });
 const fb2Leg = () => { const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; return s && s.b7 ? 'b7' : s && s.b8 ? 'b8' : 'main'; };
@@ -276,7 +277,7 @@ function fb2PlanK(kAt) {      // kAt (tests): plan as if the earliest beepable f
     let v = 0, w = 0;
     for (const r of sub) for (const [l, wl] of FB2_LAGS) for (const [d, q] of PRESS_ERR) {
       const K = Math.min(FB2_KMAX, Math.max(FB2_KMIN, c.k + d - l)), K2 = c.k + d - l < FB2_KMIN ? FB2_KMAX : K, a = r.A[K2 - FB2_KMIN]; w += r.w * wl * q;
-      if (!a || !a.lucky) continue; const D0 = a.menu + 45, b = fb2PBWin(a.S, a.T + 1, D0, 30, r.h.ph).map(x => (x >= 7 ? 1 : 0));
+      if (!a || !a.lucky) continue; const D0 = a.menu + 45, b = fb2PBWin(a.S, a.T + 1, D0, 30, r.h.ph).map(x => (x >= fb2Goal() ? 1 : 0));
       let best = 0; for (let i = 1; i <= 30; i++) best = Math.max(best, 0.25 * b[i - 1] + 0.5 * b[i] + 0.25 * b[i + 1]); v += r.w * wl * q * best;
     }
     c.p7 = w ? v / w : 0;
@@ -506,7 +507,7 @@ function fb2Show() {
   el.innerHTML = '<b>FB2 T6 → T7</b> (' + FB2.hyps.length + ' RNG states after the rays)' +
     '<br>Do Nothing (Lakilester): ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; blind about ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, ' + likelyText({ p: P.p, win: P.win }) + ' · perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + ')') +
     (FB2.pObs != null && T ? '<br>Seen: Do Nothing on +' + FB2.pObs.toFixed(1) + '; Close Call ' + (T.outcome === 'dodge' ? 'worked (seen)' : T.outcome === 'hit' ? 'missed: Bowser hit (seen)' : pc(T.pLucky)) + '; Bowser ' + Object.entries(T.atk).map(([a, w]) => a + ' ' + pc(w)).join(', ') : '') +
-    (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
+    (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best ' + fb2Goal() + '+ ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press ' + fb2Goal() + '+ bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
 window.__fb2 = { v123: { assume: () => fb2T8Assume() }, v122: { planT7: () => fb2PlanT7(), maxS: FB2_T7_MAXS, budget: FB2_T7_BUDGET }, v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
