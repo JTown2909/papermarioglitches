@@ -340,6 +340,9 @@ function fb2SetK(k, how, k0) {      // the popup A on frame k (k0..k when pictur
  * 0.21, then 13 s of "No edge" at doubt 0.96): the backup T7's outcome is not read (no HP watch there), so the wave / Star Rod
  * share stayed in the doubt. The T8 Power Bounce is only the route when Bowser used a Body Slam or a Claw (Mario in Danger, the
  * charges kept): on the T8 step the page plans on that branch, and says so. */
+/* v123, withdrawn the same day (clip + log 09:26-09:28: Bowser's T7 Claw, Mario 1 HP, the T8 plan 69% at doubt 0.31 on 13 states
+ * that gave 5 bounces on the pressed frame, ~0.4 frame early inside the 3-frame window; the bounce stopped at 4): the doubt the
+ * unread T7 branch kept was the only thing between a wrong T8 state set and a beep at ~100%. Kept for the status line only. */
 function fb2T8Assume() { return typeof fb2BackupOn === 'function' && fb2BackupOn() && typeof RT === 'function' && !!(RT()[routeStep] || {}).b8; }
 function fb2Prune(upto) {
   const T7 = FB2.t7; if (!T7) return [];
@@ -363,7 +366,7 @@ function fb2Prune(upto) {
     if (err > ZW_MAXERR) continue;
     const w = o.w * lw; out.push(Object.assign({}, o, { w, err })); mx = Math.max(mx, w);
   }
-  const nVis = vis.reduce((a, [x, y]) => a + (y - x), 0), keep = out.filter(o => o.w >= mx * ZW_CUT), sum = keep.reduce((a, o) => a + o.w, 0), pL = T7.outcome === 'dodge' || fb2T8Assume() ? 1 : T7.pLucky != null ? Math.max(1e-3, T7.pLucky) : 1, bg = tot0 * (ZW_BG0 / (1 - ZW_BG0) + (1 - pL) / pL) * Math.exp(-ZW_RHO * nVis);
+  const nVis = vis.reduce((a, [x, y]) => a + (y - x), 0), keep = out.filter(o => o.w >= mx * ZW_CUT), sum = keep.reduce((a, o) => a + o.w, 0), pL = T7.outcome === 'dodge' ? 1 : T7.pLucky != null ? Math.max(1e-3, T7.pLucky) : 1, bg = tot0 * (ZW_BG0 / (1 - ZW_BG0) + (1 - pL) / pL) * Math.exp(-ZW_RHO * nVis);
   keep.doubt = keep.length ? bg / (bg + sum) : 1;
   return keep;
 }
@@ -504,7 +507,6 @@ function fb2Show() {
     '<br>Do Nothing (Lakilester): ' + (!P ? '…' : P.none ? 'no plan (' + P.none + '; blind about ' + pc(P.blind) + ')' : 'beep on +' + P.k + ': Close Call, ' + likelyText({ p: P.p, win: P.win }) + ' · perfect press ' + pc(P.pp != null ? P.pp : P.p) + (P.win ? ' (window ' + P.win + ')' : '') + ' (with your press spread ' + pc(P.p) + ')') +
     (FB2.pObs != null && T ? '<br>Seen: Do Nothing on +' + FB2.pObs.toFixed(1) + '; Close Call ' + (T.outcome === 'dodge' ? 'worked (seen)' : T.outcome === 'hit' ? 'missed: Bowser hit (seen)' : pc(T.pLucky)) + '; Bowser ' + Object.entries(T.atk).map(([a, w]) => a + ' ' + pc(w)).join(', ') : '') +
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
-  if (fb2T8Assume()) el.innerHTML += '<br>T8: planned as if Bowser used a Body Slam / Claw on T7 (Mario in Danger, the charges kept)';     // v123
 }
 fb2Reset();
 window.__fb2 = { v123: { assume: () => fb2T8Assume() }, v122: { planT7: () => fb2PlanT7(), maxS: FB2_T7_MAXS, budget: FB2_T7_BUDGET }, v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests

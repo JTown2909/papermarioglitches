@@ -11,8 +11,10 @@
   game crash.
 - **Backup T8** (console 09:05, "still no lock for the t8 bounce backup"): the backup T7's outcome is not read (no HP watch), so
   the wave / Star Rod share (1 - pLucky, 0.79 there) stayed in the doubt (0.96) and T8 said "No edge" for 13 s. The T8 Power
-  Bounce is only the route after a Body Slam / Claw, so on the T8 step the page plans on that branch (fb2T8Assume) and says so.
-  On 09:09 the coins confirmed the branch by themselves (doubt 0.05) and T8 beeped.
+  Bounce is only the route after a Body Slam / Claw, so v123 first planned T8 on that branch (fb2T8Assume). Withdrawn: on the
+  09:26 clip (Bowser's Claw, Mario 1 HP) the T8 plan was 69% at doubt 0.31 on 13 states that all gave 5 bounces on the pressed
+  frame (read ~0.4 frame early, inside the 3-frame window), and the bounce stopped at 4 (18, 17, 16, 15): that doubt was the only
+  thing between a wrong T8 state set and a ~100% beep. On 09:09 the coins confirmed the branch by themselves (doubt 0.05).
 - **The final Power Bounce's press** (console 09:09, "it not showing anything at the end distracted me"): the main T7 / backup T8
   press gets the last-press readout (fb2PbPress: the frame on the FB2 clock against the beeped window).
 - **Final Bowser T1 -> T2** (the runner: "on turn 2 the software really takes its time changing from turn 1 to turn 2"; 09:05:

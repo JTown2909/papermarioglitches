@@ -1,7 +1,7 @@
 /* v123: the learned per-lever press correction (page_template.html leverShrink). The runner's saved records (log 08:50, Nov 21:
  * Duplighosts -1.57, Final Bowser Do Nothing +1.27, Jr. Troopa -0.68 frames on 8 presses) were corrected by only n / (n + 4) of
  * their mean; from 6 presses the shrink is the mean's own uncertainty, so a steady offset is corrected in full (at most 1.5).
- * Also (console 09:05): the backup T8 Power Bounce plans on the Body Slam / Claw branch (fb2T8Assume); Final Bowser moves to T2
+ * Also (console 09:05): fb2T8Assume names the backup T8 step (its use in the doubt was withdrawn, README v123); Final Bowser moves to T2
  * once T1 is over (the hit read, or 10 HP held through Bowser's turn), not at T2's Charge burst 15 s later.
  * usage: node test_v123.js [PAGE] */
 const { chromium } = require('playwright'); const fs = require('fs'), http = require('http');
@@ -39,7 +39,7 @@ const REC = { fb14: [1.93, 1, -0.26, 1.83, 1.7, 0.83, 1.72, 1.42], jr: [-1, -0.1
   console.log(JSON.stringify(r2));
   ok(r2.at12 === r2.i1 && r2.at18 === r2.i2, 'Final Bowser T1 -> T2 when 10 HP is held through Bowser\'s turn (16 s after Cloud Nine), not before');
   ok(r2.hit === r2.i2 && r2.logged.length === 2 && r2.t2 === r2.i2, 'Final Bowser T1 -> T2 at the hit read; on T2 nothing moves ' + JSON.stringify(r2.logged));
-  ok(r2.a8 === true && r2.a7 === false && r2.a8off === false, 'backup T8 plans on the Body Slam / Claw branch (only on the backup T8 step)');
+  ok(r2.a8 === true && r2.a7 === false && r2.a8off === false, 'fb2T8Assume is true on the backup T8 step only');
   const r3 = await p.evaluate(() => { const T = window.__tot, E = c => T.v111.ev(c), RT = T.RT(), i8 = RT.findIndex(s => s.b8); T.setStep(i8);
     E('FB2B.on = true; FB2.on = true; FB2.rate = 33.427; CHG.trig = { t: performance.now() - (420 + 2 - 16 + 0.2) * 33.427 }');
     const now = performance.now(), d = 420, tab = new Array(40).fill(false); for (let c = 419; c <= 421; c++) tab[c - 400] = true;
