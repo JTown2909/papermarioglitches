@@ -413,7 +413,16 @@ const leverKey = id => (id === 'fb14' ? 'fb14' : /^jr(cc|pb)/.test(id || '') ? '
 const BUILTIN_FIX = { jr: -0.5, hw: 0, dup: 0, fb14: 0 };
 const builtinFix = k => BUILTIN_FIX[k] || 0;
 function leverList(k) { if (!LEVER_STORE[k]) return []; try { const L = JSON.parse(localStorage.getItem(LEVER_STORE[k]) || 'null'); if (Array.isArray(L) && L.length) return L.slice(-8); } catch (e) {} return (LEVER_PRESS0[k] || []).slice(); }
-function leverBias(k) { if (LEVER_LEARN[k] === false) return 0; const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * L.length / (L.length + 4))); }
+/* v123 (the runner's saved press records, Nov 20-21: Duplighosts -1.57, Final Bowser Do Nothing +1.27, its skip +1.61, Jr. Troopa
+ * -0.68 frames on 8 presses each, the spread ~0.7-0.9): the fixed n / (n + 4) shrink left a third of a steady offset in (Duplighosts
+ * 1.56 early on a +0.98 correction, console 21:01). From LEVER_FULL_N presses the shrink is the mean's own uncertainty
+ * (1 - var / (n m^2), never under n / (n + 4)): a steady offset is corrected in full, a noisy one stays shrunk; still at most LEVER_MAX. */
+const LEVER_FULL_N = 6;
+function leverShrink(L) {
+  const n = L.length, m = L.reduce((a, x) => a + x, 0) / n, base = n / (n + 4); if (n < LEVER_FULL_N || !m) return base;
+  const v = L.reduce((a, x) => a + (x - m) * (x - m), 0) / (n - 1); return Math.max(base, Math.min(1, 1 - v / (n * m * m)));
+}
+function leverBias(k) { if (LEVER_LEARN[k] === false) return 0; const L = leverList(k); if (L.length < LEVER_MIN_N) return 0; const m = L.reduce((a, x) => a + x, 0) / L.length; return Math.max(-LEVER_MAX, Math.min(LEVER_MAX, -m * leverShrink(L))); }
 function leverAdd(k, e) { if (!LEVER_STORE[k]) return []; const L = leverList(k).concat([+e.toFixed(2)]).slice(-8); try { localStorage.setItem(LEVER_STORE[k], JSON.stringify(L)); } catch (x) {} return L; }
 // the earliest confirm frame (on a clock with frame 0 at tLast) whose press and every beep before it are still ahead
 function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) - tLast) / rate + 0.5 - num('off') - 1e-9); }
@@ -1927,7 +1936,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v122';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v123';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {

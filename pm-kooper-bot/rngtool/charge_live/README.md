@@ -1,3 +1,16 @@
+# Time Out Timer v123: the learned press correction trusts a steady offset (Nov 21)
+
+- The runner's saved press records (log 08:50, `more.levers`, 8 presses each): Duplighosts -1.57 frames (sd 0.94), Final Bowser Do
+  Nothing +1.27 (0.73), its skip +1.58 (1.13), Jr. Troopa -0.68 (0.75), Hallway +0.40 (0.76). The correction was n / (n + 4) of the
+  mean (2/3 at 8 presses), which left a third of a steady offset in every press (console 21:01: Duplighosts 1.56 frames early on a
+  +0.98 correction). From 6 presses the shrink is now the mean's own uncertainty, 1 - var / (n m^2), never under n / (n + 4), still
+  capped at 1.5: Duplighosts +1.05 -> +1.50, Final Bowser -0.85 -> -1.22, its skip -1.06 -> -1.48, Jr. Troopa +0.45 -> +0.58,
+  Hallway unchanged (-0.27: small and noisy). The records are presses against the beeps, so the correction does not feed back on itself.
+- Duplighosts 08:42 / 08:44 (Mario 16.5 px right of his usual place in the Charge pictures, also on 18:55 and an older run): 08:44
+  copied (the route went on to Jr. Troopa), so the position does not break the read; 08:42's perfect press with no copy came with a
+  game crash.
+- test_v123.js; test_console_v96 pins the new rule.
+
 # Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)
 
 - **Backup T7 edge** (console 21:08): the backup T7 Charge locked through the v120 narrow search (141 candidates, 0.36 s), but the
