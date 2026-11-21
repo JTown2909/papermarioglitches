@@ -49,7 +49,7 @@ const FB14_NEXTCHG = 8000, FB14_NEWATTEMPT = 120000, FB14_HIT_N = 10, FB14_REVIV
 const FB14_MISSW = 0.01;     // v86: a state whose Bowser hit Mario on a turn the bar showed a miss (the HP read can be wrong: not 0)
 const FB14_HIDE = { jelly: 2, peach: 2 }, FB14_JSHIFTS = [[-1, 0.25], [0, 0.5], [1, 0.25]];
 var FB14 = { on: false };
-function fb14Reset(why) { Object.assign(FB14, { on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hitT: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null, weak: null }); }
+function fb14Reset(why) { Object.assign(FB14, { earlyT2: null, on: false, why: why || null, states: [], t0: null, rate: null, taps: [], vis: [], visFrom: null, turn: 0, M: {}, P: {}, plan: null, lockN: 0, log: [], pb: null, t6: null, hideWatch: null, doubt: 0, bg: 0, p4t: null, pend: [], pT: {}, charges: [], inputs: [], lastBurst: null, gone: false, allOutLogged: false, prevPlan: null, hit: null, hitT: null, hp: null, hpw: null, missed: null, prior: null, earlyMsg: null, stream: why === 'boots' ? null : FB14.stream || null, trigStep: null, noEdge: {}, anchor: {}, hitLogged: null, routeOff: null, plans: [], decide: null, afterConf: null, pre: null, snap2: null, relock: null, relockTried: false, wide: false, atk: {}, atkW: {}, bolts: [], boltW: null, evLog: {}, sk: null, box: null, boxW: null, skTry: null, fresh: null, weak: null }); }
 fb14Reset();
 /* ---- the random numbers (fast, no arrays) ---- */
 let FBV = 0;
@@ -686,6 +686,19 @@ function fb14Frame(t, present) {
  * ends the route (the first fight's carry died at T3; the second planned T2 at doubt 0.7% from a fresh lock and Bowser hit
  * again). Mario's HP tens place (jrTens, the Hallway's read, console-checked there): the "1" of 10 on the steady bar
  * before the lever, blank on the steady bar for 10 frames after it = a hit. From then on: no edge for this attempt. */
+/* v123 (the runner: "on turn 2 the software really takes its time changing from turn 1 to turn 2"; console 09:05: Mario hit on T1
+ * at 1303.2 s, the route still on T1 until T2's Charge burst at 1318.0 s): the route moves to T2 once T1 is over: the hit read, or
+ * Mario's 10 HP held through Bowser's turn (FB14_T1_OVER_MS after Cloud Nine's confirm, 30+ steady pictures). T2's Charge is then
+ * read on T2's own step (its burst moves nothing); a burst more than FB14_NEWATTEMPT1 after T1's Charge is still a new attempt. */
+const FB14_T1_OVER_MS = 16000;
+function fb14EarlyT2(t) {
+  if (typeof isRoute !== 'function' || !isRoute()) return; const s = fb14Step(); if (!s || s.fb14 !== 1 || s.fb14role !== 'lever' || !FB14.pT || FB14.pT[1] == null) return;
+  const W = FB14.hpw, hit = !!W && W.done[1] === 'hit', quiet = !!W && W.seen10 && (W.ok[1] || 0) >= 30 && t - FB14.pT[1] > FB14_T1_OVER_MS && !(FB14.pT[1] > t);
+  if (!hit && !quiet) return;
+  const j = RT().findIndex((x, i) => i > routeStep && x.fb14 === 2); if (j < 0) return;
+  slog('fb14StepByOutcome', { from: routeStep, to: j, why: hit ? 'T1 hit read' : 'T1 over (10 HP held through Bowser\'s turn)', afterMs: Math.round(t - FB14.pT[1]) });
+  FB14.earlyT2 = { t, lb: FB14.lastBurst ? Object.assign({}, FB14.lastBurst) : null }; setStep(j);
+}
 function fb14HpWatch(t, present) {
   /* v86: the watch follows the last lever confirmed (T1-T3), not the route's step: the step moves on at the confirm, so v82-v85
    * watched the next turn instead and never saw a hit on the turn just played (the hit is read 2-25 s after the confirm). It
@@ -694,6 +707,7 @@ function fb14HpWatch(t, present) {
    * for that turn are then checked against it (fb14Weigh): on log 1794169517521's T1 (Bowser's fire breath missed) only
    * 36% of the weight predicted that, and with it the T2 shares are 93-99% or under 7% on almost every frame. */
   if (typeof jrTens !== 'function') return;
+  fb14EarlyT2(t);
   if (FB14.hit) return;
   const stp = fb14Step(); if (!stp || !stp.fb14) return;
   const W = FB14.hpw || (FB14.hpw = { seen10: false, tenRun: 0, blankRun: 0, ok: {}, done: {} });
@@ -1424,7 +1438,7 @@ function fb14Trigger() {
     // v110 (gg, log v109a: the log erased with the route left on T1's Cloud Nine step by the attempt before; the new attempt's T1
     // Charge was taken as T2's): on T1's lever step a burst more than FB14_NEWATTEMPT1 after T1's Charge is not T2's Charge (T1's
     // Charge -> T2's is about 30 s: Cloud Nine, its message, Bowser's turn) but the next attempt's T1 Charge
-    else if (s && s.fb14 === 1 && s.fb14role === 'lever' && lb && lb.turn === 1 && t - lb.t > FB14_NEWATTEMPT1 && c1 >= 0) { slog('fb14NewAttempt', { from: routeStep, after: Math.round(t - lb.t), why: 'a burst on T1\'s lever long after T1\'s Charge' }); fb14Reset('new attempt'); setStep(c1); s = fb14Step(); }
+    else if (s && (s.fb14 === 1 || (s.fb14 === 2 && FB14.earlyT2)) && s.fb14role === 'lever' && lb && lb.turn === 1 && t - lb.t > FB14_NEWATTEMPT1 && c1 >= 0) { slog('fb14NewAttempt', { from: routeStep, after: Math.round(t - lb.t), why: 'a burst on T1\'s lever long after T1\'s Charge' }); fb14Reset('new attempt'); setStep(c1); s = fb14Step(); }
     // v110 (gg, log v109a 1025744: Jammin' Jelly's flash, 0.77 s after its bar hide, triggered the reader on T3's step and moved
     // the route to T4; T3's Do Nothing was then taken as T4's): on T3 the first bar hide of the step (3 s or more after the step
     // began: T3 starts at T2's Do Nothing) is the Jelly's; a burst within FB14_JELLY_MS of it moves nothing

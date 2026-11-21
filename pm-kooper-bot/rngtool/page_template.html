@@ -1939,6 +1939,9 @@ const SLOG = []; let slogLock = null;
 const VERSION = 'v123';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
+/* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
+ * last event before it, so a saved log shows where the page held up (the capture and the beeps share that thread) */
+try { let nLT = 0; new PerformanceObserver(l => { for (const e of l.getEntries()) { if (e.duration < 150 || nLT >= 400) continue; nLT++; const last = SLOG.length ? SLOG[SLOG.length - 1].ev : null; slog('longTask', { ms: Math.round(e.duration), step: routeStep, after: last }); } }).observe({ entryTypes: ['longtask'] }); } catch (e) {}
 function downloadLog() {
   const blob = new Blob([JSON.stringify({ version: 1, page: VERSION, saved: new Date().toISOString(), settings: (() => { const o = {}; SET.forEach(k => o[k] = $('s-' + k).value); return o; })(), route: routeStep, more: { zwwin: num('zwwin'), zwedge: num('zwedge'), chgcpu: num('chgcpu'), presses: presses.slice(), levers: (() => { const o = {}; try { for (const k of Object.keys(LEVER_STORE)) o[k] = leverList(k); } catch (e) {} return o; })(), fbGaps: typeof fbHistLoad === 'function' ? fbHistLoad() : [] }, events: SLOG, chargeCaptures: typeof CHG_CAPS !== 'undefined' ? CHG_CAPS : [] }, null, 0)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = logFileName(new Date()); document.body.appendChild(a); a.click(); a.remove();
@@ -2739,6 +2742,7 @@ function checkPress(tObs) {
     const B = baseState(), f = B.baseF + Math.round((tObs - B.tLast - num('vlag')) / st.clock.rate - (VAN[stp.cat] || VAN.M)() - num('pfix'));
     if (stp.imps) addTurn(f, stp.turn, 'Carrying the seed through this turn.', stp.imps); else addTurn(f, stp.turn, 'Carrying the seed through this turn.', null, SHIFTS);
   }
+  if (stp && stp.turn === 'fb2_pb' && st.plan && st.plan.prof === 'fb2' && tObs > (st.plan.tMade || 0) && tObs < st.plan.tPress + 3000) fb2PbPress(st.plan, tObs, stp);     // v123
   checkPress_(tObs);
   if (stp) logInput(tObs, stp.cat, stp.turn || stp.label, st.turnEv.length > n0);
   if (isRoute()) {
@@ -2750,6 +2754,17 @@ function checkPress(tObs) {
     else if (typeof fbp1KeepStep === 'function' && fbp1KeepStep(stp, tObs)) {}     // v116: Final Bowser Phase 1
     else { setStep(routeStep + 1); st.lastStepClose = { t: tObs, to: routeStep }; }
   }
+}
+/* v123 (console 09:09, the backup T8 Power Bounce: "it not showing anything at the end distracted me"): the final Power Bounce
+ * (main T7 / backup T8) gets the same last-press readout as every other lever: the frame hit against the beeped window */
+function fb2PbPress(P, tObs, stp) {
+  const c = typeof fb2Pic === 'function' && typeof CHG !== 'undefined' && CHG.trig ? fb2Pic(tObs) - VAN.B() - num('pfix') : (tObs - P.tLast - num('vlag')) / P.rate - VAN.B() - num('pfix'), f = Math.round(c), err = c - P.target;     // the FB2 clock, as fb2Confirm reads the Do Nothing
+  const inWin = P.w && f >= P.w.start && f <= P.w.end, works = !!(P.tab && P.first != null && P.tab[f - P.first]);
+  const label = 'Final Bowser ' + (stp.b8 ? 'T8' : 'T7') + ': Power Bounce';
+  slog('press', { prof: 'fb2', step: routeStep, err: +err.toFixed(2), inWin, works, onBeeps: Math.abs(err) <= 5 });
+  try { pressShow(P, c, label); } catch (e) {}
+  V.pressNote = 'Last press · ' + (Math.abs(err) < 0.5 ? 'on the frame' : Math.abs(err).toFixed(1) + ' frame' + (Math.abs(err) >= 1.5 ? 's' : '') + (err < 0 ? ' early' : ' late')) + ' ' + (works ? '✓' : '✗');
+  try { showPresses(); } catch (e) {}
 }
 function checkPress_(tObs) {
   if (!PROF().rolls.length) return;

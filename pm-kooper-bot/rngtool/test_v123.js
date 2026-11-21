@@ -1,6 +1,8 @@
 /* v123: the learned per-lever press correction (page_template.html leverShrink). The runner's saved records (log 08:50, Nov 21:
  * Duplighosts -1.57, Final Bowser Do Nothing +1.27, Jr. Troopa -0.68 frames on 8 presses) were corrected by only n / (n + 4) of
  * their mean; from 6 presses the shrink is the mean's own uncertainty, so a steady offset is corrected in full (at most 1.5).
+ * Also (console 09:05): the backup T8 Power Bounce plans on the Body Slam / Claw branch (fb2T8Assume); Final Bowser moves to T2
+ * once T1 is over (the hit read, or 10 HP held through Bowser's turn), not at T2's Charge burst 15 s later.
  * usage: node test_v123.js [PAGE] */
 const { chromium } = require('playwright'); const fs = require('fs'), http = require('http');
 const PAGE = process.argv[2] || process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer/timeout_timer.html';
@@ -21,6 +23,32 @@ const REC = { fb14: [1.93, 1, -0.26, 1.83, 1.7, 0.83, 1.72, 1.42], jr: [-1, -0.1
   ok(Math.abs(r.five - 5 / 9) < 1e-9, 'under 6 presses the old shrink (n / (n + 4)): ' + r.five);
   ok(Math.abs(r.noisy - 0.6) < 1e-9, 'a noisy record keeps the old shrink: ' + r.noisy);
   ok(r.steady > 0.99, 'a steady record is corrected in full: ' + r.steady.toFixed(3));
+  const r2 = await p.evaluate(() => { const T = window.__tot, E = c => T.v111.ev(c), RT = T.RT(), out = {};
+    const i1 = RT.findIndex(s => s.fb14 === 1 && s.fb14role === 'lever'), i2 = RT.findIndex(s => s.fb14 === 2);
+    // quiet T1 (Bowser missed): 10 HP held, 17 s after Cloud Nine's confirm
+    T.setStep(i1); E('FB14.pT = { 1: 1000 }; FB14.hpw = { seen10: true, tenRun: 0, blankRun: 0, ok: { 1: 40 }, done: {} }; FB14.lastBurst = { turn: 1, t: 0 }');
+    E('fb14EarlyT2(12000)'); out.at12 = T.step(); E('fb14EarlyT2(18000)'); out.at18 = T.step();
+    // a hit read on T1
+    T.setStep(i1); E('FB14.earlyT2 = null; FB14.pT = { 1: 1000 }; FB14.hpw = { seen10: true, tenRun: 0, blankRun: 0, ok: {}, done: { 1: \'hit\' } }'); E('fb14EarlyT2(5000)'); out.hit = T.step();
+    out.logged = T.SLOG.filter(e => e.ev === 'fb14StepByOutcome').map(e => e.why);
+    // T2 elsewhere: nothing moves
+    T.setStep(i2); E('fb14EarlyT2(60000)'); out.t2 = T.step(); out.i1 = i1; out.i2 = i2;
+    // backup T8
+    const i8 = RT.findIndex(s => s.b8); T.setStep(i8); E('FB2B.on = true'); out.a8 = window.__fb2.v123.assume(); T.setStep(i8 - 1); out.a7 = window.__fb2.v123.assume(); E('FB2B.on = false'); T.setStep(i8); out.a8off = window.__fb2.v123.assume();
+    return out; });
+  console.log(JSON.stringify(r2));
+  ok(r2.at12 === r2.i1 && r2.at18 === r2.i2, 'Final Bowser T1 -> T2 when 10 HP is held through Bowser\'s turn (16 s after Cloud Nine), not before');
+  ok(r2.hit === r2.i2 && r2.logged.length === 2 && r2.t2 === r2.i2, 'Final Bowser T1 -> T2 at the hit read; on T2 nothing moves ' + JSON.stringify(r2.logged));
+  ok(r2.a8 === true && r2.a7 === false && r2.a8off === false, 'backup T8 plans on the Body Slam / Claw branch (only on the backup T8 step)');
+  const r3 = await p.evaluate(() => { const T = window.__tot, E = c => T.v111.ev(c), RT = T.RT(), i8 = RT.findIndex(s => s.b8); T.setStep(i8);
+    E('FB2B.on = true; FB2.on = true; FB2.rate = 33.427; CHG.trig = { t: performance.now() - (420 + 2 - 16 + 0.2) * 33.427 }');
+    const now = performance.now(), d = 420, tab = new Array(40).fill(false); for (let c = 419; c <= 421; c++) tab[c - 400] = true;
+    T.st.plan = { prof: 'fb2', tMade: now - 3000, target: d, w: { start: 419, end: 421, length: 3 }, tab, first: 400, tPress: now, rate: 33.427, tLast: now - 400 * 33.427 };
+    const trig = E('CHG.trig.t'), tObs = trig + (d + 2 - 16 + 0.2) * 33.427; E('checkPress(' + tObs + ')');
+    const pr = T.SLOG.filter(e => e.ev === 'press' && e.prof === 'fb2').pop(); const note = E('V.pressNote'); E('FB2B.on = false; FB2.on = false');
+    return { pr, note, tail: T.SLOG.slice(-6).map(e => e.ev), step: T.step(), i8 }; });
+  console.log(JSON.stringify(r3));
+  ok(r3.pr && Math.abs(r3.pr.err - 0.2) < 0.01 && r3.pr.works && r3.pr.inWin && /Last press · on the frame ✓/.test(r3.note || ''), 'the backup T8 Power Bounce press gets a last-press readout (' + (r3.note || '') + ')');
   ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
   await b.close(); srv.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
 })();

@@ -9,6 +9,18 @@
 - Duplighosts 08:42 / 08:44 (Mario 16.5 px right of his usual place in the Charge pictures, also on 18:55 and an older run): 08:44
   copied (the route went on to Jr. Troopa), so the position does not break the read; 08:42's perfect press with no copy came with a
   game crash.
+- **Backup T8** (console 09:05, "still no lock for the t8 bounce backup"): the backup T7's outcome is not read (no HP watch), so
+  the wave / Star Rod share (1 - pLucky, 0.79 there) stayed in the doubt (0.96) and T8 said "No edge" for 13 s. The T8 Power
+  Bounce is only the route after a Body Slam / Claw, so on the T8 step the page plans on that branch (fb2T8Assume) and says so.
+  On 09:09 the coins confirmed the branch by themselves (doubt 0.05) and T8 beeped.
+- **The final Power Bounce's press** (console 09:09, "it not showing anything at the end distracted me"): the main T7 / backup T8
+  press gets the last-press readout (fb2PbPress: the frame on the FB2 clock against the beeped window).
+- **Final Bowser T1 -> T2** (the runner: "on turn 2 the software really takes its time changing from turn 1 to turn 2"; 09:05:
+  15 s from the T1 hit to the step): the route moves to T2 at the T1 hit read, or once 10 HP has held through Bowser's turn
+  (16 s after Cloud Nine), not at T2's Charge burst (fb14EarlyT2); a burst 60 s after T1's Charge is still a new attempt.
+- **Lag** (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged (`longTask`, with the
+  step and the event before it), so the next logs show where. The "no state fits" T7 line is logged when the doubt moves (09:05: 314
+  lines in 5 s).
 - test_v123.js; test_console_v96 pins the new rule.
 
 # Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)
