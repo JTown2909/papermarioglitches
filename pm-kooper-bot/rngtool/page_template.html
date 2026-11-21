@@ -557,7 +557,7 @@ const ENDGAME = [
     // Flip (hw_spiny2, Bowser STOPped) to T3's Power Bounce, beeped for 4+ hits, aiming at 5+ (pmrng_core.js hwpb4 / hwpb5)
     { text: 'T2: Time Out; Spiny Flip', steps: [{ label: 'Time Out → STOP', cat: 'B', prof: 'timeout', turn: 'hw_to' },
       { label: 'Spiny Flip', cat: 'B', turn: 'hw_spiny2', hud: true, imps: Array.from({ length: 33 }, (_, i) => 138 + i) }] },
-    { text: 'T3: Bounce x4/5; Spiny Flip', steps: [{ label: 'Power Bounce → 4+, aims at 5', cat: 'B', prof: 'hwpb4' }] },
+    { text: 'T3: Bounce x5; Spiny Flip', steps: [{ label: 'Power Bounce → 5+ on the beep (4 still works)', cat: 'B', prof: 'hwpb4', aim5: true }] },     // v124 (the runner: "we should probably change the hallway bounce to 5+ only, but 4 is still technically fine")
     { text: 'T4: Bounce x3; Spiny Flip', steps: [] },
     { text: 'T5: Jump x2; Spiny Flip', steps: [] } ] },
   // Final Bowser phase 2 (fb2_route/README.md). The T6 Super Charge locks the seed from its rays (the step below has it
@@ -1473,7 +1473,7 @@ function ppPick0(share, share4, a, b, from, W, sc, goal) {
   if ((goal === 'safe3' || goal === 'free') && !share4) { const bs = cand.filter(x => x.r.length >= 2).sort(cmp([SC, W3, M3]))[0]; if (bs && bs.sc > pick.sc + PP_SC_GAIN && !pick.r4) pick = bs; }
   return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: pick.r4 ? { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length } : null };
 }
-const KEY_LATER_S = { timeout: 3, jrpb5p: 3, jrpb5: 3, jrpb5n: 3 }, KEY_AIM = 0.9, KEY_GAIN = 0.1;     // v124: the key levers' longer look-ahead (s past the base window)
+const KEY_LATER_S = { timeout: 3, jrpb5p: 3, jrpb5: 3, jrpb5n: 3, hwpb4: 3 }, KEY_AIM = 0.9, KEY_GAIN = 0.1;     // v124: the key levers' longer look-ahead (s past the base window)
 const DUP4_AIM = 0.90;     // v112: the all-4 frame is beeped when its realistic 3+ chance is this or more
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
   goal = goal || (prof.id === 'dup3' ? dupGoal() : /^jrpb5[np]?$/.test(prof.id) ? 'free' : 'safe3');     // v83: Jr. Power Bounce: 6 with 5+ either side (the route's label)
@@ -1489,7 +1489,8 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
     const six6 = /^jrpb5[np]?$/.test(prof.id) && isRoute() && RT()[routeStep] && RT()[routeStep].six6;     // v111: the partnerless T7 needs the 6 (no Bomb after it)
     pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5[np]?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');
     // v111: the partnerless T7 picks on the 6+ map itself (its widest run, the middle), whatever the 5+ chance does beside it
-    if (six6 && share4) { const P6 = ppPick(share4, null, a, b, from, W, sc4, 'free', later, true); if (P6.ok) pk = Object.assign({}, P6, { six: true, run4: P6.run }); }
+    const aim5 = prof.id === 'hwpb4' && isRoute() && RT()[routeStep] && RT()[routeStep].aim5;     // v124: Hallway T3 picks on the 5+ map (4+ is the fallback the plan's p reports)
+    if ((six6 || aim5) && share4) { const P6 = ppPick(share4, null, a, b, from, W, sc4, 'free', later, true); if (P6.ok) pk = Object.assign({}, P6, { six: true, run4: P6.run }); }
     // v124 (the runner: "we really just need a good jr bounce, time out on hallway ... we need better numbers, like 90% or above"):
     // on the key levers a plan under KEY_AIM with the press spread looks KEY_LATER_S further on for the first frame that reaches
     // KEY_AIM (else one KEY_GAIN likelier): a longer wait for a wider window, only where it buys the odds

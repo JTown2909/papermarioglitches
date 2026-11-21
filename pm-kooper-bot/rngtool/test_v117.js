@@ -15,7 +15,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
 (async () => {
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); if (s) localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, set || null);
+    await p.addInitScript(s => { window.__noKeyLater = true; /* v124: the replays check the frame live planned on (no 3 s look-ahead) */ try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); if (s) localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} window.__now = 1000; performance.now = () => window.__now; }, set || null);
     await p.goto('file://' + PAGE); return p; };
   // the v111 replay; opts.plan: make a plan at that time; opts.pb: the live Power Bounce confirm (the states' outcome there)
   const replay = async (L, opts) => {

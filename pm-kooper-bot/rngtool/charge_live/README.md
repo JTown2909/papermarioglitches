@@ -9,6 +9,16 @@ plan under KEY_AIM (90%) with the press spread now looks KEY_LATER_S (3 s) past 
 (else one KEY_GAIN, 10 points, likelier), logged `keyLater`. Over 40 Time Out seeds (test_v124): 35 plans were already 90%+, the
 other 5 moved from 75% to 100% for 1.2-2.4 s more wait. test_zw_wait (its own replan clock) runs without it (window.__noKeyLater).
 
+**Hallway T3 aims at 5+** (the runner: "we should probably change the hallway bounce to 5+ only, but 4 is still technically fine"): the
+step (route text "T3: Bounce x5; Spiny Flip", aim5) picks its frame on the 5+ map (as Jr. Troopa's partnerless T7 does on the 6),
+the plan's p stays the 4+ chance, and the 3 s look-ahead (hwpb4 in KEY_LATER_S) looks for a 5+ frame at 90% (log 11:20: 4+ 100% on
+a 17-frame window, 5+ 87% on 1 frame). test_v117's replays run without the look-ahead (they check the frame live planned on).
+
+**Jr. Troopa's Close Call reads, looked at and not changed**: today's 1-frame Do Nothing Close Calls read -1.05 / -0.47 / -0.45 / -0.39
+dodged and -0.10 / -0.06 / +0.12 / +0.58 were hit (three dead on the planned frame; one +0.09 dodged the night before), as if the
+Strategies box's read were ~0.6 frame late. Moving those reads 0.6 frame later broke test_v117's j1729 replay (the clip's 5 bounces:
+the T7 6 planned as confident again, p4 0.88), so the reads are left as they are until a fit over the replays settles it.
+
 **T4: Lakilester's block** (the runner: "the wave would not be 'blocked' but it would miss mario, meanwhile blocked by laki, which
 does matter for the purpose of tracking the 'do nothing' turns"). The T4 beep is the dodge test (P + 85: the wave misses Mario);
 Lakilester blocks it with a single A on P + 86..88 (V87_RECOVERY.md (2), guard_scan.py), which keeps him up for T6's Do Nothing and
