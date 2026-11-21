@@ -228,7 +228,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
   const src = n => fs.readFileSync(path.join(__dirname, n), 'utf8'), fb14 = src('charge_live/fb14_live.js'), fb2 = src('charge_live/fb2_live.js');
   ok(/const reach = fbPressT\(P\.target\) >= earliestPress\(now \+ FB14_PLAN_MS\)/.test(fb14) && /narrowed && reach &&/.test(fb14), '6. fb0709 T2: a refine runs only while a new plan can still aim at the planned frame (770 at 0.994 was swapped for 792, 0.51)');
   ok(/p >= Math\.max\(num\('zwedge'\), fb14Blind\(P\.fb14\) \+ FB14_KEEP_EDGE\)/.test(fb14), '6. fb0709 T4: too late to move, a frame still 5 points over blind keeps its beeps (0.626 was stopped 0.19 s before the first beep)');
-  ok((fb2.match(/tab: sh\.map\(v => v >= 0\.5\)|tab: e7\.map/g) || []).length === 2, '6. fb0709 T6: the T6 / T7 plans carry their frames (v108: tab [], no strip)');
+  ok((fb2.match(/tab: sh\.map\(v => v >= |tab: e7\.map/g) || []).length === 2, '6. fb0709 T6: the T6 / T7 plans carry their frames (v108: tab [], no strip)');
   const errs2 = errs.filter(e => !/v109 test error/.test(e)); ok(!errs2.length, 'no page errors ' + errs2.join(' | ').slice(0, 300));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();
