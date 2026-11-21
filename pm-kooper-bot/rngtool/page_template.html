@@ -2615,7 +2615,10 @@ function hwStepByTarget(t) {
 function hwRetry(hiddenMs) {
   if (!isRoute() || hiddenMs == null || hiddenMs < ZW_GAP) return;
   const hi = RT().findIndex(x => x.turn === 'hw_spiny'), s = RT()[routeStep]; if (hi < 0 || routeStep <= hi) return;
-  if (!(/^Hallway Bowser/.test(s.t || '') || (st.hwLeft && st.hwLeft.hides < 3))) return;
+  // v121 (console 19:04, the runner: "it thought it was fighting hallway. it was final" / "it should NEVER warp to anything it isnt
+  // local to in the moment"): Final Bowser T1's 10 s hide (Bowser's attack) stepped the route back to Hallway T1 through the
+  // st.hwLeft clause (fewer than 3 hides since the route left the Hallway). Only a step that is on the Hallway steps back now
+  if (!/^Hallway Bowser/.test(s.t || '')) return;
   // v82 (logs 1794169517521 t=1152710, 1794170254406 t=2011596): after Time Out (hallwayDone) the battle goes on; Bowser's
   // turn and Mario's attacks hide the coin ~13.6 s, which stepped the route back to T1 and read every later bar hide as a
   // Charge. A new attempt always starts with T1's Charge, whose burst sets T1 (chgPendResolve): only that may, while the

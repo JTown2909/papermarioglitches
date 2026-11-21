@@ -1,0 +1,30 @@
+/* v121 (the runner, 2026-11-20 evening):
+ *  1. console 19:04: Final Bowser T1's 10 s hide (Bowser's attack) stepped the route back to Hallway T1 ("it thought it was
+ *     fighting hallway. it was final" / "it should NEVER warp to anything it isnt local to in the moment"): a long hide steps
+ *     back to Hallway T1 only from a Hallway step, never from Final Bowser (the st.hwLeft clause is gone).
+ *  2. the Jr. Troopa early-plan floor: the menu gap + JR_FLOOR_PAD (30), not + the beeps' lead + 10 (test_console_1108b pins it).
+ * usage: node test_v121.js [PAGE] */
+const { chromium } = require('playwright'); const fs = require('fs'), http = require('http');
+const PAGE = process.argv[2] || process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer/timeout_timer_standalone.html';
+let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); if (!c) fails++; };
+(async () => {
+  const srv = http.createServer((q, r) => { r.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); fs.createReadStream(PAGE).pipe(r); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const b = await chromium.launch(), errs = [], p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
+  await p.addInitScript(() => { localStorage.clear(); });
+  await p.goto('http://127.0.0.1:' + srv.address().port + '/');
+  const r = await p.evaluate(() => { const T = window.__tot, ev = T.v111.ev, R = T.RT();
+    const hi = R.findIndex(s => s.turn === 'hw_spiny'), f1 = R.findIndex(s => s.fb14 === 1 && s.fb14role === 'lever');
+    // leave the Hallway for Final Bowser T1 (st.hwLeft set, 0 hides), then a 10 s hide
+    T.v106.setStep(hi + 1); T.v106.setStep(f1); const left = !!ev('st.hwLeft');
+    ev('st.hwDone = false'); ev('hwRetry(10247)'); const afterFb = T.step();
+    // on a Hallway step a long hide still means a retry
+    T.v106.setStep(hi + 1); ev('st.hwDone = false; zw.on = false'); ev('hwRetry(10247)'); const afterHw = T.step();
+    return { v: T.VERSION, hi, f1, left, afterFb, afterHw, pad: ev('JR_FLOOR_PAD') }; });
+  ok(r.v === 'v121', 'page version v121');
+  ok(r.left && r.afterFb === r.f1, '1. a 10 s hide on Final Bowser T1 (left the Hallway 0 hides ago) keeps the route on Final Bowser (step ' + r.afterFb + ', T1 lever ' + r.f1 + ')');
+  ok(r.afterHw === r.hi, '1. a long hide on a Hallway step still steps back to Hallway T1 (a retry: step ' + r.afterHw + ')');
+  ok(r.pad === 30, '2. JR_FLOOR_PAD 30 (the Jr. Troopa early-plan floor without the beeps\' lead)');
+  ok(!errs.length, 'no page errors ' + JSON.stringify(errs.slice(0, 2)));
+  await b.close(); srv.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
+})();
