@@ -424,6 +424,9 @@ function earliestFrame(tLast, rate, now) { return Math.ceil((earliestPress(now) 
 BEEP_GUARD = true;
 const BEEP_STOP_MS = 400, BEEP_QUIET_MS = 800;
 const ZW_SOON_GAIN = 0.05;     // v120: a too-soon frame this much better than the reachable plan: no beeps (zwPlan)
+// v121 (the runner: "the goal is to avoid any blind presses and raise the chances of winning as high as we can while also being
+// fast"): the reachable plan is beeped unless it is no better than pressing blind (Time Out 31%); only then the too-soon no-edge
+const ZW_SOON_BLIND = 0.31;
 function playBeeps(tPress, n, g) {
   n = n || nBeeps(); g = g || num('gapms'); const now = performance.now(), t1 = tPress - (n - 1) * g, f = beepsInFlight(now);
   if (f && Math.abs(f.tEnd - tPress) < 5) return true;      // the same series
@@ -1566,7 +1569,7 @@ function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the f
   if (!win && early == null && !C.none && PROF().id === 'timeout' && !window.__noSoon) {     // (__noSoon: tests of other rules)
     const back = Math.max(0, Math.min(from - S.h - 1, Math.ceil((earliestPress(now) - now) / rate)));
     if (back > 0) { const C0 = zwChoose(S.list, from - back, W + back, PD, PROF(), adj, null, null);
-      if (!C0.none && C0.target < from && C0.p != null && C.p != null && C0.p >= C.p + ZW_SOON_GAIN) {
+      if (!C0.none && C0.target < from && C0.p != null && C.p != null && C0.p >= C.p + ZW_SOON_GAIN && C.p <= ZW_SOON_BLIND) {
         st.msg = 'No edge: the best frame (' + Math.round(100 * C0.p) + '%, ' + C0.w.length + '-frame window) comes too soon for ' + nBeeps() + ' beeps; the next one is only ' + Math.round(100 * C.p) + '%. ' + F.normal + '.';
         st.tooSoon = { step: routeStep, msg: st.msg }; slog('zwTooSoon', { soon: C0.target, pSoon: +C0.p.toFixed(3), winSoon: C0.w.length, target: C.target, p: +C.p.toFixed(3), win: C.w.length, from }); cancelBeeps(); render(); return true; } }
   }
