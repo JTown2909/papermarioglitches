@@ -204,6 +204,19 @@
       effects: { 48: Array(10).fill(359), 74: Array(10).fill(359), 100: Array(8).fill(359), 126: Array(8).fill(359) },
       rolls: [[73, 130], [99, 84], [125, 54], [151, 35]].map(([at, c]) => ({ at, max: 100, ok: v => v <= c })), vanish: 2, minRun: 1,
       screen: 'Power Bounce target screen (hand on Bowser)', box: 'the クッパ name box in the top-left' },
+    // v121, Hallway Bowser T3 after Time Out (the runner: "a turn 3 4/5 bounce on hallway, right after time out", so no Maple
+    // Syrup is needed after Jr. Troopa): Ultra Boots, one S.Jump Charge (+3), Power Rush (+2, Danger), defence 1: hits 7, 6, 5, 4,
+    // 3, 2 (hw_ub_cc/t3pb_log.py, 12 emulator runs): each hit's 359-draws on +48, +75, +102, ... (10 for 5+ damage, 8 for 3-4,
+    // 6 for 2); cap rolls rand_int(100) on +74, +101, +128, +155 pass at <= 130, 84, 54, 35 (hits = 2 + passes; README of
+    // hw_ub_cc). 4+ hits = the +101 roll passes; 5+ = the +128 one too. The page aims at 5+ with 4+ on both sides.
+    hwpb4: { id: 'hwpb4', name: 'Hallway Bowser: Power Bounce 4+ hits (aims at 5+)', short: '4+ bounces', group: 'hw',
+      effects: { 48: Array(10).fill(359), 75: Array(10).fill(359) },
+      rolls: [[74, 130], [101, 84]].map(([at, c]) => ({ at, max: 100, ok: v => v <= c })), vanish: 2, minRun: 2,
+      screen: 'Power Bounce target screen (hand on Bowser)', box: 'the クッパ name box in the top-left' },
+    hwpb5: { id: 'hwpb5', name: 'Hallway Bowser: Power Bounce 5+ hits', short: '5+ bounces', group: 'hw',
+      effects: { 48: Array(10).fill(359), 75: Array(10).fill(359), 102: Array(10).fill(359) },
+      rolls: [[74, 130], [101, 84], [128, 54]].map(([at, c]) => ({ at, max: 100, ok: v => v <= c })), vanish: 2, minRun: 2,
+      screen: 'Power Bounce target screen (hand on Bowser)', box: 'the クッパ name box in the top-left' },
   };
   // Duplighosts with branching: a copy -> next roll 97 frames later; a failed copy -> tackle (8 x rand(359) on +34)
   // and the next roll 78 frames later. Measured in the emulator (13 seeds, every roll and effect matched).
@@ -228,7 +241,7 @@
   /* Duplighosts: the earliest frame in [from, to] where all 4 copy and both neighbours give 3+; returns
    * {target, window} with window = the 3+ run around it, or null */
   // base profile -> its better outcome: aim at a frame with the better outcome whose neighbours both give the base one
-  const TOP = { dup3: 'dup4', jrpb5: 'jrpb6', fbpb6: 'fbpb7', jrpb5n: 'jrpb6n', jrpb5p: 'jrpb6p' };
+  const TOP = { dup3: 'dup4', jrpb5: 'jrpb6', fbpb6: 'fbpb7', jrpb5n: 'jrpb6n', jrpb5p: 'jrpb6p', hwpb4: 'hwpb5' };
   function aimTop(seed, from, to, baseId) {
     const P3 = PROFILES[baseId], P4 = PROFILES[TOP[baseId]], c3 = {}, w3 = f => (f in c3 ? c3[f] : (c3[f] = works(seed, 0, f, 0, P3)));
     for (let f = from + 1; f < to; f++) {
@@ -400,6 +413,14 @@
   TURNS.nb_hb = { pre: { 54: X359(10), 80: X359(10), 143: [100] }, post: {} };
   TURNS.nb_hb_hit = { pre: { 54: X359(10), 80: X359(10), 170: X359(10) }, post: {} };
   TURNS.nb_whacka = { pre: { 118: [].concat(...Array(22).fill([359, 10, 10])) }, post: {} };
+  /* v121, Hallway Bowser after Time Out (hw_ub_cc/t3pb_log.py: the current route with the runner's badges, 12 emulator runs, 4
+   * seeds, every draw the same frame and range): hw_to, frame 0 = Time Out's target-screen confirm: its effects (+24 / +73 /
+   * +112, as the timeout profile), the roll on +386 (it worked: Bowser STOPped), then the STOP sparkles +402..+439 after the
+   * frame's coin. Each sparkle colour is three draws whose ranges follow their values: a = rand(127), b = rand(127 - a),
+   * c = rand(127 - a - b) (token RGB3 = -127). hw_spiny2: T2's Spiny Flip with Bowser STOPped: hw_spiny without his AI. */
+  const RGB3 = -127;
+  TURNS.hw_to = { pre: { 24: Array(72).fill(40000), 73: [].concat(...Array(40).fill([359, 10, 10])), 112: Array(72).fill(30000), 386: [100] }, post: {"402":[-127],"403":[20,20,-127],"405":[20,20,-127],"406":[20,20,-127],"408":[-127,20,20,-127],"409":[20,20,-127,20,20,-127],"411":[20,20,-127,20,20,-127],"412":[20,20,-127,20,20,-127],"414":[-127,20,20,-127,20,20,-127],"415":[20,20,-127,20,20,-127,20,20,-127],"417":[20,20,-127,20,20,-127],"418":[20,20,-127,20,20,-127],"420":[-127,20,20,-127,20,20,-127],"421":[20,20,-127,20,20,-127,20,20,-127],"423":[20,20,-127,20,20,-127],"424":[20,20,-127,20,20,-127],"426":[-127,20,20,-127,20,20,-127],"427":[20,20,-127,20,20,-127,20,20,-127],"429":[20,20,-127,20,20,-127],"430":[20,20,-127,20,20,-127],"432":[20,20,-127,20,20,-127],"433":[20,20,-127,20,20,-127],"435":[20,20,-127],"436":[20,20,-127],"438":[20,20,-127],"439":[20,20,-127]} };
+  TURNS.hw_spiny2 = { pre: {}, post: {}, eio: [[39, 119, 20]], impact: X359(8) };
   const NB_K = { lo: 73, hi: 132, none: 133, back: 5, jrcc: 29, jrnext: 97, hwai: 16 };
   /* evs: [{f, id}] (f = frame of the confirm, in the caller's frame numbering) -> Map frame -> {pre, post, eio} */
   function buildEv(list) {
@@ -409,7 +430,7 @@
       for (const o in T.pre) get(f + +o).pre.push(...T.pre[o]);
       for (const o in T.post) get(f + +o).post.push(...T.post[o]);
       for (const [c, r, per] of T.eio || []) get(f + c).eio.push([f + r, per || 10]);
-      if (T.impact && imp != null) { get(f + imp).pre.push(...T.impact); const a = get(f + imp + T.ai); a.ai = id; a.guard = !!guard; a.danger = !!danger; }
+      if (T.impact && imp != null) { get(f + imp).pre.push(...T.impact); if (T.ai != null) { const a = get(f + imp + T.ai); a.ai = id; a.guard = !!guard; a.danger = !!danger; } }     // v121 hw_spiny2: no AI (Bowser STOPped)
       if (T.aiAt != null) { const a = get(f + T.aiAt); a.ai = id; a.guard = false; a.danger = true; }      // v85 nb_hwcc: Bowser's AI at 3 HP
     }
     return m;
@@ -447,10 +468,17 @@
       else { S.extra.set(f + 72, [100].concat(Array(10).fill(359))); S.extra.set(f + 231, Array(6).fill(359)); }
     } else S.branch = 'fire breath';
   }
+  function drawAll(S, list) {      // v121: RGB3 = a STOP sparkle colour (three draws, ranges from the values)
+    for (const mx of list) {
+      if (mx !== RGB3) { S.s = randInt(S.s, mx)[0]; continue; }
+      const rz = (x, m) => (m === 0 ? [x, 0] : randInt(x, m));     // rand_int(0): 0, no step (the game's rand_int)
+      const a = rz(S.s, 127); const b = rz(a[0], 127 - a[1]); const c = rz(b[0], 127 - a[1] - b[1]); S.s = c[0];
+    }
+  }
   function frameEv(S, f, ev) {
     const e = ev && ev.get(f); let r = null;
     if (e) {
-      for (const mx of e.pre) S.s = randInt(S.s, mx)[0];
+      drawAll(S, e.pre);
       if (e.ai) bowserT1(S, f, e.guard, e.danger);
       for (const [rm, per] of e.eio) {
         S.s = randInt(S.s, 360)[0]; const p = [];
@@ -461,7 +489,7 @@
     if (S.extra && S.extra.has(f)) { for (const mx of S.extra.get(f)) S.s = randInt(S.s, mx)[0]; S.extra.delete(f); }
     if (S.ccAt === f) { const q = randInt(S.s, 100); S.s = q[0]; S.ccAt = null; S.cc = { f, v: q[1], lucky: q[1] < 30 }; if (!S.cc.lucky) { S.ccHit = true; S.unknown = true; } }
     if (f === S.nc) { const q = randInt(S.s, 100); S.s = q[0]; r = q[1] >= 70; S.nc = f + (r ? 48 : 24); }
-    if (e) for (const mx of e.post) S.s = randInt(S.s, mx)[0];
+    if (e) drawAll(S, e.post);
     if (S.inst.length) {
       for (const I of S.inst) if (f < I.rm) for (let i = 0; i < 10; i++) { if (++I.p[i] >= (I.per || 10)) { I.p[i] = 0; S.s = randInt(S.s, 359)[0]; } }
       S.inst = S.inst.filter(I => f + 1 < I.rm);

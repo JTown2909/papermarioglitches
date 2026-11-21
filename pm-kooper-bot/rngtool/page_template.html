@@ -2783,10 +2783,17 @@ function measurePress(tObs) {
 /* v109 (the runner: the other fights show where the press landed in the window, Final Bowser only a text line): a Final
  * Bowser lever press (T1-T4, T6) keeps the plan's frames, its window and the measured confirm frame; the strip shows them (the
  * frame hit green if it works for most states, red if not) after the route moves on, until the next plan beeps */
+const PRESS_READ_SD = 0.3;     // v121: the video's confirm reading, frames (sd)
+function pNorm(z) { const t = 1 / (1 + 0.2316419 * Math.abs(z)), d = 0.3989423 * Math.exp(-z * z / 2), q = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274)))); return z > 0 ? 1 - q : q; }
 function pressShow(P, c, label) {
   if (!P || !P.tab || !P.tab.length || P.first == null || c == null) return null;
-  const f = Math.round(c), works = !!P.tab[f - P.first];
-  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: P.tab4 ? P.tab4.slice() : null, chance: P.chance ? P.chance.slice() : null, first: P.first,     /* v115 (runner 11-17): the white tips (the 6 cap / all 4) and the dimming stay after the press */ tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: P.chance && P.chance[f - P.first] != null ? P.chance[f - P.first] : P.mix && P.mix.p != null ? P.mix.p : null };     // v115: the chance of the frame hit (the press table's), else the plan's     // v111 (oo): the plan's chance, for the ✓
+  // v121 (console 19:14, Final Bowser T3 647.54 / T4 1067.91: "0%", Bowser missed both): the video reads the confirm to about
+  // half a frame, so a press near a frame edge is weighed over both frames (PRESS_READ_SD) instead of judged by the rounded one
+  const f0 = Math.floor(c), w1 = pNorm((c - f0 - 0.5) / PRESS_READ_SD), at = (arr, g) => (arr && arr[g - P.first] != null ? +arr[g - P.first] : null);
+  const ch0 = at(P.chance, f0), ch1 = at(P.chance, f0 + 1), t0 = P.tab[f0 - P.first] ? 1 : 0, t1 = P.tab[f0 + 1 - P.first] ? 1 : 0;
+  const f = Math.round(c), works = (1 - w1) * t0 + w1 * t1 >= 0.5;
+  const pBlend = ch0 != null && ch1 != null ? (1 - w1) * ch0 + w1 * ch1 : null;
+  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: P.tab4 ? P.tab4.slice() : null, chance: P.chance ? P.chance.slice() : null, first: P.first,     /* v115 (runner 11-17): the white tips (the 6 cap / all 4) and the dimming stay after the press */ tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: pBlend != null ? pBlend : P.chance && P.chance[f - P.first] != null ? P.chance[f - P.first] : P.mix && P.mix.p != null ? P.mix.p : null };     // v115: the chance of the frame hit (the press table's), else the plan's     // v111 (oo): the plan's chance, for the ✓
   slog('pressShow', { label, target: P.target, c: +c.toFixed(2), works });
   return works;
 }
@@ -2807,7 +2814,7 @@ function pressTable(o) {
   // a press on an all-4 frame (Duplighosts): where it landed, not early / late against a beep it did not aim at (d1416)
   const when4 = o.on4 ? (o.hit4 ? 'hit the 4' : 'on the 4 (edge)') + (o.off4 ? ', not the beeped frame (' + ae + ' frames ' + (e > 0 ? 'after' : 'before') + ' it)' : '') : null;
   const winTxt = o.w ? (o.w.start === o.w.end ? 'frame ' + o.w.start : o.w.start + '-' + o.w.end) : null;
-  const win = o.edge ? 'on the edge of the window' + (winTxt ? ' ' + winTxt : '') + ' (the video cannot tell)' : o.inWin == null ? (winTxt ? 'window ' + winTxt : '–') : (o.inWin ? 'inside' : 'outside') + (winTxt ? ' (window ' + winTxt + (o.target != null && o.w && o.w.start !== o.w.end ? ', aimed ' + Math.round(o.target) : '') + ')' : '');
+  const win = o.edge ? 'on the edge of the window' + (winTxt ? ' ' + winTxt : '') + ' (the video cannot tell)' : o.inWin == null ? (winTxt ? 'window ' + winTxt : '–') : (o.inWin ? 'inside' : 'outside') + (winTxt ? ' (' + (o.w.start === o.w.end ? '' : 'window ') + winTxt + (o.target != null && o.w && o.w.start !== o.w.end ? ', aimed ' + Math.round(o.target) : '') + ')' : '');
   let q = o.q != null ? Math.max(0, Math.min(1, o.q)) : o.works == null ? null : o.works ? (o.p != null ? o.p : 1) : 0, qOf = o.q != null ? 'this frame' : 'the plan';
   const goal = o.on4 && o.hit4 ? 'all 4 copy' : (o.goal || 'works'), fail = o.failWord || 'fails';
   const chance = q == null ? '–' : goal + ' ' + pc(q) + ' · ' + fail + ' ' + pc(1 - q) + ' (' + qOf + (o.p != null && qOf === 'this frame' && Math.abs(o.p - q) >= 0.01 ? '; the plan was ' + pc(o.p) : '') + ')';
@@ -2842,8 +2849,8 @@ function showPresses() {
   if (LL && (st.lastGenT == null || LL.t > st.lastGenT)) { const e = LL.err, a = Math.round(Math.abs(e) * 10) / 10;
     const rest = 'This lever has its own correction (not the Beep offset): its beeps come ' + Math.abs(LL.bias).toFixed(1) + ' frames ' + (LL.bias >= 0 ? 'later' : 'earlier') + ' (learned from its own presses).';
     // v113: the same table as every other press; the frame, window and chance from the strip's press record (pressShow) when it is this press
-    const ps = st.pressShow && st.pressShow.label === LL.label && Math.abs(st.pressShow.t - LL.t) < 3000 ? st.pressShow : null;
-    const T = pressTable({ label: LL.label, err: e, f: ps ? Math.round(ps.hit) : null, target: ps ? ps.target : null, w: ps && ps.w ? ps.w : null, inWin: ps && ps.w ? Math.round(ps.hit) >= ps.w.start && Math.round(ps.hit) <= ps.w.end : null, works: LL.works, p: ps ? ps.p : null, goal: 'works', failWord: 'fails' });
+    const ps = st.pressShow && Math.abs(st.pressShow.t - LL.t) < 3000 ? st.pressShow : null;     // v121: by time (the labels differ: "the skip A" / "the A that skips Cloud Nine's message")
+    const T = pressTable({ label: LL.label, err: e, f: ps ? Math.round(ps.hit) : null, target: ps ? ps.target : null, w: ps && ps.w ? ps.w : null, inWin: ps && ps.w ? Math.round(ps.hit) >= ps.w.start && Math.round(ps.hit) <= ps.w.end : null, works: ps ? ps.works : LL.works, q: ps ? ps.p : null, goal: 'works', failWord: 'fails' });     // v121: this frame's chance (weighed over the frames the reading allows)
     $('press-msg').innerHTML = T.html + rest; return; }
   if (!presses.length && !(P || st.lastPress)) { $('press-msg').textContent = 'Press check: after you confirm on the target screen (with the beeps running), this says how early or late you pressed, measured against the middle of the aimed frame.'; return; }
   // v111: the press just made first (its own lever's record since v110: the global list no longer gets the Jr. / Duplighosts presses)

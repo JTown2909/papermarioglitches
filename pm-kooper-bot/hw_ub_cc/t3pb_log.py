@@ -43,13 +43,18 @@ spiny('T1spiny'); info['hpT1'] = mario_hp(e)
 e.w8(PLAYER_DATA + 2, 5)                          # DIAGNOSTIC: Danger at the T2 menu (Power Rush from T3's begin_turn)
 star('T2timeout'); info['statusT2'] = bowser_status(e)
 spiny('T2spiny')
-r.wait_state((14,)); r.idle(20)
+r.wait_state((13,)); r.idle(20); info['T3menu'] = r.f
 hp0 = r.bowser_hp()[0]
 r.seq(r.moves(-2) + [(A, 0, 20), (0, DOWN, 10), (A, 0, 15), (A, 0, 1)], PBD, 'T3pb')
-hits = []; prev = hp0
-for k in range(40 + 27 * 12):
-    r.step(A if k >= 47 and (k - 47) % 27 == 0 else 0); h = r.bowser_hp()[0]
-    if h != prev: hits.append((k + 1, prev - h)); prev = h
+hits = []; prev = hp0; armed = True; presses = []
+for k in range(1, 600):                          # each action command on the first frame of its window (actionQuality -1), as pb_nb_log.py
+    q = e.s8(BSTATUS + 0x81); press = k > 5 and q == -1 and armed
+    if press: presses.append(k); armed = False
+    if q != -1: armed = True
+    r.step(A if press else 0); h = r.bowser_hp()[0]
+    if h != prev: hits.append((k, prev - h)); prev = h
+    if bstate(e) not in (17, 18, 19) and k > 30: break
+info['presses'] = presses
 info['hits'] = hits; info['bowserAfter'] = r.bowser_hp(); info['marks'] = r.marks
 json.dump({'info': info, 'rows': r.rows}, open(OUT, 'w'))
 print(json.dumps(info))
