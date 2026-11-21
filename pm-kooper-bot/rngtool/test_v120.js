@@ -44,9 +44,12 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       for (const e of E) if (e.t > lk.t && e.t < pl.t && e.ev === 'shine') { setNow(e.at + 150); T.addShine(e.at, true); }
       setNow(pl.t); const n0 = T.v106.SLOG.length; ev("st.plan = null; zwPlan('test')");
       const s = T.v106.SLOG.slice(n0).find(e => e.ev === 'zwTooSoon');
-      return { soon: s, plan: !!ev('st.plan'), msg: ev('st.msg') };
+      const first = { soon: s, plan: !!ev('st.plan'), msg: ev('st.msg') };
+      for (const dt of [500, 1000, 1500, 2000]) { setNow(pl.t + dt); ev("zwPlan('retry')"); if (ev('st.plan')) { first.later = dt; break; } }
+      return first;
     }, L);
     ok(o.soon && !o.plan && o.soon.pSoon >= o.soon.p + 0.05 && o.soon.soon < o.soon.from && /too soon for 3 beeps/.test(o.msg || ''), '3. 18:32 Time Out: no beeps, the best frame came too soon (' + JSON.stringify(o.soon) + ' | ' + (o.msg || '').slice(0, 120) + ')');
+    ok(o.later == null, '3b. (v121, console 18:58) the no-edge holds on the retries 0.5-2 s later (no plan once the soon window has passed; ' + o.later + ')');
     await q.close();
   }
   // 4. the backup T7 Charge from the T6 lock's seed (console 18:47 and two Nov 17 pairs): the candidates hold the T7 seed and lock it fast

@@ -1560,12 +1560,15 @@ function zwPlan(why, win) {     // win (v85, nbCancelPlan): { lo, hi, h }: the f
   // plan by ZW_SOON_GAIN or more, no beeps: press normally
   // (Time Out only: on Jr. Troopa's levers the blind odds are high and a too-soon better frame is common: the j1729 T7 replay
   // would lose a 75% plan to a 67.5% blind press)
+  // v121 (console 18:58: three too-soon no-edges, then the 4th try, 0.5 s later, beeped the 68% frame once the soon window had
+  // passed): the no-edge holds for the rest of this target screen (st.tooSoon, cleared on a step change)
+  if (st.tooSoon && st.tooSoon.step === routeStep && PROF().id === 'timeout' && !window.__noSoon) { st.msg = st.tooSoon.msg; cancelBeeps(); render(); return true; }
   if (!win && early == null && !C.none && PROF().id === 'timeout' && !window.__noSoon) {     // (__noSoon: tests of other rules)
     const back = Math.max(0, Math.min(from - S.h - 1, Math.ceil((earliestPress(now) - now) / rate)));
     if (back > 0) { const C0 = zwChoose(S.list, from - back, W + back, PD, PROF(), adj, null, null);
       if (!C0.none && C0.target < from && C0.p != null && C.p != null && C0.p >= C.p + ZW_SOON_GAIN) {
         st.msg = 'No edge: the best frame (' + Math.round(100 * C0.p) + '%, ' + C0.w.length + '-frame window) comes too soon for ' + nBeeps() + ' beeps; the next one is only ' + Math.round(100 * C.p) + '%. ' + F.normal + '.';
-        slog('zwTooSoon', { soon: C0.target, pSoon: +C0.p.toFixed(3), winSoon: C0.w.length, target: C.target, p: +C.p.toFixed(3), win: C.w.length, from }); cancelBeeps(); render(); return true; } }
+        st.tooSoon = { step: routeStep, msg: st.msg }; slog('zwTooSoon', { soon: C0.target, pSoon: +C0.p.toFixed(3), winSoon: C0.w.length, target: C.target, p: +C.p.toFixed(3), win: C.w.length, from }); cancelBeeps(); render(); return true; } }
   }
   const lb = leverBias(leverKey(PROF().id));      // v87: a lever's own correction (none on the zero-wait levers so far)
   // v87 (console log 2f22d4dc): no lever on this route is pressed more than a few seconds after its screen opens; an early
@@ -2489,7 +2492,7 @@ function applyProfile() {
 function setStep(i) {
   slog('step', { to: i }); const was = routeStep; st.hwDone = false;
   // v114: the backup ending ends when the route goes back to a Final Bowser turn before it (a new attempt, a click back to T1-T6)
-  { const z = RT()[Math.max(0, Math.min(RT().length - 1, i))]; if (typeof FB2B !== 'undefined' && FB2B.on && z && !z.backup && (z.fb14 || z.fb5 || z.turn === 'fb2_k' || z.turn === 'fb2_pb' || !/^Final Bowser/.test(z.t || ''))) { FB2B.on = false; slog('fb2BackupOff', { to: i }); } } if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { cancelBeeps({ force: true, why: 'step' }); st.series = null; dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
+  { const z = RT()[Math.max(0, Math.min(RT().length - 1, i))]; if (typeof FB2B !== 'undefined' && FB2B.on && z && !z.backup && (z.fb14 || z.fb5 || z.turn === 'fb2_k' || z.turn === 'fb2_pb' || !/^Final Bowser/.test(z.t || ''))) { FB2B.on = false; slog('fb2BackupOff', { to: i }); } } if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { st.tooSoon = null; cancelBeeps({ force: true, why: 'step' }); st.series = null; dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
   if (RT()[was] && /^Hallway Bowser/.test(RT()[was].t || '') && !/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '') && routeStep > was) st.hwLeft = { at: performance.now(), hides: 0 };
   else if (/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '')) st.hwLeft = null; if (V.preDone) for (const k in V.preDone) if (k.startsWith(routeStep + ':')) { delete V.preDone[k]; if (V.pre) delete V.pre[k]; } try { localStorage.setItem('tot-route-step', String(routeStep)); } catch (e) {} applyProfile(); if (routeStep !== was) fb2WaitArm(); }
 // v92: the runner's own route moves (a click, the buttons, the keys) are told from the page's (a screen, a burst): a Final
