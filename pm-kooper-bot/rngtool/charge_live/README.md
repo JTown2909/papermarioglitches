@@ -8,6 +8,15 @@
   draws RandInt(100) against 0 / 0 / 15 / 75 for TurnsSinceStarBeam 1 / 2 / 3 / 4+ (the Peach Beam on T5 sets it to 0; Bowser's
   T5 / T6 / T7 turns are 1 / 2 / 3), and the T7 emulator sweep cast it in 13 of 90 runs. Kept as measured until a console run
   shows otherwise.
+- **Main T7 Power Bounce froze the page** (console 21:12, "it still didnt lock the bounce turn"; console 19:14 too): after the
+  T6 dodge the T7 plan had 8454 states and re-ran each one's idle frames from the T7 menu and ~70 Power Bounce simulations on
+  every replan (old page: 2.4 s per replan at 2000 states, ~10 s at 8454). The page froze, the capture restarted twice
+  ("no new picture for 7 s"), and the coins that narrow the states were never seen, so the doubt went to 1. Now: each state's
+  idle run is kept and stepped on (fb2Prune), its Power Bounce window is computed once 60 frames ahead (fb2PBRow, the same
+  numbers as before: bench at 1000 states identical), the heaviest 1500 states are planned on (the rest count as no 7), and the
+  windows are worked out 120 ms per replan ("working out the bounces ... %"): 3000 states, the longest replan 161 ms, then
+  10-60 ms per replan.
+- **Main T6 edge unchanged**: `fb2Edge` is relative only under 15% blind (the backup T7); the main T6 keeps Best chance.
 - **Saved log**: `more.levers` holds every lever's press record (console 21:01: Duplighosts 1.56 frames early with a +0.98
   correction; the records were only in the browser).
 - **Boots change** (test_nb_route): the fight was read after the menu had switched routes (Ultra index 11 is Hallway T3 since

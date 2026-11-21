@@ -5,6 +5,9 @@
  *  2. the saved log carries every lever's press record (console 21:01, Duplighosts 1.56 frames early with a +0.98 correction:
  *     the records stay in the browser, so the correction could not be checked from the log).
  *  3. a boots change keeps the fight on screen (read before the menu switches routes): Final Bowser stays Final Bowser.
+ *  4. console 21:12: the main T7 Power Bounce plan on 8454 states held the page ~10 s per replan (the capture restarted, the coins
+ *     that narrow the states were missed, "it still didnt lock the bounce turn"): the same plan from cached idle runs and Power
+ *     Bounce windows, the heaviest 1500 states, worked out 120 ms per replan; with 3000 states no replan holds the page long.
  * usage: node test_v122.js [PAGE] */
 const { chromium } = require('playwright'); const fs = require('fs'), http = require('http');
 const PAGE = process.argv[2] || process.env.PAGE || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad/timeout_timer/timeout_timer.html';
@@ -41,6 +44,26 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(/^Final Bowser T1/.test(r.boots), '3. Normal -> Ultra on Final Bowser stays on Final Bowser (' + r.boots + ')');
   ok(/^Final Bowser/.test(r.bootsN), '3. Ultra -> Normal on Final Bowser stays on Final Bowser (' + r.bootsN + ')');
   ok(/^Jr\. Troopa/.test(r.bootsJ), '3. Normal -> Ultra on Jr. Troopa stays on Jr. Troopa (' + r.bootsJ + ')');
+  const FIX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/fb2_t6dn.json', 'utf8'));
+  const t7 = await p.evaluate(async R => {
+    const T = window.__tot, F = window.__fb2, FB = F.FB2, RT = T.RT(), sel = document.getElementById('s-boots'); sel.value = 'ultra'; sel.dispatchEvent(new Event('change'));
+    const i = RT.findIndex(s => s.turn === 'fb2_k'), r = R.find(x => x.hp === 1); T.setStep(i);
+    FB.on = true; FB.hyps = [{ s: parseInt(r.s61, 16) >>> 0, nc: r.nc61, ph: r.phases[0], w: 1 }]; FB.rate = 33.427;
+    T.CHG.trig = { t: performance.now() - 5000 }; const P = F.planPAt(150); FB.plan = Object.assign({}, P, { k: r.P, bias: 0 });
+    F.confirm(T.CHG.trig.t + (r.P + F.van() - 16) * 33.427);
+    const base = FB.t7.states, out = []; let s = 0x13579bdf;
+    for (let n = 0; n < 3000; n++) { const o = base[n % base.length]; s = (Math.imul(s, 0x5D588B65) + 1) >>> 0;
+      out.push(Object.assign({}, o, { a: Object.assign({}, o.a, { S: Object.assign({}, o.a.S, { s: n < base.length ? o.a.S.s : s, coins: o.a.S.coins.slice() }) }), w: o.w * (1 + (n % 7) / 10) })); }
+    FB.t7.states = out; FB.t7.outcome = 'dodge'; FB.vis = []; FB.taps = []; FB.visFrom = null;
+    // the T7 screen: the clock at the T7 menu + 60 now
+    T.CHG.trig = { t: performance.now() - (r.menu + 60 - 16) * 33.427 };
+    const ms = []; let n = 0;
+    while (n++ < 60) { const t0 = performance.now(); F.v122.planT7(); ms.push(Math.round(performance.now() - t0)); if (!FB.t7.plan || FB.t7.plan.none !== 'working') break; await new Promise(z => setTimeout(z, 30)); }
+    return { ms, plan: FB.t7.plan && { none: FB.t7.plan.none || null, states: FB.t7.plan.states, planned: FB.t7.plan.planned }, working: T.SLOG.filter(e => e.ev === 'fb2T7Working').length };
+  }, FIX.runs);
+  console.log('  T7 replans (ms): ' + t7.ms.join(' ') + ' -> ' + JSON.stringify(t7.plan));
+  ok(t7.ms.length > 1 && Math.max(...t7.ms) < 600 && t7.working === 1, '4. 3000 T7 states: worked out over ' + t7.ms.length + ' replans, the longest ' + Math.max(...t7.ms) + ' ms (was ~4 s each)');
+  ok(t7.plan && t7.plan.none !== 'working' && t7.plan.states === 3000 && t7.plan.planned === 1500, '4. then planned on the heaviest 1500 of 3000 states (' + JSON.stringify(t7.plan) + ')');
   ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
   await b.close(); srv.close();
   console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);

@@ -101,7 +101,7 @@ function fb2AI7(S0, E, ph, slamOk, clawOk) {
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
   return { lucky: good, cc: null, atk, T, menu: T, S };
 }
-const fb2Edge = b => Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b));     // v122: the edge against the blind odds
+const fb2Edge = b => (b < 0.15 ? Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b)) : num('zwedge'));     // v122: the edge against low blind odds (the backup T7); else Best chance
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
  * 7th ends the fight at 80 HP: 15 + 14 + ... + 9 = 84) */
 function fb2PB(S0, f0, d, ph) {
@@ -115,6 +115,15 @@ function fb2PB(S0, f0, d, ph) {
     S.s = R.adv(S.s);
   }
   return k + 2;
+}
+/* v122: the bounces for target A frames d0..d1 of state o (as fb2PB(o.a.S, o.a.T + 1, d, o.h.ph) each), from a window kept on the
+ * state's AI result and computed once FB2_PB_AHEAD frames past what is asked, so the replans as the screen runs reuse it */
+const FB2_PB_AHEAD = 60, FB2_T7_MAXS = 1500, FB2_T7_BUDGET = 120;
+const fb2PBHas = (o, d0, d1) => { const C = o.a._pbc; return d0 < o.a.T + 2 || (!!C && C.ph === o.h.ph && d0 >= C.lo && d1 <= C.lo + C.arr.length - 1); };
+function fb2PBRow(o, d0, d1) {
+  const a = o.a, ph = o.h.ph; if (d0 < a.T + 2) { const r = []; for (let d = d0; d <= d1; d++) r.push(fb2PB(a.S, a.T + 1, d, ph)); return r; }
+  let C = a._pbc; if (!C || C.ph !== ph || d0 < C.lo || d1 > C.lo + C.arr.length - 1) { const W = d1 - d0 + FB2_PB_AHEAD; C = a._pbc = { ph, lo: d0, arr: fb2PBWin(a.S, a.T + 1, d0 + 1, W, ph) }; }
+  return C.arr.slice(d0 - C.lo, d1 - C.lo + 1);
 }
 /* the same for every d in [D0 - 1, D0 + W + 1] (the idle frames up to D0 - 1 simulated once) */
 function fb2PBWin(S0, f0, D0, W, ph) {
@@ -339,7 +348,10 @@ function fb2Prune(upto) {
   const near = (x, f) => x - f >= -2 && x - f <= 3.5, out = []; let mx = 0, tot0 = 0;
   for (const o of T7.states) {
     tot0 += o.w;
-    const S = { s: o.a.S.s, nc: o.a.S.nc, coins: o.a.S.coins.slice() }; fb2Idle(S, o.a.T + 1, Math.floor(upto), o.h.ph);
+    // v122: each state's idle run is kept and stepped on from where the last call stopped (it was re-run from the T7 menu for
+    // every state on every replan: 8454 states held the page ~10 s, console 21:12)
+    const uf = Math.floor(upto); let C = o._idle; if (!C || C.f > uf || C.ph !== o.h.ph) C = o._idle = { f: o.a.T + 1, ph: o.h.ph, S: { s: o.a.S.s, nc: o.a.S.nc, coins: o.a.S.coins.slice() } };
+    if (uf > C.f) { fb2Idle(C.S, C.f, uf, o.h.ph); C.f = uf; } const S = C.S;
     const sh = S.coins.filter(c => c[1]).map(c => c[0] + o.l); let lw = 1, err = 0;
     for (const x of taps) if (sh.some(f => near(x, f))) lw *= Lm; else { lw *= Lf; err++; }
     for (const f of sh) if (vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= Lmiss; err++; }
@@ -441,21 +453,29 @@ function fb2PlanT7(cScr) {
   let from = Math.ceil(cNow + num('lead') * 1000 / fb2Rate() + 1);
   if (cScr == null) for (let i = 0; i < 300 && fb2PressT(from) < earliestPress(now); i++) from++;   // every beep still ahead
   const s7 = new Array(W + 1).fill(0), s6 = new Array(W + 1).fill(0);
-  for (const o of S) { const b = []; for (let x = from - 1; x <= from + W + 1; x++) b.push(fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph));
-    for (let k = 0; k <= W; k++) for (const [d, q] of PRESS_ERR) { s7[k] += o.w * q * (b[k + 1 + d] >= G ? 1 : 0); s6[k] += o.w * q * (b[k + 1 + d] >= G - 1 ? 1 : 0); } }
+  const e7 = new Array(W + 3).fill(0), e6 = new Array(W + 3).fill(0), t0 = performance.now();
+  // v122 (console 21:12: 8454 states after the T6 dodge, each replan ~10 s with the page frozen, the capture restarted twice and
+  // the coins that narrow the states were never seen): the heaviest FB2_T7_MAXS states are planned on (the rest count as no 7,
+  // as the background does), and their Power Bounce windows are worked out FB2_T7_BUDGET ms per replan, so the capture keeps running
+  const SP = S.length > FB2_T7_MAXS ? S.slice().sort((x, y) => y.w - x.w).slice(0, FB2_T7_MAXS) : S;
+  if (cScr == null) { const tb = performance.now(); let left = 0;
+    for (const o of SP) { if (fb2PBHas(o, from - 1 - o.l, from + W + 1 - o.l)) continue; if (performance.now() - tb > FB2_T7_BUDGET) { left++; continue; } fb2PBRow(o, from - 1 - o.l, from + W + 1 - o.l); }
+    if (left) { if (st.plan && st.plan.prof === 'fb2') { st.plan = null; cancelBeeps(); } FB2.t7.plan = { none: 'working' }; st.msg = TN + ' Power Bounce: working out the bounces for ' + SP.length + ' seeds (' + Math.round(100 * (1 - left / SP.length)) + '%)'; if (FB2.t7.workLogged !== true) { FB2.t7.workLogged = true; slog('fb2T7Working', { states: S.length, planned: SP.length, left }); } fb2Show(); render(); return true; } }
+  for (const o of SP) { const b = fb2PBRow(o, from - 1 - o.l, from + W + 1 - o.l);
+    for (let k = 0; k <= W; k++) for (const [d, q] of PRESS_ERR) { s7[k] += o.w * q * (b[k + 1 + d] >= G ? 1 : 0); s6[k] += o.w * q * (b[k + 1 + d] >= G - 1 ? 1 : 0); }
+    for (let i = 0; i < W + 3; i++) { if (b[i] >= G) e7[i] += o.w / tot; if (b[i] >= G - 1) e6[i] += o.w / tot; } }
+  FB2.t7.planMs = Math.round(performance.now() - t0);
   // v83, the perfect press: the 7-bounce share on each frame itself (no spread), the centre of the widest run of frames
   // that give 7 for the states (ppPick); with no such frame, the best 7 frame as before. Spread-weighted p7 / p6 logged.
-  const e7 = new Array(W + 3).fill(0), e6 = new Array(W + 3).fill(0);
-  for (const o of S) for (let x = from - 1; x <= from + W + 1; x++) { const v = fb2PB(o.a.S, o.a.T + 1, x - o.l, o.h.ph); if (v >= G) e7[x - from + 1] += o.w / tot; if (v >= G - 1) e6[x - from + 1] += o.w / tot; }
   let k = 0; for (let i = 1; i <= W; i++) if (s7[i] + 0.1 * s6[i] > s7[k] + 0.1 * s6[k] + 1e-12) k = i;
   const pk = ppPick(e7, e6, from - 1, from + W + 1, from, W, x => (s7[x - from] || 0) / tot, 'safe3'); if (pk.ok) k = pk.target - from;
-  const d = from + k, dz = S.doubt || 0, plan = { d, p7: (1 - dz) * s7[k] / tot, p6: (1 - dz) * s6[k] / tot, pp7: (1 - dz) * e7[k + 1], pp6: (1 - dz) * e6[k + 1], win: pk.ok ? pk.run.length : 0, doubt: +dz.toFixed(3), states: S.length, tPress: fb2PressT(d) };   // the background's share counts as no 7 (blind 7 is ~7%)
+  const d = from + k, dz = S.doubt || 0, plan = { d, p7: (1 - dz) * s7[k] / tot, p6: (1 - dz) * s6[k] / tot, pp7: (1 - dz) * e7[k + 1], pp6: (1 - dz) * e6[k + 1], win: pk.ok ? pk.run.length : 0, doubt: +dz.toFixed(3), states: S.length, planned: SP.length, tPress: fb2PressT(d) };   // the background's share counts as no 7 (blind 7 is ~7%)
   // v95 (log 906bfb29 T7: p7 0, p6 0, win 0 at doubt 0.44 on 3 states, and the countdown played; the runner got 3): the
   // page's edge rule as every other plan (zwChoose): beeps only when the perfect-press 7 share, the background counted as
   // no 7, reaches Settings > Best chance (zwedge). Below it: "No edge", no countdown.
   if (!(plan.pp7 >= num('zwedge'))) {
     plan.none = 'edge'; FB2.t7.plan = plan; if (cScr != null) return plan;
-    const was = st.plan && st.plan.prof === 'fb2'; if (was || FB2.t7.edgeLogged !== d) { slog('fb2NoEdge', { why: 'edge', d, p7: +plan.p7.toFixed(3), pp7: +plan.pp7.toFixed(3), p6: +plan.p6.toFixed(3), win: plan.win, doubt: plan.doubt, states: plan.states }); FB2.t7.edgeLogged = d; }
+    const was = st.plan && st.plan.prof === 'fb2'; if (was || FB2.t7.edgeLogged !== d) { slog('fb2NoEdge', { why: 'edge', d, ms: FB2.t7.planMs, p7: +plan.p7.toFixed(3), pp7: +plan.pp7.toFixed(3), p6: +plan.p6.toFixed(3), win: plan.win, doubt: plan.doubt, states: plan.states }); FB2.t7.edgeLogged = d; }
     if (was) st.plan = null; cancelBeeps();
     // v109 (console fb0731 T7: 9 s of "No edge" before a 7 window, the runner did not know whether the page was waiting or broken):
     // the next frame where 7 bounces work for most states, looked for up to FB2_T7_AHEAD frames on
@@ -481,4 +501,4 @@ function fb2Show() {
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best 7 ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press 7 bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
-window.__fb2 = { v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
+window.__fb2 = { v122: { planT7: () => fb2PlanT7(), maxS: FB2_T7_MAXS, budget: FB2_T7_BUDGET }, v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
