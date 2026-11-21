@@ -648,7 +648,7 @@ if (window.__chgDebug) {
       // runner-up the narrow pick stands only if the full search's best is on its stream (chargeNarrowCheck)
       let lone = null, nOk = 0;
       const okOf = r => { const first = nOk++ === 0; const T = r.top; if (!T[0] || T[0].sc < CHG_MIN) return false; const N0 = near(T[0].seed); const b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0));
-        if (!b) { if (first) lone = r; return false; } return T[0].sc / b.sc >= CHG_RATIO; };     // (the unshifted pictures' pick only: a shifted one would need its trigger moved)
+        if (!b) { if (!first) return false; if (chgP().id === 'fb2' && typeof chgFb2Wide === 'function' && chgFb2Wide()) return true; lone = r; return false; } return T[0].sc / b.sc >= CHG_RATIO; };     // the backup T7's candidates come from the T6 lock by the gap rule (README v120): not checked again     // (the unshifted pictures' pick only: a shifted one would need its trigger moved)
       res = await chgSearch(maps, { cands }); let ok = okOf(res), sh = 0;
       // (a second's work each: the pictures one frame earlier / later, before the full search)
       for (const d of [1, -1]) { if (ok || typeof fbShiftG !== 'function') break; const r2 = await chgSearch(chgMaps(fbShiftG(G, d), cen, CHG_N), { cands }); slog('chargeNarrowShift', { d, best: r2.top[0] && Math.round(r2.top[0].sc), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) }); if (okOf(r2)) { res = r2; ok = true; sh = d; CHG.trig.t += d * FRAME; } }

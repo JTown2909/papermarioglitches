@@ -250,7 +250,7 @@ function fb2Confirm(tObs) {
 }
 /* v125 (console 13:37: a T6 lock on 2370 hypotheses - each T6 plan took 2.1 s, its own press time passed before it was out ("beepsNoFit",
  * "target passed"), and the confirm's states, 60866 of them, held the page 1.5 s, so the HP watch saw no picture before the Close Call
- * test and the hit - Mario's Life Shroom - was never read): the plans and the confirm's states run on FB2_HMAX hypotheses sampled by weight */
+ * test and the hit - Mario's Life Shroom - was never read): the T6 / backup T7 Do Nothing plans run on FB2_HMAX hypotheses sampled by weight (the confirm's states keep every one, faster) */
 const FB2_HMAX = 400;
 function fb2TopHyps() {     // a systematic sample by weight (each kept one standing for an equal share), so the odds stay those of the whole set
   const H = FB2.hyps || []; if (H.length <= FB2_HMAX) return H;
@@ -261,10 +261,13 @@ function fb2TopHyps() {     // a systematic sample by weight (each kept one stan
 }
 function fb2SetP(c) {
   const b7 = fb2BackupOn(), F = fb2Flags(), out = [], shifts = typeof FB14_SHIFTS_S !== 'undefined' ? FB14_SHIFTS_S : [[0, 1]], F0 = Math.round(c);
-  for (const h of fb2TopHyps()) for (const [l, wl] of FB2_LAGS) for (const [d, wd] of shifts) for (const [so, co, wf] of F) {
-    const P = F0 + d - l, S = { s: h.s, nc: h.nc, coins: [] }; fb2Idle(S, 61, P + FB2_DNAI, h.ph);
-    const a = b7 ? fb2AI7(S, P + FB2_DNAI, h.ph, so, co) : fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l, P, a, w: h.w * wl * wd * wf });
-  }
+  // every hypothesis (not fb2TopHyps' sample: a seed dropped here is gone for T7), its idle frames run once up to the earliest P and
+  // stepped on from there (they were re-run from frame 61 for every lag / shift / flag: 60866 states held the page 1.5 s)
+  const combos = []; for (const [l, wl] of FB2_LAGS) for (const [d, wd] of shifts) combos.push({ P: F0 + d - l, l, w: wl * wd });
+  combos.sort((x, y) => x.P - y.P);
+  for (const h of FB2.hyps) { const S = { s: h.s, nc: h.nc, coins: [] }; let at = 61;
+    for (const cb of combos) { fb2Idle(S, at, cb.P + FB2_DNAI, h.ph); at = Math.max(at, cb.P + FB2_DNAI);
+      for (const [so, co, wf] of F) { const a = b7 ? fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co) : fb2AI(S, cb.P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l: cb.l, P: cb.P, a, w: h.w * cb.w * wf }); } } }
   const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + (o.a.lucky ? o.w : 0), 0) / tot;
   const atk = {}; out.forEach(o => { atk[o.a.atk] = (atk[o.a.atk] || 0) + o.w / tot; });
   const hitAtk = {}, hw = out.reduce((x, o) => x + (o.a.lucky ? 0 : o.w), 0); out.forEach(o => { if (!o.a.lucky) hitAtk[o.a.atk] = (hitAtk[o.a.atk] || 0) + o.w / (hw || 1); });

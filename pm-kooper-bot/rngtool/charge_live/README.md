@@ -6,11 +6,12 @@
   Replayed, the full search over all seeds agreed with the narrow pick where the run went on to win (c4e50398) and found a different,
   ambiguous best (ratio ~1.05) on 13:23, 11:52 and 11:24. Now such a pick stands only if the full search's best is on its stream
   (`chargeNarrowCheck`: narrow / full seed, agree, scores); else the full search decides (usually no lock: "No lock on T6 ... Do Nothing
-  now"). The backup T7 picks of 11:52 and 09:32 agree and lock as before.
+  now"). The backup T7's candidates (from the T6 lock by the gap rule) are not checked again (a full search there took 8 s in test_v120).
 - **T6 froze the page** (console 13:37, a T6 lock on 2370 hypotheses): each T6 plan took 2.1 s (its own press time passed before it
   was out: "beepsNoFit", "target passed", then a later replan), and the confirm's states (60866) held the page 1.5 s, so the HP watch
   had no picture before the Close Call test and the hit (the Life Shroom) was never read ("fb2OutcomeUnread"). The plans and the
-  confirm's states now run on FB2_HMAX (400) hypotheses sampled by weight (fb2TopHyps), and the HP watch takes its reference pictures
+  plans now run on FB2_HMAX (400) hypotheses sampled by weight (fb2TopHyps); the confirm's states keep every hypothesis (a seed dropped
+  there would be gone for T7) with each one's idle frames run once and stepped on (fb2SetP); the HP watch takes its reference pictures
   up to 2.1 s after the confirm (the test is on P + 68, 2.3 s). test_v108's fb1548 replay locks on 25 states (the full search, the
   narrow pick not confirmed).
 - **Hallway route with T3's 5 cap** (the runner): "T4: Jump x2; Do Nothing", "T5: Jump x2".
