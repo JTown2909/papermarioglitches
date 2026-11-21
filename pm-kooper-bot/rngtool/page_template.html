@@ -1794,6 +1794,9 @@ function addShine(t, auto) {
   if (auto && typeof fb2Tap === 'function') fb2Tap(t);
   if (auto && typeof fb14Tap === 'function') fb14Tap(t);
   if (auto && zw.on) zwTap(t);
+  // v123 (the runner: the page lags "on the last few turns"; consoles 09:05 / 09:09: the walk's shine search ran on Final Bowser's
+  // coin, its wide and torch-room searches on the main thread): on Final Bowser the coin is read by its own trackers above only
+  if (auto && fbStepNow()) return;
   const s = seg();
   if (auto && s.taps.length) {                     // a real shine lands 48 + 24k frames after the previous one
     const g = (t - s.taps[s.taps.length - 1]) / FRAME, k = Math.round((g - 48) / 24);
@@ -1842,7 +1845,9 @@ function newSegment() {
   slog('newSegment', { segs: st.segs.length + 1 });
   st.prevLock = lastLockedState(); st.segs.push({ taps: [] }); st.lock = null; st.cands = null; st.rcarry = null; st.turnEv = []; st.hyp = null; st.carryOk = 0; st.needResync = false; render();   // a running plan stays
 }
+function fbStepNow() { return typeof isRoute === 'function' && isRoute() && /^Final Bowser/.test((RT()[routeStep] || {}).t || ''); }     // v123
 async function findChain() {
+  if (fbStepNow()) return;     // v123: no walk search on Final Bowser
   const cur = seg(), list = st.chain.map(c => c.taps).concat([cur.taps.slice()]);
   const hids = st.chain.map(c => c.hid).slice(1).concat([cur.hid]);
   const segs = list.map((taps, i) => { const g = { pattern: pat(taps).pattern }; if (i) { [g.lo, g.hi] = gapWin(list[i - 1][list[i - 1].length - 1], taps[0], hids[i - 1]); Object.assign(g, gapEdges(i)); } return g; });

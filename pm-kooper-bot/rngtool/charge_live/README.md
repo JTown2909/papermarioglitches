@@ -21,7 +21,14 @@
 - **Lag** (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged (`longTask`, with the
   step and the event before it), so the next logs show where. The "no state fits" T7 line is logged when the doubt moves (09:05: 314
   lines in 5 s).
-- test_v123.js; test_console_v96 pins the new rule.
+- **Lag on the last turns** (the runner: "on the last few turns"; 09:05 / 09:09): the walk's shine search (wide and torch-room
+  carries, chain searches) ran on Final Bowser's coin on the main thread; Final Bowser's coin goes to its own trackers only now.
+- **Final Bowser T1 no lock** (09:14): a 7.3 s stream search failed, the attempt took 9.3 s and the re-read was judged too slow
+  for the 13.5 s limit; a re-read runs no stream search, so its time estimate leaves the stream out (replayed: the first re-read
+  locks).
+- **T7 Power Bounce colours** (09:16: "the timer page did not show any colors" on a 42% plan): no frame reached 50%, so none was
+  coloured; the best frames are coloured now (80% of the best, at most 50%) and dimmed by their chance.
+- test_v123.js; test_console_v96 / test_fb14_v86 pin the new lever rule.
 
 # Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)
 

@@ -493,7 +493,7 @@ function fb2PlanT7(cScr) {
   if (cScr != null) return plan;
   if (cScr == null) { cancelBeeps(); playBeeps(plan.tPress);
     const r7 = fb2Rate(), w7 = pk.ok ? pk.run : { start: d, end: d, length: 1 };      // v109: the strip's frames (7 bounces for most states), as T6
-    st.msg = null; st.plan = { tMade: now, w: { start: w7.start, end: w7.end, length: w7.length }, target: d, tPress: plan.tPress, tLast: plan.tPress - (d - 0.5 + num('off')) * r7, rate: r7, carried: true, from, to: from + W, first: from - 1, prof: 'fb2', tab: e7.map(v => (1 - dz) * v >= 0.5), tab4: null, mix: { p: plan.p7, pp: plan.pp7, win: plan.win, doubt: dz, groups: S.length, zw: true } }; }
+    st.msg = null; st.plan = { tMade: now, w: { start: w7.start, end: w7.end, length: w7.length }, target: d, tPress: plan.tPress, tLast: plan.tPress - (d - 0.5 + num('off')) * r7, rate: r7, carried: true, from, to: from + W, first: from - 1, prof: 'fb2', tab: e7.map(v => (1 - dz) * v >= Math.min(0.5, 0.8 * (1 - dz) * Math.max(...e7))), chance: e7.map(v => +((1 - dz) * v).toFixed(3)), tab4: null,     /* v123 (console 09:16: a 42% plan with no frame at 50% showed no colours): the best frames are coloured, dimmed by their chance */ mix: { p: plan.p7, pp: plan.pp7, win: plan.win, doubt: dz, groups: S.length, zw: true } }; }
   slog('fb2PlanT7', plan); fb2Show(); if (cScr == null) render(); return true;
 }
 function fb2Show() {

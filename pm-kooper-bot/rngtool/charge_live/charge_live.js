@@ -663,7 +663,7 @@ if (window.__chgDebug) {
         if (chgLockOk(r2)) { res = r2; A.shift = d; CHG.trig.t += d * FRAME; CHG.trig.n -= d; CHG.G = fbShiftG(G, d); break; } }
       A.ms = Math.round(performance.now() - t1a); CHG.info.shiftAssist = A; if (!CHG.replay) slog('chargeShiftAssist', A);
     }
-    CHG.res = res; CHG.tLock = performance.now(); CHG.attMs = CHG.tLock - t0; CHG.info.searchMs = Math.round(CHG.tLock - CHG.tSearch); CHG.info.lockAfterRaysMs = Math.round(CHG.tLock - CHG.tEnd);
+    CHG.res = res; CHG.tLock = performance.now(); CHG.attMs = CHG.tLock - t0; CHG.attStreamMs = CHG.info.stream && CHG.info.stream.ms ? CHG.info.stream.ms : 0; CHG.info.searchMs = Math.round(CHG.tLock - CHG.tSearch); CHG.info.lockAfterRaysMs = Math.round(CHG.tLock - CHG.tEnd);
     if (res.fb2) CHG.info.stage = res.fb2.times;
     chgDecide();
   } catch (e) { if (CHG.replay) { chgReplayDone({ state: 'error', msg: String(e && e.message || e) }); return; } slog('chargeError', { msg: String(e && e.message || e) }); CHG.state = 'failed'; CHG.why = 'error: ' + (e && e.message || e); chgShow(); }
@@ -864,7 +864,10 @@ function chgLockBy(P) { const f = CHG_PRESS[P.id]; return f ? f() - (earliestPre
 /* another placement only while its search (as long as the last one took) ends before chgLockBy; replays: no clock */
 function chgRetryTime() {
   if (CHG.replay && !CHG.replay.clock) return CHG.alt < (CHG.replay.maxAlts != null ? CHG.replay.maxAlts : CHG_ALT_MAX);
-  return CHG.alt < CHG_ALT_MAX && performance.now() - CHG.tEnd + (CHG.attMs || 2500) <= chgLockBy(chgP());
+  // v123 (console 09:14, Final Bowser T1: a 7.3 s stream search failed, the attempt took 9.3 s and the re-read was judged too slow;
+  // replayed, the first re-read locks): a re-read runs no stream search, so its time is the attempt's without it
+  const est = Math.max(1200, (CHG.attMs || 2500) - (CHG.alt === 0 ? CHG.attStreamMs || 0 : 0));
+  return CHG.alt < CHG_ALT_MAX && performance.now() - CHG.tEnd + est <= chgLockBy(chgP());
 }
 /* v118: a Final Bowser read that ends with no lock leaves its best placement's seed as a weak stream (fb14_live.js) */
 function chgWeakEnd() { const W = CHG.weakBest; if (!W) return; if (CHG.info) CHG.info.weak = W; if (!CHG.replay && typeof fbWeakNote === 'function') fbWeakNote(W); }
