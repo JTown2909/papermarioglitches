@@ -643,8 +643,12 @@ if (window.__chgDebug) {
       // the runner-up off the best one's stream: the candidates here are runs of consecutive seeds, and one a few steps away
       // shares B's rays and every respawn (the true T6 seed of the end-to-end run, 4753, against its neighbour's ~4700)
       const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };
-      const okOf = r => { const T = r.top; if (!T[0] || T[0].sc < CHG_MIN) return false; const N0 = near(T[0].seed); const b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0));
-        return T[0].sc / (b ? b.sc : T[0].sc / (CHG_RATIO * 1.0001)) >= CHG_RATIO; };
+      // v125 (the Nov 20-21 logs: 11 T6 "locks" with no runner-up off the best one's stream - ratio logged as 1.8 - gave 2 dodges, blind
+      // odds; the 7 with a real runner-up gave 4; replayed, the full search agreed with the narrow pick only where the run won): with no
+      // runner-up the narrow pick stands only if the full search's best is on its stream (chargeNarrowCheck)
+      let lone = null, nOk = 0;
+      const okOf = r => { const first = nOk++ === 0; const T = r.top; if (!T[0] || T[0].sc < CHG_MIN) return false; const N0 = near(T[0].seed); const b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0));
+        if (!b) { if (first) lone = r; return false; } return T[0].sc / b.sc >= CHG_RATIO; };     // (the unshifted pictures' pick only: a shifted one would need its trigger moved)
       res = await chgSearch(maps, { cands }); let ok = okOf(res), sh = 0;
       // (a second's work each: the pictures one frame earlier / later, before the full search)
       for (const d of [1, -1]) { if (ok || typeof fbShiftG !== 'function') break; const r2 = await chgSearch(chgMaps(fbShiftG(G, d), cen, CHG_N), { cands }); slog('chargeNarrowShift', { d, best: r2.top[0] && Math.round(r2.top[0].sc), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) }); if (okOf(r2)) { res = r2; ok = true; sh = d; CHG.trig.t += d * FRAME; } }
@@ -653,7 +657,10 @@ if (window.__chgDebug) {
       slog('chargeNarrow', CHG.info.narrow);
       if (CHG.narrow14) { CHG.narrow14.done = true; CHG.narrow14.ok = !!ok; if (ok) res.narrow14 = true; }
       if (!ok && SW) { const r3 = await streamTry(SW); if (r3) { res = r3; ok = true; } }      // v89: the carry missed (Bowser's hit): the stream window next
-      if (!ok) { CHG.tSearch = performance.now(); res = await chgSearch(maps); }
+      if (!ok) { CHG.tSearch = performance.now(); const full = await chgSearch(maps);
+        if (lone && lone.top[0] && full.top[0]) { const N1 = near(lone.top[0].seed), agree = N1.has(full.top[0].seed >>> 0);
+          slog('chargeNarrowCheck', { narrow: (lone.top[0].seed >>> 0).toString(16), full: (full.top[0].seed >>> 0).toString(16), agree, nScore: Math.round(lone.top[0].sc), fScore: Math.round(full.top[0].sc) });
+          if (agree) { res = lone; ok = true; CHG.info.narrow.locked = true; CHG.info.narrow.checked = true; res.top = [res.top[0]].concat(res.top.slice(1).filter(x => !N1.has(x.seed >>> 0))); } else res = full; } else res = full; }
     } else if (E) { E.give(maps); res = await CHG.searchP; } else res = await chgSearch(maps);
     // v114 (console fb1810): on the backup T7 a no-lock is searched again on the pictures one / two frames off (chgFb2Wide)
     if (chgP().id === 'fb2' && chgFb2Wide() && !chgLockOk(res)) {

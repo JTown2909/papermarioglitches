@@ -1,3 +1,15 @@
+# Time Out Timer v125: T6 / backup T7 narrow locks must agree with the full search; Final Bowser shines logged again (Nov 21)
+
+- **Narrow locks with no runner-up**: the T6 Charge (and the backup T7's) is searched first on the seeds carried from T1-T5. When no
+  candidate off the best one's stream survives the bound (all skipped), the lock was taken at a logged ratio of 1.8 - a floor, not a
+  measured ratio. In the Nov 20-21 logs those 11 T6 "locks" gave 2 dodges (blind odds, ~30%), the 7 with a measured runner-up 4.
+  Replayed, the full search over all seeds agreed with the narrow pick where the run went on to win (c4e50398) and found a different,
+  ambiguous best (ratio ~1.05) on 13:23, 11:52 and 11:24. Now such a pick stands only if the full search's best is on its stream
+  (`chargeNarrowCheck`: narrow / full seed, agree, scores); else the full search decides (usually no lock: "No lock on T6 ... Do Nothing
+  now"). The backup T7 picks of 11:52 and 09:32 agree and lock as before.
+- **Final Bowser shines** are logged again (v123 stopped logging them with the walk search; the FB trackers kept getting them), so a
+  T7 "no state fits" can be checked against the coin.
+
 # Time Out Timer v124: the key levers look further for a 90% window (Nov 21)
 
 The runner: "we really just need a good jr bounce, time out on hallway, dodged final bowser wave on turn 4, and the high bounce on
