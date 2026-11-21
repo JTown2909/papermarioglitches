@@ -14,6 +14,12 @@ step (route text "T3: Bounce x5; Spiny Flip", aim5) picks its frame on the 5+ ma
 the plan's p stays the 4+ chance, and the 3 s look-ahead (hwpb4 in KEY_LATER_S) looks for a 5+ frame at 90% (log 11:20: 4+ 100% on
 a 17-frame window, 5+ 87% on 1 frame). test_v117's replays run without the look-ahead (they check the frame live planned on).
 
+**Frame timing** (the runner: "can the software more accurately keep track of which frame we're on?"): the pictures are timed by
+requestVideoFrameCallback's captureTime (else expectedDisplayTime) when the page is visible; behind OBS they come from the track
+(MediaStreamTrackProcessor) and were stamped when the page got to them, after any wait in the queue. Those now use the frame's own
+timestamp, mapped onto performance.now() by the smallest arrival delay seen (bgFrameTime). Every 30 s the log gets `frameStats`: how
+many pictures came from each source, the mean and spread of the gaps between them, and how many gaps are off the 16.7 / 33.4 ms grid.
+
 **Final Bowser outcomes against the plans** (every plan with an outcome in the Nov 20-21 logs): T1 skip 11 of 17 against 11.3
 expected, T2 12 / 16 against 11.0, T3 9 / 12 against 7.9 (honest); T4 17 / 17 against 13.0 (the wave missed Mario even on 52% plans
 and on presses 1.2-2.4 frames off: the turn is more forgiving than the model of it); T6 5 / 16 against 9.5 (most T6 hits came with

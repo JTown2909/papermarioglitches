@@ -58,7 +58,7 @@ function startBackground(track) {
       let r; try { r = await rd.read(); } catch (e) { break; }
       if (r.done) break;
       const fr = r.value;
-      try { if (V.force === 'bg' || performance.now() - V.lastVfc > 150) { V.src = fr; frameSafe(performance.now()); V.bgFrames = (V.bgFrames || 0) + 1; } }
+      try { if (V.force === 'bg' || performance.now() - V.lastVfc > 150) { V.src = fr; const t = bgFrameTime(fr); frameSafe(t); V.bgFrames = (V.bgFrames || 0) + 1; frameStat('bg', t, fr.timestamp != null); } }
       finally { V.src = null; fr.close(); }
     }
   })();
@@ -68,7 +68,28 @@ function stopCam() { if (V.stream) V.stream.getTracks().forEach(t => t.stop()); 
 // captureTime on another clock; anything more than a second away from now is not trusted.
 function frameTime(now, meta) {
   const pn = performance.now(), ok = x => typeof x === 'number' && x > 0 && Math.abs(x - pn) < 1000;
-  return ok(meta.captureTime) ? meta.captureTime : ok(meta.expectedDisplayTime) ? meta.expectedDisplayTime : now;
+  const t = ok(meta.captureTime) ? meta.captureTime : ok(meta.expectedDisplayTime) ? meta.expectedDisplayTime : now;
+  frameStat(ok(meta.captureTime) ? 'vfcCapture' : ok(meta.expectedDisplayTime) ? 'vfcDisplay' : 'vfcNow', t, true);
+  return t;
+}
+// v124 (the runner: "can the software more accurately keep track of which frame we're on?"): a frame read from the track (the page
+// hidden behind OBS) was stamped when the page got to it, after any wait in the queue; its own timestamp (microseconds on the
+// capture's clock) is mapped onto performance.now() by the smallest arrival delay seen, so the queue's wait no longer moves it
+function bgFrameTime(fr) {
+  const pn = performance.now(); if (fr.timestamp == null || !isFinite(fr.timestamp)) return pn;
+  const d = pn - fr.timestamp / 1000; if (V.bgOff == null || d < V.bgOff || pn - (V.bgOffT || 0) > 30000) { V.bgOff = d; V.bgOffT = pn; }
+  const t = fr.timestamp / 1000 + V.bgOff; return Math.abs(t - pn) < 500 ? t : pn;
+}
+// how the frames are timed, logged every 30 s (frameStats): the source, how many, and the spread of the gaps between frames
+function frameStat(src, t, exact) {
+  const F = V.fstat || (V.fstat = { t0: performance.now(), n: {}, gaps: [], last: null });
+  F.n[src] = (F.n[src] || 0) + 1; if (F.last != null) { const g = t - F.last; if (g > 0 && g < 100) F.gaps.push(g); } F.last = t;
+  if (performance.now() - F.t0 > 30000 && typeof slog === 'function') {
+    const G = F.gaps, m = G.reduce((a, x) => a + x, 0) / (G.length || 1), sd = Math.sqrt(G.reduce((a, x) => a + (x - m) * (x - m), 0) / (G.length || 1));
+    const off = G.filter(g => Math.abs(g - 16.68) > 3 && Math.abs(g - 33.37) > 3).length;
+    slog('frameStats', { src: F.n, gapMs: +m.toFixed(2), sdMs: +sd.toFixed(2), offGrid: off, n: G.length });
+    V.fstat = { t0: performance.now(), n: {}, gaps: [], last: null };
+  }
 }
 // v109 (logs 07-48-18 / 07-49-56: after the Normal Boots Jr. fight's end not one event for two fights): an exception in onFrame
 // skipped schedule(), and the picture loop was dead until a reload. The next frame is always scheduled; an error is logged once
