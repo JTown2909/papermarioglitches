@@ -543,8 +543,12 @@ const ENDGAME = [
     { text: 'T7: Star Storm if 4 capped / Shooting Star [Down 5] if 4 capped', steps: [] } ] },
   { h: 'Hallway Bowser', turns: [
     { text: 'T1: Charge; Spiny Flip - Danger', steps: [{ label: 'Spiny Flip', cat: 'B', turn: 'hw_spiny', pre: [{ cat: 'M', id: 'hw_charge' }], hud: true, imps: Array.from({ length: 33 }, (_, i) => 138 + i) }] },
-    { text: 'T2: Time Out; Spiny Flip', steps: [{ label: 'Time Out → STOP', cat: 'B', prof: 'timeout' }] },
-    { text: 'T3: Bounce x3; Spiny Flip', steps: [] },
+    // v121 (the runner: "if we're gonna end jr troopa with 3hp, 7 fp, i need you to give a turn 3 4/5 bounce on hallway, right after
+    // time out. this is so we dont have to eat a maple after jr troopa"): the carry goes on through Time Out (hw_to) and T2's Spiny
+    // Flip (hw_spiny2, Bowser STOPped) to T3's Power Bounce, beeped for 4+ hits, aiming at 5+ (pmrng_core.js hwpb4 / hwpb5)
+    { text: 'T2: Time Out; Spiny Flip', steps: [{ label: 'Time Out → STOP', cat: 'B', prof: 'timeout', turn: 'hw_to' },
+      { label: 'Spiny Flip', cat: 'B', turn: 'hw_spiny2', hud: true, imps: Array.from({ length: 33 }, (_, i) => 138 + i) }] },
+    { text: 'T3: Bounce x4/5; Spiny Flip', steps: [{ label: 'Power Bounce → 4+, aims at 5', cat: 'B', prof: 'hwpb4' }] },
     { text: 'T4: Bounce x3; Spiny Flip', steps: [] },
     { text: 'T5: Jump x2; Spiny Flip', steps: [] } ] },
   // Final Bowser phase 2 (fb2_route/README.md). The T6 Super Charge locks the seed from its rays (the step below has it
@@ -1207,7 +1211,7 @@ function zwVisible(f) { return zw.vis.some(([a, b]) => f >= a && f <= b) || (zw.
  * tracker whose states fit the coin badly hands the chance back to blind (zwDoubt) instead of beeping on them. v71 dropped
  * a state on any one miss or false shine: one missed shine (a busy browser) lost the true seed (clip 20-54-59, T2). */
 const ZW_PMISS = 0.02, ZW_FALSE = 1.8e-4, ZW_RHO = 0.3 / 31.2, ZW_CUT = 1e-4, ZW_MAXERR = 3, ZW_BG0 = 0.05, ZW_BGIN = 0.03;
-const ZW_BLIND = { timeout: 0.31, dup3: 0.47, dup4: 0.13, jrcc_bomb: 0.30, jrcc_syrup: 0.30, jrcc_nothing: 0.30, jrpb5: 0.675, jrpb6: 0.322, jrcc_gch: 0.30, jrcc_gchw: 0.30, jrcc_hb: 0.30, hwcc_gch: 0.30, hwcc_gchw: 0.30, jrpb5n: 0.675, jrpb6n: 0.322, jrpb5p: 0.675, jrpb6p: 0.322 };
+const ZW_BLIND = { timeout: 0.31, dup3: 0.47, dup4: 0.13, jrcc_bomb: 0.30, jrcc_syrup: 0.30, jrcc_nothing: 0.30, jrpb5: 0.675, jrpb6: 0.322, jrcc_gch: 0.30, jrcc_gchw: 0.30, jrcc_hb: 0.30, hwcc_gch: 0.30, hwcc_gchw: 0.30, jrpb5n: 0.675, jrpb6n: 0.322, jrpb5p: 0.675, jrpb6p: 0.322, hwpb4: 0.84, hwpb5: 0.46 };
 function zwLR() {
   const W = 1.5 + (zw.tapLate || 1.5), d = W * (ZW_RHO + ZW_FALSE);
   return { match: (1 - ZW_PMISS) / d, miss: ZW_PMISS, fals: ZW_FALSE / (ZW_RHO + ZW_FALSE) };
@@ -1302,8 +1306,9 @@ function zwInput(id, tObs, vanish, imps) {
   else {
     const out = []; zw.preSplit = id === 'hw_spiny' ? zw.parts : null;     // v79: hwHpSplit builds the roll fallback from these
     const shs = zw.shifts || [[0, 1]];      // the Charge lock: the confirm read from the bar hiding is +-1 frame
-    for (const p of zw.parts) for (const [sh, ws] of shs) for (const im of imps) for (const gd of [true, false]) {
-      const q = zwClone(p); q.w = p.w * ws / (imps.length * 2); const e2 = R.buildEv([{ f: c + sh, id, imp: im, guard: gd }]);
+    const gds = id === 'hw_spiny' ? [true, false] : [false];     // v121: the guard only matters to Bowser's AI (hw_spiny2 has none)
+    for (const p of zw.parts) for (const [sh, ws] of shs) for (const im of imps) for (const gd of gds) {
+      const q = zwClone(p); q.w = p.w * ws / (imps.length * gds.length); const e2 = R.buildEv([{ f: c + sh, id, imp: im, guard: gd }]);
       zwMerge(q.ev, e2); q.evMax = Math.max(q.evMax, c + sh + im + 45); out.push(q);
     }
     zw.parts = out;
@@ -1715,7 +1720,7 @@ function makePlan() {
     if (s && s.nb && s.jr != null && PROF().lever === 'cancel') { nbCancelMake(); return; }     // v85: Goombario's box A (jr_live.js)
     if (s && s.nb && s.prof && s.prof !== 'dup3' && !st.lock && !zw.on && !(s.jr != null && PROF().group === 'jr' && s.prof !== 'jrpb5n')) { st.msg = 'No beeps yet (Normal Boots): show a few shines in this menu (wait on it, or C-up): the seed is found from the coin and ' + (s.prof === 'timeout' ? 'Time Out' : 'Power Bounce') + ' is beeped. Without a lock, press normally (' + (s.prof === 'timeout' ? '31%' : s.blind) + ').'; render(); return; }
     if (s && s.nb && s.nomodel) { st.msg = 'No beeps this turn (Normal Boots): ' + s.nomodel + '.' + (s.blind ? ' Play it blind: ' + s.blind + '.' : ''); cancelBeeps(); render(); return; } }
-  if (zw.on && (PROF().id === 'timeout' || dupZw() || jrZw()) && zwPlan()) return;
+  if (zw.on && (PROF().id === 'timeout' || PROF().id === 'hwpb4' || dupZw() || jrZw()) && zwPlan()) return;
   // v76: on the Charge-lock route the Duplighosts are planned only from this fight's Charge tracker, never from a coin lock
   // (console session 2026-11-07, t=579423: a walk lock from before the fight produced three Do Nothing plans and a beeped press)
   if (dupStepNow() && !dupZw()) { st.msg = dupNoLockMsg(); render(); if (typeof chgShow === 'function') chgShow(); return; }
@@ -2293,7 +2298,7 @@ function saveBoxes() { try { localStorage.setItem('tot-boxes', JSON.stringify(V.
  * hiding the status bar a fixed number of frames later (emulator, every confirm of a Jr. Troopa run: Mario's actions 3,
  * Bombette's Bomb 4; Bombette doing nothing does not hide it). On a turn whose inputs are all listed (step.hud: the pre
  * inputs, then the step), a hide that no target screen explains is the turn's next input. */
-const HUD_HIDE = { jr_charge: 3, hw_charge: 3, jr_whacka: 3, jr_syrup_cc: 3, jr_bomb: 4, jr_bomb_cc: 4, hw_spiny: 2 };   // hw_spiny: route clips (A icon + 0-2 capture frames; the Charge lock carries -1..+1 around it)
+const HUD_HIDE = { jr_charge: 3, hw_charge: 3, jr_whacka: 3, jr_syrup_cc: 3, jr_bomb: 4, jr_bomb_cc: 4, hw_spiny: 2, hw_spiny2: 2 };   // hw_spiny: route clips (A icon + 0-2 capture frames; the Charge lock carries -1..+1 around it)
 /* Walk counter (zero-wait): from the coin's return after a long gap (10 s or more hidden: the end of the Jr. Troopa
  * fight's text) to the next long gap (the Hallway Bowser cutscene taking the bar away). Counts real-time seconds with the
  * coin on screen ("coin visible") and real-time seconds walked, and the bits of evidence so far against the ~38 a lock
@@ -2494,6 +2499,7 @@ function applyProfile() {
  * means the turn's confirm is in, so its series is cut whether or not it has begun (the begun-series guard is for replans) */
 function setStep(i) {
   slog('step', { to: i }); const was = routeStep; st.hwDone = false;
+  { const hi0 = isRoute() ? RT().findIndex(x => x.turn === 'hw_spiny') : -1; if (hi0 >= 0 && i <= hi0 + 1 && i < routeStep) st.hwTO = null; }     // v121: a retry (T1 / T2's Time Out again) clears Time Out's flag
   // v114: the backup ending ends when the route goes back to a Final Bowser turn before it (a new attempt, a click back to T1-T6)
   { const z = RT()[Math.max(0, Math.min(RT().length - 1, i))]; if (typeof FB2B !== 'undefined' && FB2B.on && z && !z.backup && (z.fb14 || z.fb5 || z.turn === 'fb2_k' || z.turn === 'fb2_pb' || !/^Final Bowser/.test(z.t || ''))) { FB2B.on = false; slog('fb2BackupOff', { to: i }); } } if (typeof arenaNote === 'function') arenaNote(Math.max(0, Math.min(RT().length - 1, i))); st.hwBackHeld = false; routeStep = Math.max(0, Math.min(RT().length - 1, i)); if (routeStep !== was) { st.tooSoon = null; cancelBeeps({ force: true, why: 'step' }); st.series = null; dupStepChange(was); jrStepChange(was); if (typeof fb14StepChange === 'function') fb14StepChange(was); if (typeof hwHpStepChange === 'function') hwHpStepChange(); } if (routeStep !== was && RT()[routeStep] && RT()[routeStep].turn === 'hw_spiny' && typeof chgReset === 'function' && !['search', 'maps', 'armed', 'capture'].includes(CHG.state)) chgReset();
   if (RT()[was] && /^Hallway Bowser/.test(RT()[was].t || '') && !/^Hallway Bowser/.test((RT()[routeStep] || {}).t || '') && routeStep > was) st.hwLeft = { at: performance.now(), hides: 0 };
@@ -2626,7 +2632,7 @@ function hwRetry(hiddenMs) {
   // turn and Mario's attacks hide the coin ~13.6 s, which stepped the route back to T1 and read every later bar hide as a
   // Charge. A new attempt always starts with T1's Charge, whose burst sets T1 (chgPendResolve): only that may, while the
   // Charge reader is on
-  if (st.hwDone && typeof chgEnabled === 'function' && chgEnabled()) { if (!st.hwBackHeld) { st.hwBackHeld = true; slog('stepBackHeld', { from: routeStep, hiddenMs: Math.round(hiddenMs), why: 'Time Out done: the rest of the battle' }); } return; }
+  if ((st.hwDone || st.hwTO) && typeof chgEnabled === 'function' && chgEnabled()) { if (!st.hwBackHeld) { st.hwBackHeld = true; slog('stepBackHeld', { from: routeStep, hiddenMs: Math.round(hiddenMs), why: 'Time Out done: the rest of the battle' }); } return; }
   // v116 (log 484e3220: a 39 s hide on the way into Final Bowser stepped the route back here, and the step's arenaNote then held
   // the Phase 1 Charge 1 s later on the Hallway, "fb only 1 s after hw"): the step back keeps the Hallway's last seen time
   const hwSeen = typeof ARENA !== 'undefined' ? ARENA.seen.hw : undefined;
@@ -2713,7 +2719,9 @@ function checkPress(tObs) {
     // step set before the battle): not the Spiny Flip, so the step stays
     if (z && z.turn === 'hw_spiny' && (CHG.state === 'armed' || CHG.state === 'capture') && Math.abs(tObs - CHG.hideT) < 3 * FRAME) { slog('chargeConfirmAsTurn', { at: Math.round(tObs) }); return; }
     if (z && z.turn === 'hw_spiny' && (CHG.state === 'search' || CHG.state === 'maps')) { CHG.spiny = tObs; slog('chargeSpinyHeld', { at: Math.round(tObs) }); }   // the Charge lock adds it when it lands
-    if (zw.on && z && z.turn === 'hw_spiny') zwInput('hw_spiny', tObs, VAN.B(), zw.imps || z.imps); }
+    if (zw.on && z && z.turn === 'hw_spiny') zwInput('hw_spiny', tObs, VAN.B(), zw.imps || z.imps);
+    if (zw.on && z && z.turn === 'hw_spiny2') zwInput('hw_spiny2', tObs, VAN.B(), z.imps);     // v121: T2's Spiny Flip (Bowser STOPped)
+    if (z && z.turn === 'hw_to') { st.hwTO = { t: tObs }; if (zw.on) zwInput('hw_to', tObs, VAN.B()); } }     // v121: Time Out's draws to the end of its STOP sparkles
   slog('screenClosed', { at: Math.round(tObs), step: routeStep, plan: st.plan ? { tPress: Math.round(st.plan.tPress), target: st.plan.target, w: st.plan.w.length, tMade: Math.round(st.plan.tMade || 0) } : null });
   const stp = isRoute() && RT()[routeStep], n0 = st.turnEv.length;
   if (stp && stp.turn && !PROF().rolls.length && st.lock && st.clock && !st.needResync && !unmodeledAfter(baseState().tLast)) {

@@ -1,0 +1,137 @@
+{
+"about": "v121 Hallway Bowser T2 Time Out -> T3 Power Bounce, JP emulator (hw_ub_cc/t3pb_log.py, the runner's badges): per run the seed before the Time Out confirm frame (frame 0), the next coin frame, the Spiny Flip confirm and its impact (frames after its confirm), the Power Bounce confirm, the seed before it, its next coin frame and the hits (0: the script's Power Bounce did not start)",
+"runs": [
+{
+"run": "0ddba11c_0",
+"seedTO": "2aaa25eb",
+"ncTO": 46,
+"spiny": 534,
+"imp": 115,
+"pb": 810,
+"seedPB": "6ab42669",
+"ncPB": 4,
+"hits": 4
+},
+{
+"run": "0ddba11c_21",
+"seedTO": "36ad7204",
+"ncTO": 25,
+"spiny": 534,
+"imp": 115,
+"pb": 831,
+"seedPB": "dcdd9879",
+"ncPB": 10,
+"hits": 3
+},
+{
+"run": "0ddba11c_9",
+"seedTO": "4bc8bfb0",
+"ncTO": 37,
+"spiny": 534,
+"imp": 115,
+"pb": 819,
+"seedPB": "43384bde",
+"ncPB": 34,
+"hits": 6
+},
+{
+"run": "13579bdf_0",
+"seedTO": "d269f1d3",
+"ncTO": 23,
+"spiny": 534,
+"imp": 115,
+"pb": 810,
+"seedPB": "2c38c823",
+"ncPB": 5,
+"hits": 4
+},
+{
+"run": "13579bdf_21",
+"seedTO": "715d8138",
+"ncTO": 14,
+"spiny": 534,
+"imp": 115,
+"pb": 831,
+"seedPB": "d83c8971",
+"ncPB": 47,
+"hits": 6
+},
+{
+"run": "13579bdf_9",
+"seedTO": "d269f1d3",
+"ncTO": 23,
+"spiny": 534,
+"imp": 115,
+"pb": 819,
+"seedPB": "1cc972e9",
+"ncPB": 20,
+"hits": 4
+},
+{
+"run": "2468ace0_0",
+"seedTO": "f7512215",
+"ncTO": 1,
+"spiny": 534,
+"imp": 115,
+"pb": 810,
+"seedPB": "7595772f",
+"ncPB": 31,
+"hits": 6
+},
+{
+"run": "2468ace0_21",
+"seedTO": "9e730e79",
+"ncTO": 38,
+"spiny": 534,
+"imp": 115,
+"pb": 831,
+"seedPB": "57bfaa6c",
+"ncPB": 23,
+"hits": 4
+},
+{
+"run": "2468ace0_9",
+"seedTO": "6013cddf",
+"ncTO": 44,
+"spiny": 534,
+"imp": 115,
+"pb": 819,
+"seedPB": "424bea21",
+"ncPB": 17,
+"hits": 4
+},
+{
+"run": "7e57c0de_0",
+"seedTO": "b381e11c",
+"ncTO": 14,
+"spiny": 534,
+"imp": 115,
+"pb": 810,
+"seedPB": "aac909ee",
+"ncPB": 20,
+"hits": 0
+},
+{
+"run": "7e57c0de_21",
+"seedTO": "d00282c7",
+"ncTO": 16,
+"spiny": 534,
+"imp": 115,
+"pb": 831,
+"seedPB": "3e77a1f9",
+"ncPB": 1,
+"hits": 0
+},
+{
+"run": "7e57c0de_9",
+"seedTO": "ce301365",
+"ncTO": 5,
+"spiny": 534,
+"imp": 115,
+"pb": 819,
+"seedPB": "39bda414",
+"ncPB": 2,
+"hits": 0
+}
+]
+}

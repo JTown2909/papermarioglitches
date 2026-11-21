@@ -1,3 +1,46 @@
+# Time Out Timer v121: Hallway T3 Power Bounce 4+ (aims at 5+) after Time Out; no warps between fights; no blind presses; press reading weighed at frame edges (Nov 20)
+
+## 1. Hallway T3 Power Bounce (pmrng_core.js hw_to / hw_spiny2 / hwpb4 / hwpb5; hw_ub_cc/t3pb_log.py; fixtures/hw_t3pb.json)
+The runner: "if we're gonna end jr troopa with 3hp, 7 fp, i need you to give a turn 3 4/5 bounce on hallway, right after time
+out. this is so we dont have to eat a maple after jr troopa". JP emulator, the current route with the runner's loadout (Ultra
+Boots, Lakilester Super, Power Bounce, S.Jump Charge 0x10C, Power Rush 0x10D, Close Call; state boss_2302_lrun_menu.st), 12 runs
+(4 seeds, 3 Power Bounce delays, different Time Out frames):
+- **Time Out's turn** (frame 0 = its target-screen confirm): its effects +24 / +73 / +112 and roll +386 (as the timeout profile),
+  then Bowser's STOP sparkles +402..+439 after the frame's coin. Each sparkle colour is three draws whose ranges follow their
+  values: a = rand(127), b = rand(127 - a), c = rand(127 - a - b) (rand_int(0) returns 0 and does not step). Same in all 12 runs.
+- **T2 Spiny Flip** with Bowser STOPped: T1's hw_spiny without Bowser's AI (the sparkles on +39..+119 every 20, the impact's
+  8 x rand(359)); the impact frame follows the throw (the page's 33 impact frames, as T1).
+- **T3 Power Bounce**: hits 7, 6, 5, 4, 3, 2 (3 + 3 + 2 - 1, one less per bounce); each hit's rand(359)s on +48, +75, +102, ...
+  (10 for 5+ damage, 8 for 3-4, 6 for 2); cap rolls rand_int(100) on +74, +101, +128, +155, +182 at <= 130, 84, 54, 35, 23
+  (hits = 2 + passes). **4+ hits = the +101 roll passes (blind 84%), 5+ = the +128 one too (blind 46%).**
+- The core carried the seed from Time Out's confirm to the Power Bounce confirm exactly in **12 / 12** runs; the 4+ / 5+ tables
+  gave the hits of **9 / 9** Power Bounces (one seed's script did not start its Power Bounce).
+- Page: the route's T2 has the Spiny Flip step (hw_spiny2, read as T1's), T3 "Bounce x4/5" beeps hwpb4 on the Power Bounce
+  target screen (hand on Bowser), aiming at 5+ with 4+ on both sides. Time Out's confirm feeds hw_to; st.hwTO keeps the long
+  hides of T2 / T3 from reading as a retry. Keep the C-up bar up in the T2 and T3 menus: their shines narrow the states.
+- Damage check for the runner's plan: T3 4 hits = 22 (7+6+5+4) with the Spiny Flips and two Jumps still kills by T5.
+
+## 2. Never warp between fights (hwRetry)
+Console 19:04: Final Bowser T1's 10 s hide stepped the route back to Hallway T1 (the st.hwLeft clause: fewer than 3 hides since
+the route left the Hallway). The runner: "it should NEVER warp to anything it isnt local to in the moment". Only a Hallway step
+steps back now.
+
+## 3. No blind presses (Time Out)
+The runner: "the goal is to avoid any blind presses and raise the chances of winning as high as we can while also being fast".
+v120's too-soon rule made Time Out a blind press (31%) whenever an earlier frame beat the reachable one; now the reachable plan
+beeps unless it is no better than blind (ZW_SOON_BLIND 0.31). The 18:58 / 19:00 / 19:02 logs' "no edge, then a beep 0.5 s
+later" cannot happen either (st.tooSoon holds for the screen).
+
+## 4. The press table
+- A press near a frame edge is weighed over both frames (PRESS_READ_SD 0.3 frame): console 19:14 Final Bowser T3 647.54 and
+  T4 1067.91 were "0%" (the rounded frames) and Bowser missed both.
+- The Final Bowser lever's table finds its press record by time (its two labels differ): T1 showed "works 100%" on a 66% plan.
+- 19:14's T7 Power Bounce: no edge (7+ for 11% of ~20000 states at best) after a 20 s capture freeze (captureLoopRestart).
+
+## 5. Jr. Troopa's early-plan floor
+The runner pressed early on a 6-frame 5+ run the plans skipped ("i pressed early because there was a huge 6 frame + purple
+window"): the floor had the beeps' 1.5 s lead in it on top of the menu gap. Now menu gap + 30 frames (JR_FLOOR_PAD).
+
 # Time Out Timer v120: no beeps when the best frame comes too soon for them; the last-press table cut to what matters; T5 "Peach Beam; Do Nothing" (Nov 19)
 
 ## 1. Too soon for the beeps (zwPlan, `ZW_SOON_GAIN` 0.05)

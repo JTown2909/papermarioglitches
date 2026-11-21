@@ -100,8 +100,9 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
         after: H.stepBackAt.map(t => (steps.filter(s => s[0] <= t + 1).pop() || [0, -1])[1]) };
     }, FIX.hallway);
     console.log('3', JSON.stringify(r));
-    check(r.done === 2 && r.back === 0, '3. Time Out twice (hallwayDone ' + r.done + '), no step back to Hallway T1 (' + r.back + '; v81 stepped back at ' + FIX.hallway.stepBackAt.join(', ') + ')');
-    check(r.held.length >= 2 && r.held.every(ms => ms > 13000 && ms < 14000) && r.after.every(s => s === r.hi + 1), '3. the ~13.6 s coin hides after Time Out are held (' + r.held.join(', ') + ' ms) and the route stays on Hallway T2');
+    // v121: after Time Out the route goes on to T2's Spiny Flip and T3's Power Bounce (hallwayDone after T3), still on the Hallway
+    check(r.back === 0, '3. Time Out twice, no step back to Hallway T1 (' + r.back + '; v81 stepped back at ' + FIX.hallway.stepBackAt.join(', ') + ')');
+    check(r.held.length >= 2 && r.held.every(ms => ms > 13000 && ms < 14000) && r.after.every(s => s === r.hi + 2 || s === r.hi + 3), '3. the ~13.6 s coin hides after Time Out are held (' + r.held.join(', ') + ' ms) and the route stays on the Hallway after Time Out (T2 Spiny Flip / T3: ' + r.after.join(', ') + ')');
     await p.close();
   }
   // ---- 4. Final Bowser
