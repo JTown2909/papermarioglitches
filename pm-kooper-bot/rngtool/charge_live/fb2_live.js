@@ -221,7 +221,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   // v109 (console fb0709 T6, clip fb1153: "no track was shown but it beeped"): the plan carried no frames (tab: []), so the strip
   // drew nothing; now the perfect-press share per frame (>= 0.5 works), on a clock whose frame k reaches the now-line at its press
   const r6 = fb2Rate(), w6 = pk.ok ? pk.run : { start: k, end: k, length: 1 };
-  st.msg = null; st.plan = { tMade: now, w: { start: w6.start, end: w6.end, length: w6.length }, target: k, tPress: pl.tPress, tLast: pl.tPress - (k - 0.5 + num('off')) * r6, rate: r6, carried: true, early: true, from: kFirst, to: kFirst + W, first: a, prof: 'fb2', tab: sh.map(v => v >= 0.5), tab4: null, chance: sh.map((v, i) => (a + i >= kFirst && a + i <= kFirst + W ? pcc(a + i) : 0)), mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
+  st.msg = null; st.plan = { tMade: now, w: { start: w6.start, end: w6.end, length: w6.length }, target: k, tPress: pl.tPress, tLast: pl.tPress - (k - 0.5 + num('off')) * r6, rate: r6, carried: true, early: true, from: kFirst, to: kFirst + W, first: a, prof: 'fb2', tab: sh.map(v => v >= Math.min(0.5, 0.8 * Math.max(...sh))), tab4: null, chance: sh.map((v, i) => (a + i >= kFirst && a + i <= kFirst + W ? pcc(a + i) : 0)), mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
   fb2Show(); if (typeof render === 'function') render(); return pl;
 }
 /* the Do Nothing confirm (the Strategies box closing on T6's step): its frame into the states, the press into the learned

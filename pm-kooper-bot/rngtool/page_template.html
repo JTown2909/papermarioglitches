@@ -2143,7 +2143,7 @@ function drawMarker(ctx, M, x, y, gold, white) {
 function stripState(d) {
   const now = performance.now(), P = st.plan, sc = st.seedChange && now - st.seedChange.t < 4000 ? st.seedChange : null;
   if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press · frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? 'works ✓' + (d.p != null && d.p < MARK_SOLID ? ' (works ' + Math.round(100 * d.p) + '% · fails ' + (100 - Math.round(100 * d.p)) + '%)' : '') : 'fails ✗') + '. Shown until the next plan beeps.' };     // v109
-  if (!PROF().rolls.length) return { cls: 'wait', text: 'Nothing to time on this step: just play it.' };
+  if (!PROF().rolls.length && !(P && P.prof === 'fb2')) return { cls: 'wait', text: 'Nothing to time on this step: just play it.' };     // v123 (clip 09:30: shown under the T7 / T8 countdowns)
   if (P && P.stopped) return { cls: 'stale', text: (zw.dead ? 'Seed lost' : 'Beeps stopped') + ' – the coin ruled the planned frame out. Press normally.', overlay: zw.dead ? 'Seed lost – beeps stopped' : 'Beeps stopped' };
   if (P && d.stale) return { cls: 'stale', text: 'Seed lost – showing old prediction. Press normally.', overlay: 'Seed lost – old prediction' };
   if (sc) return sc.ok ? { cls: 'stale', text: 'Seed changed – new window (a shine ruled the old one out). Follow the new beeps.' } : { cls: 'stale', text: 'Seed changed – too late to move the beeps; the planned frame still works for ' + Math.round(100 * (P && P.mix && P.mix.pNow != null ? P.mix.pNow : 0)) + '%.' };
@@ -2269,7 +2269,7 @@ function drawStrip() {
   let note = 'Example seed 0x12345678. Your own frames appear once the seed is locked (the Charge on Hallway turn 1, or shines).';
   if (nowD !== null) note = st.plan ? 'Press A on the last, higher beep, or when the gold aim marker (the middle of the aimed frame) reaches the now-line. Visual offset moves the strip so the two happen together.' :
       'Coloured frames would work if you confirmed on them; the line is now. No beeps yet: ' + (!V.stream ? 'press P on the target screen.' : !V.ref ? 'save the target screen (or press P on it).' : 'they start when the target screen is recognized (' + Math.round(V.score * 100) + '% match, needs ' + Math.round(num('tmatch') * 100) + '%).');
-  if (!PROF().rolls.length) note = 'This route step decides nothing random: just play it. The page moves to the next step when this screen closes.';
+  if (!PROF().rolls.length && !(st.plan && st.plan.prof === 'fb2')) note = 'This route step decides nothing random: just play it. The page moves to the next step when this screen closes.';
   if ($('stripnote').textContent !== note) $('stripnote').textContent = note;
   if (st.plan) {
     const left = (st.plan.tPress - performance.now()) / 1000;

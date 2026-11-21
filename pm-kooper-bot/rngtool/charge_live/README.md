@@ -30,6 +30,11 @@
   locks).
 - **T7 Power Bounce colours** (09:16: "the timer page did not show any colors" on a 42% plan): no frame reached 50%, so none was
   coloured; the best frames are coloured now (80% of the best, at most 50%) and dimmed by their chance.
+- **Display on the last turns** (clip + log 09:30-09:32, a win; "the display was a bit weird"): under the backup T7's countdown
+  ("2.1 s to press") the strip was empty and said "Nothing to time on this step: just play it" (the T7 / T8 steps have no
+  rolls of their own, and the 34% Do Nothing plan had no frame at 50%); the T8 countdown said the same. The status line
+  and the note now follow the FB2 plan, and the Do Nothing strip colours its best frames (as T7's), so an on-time press on the
+  aimed frame no longer reads "on time ✗".
 - test_v123.js; test_console_v96 / test_fb14_v86 pin the new lever rule.
 
 # Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)
