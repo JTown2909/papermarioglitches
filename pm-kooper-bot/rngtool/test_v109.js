@@ -24,7 +24,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set, presses) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(([s, pr]) => { try { localStorage.clear(); localStorage.setItem('tot-jrpl', '1'); localStorage.setItem('tot-settings', JSON.stringify(s)); if (pr) localStorage.setItem('tot-presses', JSON.stringify(pr)); } catch (e) {} }, [set || { prof: 'endgame', off: '-4.5', vlag: '50', jrroute: 'charge', duproute: 'charge' }, presses || null]); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v121', 'page version v109');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v122', 'page version v109');
 
   // ---- 1. the solid window (synthetic jr0701 T4 shape)
   const s1 = await p.evaluate(() => {

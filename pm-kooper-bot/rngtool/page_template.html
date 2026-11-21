@@ -1927,11 +1927,11 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v121';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v122';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 function downloadLog() {
-  const blob = new Blob([JSON.stringify({ version: 1, page: VERSION, saved: new Date().toISOString(), settings: (() => { const o = {}; SET.forEach(k => o[k] = $('s-' + k).value); return o; })(), route: routeStep, more: { zwwin: num('zwwin'), zwedge: num('zwedge'), chgcpu: num('chgcpu'), presses: presses.slice(), fbGaps: typeof fbHistLoad === 'function' ? fbHistLoad() : [] }, events: SLOG, chargeCaptures: typeof CHG_CAPS !== 'undefined' ? CHG_CAPS : [] }, null, 0)], { type: 'application/json' });
+  const blob = new Blob([JSON.stringify({ version: 1, page: VERSION, saved: new Date().toISOString(), settings: (() => { const o = {}; SET.forEach(k => o[k] = $('s-' + k).value); return o; })(), route: routeStep, more: { zwwin: num('zwwin'), zwedge: num('zwedge'), chgcpu: num('chgcpu'), presses: presses.slice(), levers: (() => { const o = {}; try { for (const k of Object.keys(LEVER_STORE)) o[k] = leverList(k); } catch (e) {} return o; })(), fbGaps: typeof fbHistLoad === 'function' ? fbHistLoad() : [] }, events: SLOG, chargeCaptures: typeof CHG_CAPS !== 'undefined' ? CHG_CAPS : [] }, null, 0)], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = logFileName(new Date()); document.body.appendChild(a); a.click(); a.remove();
 }
 // v106: the log's file name in local time, as OBS names its clips (pm-rng-log-2026-11-14_10-10-55.json)

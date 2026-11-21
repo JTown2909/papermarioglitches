@@ -101,6 +101,7 @@ function fb2AI7(S0, E, ph, slamOk, clawOk) {
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
   return { lucky: good, cc: null, atk, T, menu: T, S };
 }
+const fb2Edge = b => Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b));     // v122: the edge against the blind odds
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
  * 7th ends the fight at 80 HP: 15 + 14 + ... + 9 = 84) */
 function fb2PB(S0, f0, d, ph) {
@@ -200,7 +201,10 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   const pl = { k, p: pcc(k), pp: ppk(k), win: pk.ok ? pk.run.length : 0, blind: fb2Txt().b, kFirst, W, bias: +bias.toFixed(2), lever: 'nothing', ms: Math.round(performance.now() - t0), states: rows.length };
   pl.tPress = fb2DnPressT(k);
   // the edge rule (zwedge), as every plan: a Close Call share under it is no plan (Do Nothing whenever you like)
-  if (!(pl.pp >= num('zwedge'))) { const nl = { none: 'no Do Nothing frame gives ' + fb2Txt().goal + ' for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind: fb2Txt().b, kFirst, pp: pl.pp, p: pl.p, lever: 'nothing' }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; if (st.plan && st.plan.prof === 'fb2') st.plan = null; st.msg = 'No edge: ' + nl.none + '. Do Nothing whenever you like (' + fb2Txt().blind + ').'; slog('fb2PlanP', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), kFirst }); fb2Show(); if (typeof render === 'function') render(); return nl; }     // v99: the No edge text at once (v98 left it to makePlan, which the T6 step never reached)
+  // v122 (console 21:08, the backup T7: best 28% with a perfect press against ~8% blind, no beeps, Do Nothing pressed blind): the
+  // edge is measured against the blind odds: beeps when the plan is twice blind and 15 points over it (the main T6, 30% blind,
+  // keeps zwedge), and its realistic chance still beats blind
+  if (!(pl.pp >= fb2Edge(fb2Txt().b) && pl.p > fb2Txt().b)) { const nl = { none: 'no Do Nothing frame gives ' + fb2Txt().goal + ' for enough of the states (best ' + Math.round(100 * (pl.pp || 0)) + '% with a perfect press)', edge: true, blind: fb2Txt().b, kFirst, pp: pl.pp, p: pl.p, lever: 'nothing' }; if (kAt != null) return nl; cancelBeeps(); FB2.plan = nl; if (st.plan && st.plan.prof === 'fb2') st.plan = null; st.msg = 'No edge: ' + nl.none + '. Do Nothing whenever you like (' + fb2Txt().blind + ').'; slog('fb2PlanP', { none: 'edge', pp: +(pl.pp || 0).toFixed(3), kFirst }); fb2Show(); if (typeof render === 'function') render(); return nl; }     // v99: the No edge text at once (v98 left it to makePlan, which the T6 step never reached)
   if (kAt != null) return pl;
   cancelBeeps(); playBeeps(pl.tPress);
   FB2.plan = pl; FB2.plans = (FB2.plans || []).concat([Object.assign({ tMade: now }, pl)]); slog('fb2PlanP', pl);

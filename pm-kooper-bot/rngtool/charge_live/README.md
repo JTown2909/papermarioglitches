@@ -1,3 +1,19 @@
+# Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)
+
+- **Backup T7 edge** (console 21:08): the backup T7 Charge locked through the v120 narrow search (141 candidates, 0.36 s), but the
+  plan was "no edge" at 28% with a perfect press: the edge rule was zwedge (40%) for every Do Nothing plan, while the backup's blind
+  odds are ~8% (README v114: 5 of 90 emulator frames). The runner pressed blind (9%: the wave). `fb2Edge(blind)` = min(zwedge,
+  max(blind + 0.15, 2 x blind)): 23% for the backup T7; the main T6 (30% blind) keeps 40%. The realistic chance must beat blind too.
+- **Star Rod on T7** (the runner: "bowser also cant shield on turn 7 during the backup"): `final_bowser_2.c` EVS_TakeTurn_Inner
+  draws RandInt(100) against 0 / 0 / 15 / 75 for TurnsSinceStarBeam 1 / 2 / 3 / 4+ (the Peach Beam on T5 sets it to 0; Bowser's
+  T5 / T6 / T7 turns are 1 / 2 / 3), and the T7 emulator sweep cast it in 13 of 90 runs. Kept as measured until a console run
+  shows otherwise.
+- **Saved log**: `more.levers` holds every lever's press record (console 21:01: Duplighosts 1.56 frames early with a +0.98
+  correction; the records were only in the browser).
+- **Boots change** (test_nb_route): the fight was read after the menu had switched routes (Ultra index 11 is Hallway T3 since
+  v121's extra step), so Final Bowser went to Hallway T1. The fight on screen is kept at applyProfile (`fightName`).
+- test_v122.js.
+
 # Time Out Timer v121: Hallway T3 Power Bounce 4+ (aims at 5+) after Time Out; no warps between fights; no blind presses; press reading weighed at frame edges (Nov 20)
 
 ## 1. Hallway T3 Power Bounce (pmrng_core.js hw_to / hw_spiny2 / hwpb4 / hwpb5; hw_ub_cc/t3pb_log.py; fixtures/hw_t3pb.json)
