@@ -2464,6 +2464,7 @@ function drawIdlePreview() {
 }
 function applyProfile() {
   const P = PROF(); useTarget(); cancelBeeps(); st.plan = null; stripData.key = null;
+  { const z = isRoute() && RT()[routeStep]; st.fightNow = z ? fightName(z) : null; }     // v121: the fight on screen, for a boots change (the menu has switched routes by then)
   $('route').hidden = !isRoute(); $('legend4').hidden = !R.TOP[PROF().id]; $('legend4-text').textContent = /^jrpb5/.test(PROF().id) ? 'top band: 6+ bounces' : 'top band: all 4 copy';
   if (isRoute()) {
     routeStep = Math.min(routeStep, RT().length - 1); const S = RT()[routeStep], C = CAT[S.cat];
@@ -2568,8 +2569,9 @@ function routeOddsShow() {
     ['ultra', 'normal'].map(k => '<br><span style="' + (k === cur ? 'font-weight:600' : 'opacity:.75') + '">' + (k === 'ultra' ? 'Ultra Boots' : 'Normal Boots') + ':</span> ' + L[k].map(([f, t]) => esc(f) + ' - ' + esc(t)).join('; ')).join('');
 }
 /* the Boots setting: both routes keep their fights in the same order; switching keeps the fight the route is on */
+function fightName(s) { return s && s.t ? s.t.replace(/:.*$| T\d.*$| Phase 2 .*$/, '') : null; }     // v121: 'Jr. Troopa: Ultra Boots…', 'Final Bowser Phase 2…' → the fight
 function bootsChange() {
-  const fightOf = s => (s && s.t ? s.t.replace(/ T\d.*$/, '') : null), was = fightOf(RT()[routeStep]);
+  const fightOf = fightName, was = st.fightNow || fightOf(RT()[routeStep]);
   saveSettings(); slog('boots', { boots: bootsNow() });
   if (zw.on) zw.on = false; if (typeof chgReset === 'function') chgReset(); if (typeof jrReset === 'function') jrReset('boots'); if (typeof fb14Reset === 'function') fb14Reset('boots');
   st.plan = null; st.msg = null; cancelBeeps();
@@ -2800,7 +2802,7 @@ function pressShow(P, c, label) {
   const f0 = Math.floor(c), w1 = pNorm((c - f0 - 0.5) / PRESS_READ_SD), at = (arr, g) => (arr && arr[g - P.first] != null ? +arr[g - P.first] : null);
   const ch0 = at(P.chance, f0), ch1 = at(P.chance, f0 + 1), t0 = P.tab[f0 - P.first] ? 1 : 0, t1 = P.tab[f0 + 1 - P.first] ? 1 : 0;
   const f = Math.round(c), works = (1 - w1) * t0 + w1 * t1 >= 0.5;
-  const pBlend = ch0 != null && ch1 != null ? (1 - w1) * ch0 + w1 * ch1 : null;
+  const pBlend = ch0 != null && ch1 != null ? (ch0 === ch1 ? ch0 : Math.round(((1 - w1) * ch0 + w1 * ch1) * 1e6) / 1e6) : null;
   st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: P.tab4 ? P.tab4.slice() : null, chance: P.chance ? P.chance.slice() : null, first: P.first,     /* v115 (runner 11-17): the white tips (the 6 cap / all 4) and the dimming stay after the press */ tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: pBlend != null ? pBlend : P.chance && P.chance[f - P.first] != null ? P.chance[f - P.first] : P.mix && P.mix.p != null ? P.mix.p : null };     // v115: the chance of the frame hit (the press table's), else the plan's     // v111 (oo): the plan's chance, for the ✓
   slog('pressShow', { label, target: P.target, c: +c.toFixed(2), works });
   return works;

@@ -29,12 +29,12 @@ let fails = 0; const check = (ok, msg) => { if (!ok) { fails++; console.log('FAI
     // B. T2 -> T1 on a Bowser screen 3 s after the burst
     T.setStep(hi + 1); st.hwBurstT = now - 3000; st.longHides = []; T.hwStepByTarget(now); out.toT1 = T.step() === hi;
     out.logged = T.SLOG.filter(e => e.ev === 'stepByTarget').map(e => e.why);
-    return out;
+    out.hi = hi; return out;
   });
   console.log(JSON.stringify(r));
   check(r.pendingAt200, 'the close should wait for the bar');
   check(r.backout.logged === 1 && r.backout.closed === 0 && !r.backout.hwDone, 'a back-out must not count: ' + JSON.stringify(r.backout));
-  check(r.confirm.closed === 1 && r.confirm.hwDone, 'a confirm must count: ' + JSON.stringify(r.confirm));
+  check(r.confirm.closed === 1 && r.confirm.step === r.hi + 2, 'a confirm must count (v121: T2 Time Out moves on to T2 Spiny Flip): ' + JSON.stringify(r.confirm));
   check(r.toT2 && r.staysT1 && r.toT1, 'turn by time from the burst: ' + JSON.stringify(r));
   console.log('errors', JSON.stringify(errs)); console.log(fails || errs.length ? 'FAILED ' + fails : 'PASS'); await b.close(); process.exit(fails || errs.length ? 1 : 0);
 })();
