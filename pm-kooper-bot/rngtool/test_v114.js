@@ -19,7 +19,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   const open = async () => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
     await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', boots: 'ultra', off: '-4.5', vlag: '50', zwedge: '0.4', zwwin: '1', fb2t5: 'any' })); } catch (e) {} window.__now = 100000; performance.now = () => window.__now; });
     await p.goto('file://' + PAGE); return p; };
-  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v124', '0. page version v114'); await p.close(); }
+  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v125', '0. page version v114'); await p.close(); }
   // ---- 1. fb1810 T6
   { const p = await open();
     const r = await p.evaluate(FX => {

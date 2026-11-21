@@ -1817,7 +1817,7 @@ function addShine(t, auto) {
   if (auto && zw.on) zwTap(t);
   // v123 (the runner: the page lags "on the last few turns"; consoles 09:05 / 09:09: the walk's shine search ran on Final Bowser's
   // coin, its wide and torch-room searches on the main thread): on Final Bowser the coin is read by its own trackers above only
-  if (auto && fbStepNow()) return;
+  if (auto && fbStepNow()) { slog('shine', { at: Math.round(t), auto: true, fb: true }); return; }     // v125: still logged (v123-v124 logs had no Final Bowser shines: the T7 'no state fits' could not be checked)
   const s = seg();
   if (auto && s.taps.length) {                     // a real shine lands 48 + 24k frames after the previous one
     const g = (t - s.taps[s.taps.length - 1]) / FRAME, k = Math.round((g - 48) / 24);
@@ -1962,7 +1962,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v124';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v125';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
