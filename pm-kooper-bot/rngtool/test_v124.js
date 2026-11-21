@@ -25,6 +25,14 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(r.v === 'v124', 'page version v124');
   ok(both.length >= 20 && both.every(x => x.k.p >= x.a.p - 1e-9), 'the look-ahead never makes a Time Out plan less likely');
   ok(moved.length > 0 && moved.every(x => x.k.p >= 0.9 - 1e-9 || x.k.p >= x.a.p + 0.1 - 1e-9) && r.moved.length >= moved.length, 'where it moved the plan: 90% or 10 points more, logged (keyLater)');
+  // T4: Lakilester's block beeps after the Do Nothing confirm (P + 87)
+  const bl = await p.evaluate(async () => { const T = window.__tot, E = c => T.v111.ev(c), RT = T.RT(), i4 = RT.findIndex(s => s.fb14 === 4 && s.fb14role === 'lever'); T.setStep(i4);
+    let osc = 0; const AC = window.AudioContext; if (AC) { const o = AC.prototype.createOscillator; AC.prototype.createOscillator = function () { osc++; return o.call(this); }; }
+    const tObs = performance.now(); E('fb14Confirm(' + tObs + ', RT()[' + i4 + '], null, "screen")'); E('setStep(' + (i4 + 1) + ')'); E('cancelBeeps()');
+    await new Promise(r => setTimeout(r, 3300)); const L = T.SLOG.filter(e => /^fb14Block/.test(e.ev)); return { L, osc, rate: E('fbRate()'), van: E('fb14Van("S", "screen")'), off: +document.getElementById('s-off').value, vlag: +document.getElementById('s-vlag').value, bias: E('fb14Bias("fb14")') }; });
+  console.log('  ' + JSON.stringify(bl));
+  const bb = bl.L.find(e => e.ev === 'fb14BlockBeeps'), want = (87 - bl.van - 1.7 + bl.off + bl.bias) * bl.rate - bl.vlag;
+  ok(bb && Math.abs(bb.inMs - want) < 40 && bl.L.some(e => e.ev === 'fb14BlockSeries') && bl.osc >= 3, 'T4: three block beeps after the Do Nothing confirm, the last on its frame + 87 (' + (bb && bb.inMs) + ' ms, want ' + Math.round(want) + '), made after a cancel');
   ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
 })();

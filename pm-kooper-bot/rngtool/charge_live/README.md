@@ -3,11 +3,19 @@
 The runner: "we really just need a good jr bounce, time out on hallway, dodged final bowser wave on turn 4, and the high bounce on
 final bowser ... we need better numbers, like 90% or above". Today's logs, the plans on those levers (realistic / perfect press):
 Jr. Troopa's Power Bounce 78-96% / 98-100% (1-3 frame windows), Time Out 64-94% / 95-100% (mostly 1-frame windows), Final Bowser
-T4 54-95% / 61-100% (the wave blocked on all 13 attempts), the T7 / T8 bounce 27-69% / 42-74% (13-1000 states). On the first two the
+T4 54-95% / 61-100% (the wave missed Mario on all 13 attempts), the T7 / T8 bounce 27-69% / 42-74% (13-1000 states). On the first two the
 seed is known (perfect press ~100%): the press spread on a 1-frame window is what costs. On Time Out and Jr. Troopa's Power Bounce a
 plan under KEY_AIM (90%) with the press spread now looks KEY_LATER_S (3 s) past the base window for the first frame that reaches 90%
 (else one KEY_GAIN, 10 points, likelier), logged `keyLater`. Over 40 Time Out seeds (test_v124): 35 plans were already 90%+, the
 other 5 moved from 75% to 100% for 1.2-2.4 s more wait. test_zw_wait (its own replan clock) runs without it (window.__noKeyLater).
+
+**T4: Lakilester's block** (the runner: "the wave would not be 'blocked' but it would miss mario, meanwhile blocked by laki, which
+does matter for the purpose of tracking the 'do nothing' turns"). The T4 beep is the dodge test (P + 85: the wave misses Mario);
+Lakilester blocks it with a single A on P + 86..88 (V87_RECOVERY.md (2), guard_scan.py), which keeps him up for T6's Do Nothing and
+puts the draws on the blocked branch the model carries from P + 89. After T4's Do Nothing confirm the page now beeps that A: three
+beeps, the last on P + 87 (FB14_BLOCK), timed from the confirm as the lever beeps are (fb14BlockBeeps; the series is made 150 ms
+before its first beep, so a plan's cancel on T5's step does not stop it). Not on the backup T7: a guard on a Body Slam / Claw
+may change the draws the T8 bounce is carried on (not measured).
 
 # Time Out Timer v123: the learned press correction trusts a steady offset (Nov 21)
 

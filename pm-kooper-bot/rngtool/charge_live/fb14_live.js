@@ -1323,11 +1323,29 @@ function fb14OwnClose(tObs, stp) {
   const dt = tObs - lb.t; if (dt < -200 || dt > FB14_OWNCLOSE) return false;
   slog('fb14OwnClose', { turn: stp.fb14, afterMs: Math.round(dt), step: routeStep }); return true;
 }
+/* v124 (the runner: the wave on T4 "would not be blocked but it would miss mario, meanwhile blocked by laki, which does matter for
+ * the purpose of tracking the do nothing turns"; V87_RECOVERY.md (2), fb2_route/guard_scan.py: a single A on P + 86..88 after T4's
+ * Do Nothing confirm P makes Lakilester block the wave, so he is not KO'd and does T6's Do Nothing; the model from P + 89 on is
+ * the blocked one): after T4's confirm three beeps, the last on P + FB14_BLOCK (the window's middle), timed from the confirm
+ * itself as the lever beeps are (the reading's vanish, the console's 1.7, the runner's offset and Do Nothing correction) */
+const FB14_BLOCK = 87;
+function fb14BlockBeeps(tObs, stp, src) {
+  if (typeof beepAt !== 'function') return; const r = fbRate(), van = fb14Van(stp.cat, src), g = Math.min(num('gapms') || 500, 500), n = 3;
+  const tPress = tObs + (FB14_BLOCK - van - 1.7 + num('off') + fb14Bias('fb14')) * r - num('vlag');
+  setTimeout(() => {     // after the confirm's own step change (its cancel) has run
+    const now = performance.now(), t1 = tPress - (n - 1) * g; if (t1 < now + 20) { slog('fb14BlockLate', { firstIn: Math.round(t1 - now) }); return; }
+    // the series is made 150 ms before its first beep (a plan's cancel before then would stop it; once it sounds, BEEP_GUARD keeps it)
+    setTimeout(() => { for (let i = 0; i < n; i++) beepAt(tPress - (n - 1 - i) * g, i === n - 1 ? 1320 : 880, i === n - 1 ? 0.12 : 0.06); slog('fb14BlockSeries', {}); }, Math.max(0, t1 - now - 150));
+    FB14.block = { tPress, tObs }; slog('fb14BlockBeeps', { inMs: Math.round(tPress - now), at: FB14_BLOCK });
+    st.msg = 'T4 wave: press A on the last beep so Lakilester blocks it (he must stay up for the Do Nothing turns).'; if (typeof render === 'function') render();
+  }, 0);
+}
 function fb14Confirm(tObs, stp, shifts, src) {
   if (!stp || !stp.fb14) return;
   const turn = stp.fb14;
   if (stp.fb14role !== 'lever') return;
   if (turn === 4) FB14.p4t = tObs; FB14.pT = FB14.pT || {}; FB14.pT[turn] = tObs;
+  if (turn === 4) fb14BlockBeeps(tObs, stp, src);     // v124: Lakilester's block of the wave
   // v101 (e2e 1234abcd / 9e3779b9: Cloud Nine read 3-7 frames late): in skip mode the runner confirms Cloud Nine while the T1
   // search loads the page and pictures are dropped; a screen-read Cloud Nine seen after a gap between pictures happened anywhere
   // in it (as the bar's hide, fb14GapShifts)
