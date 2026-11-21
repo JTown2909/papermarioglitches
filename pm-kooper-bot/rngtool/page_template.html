@@ -1473,11 +1473,13 @@ function ppPick0(share, share4, a, b, from, W, sc, goal) {
   if ((goal === 'safe3' || goal === 'free') && !share4) { const bs = cand.filter(x => x.r.length >= 2).sort(cmp([SC, W3, M3]))[0]; if (bs && bs.sc > pick.sc + PP_SC_GAIN && !pick.r4) pick = bs; }
   return { target: pick.c, ok: true, run: { start: pick.r.start, end: pick.r.end, length: pick.r.length }, run4: pick.r4 ? { start: pick.r4.start, end: pick.r4.end, length: pick.r4.length } : null };
 }
+const KEY_LATER_S = { timeout: 3, jrpb5p: 3, jrpb5: 3, jrpb5n: 3 }, KEY_AIM = 0.9, KEY_GAIN = 0.1;     // v124: the key levers' longer look-ahead (s past the base window)
 const DUP4_AIM = 0.90;     // v112: the all-4 frame is beeped when its realistic 3+ chance is this or more
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
   goal = goal || (prof.id === 'dup3' ? dupGoal() : /^jrpb5[np]?$/.test(prof.id) ? 'free' : 'safe3');     // v83: Jr. Power Bounce: 6 with 5+ either side (the route's label)
   const later = lim ? 0 : Math.max(0, Math.round((num('zwlater') - num('zwwin')) * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)));      // v87
-  const D = Math.max(...PD.map(x => Math.abs(x[0]))), X = lim ? 0 : 10, a = from - D, b = lim ? Math.min(lim.hi, from + W) : from + W + later + X + D, top = R.TOP[prof.id] ? R.PROFILES[R.TOP[prof.id]] : null;
+  const keyL = !lim && !window.__noKeyLater && KEY_LATER_S[prof.id] ? Math.round(KEY_LATER_S[prof.id] * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)) : 0;
+  const D = Math.max(...PD.map(x => Math.abs(x[0]))), X = lim ? 0 : 10, a = from - D, b = lim ? Math.min(lim.hi, from + W) : from + W + Math.max(later, keyL) + X + D, top = R.TOP[prof.id] ? R.PROFILES[R.TOP[prof.id]] : null;
   const share = zwShare(list, a, b, prof), share4 = top ? zwShare(list, a, b, top) : null;
   if (lim) for (let c = a; c < lim.lo && c <= b; c++) share[c - a] = 0;     // v85: an A before the box opens does nothing
   const scOf = sh => c => { let v = 0; for (const [d, q] of PD) v += q * (sh[c + d - a] || 0); return v; };
@@ -1487,7 +1489,15 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
     const six6 = /^jrpb5[np]?$/.test(prof.id) && isRoute() && RT()[routeStep] && RT()[routeStep].six6;     // v111: the partnerless T7 needs the 6 (no Bomb after it)
     pk = ppPick(share, share4, a, b, from, W, sc, /^jrpb5[np]?$/.test(prof.id) && goal === 'free' ? 'six' : goal, later, prof.id !== 'fb14');
     // v111: the partnerless T7 picks on the 6+ map itself (its widest run, the middle), whatever the 5+ chance does beside it
-    if (six6 && share4) { const P6 = ppPick(share4, null, a, b, from, W, sc4, 'free', later, true); if (P6.ok) pk = Object.assign({}, P6, { six: true, run4: P6.run }); }     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
+    if (six6 && share4) { const P6 = ppPick(share4, null, a, b, from, W, sc4, 'free', later, true); if (P6.ok) pk = Object.assign({}, P6, { six: true, run4: P6.run }); }
+    // v124 (the runner: "we really just need a good jr bounce, time out on hallway ... we need better numbers, like 90% or above"):
+    // on the key levers a plan under KEY_AIM with the press spread looks KEY_LATER_S further on for the first frame that reaches
+    // KEY_AIM (else one KEY_GAIN likelier): a longer wait for a wider window, only where it buys the odds
+    if (keyL > later && pk.ok) { const SH = pk.six ? share4 : share, SCF = pk.six ? sc4 : sc, okK = c => c >= a && c <= b && (SH[c - a] || 0) >= 0.5, s0 = SCF(pk.target);
+      if (s0 < KEY_AIM) { let hit = null, bestC = null; for (let c = from + W + later + 1; c <= from + W + keyL; c++) { if (!okK(c)) continue; const v = SCF(c); if (v >= KEY_AIM) { hit = c; break; } if (bestC == null || v > SCF(bestC)) bestC = c; }
+        const c = hit != null ? hit : bestC != null && SCF(bestC) >= s0 + KEY_GAIN ? bestC : null;
+        if (c != null) { let s1 = c, e1 = c; while (okK(s1 - 1)) s1--; while (okK(e1 + 1)) e1++; slog('keyLater', { prof: prof.id, from: pk.target, to: c, p0: +s0.toFixed(3), p1: +SCF(c).toFixed(3), waitF: c - pk.target });
+          pk = Object.assign({}, pk, { target: c, ok: true, run: { start: s1, end: e1, length: e1 - s1 + 1 }, later: true }); if (pk.six) pk.run4 = pk.run; } } }     // v106: the Power Bounce's 6 run (ppPick6), not the Duplighosts' "free"
     // v109 (console jrg0753, Normal Boots wait mode: the runner sat on Goombario's Charge screen 3-5 s each turn): where the beeped
     // press is a wait (the Charge confirm held until the beep), the earliest frame within PP_WAIT_TOL of the pick with the press spread
     if (prof.lever === 'wait' && pk.ok && !share4) { const okE = c => (share[c - a] || 0) >= 0.5; for (let c = from; c < pk.target; c++) if (okE(c) && sc(c) >= sc(pk.target) - PP_WAIT_TOL) { let s0 = c, e0 = c; while (s0 - 1 >= a && okE(s0 - 1)) s0--; while (e0 + 1 <= b && okE(e0 + 1)) e0++; pk = Object.assign({}, pk, { target: c, run: { start: s0, end: e0, length: e0 - s0 + 1 }, earlier: pk.target - c }); break; } }
@@ -1941,7 +1951,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v123';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v124';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the

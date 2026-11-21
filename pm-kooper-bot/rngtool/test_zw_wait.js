@@ -12,7 +12,7 @@ let fails = 0; const check = (ok, msg) => { if (!ok) { fails++; console.log('FAI
   const b = await chromium.launch(); const errs = []; const out = [];
   for (const seed of [0x1badb002, 0x2468ace0, 0x0ddba11]) {
     const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
-    await p.addInitScript(() => { window.__osc = 0; const AC = window.AudioContext; if (!AC) return; const o = AC.prototype.createOscillator; AC.prototype.createOscillator = function () { window.__osc++; return o.call(this); }; });
+    await p.addInitScript(() => { window.__noKeyLater = true;     /* v124: this test replans on its own clock; the key levers' longer look-ahead is tested in test_v124 */ window.__osc = 0; const AC = window.AudioContext; if (!AC) return; const o = AC.prototype.createOscillator; AC.prototype.createOscillator = function () { window.__osc++; return o.call(this); }; });
     await p.goto('file://' + PAGE); await p.evaluate(() => localStorage.setItem('tot-settings', JSON.stringify({ off: '-5', beeps: '3', lead: '1.5', zwwin: '1', zwedge: '0', vlag: '50', wtype: 'best' }))); await p.goto('file://' + PAGE);
     const r = await p.evaluate(async seed => {
       const T = window.__tot, R = T.R, zw = T.zw, rate = 33.427, vlag = 50, now0 = performance.now();

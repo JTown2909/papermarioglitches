@@ -1,3 +1,14 @@
+# Time Out Timer v124: the key levers look further for a 90% window (Nov 21)
+
+The runner: "we really just need a good jr bounce, time out on hallway, dodged final bowser wave on turn 4, and the high bounce on
+final bowser ... we need better numbers, like 90% or above". Today's logs, the plans on those levers (realistic / perfect press):
+Jr. Troopa's Power Bounce 78-96% / 98-100% (1-3 frame windows), Time Out 64-94% / 95-100% (mostly 1-frame windows), Final Bowser
+T4 54-95% / 61-100% (the wave blocked on all 13 attempts), the T7 / T8 bounce 27-69% / 42-74% (13-1000 states). On the first two the
+seed is known (perfect press ~100%): the press spread on a 1-frame window is what costs. On Time Out and Jr. Troopa's Power Bounce a
+plan under KEY_AIM (90%) with the press spread now looks KEY_LATER_S (3 s) past the base window for the first frame that reaches 90%
+(else one KEY_GAIN, 10 points, likelier), logged `keyLater`. Over 40 Time Out seeds (test_v124): 35 plans were already 90%+, the
+other 5 moved from 75% to 100% for 1.2-2.4 s more wait. test_zw_wait (its own replan clock) runs without it (window.__noKeyLater).
+
 # Time Out Timer v123: the learned press correction trusts a steady offset (Nov 21)
 
 - The runner's saved press records (log 08:50, `more.levers`, 8 presses each): Duplighosts -1.57 frames (sd 0.94), Final Bowser Do
