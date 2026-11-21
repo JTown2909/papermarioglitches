@@ -21,6 +21,7 @@
  *    page's other plans (lead, window, beeps). */
 const FB2_TOL = 0.002, FB2_P130 = [78, 83, 113, 118], FB2_P220 = [18, 78, 88, 178];
 const FB2_DELTA = { slam: 52, claw: 62, fire: 55 }, FB2_MENU = { slam: 101, claw: 83, fire: 134 }, FB2_KMIN = 77, FB2_KMAX = 137;
+const FB2_KEY_S = 3;     // v124: the Do Nothing's look-ahead past the base window (s)
 const FB2_LAGS = [[0, 0.75], [1, 0.25]], FB2_BEEPS = 3, FB2_GAP = 300, FB2_DMG0 = 15, FB2_HP = 80, FB2_MAXH = 4000;
 const FB2_TH = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 60 / 100); t.push(c); } return t; })();
 var FB2 = { on: false };      // var: charge_live.js calls fb2Reset (via chgReset) before this file has run
@@ -195,7 +196,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   // T6 countdown is the runner's own (Settings: Beeps, Beep spacing, Lead time; playBeeps, earliestPress), never squeezed: the
   // first frame is the first whose press time leaves the whole countdown ahead, as T1-T4 and T7
   let kFirst = kAt; if (kAt == null) { kFirst = Math.max(FB2_PMIN, Math.ceil(fb2Pic(now + num('vlag')))); for (let i = 0; i < 900 && fb2DnPressT(kFirst) < earliestPress(now); i++) kFirst++; }
-  const W = Math.max(10, Math.round(Math.max(1, num('zwwin')) * 1000 / fb2Rate())), P0 = kFirst - 4, P1 = kFirst + W + 4, rows = [];
+  const W = Math.max(10, Math.round(Math.max(1, num('zwwin')) * 1000 / fb2Rate())), KL = kAt == null && !window.__noKeyLater ? Math.round(FB2_KEY_S * 1000 / fb2Rate()) : 0, P0 = kFirst - 4, P1 = kFirst + W + KL + 4, rows = [];
   for (const h of H) for (const [so, co, wf] of F) {
     const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, P0 + FB2_DNAI, h.ph);
     const L = new Uint8Array(P1 - P0 + 1);
@@ -206,9 +207,16 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   const tot = rows.reduce((a, r) => a + r.w, 0);
   const pcc = k => { let v = 0; for (const r of rows) for (const [l, wl] of FB2_LAGS) for (const [d, q] of PRESS_ERR) v += r.w * wl * q * luck(r, k + d - l); return v / tot; };
   const ppk = k => { let v = 0; for (const r of rows) for (const [l, wl] of FB2_LAGS) v += r.w * wl * luck(r, k - l); return v / tot; };
-  const a = kFirst - 1, b = kFirst + W + 1, sh = []; for (let k = a; k <= b; k++) sh.push(k >= kFirst && k <= kFirst + W ? ppk(k) : 0);
-  const pk = ppPick(sh, null, a, b, kFirst, W, pcc, 'safe3');
+  const a = kFirst - 1, b0 = kFirst + W + 1, sh = []; for (let k = a; k <= b0; k++) sh.push(k >= kFirst && k <= kFirst + W ? ppk(k) : 0);
+  let pk = ppPick(sh, null, a, b0, kFirst, W, pcc, 'safe3');
   let k = pk.target; if (k == null || !(k >= kFirst)) { k = kFirst; for (let x = kFirst; x <= kFirst + W; x++) if (pcc(x) > pcc(k)) k = x; }
+  // v124 (console 11:52: T6 beeped a 1-frame window at 47%, the Close Call missed; the backup T7 at 52%, the wave): on the Strategies
+  // screen the Do Nothing can wait, so a plan under KEY_AIM looks FB2_KEY_S further for the first frame at KEY_AIM (else one KEY_GAIN likelier)
+  let b = b0;
+  if (KL && pcc(k) < KEY_AIM) { const p0 = pcc(k); let hit = null, best = null; for (let x = kFirst + W + 1; x <= kFirst + W + KL; x++) { if (ppk(x) < 0.5) continue; const v = pcc(x); if (v >= KEY_AIM) { hit = x; break; } if (best == null || v > pcc(best)) best = x; }
+    const x = hit != null ? hit : best != null && pcc(best) >= p0 + KEY_GAIN ? best : null;
+    if (x != null) { b = x + 2; for (let c = b0 + 1; c <= b; c++) sh.push(ppk(c)); let s0 = x, e0 = x; while (s0 - 1 >= kFirst && ppk(s0 - 1) >= 0.5) s0--; while (ppk(e0 + 1) >= 0.5 && e0 + 1 <= b) e0++;
+      slog('keyLater', { prof: b7 ? 'fb2b7' : 'fb2', from: k, to: x, p0: +p0.toFixed(3), p1: +pcc(x).toFixed(3), waitF: x - k }); k = x; pk = { ok: true, target: x, run: { start: s0, end: e0, length: e0 - s0 + 1 } }; } }
   const pl = { k, p: pcc(k), pp: ppk(k), win: pk.ok ? pk.run.length : 0, blind: fb2Txt().b, kFirst, W, bias: +bias.toFixed(2), lever: 'nothing', ms: Math.round(performance.now() - t0), states: rows.length };
   pl.tPress = fb2DnPressT(k);
   // the edge rule (zwedge), as every plan: a Close Call share under it is no plan (Do Nothing whenever you like)
@@ -223,7 +231,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   // v109 (console fb0709 T6, clip fb1153: "no track was shown but it beeped"): the plan carried no frames (tab: []), so the strip
   // drew nothing; now the perfect-press share per frame (>= 0.5 works), on a clock whose frame k reaches the now-line at its press
   const r6 = fb2Rate(), w6 = pk.ok ? pk.run : { start: k, end: k, length: 1 };
-  st.msg = null; st.plan = { tMade: now, w: { start: w6.start, end: w6.end, length: w6.length }, target: k, tPress: pl.tPress, tLast: pl.tPress - (k - 0.5 + num('off')) * r6, rate: r6, carried: true, early: true, from: kFirst, to: kFirst + W, first: a, prof: 'fb2', tab: sh.map(v => v >= Math.min(0.5, 0.8 * Math.max(...sh))), tab4: null, chance: sh.map((v, i) => (a + i >= kFirst && a + i <= kFirst + W ? pcc(a + i) : 0)), mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
+  st.msg = null; st.plan = { tMade: now, w: { start: w6.start, end: w6.end, length: w6.length }, target: k, tPress: pl.tPress, tLast: pl.tPress - (k - 0.5 + num('off')) * r6, rate: r6, carried: true, early: true, from: kFirst, to: Math.max(kFirst + W, b - 1), first: a, prof: 'fb2', tab: sh.map(v => v >= Math.min(0.5, 0.8 * Math.max(...sh))), tab4: null, chance: sh.map((v, i) => (a + i >= kFirst && a + i <= b ? pcc(a + i) : 0)), mix: { p: pl.p, pp: pl.pp, win: pl.win, doubt: 0, groups: rows.length, zw: true } };
   fb2Show(); if (typeof render === 'function') render(); return pl;
 }
 /* the Do Nothing confirm (the Strategies box closing on T6's step): its frame into the states, the press into the learned

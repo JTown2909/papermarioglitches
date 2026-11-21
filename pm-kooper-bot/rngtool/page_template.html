@@ -1484,7 +1484,7 @@ const DUP4_AIM = 0.90;     // v112: the all-4 frame is beeped when its realistic
 function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): { lo, hi }: no frame outside counts (Goombario's box)
   goal = goal || (prof.id === 'dup3' ? dupGoal() : /^jrpb5[np]?$/.test(prof.id) ? 'free' : 'safe3');     // v83: Jr. Power Bounce: 6 with 5+ either side (the route's label)
   const later = lim ? 0 : Math.max(0, Math.round((num('zwlater') - num('zwwin')) * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)));      // v87
-  const keyL = !lim && !window.__noKeyLater && KEY_LATER_S[prof.id] ? Math.round(KEY_LATER_S[prof.id] * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)) : 0;
+  const keyS = KEY_LATER_S[prof.id] || prof.key || 0, keyL = !lim && !window.__noKeyLater && keyS ? Math.round(keyS * 1000 / ((typeof zw !== 'undefined' && zw.rate) || FRAME)) : 0;     // prof.key: Final Bowser T4 (fb14_live.js)
   const D = Math.max(...PD.map(x => Math.abs(x[0]))), X = lim ? 0 : 10, a = from - D, b = lim ? Math.min(lim.hi, from + W) : from + W + Math.max(later, keyL) + X + D, top = R.TOP[prof.id] ? R.PROFILES[R.TOP[prof.id]] : null;
   const share = zwShare(list, a, b, prof), share4 = top ? zwShare(list, a, b, top) : null;
   if (lim) for (let c = a; c < lim.lo && c <= b; c++) share[c - a] = 0;     // v85: an A before the box opens does nothing

@@ -699,6 +699,7 @@ function fb14EarlyT2(t) {
   slog('fb14StepByOutcome', { from: routeStep, to: j, why: hit ? 'T1 hit read' : 'T1 over (10 HP held through Bowser\'s turn)', afterMs: Math.round(t - FB14.pT[1]) });
   FB14.earlyT2 = { t, lb: FB14.lastBurst ? Object.assign({}, FB14.lastBurst) : null }; setStep(j);
 }
+const FB14_KEY_S = 3;
 function fb14HpWatch(t, present) {
   /* v86: the watch follows the last lever confirmed (T1-T3), not the route's step: the step moves on at the confirm, so v82-v85
    * watched the next turn instead and never saw a hit on the turn just played (the hit is read 2-25 s after the confirm). It
@@ -1064,8 +1065,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (skp) { const [w0, w1] = fb14SkipWin(); from = Math.max(from, w0); W = w1 - from;
     if (W < 0) { const pl = { none: 'the message window is over', turn, sk: true }; FB14.plan = pl; if (cAt != null) return pl; st.msg = 'No edge: Cloud Nine\'s message window is over. ' + fb14BlindText(1)[0].toUpperCase() + fb14BlindText(1).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'skip window over' }); cancelBeeps(); fb14Show(); render(); return true; } }
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
-  const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + X + D, turn), ms = Math.round(performance.now() - t1);
-  const prof = { id: 'fb14', share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
+  const keyT = turn === 4 && !skp && cAt == null && !window.__noKeyLater, KF = keyT ? Math.round(FB14_KEY_S * 1000 / fbRate()) : 0;     // v124: T4 (the wave must miss Mario) may wait FB14_KEY_S more for a 90% frame (zwChoose's key look-ahead)
+  const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + KF + X + D, turn), ms = Math.round(performance.now() - t1);
+  const prof = { id: 'fb14', key: keyT ? FB14_KEY_S : 0, share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
   // v101 (e2e 2b7e1516 T1: zwChoose's "later" reach picked + 315, past the message: a skip that does nothing): a skip plan's frames
   // are held inside the message's window (zwChoose lim)
   const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 }, undefined, skp ? { lo: from, hi: from + W } : undefined);

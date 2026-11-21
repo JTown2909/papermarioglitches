@@ -14,6 +14,13 @@ step (route text "T3: Bounce x5; Spiny Flip", aim5) picks its frame on the 5+ ma
 the plan's p stays the 4+ chance, and the 3 s look-ahead (hwpb4 in KEY_LATER_S) looks for a 5+ frame at 90% (log 11:20: 4+ 100% on
 a 17-frame window, 5+ 87% on 1 frame). test_v117's replays run without the look-ahead (they check the frame live planned on).
 
+**Final Bowser outcomes against the plans** (every plan with an outcome in the Nov 20-21 logs): T1 skip 11 of 17 against 11.3
+expected, T2 12 / 16 against 11.0, T3 9 / 12 against 7.9 (honest); T4 17 / 17 against 13.0 (the wave missed Mario even on 52% plans
+and on presses 1.2-2.4 frames off: the turn is more forgiving than the model of it); T6 5 / 16 against 9.5 (most T6 hits came with
+presses 0.5-2 frames late, before v123's correction; on v123 the T6 presses average +0.2). **T4, T6 and the backup T7 look further**:
+a Do Nothing plan under KEY_AIM looks 3 s more for a 90% frame (else 10 points more): fb2PlanP (FB2_KEY_S, the rows simulated over
+the longer reach) and T4's zwChoose (prof.key, FB14_KEY_S, its share computed that far), logged `keyLater`.
+
 **The % box and the page clock** (the runner: "a % for the ideal aim frame and the frame that i actually hit ... in a box near the top
 ... on the right of" the lock badge; "is being able to see the time on the stream helpful?"): right of the LOCKED badge a large box shows
 the beeped plan's chance, and after a press the chance of the frame hit (green / red) with the aimed frame's under it (pctBoxShow; the
