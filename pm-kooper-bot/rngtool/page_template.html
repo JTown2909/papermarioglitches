@@ -564,8 +564,8 @@ const ENDGAME = [
     { text: 'T2: Time Out; Spiny Flip', steps: [{ label: 'Time Out → STOP', cat: 'B', prof: 'timeout', turn: 'hw_to' },
       { label: 'Spiny Flip', cat: 'B', turn: 'hw_spiny2', hud: true, imps: Array.from({ length: 33 }, (_, i) => 138 + i) }] },
     { text: 'T3: Bounce x5; Spiny Flip', steps: [{ label: 'Power Bounce → 5+ on the beep (4 still works)', cat: 'B', prof: 'hwpb4', aim5: true }] },     // v124 (the runner: "we should probably change the hallway bounce to 5+ only, but 4 is still technically fine")
-    { text: 'T4: Bounce x3; Spiny Flip', steps: [] },
-    { text: 'T5: Jump x2; Spiny Flip', steps: [] } ] },
+    { text: 'T4: Jump x2; Do Nothing', steps: [] },     // v125 (the runner, with T3's 5 cap: "T4: Jump x2; Do Nothing / T5: Jump x2")
+    { text: 'T5: Jump x2', steps: [] } ] },
   // Final Bowser phase 2 (fb2_route/README.md). The T6 Super Charge locks the seed from its rays (the step below has it
   // as its pre, as Hallway T1); the page then beeps the A that closes the "+3" popup (the Close Call lever), reads the
   // frame it happened on from the popup closing, follows Bowser's turn with the coin, and beeps the Power Bounce A.

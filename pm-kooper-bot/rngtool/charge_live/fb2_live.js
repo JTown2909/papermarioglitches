@@ -191,7 +191,7 @@ const fb2Bias = () => (typeof fb14Bias === 'function' ? fb14Bias() : 0);
 const fb2DnPressT = k => fb2PressT(k) + fb2Bias() * fb2Rate();
 function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
   if (kAt == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
-  const t0 = performance.now(), H = FB2.hyps, b7 = fb2BackupOn(), F = fb2Flags(), now = performance.now(), bias = fb2Bias();
+  const t0 = performance.now(), H = fb2TopHyps(), b7 = fb2BackupOn(), F = fb2Flags(), now = performance.now(), bias = fb2Bias();
   // v102 (console log fb0449 T6: planned 1.6 s ahead, its 3 beeps 300 ms apart: "the beeps seemed to glitch by speeding up"): the
   // T6 countdown is the runner's own (Settings: Beeps, Beep spacing, Lead time; playBeeps, earliestPress), never squeezed: the
   // first frame is the first whose press time leaves the whole countdown ahead, as T1-T4 and T7
@@ -248,9 +248,20 @@ function fb2Confirm(tObs) {
   if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex((x, j) => j > routeStep && x.turn === 'fb2_pb'); /* v114: the next one (T7 main / T8 backup) */ if (i >= 0) { slog('fb2StepByConfirm', { from: routeStep, to: i }); setStep(i); } }
   if (FB2.on) fb2SetP(c);
 }
+/* v125 (console 13:37: a T6 lock on 2370 hypotheses - each T6 plan took 2.1 s, its own press time passed before it was out ("beepsNoFit",
+ * "target passed"), and the confirm's states, 60866 of them, held the page 1.5 s, so the HP watch saw no picture before the Close Call
+ * test and the hit - Mario's Life Shroom - was never read): the plans and the confirm's states run on FB2_HMAX hypotheses sampled by weight */
+const FB2_HMAX = 400;
+function fb2TopHyps() {     // a systematic sample by weight (each kept one standing for an equal share), so the odds stay those of the whole set
+  const H = FB2.hyps || []; if (H.length <= FB2_HMAX) return H;
+  if (FB2.topH && FB2.topH.src === H) return FB2.topH.list;
+  const tot = H.reduce((a, h) => a + h.w, 0), step = tot / FB2_HMAX, out = []; let acc = 0, next = step / 2;
+  for (const h of H) { acc += h.w; while (acc >= next && out.length < FB2_HMAX) { out.push(Object.assign({}, h, { w: step })); next += step; } }
+  FB2.topH = { src: H, list: out }; return out;
+}
 function fb2SetP(c) {
   const b7 = fb2BackupOn(), F = fb2Flags(), out = [], shifts = typeof FB14_SHIFTS_S !== 'undefined' ? FB14_SHIFTS_S : [[0, 1]], F0 = Math.round(c);
-  for (const h of FB2.hyps) for (const [l, wl] of FB2_LAGS) for (const [d, wd] of shifts) for (const [so, co, wf] of F) {
+  for (const h of fb2TopHyps()) for (const [l, wl] of FB2_LAGS) for (const [d, wd] of shifts) for (const [so, co, wf] of F) {
     const P = F0 + d - l, S = { s: h.s, nc: h.nc, coins: [] }; fb2Idle(S, 61, P + FB2_DNAI, h.ph);
     const a = b7 ? fb2AI7(S, P + FB2_DNAI, h.ph, so, co) : fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l, P, a, w: h.w * wl * wd * wf });
   }
@@ -418,7 +429,7 @@ function fb2HpWatch(t, present) {
   const late = T7.outcome === 'dodge' && t - FB2.pT < FB2_LATE_MS;
   if (T7.outcome && !late) return;
   if (!W.ref) {      // the median of the pictures before the confirm, else of the first ones after it (before the test, P + 68)
-    if (W.pre.length < 3 && t < FB2.pT + 1500) { W.pre.push(v); return; }
+    if (W.pre.length < 3 && t < FB2.pT + 2100) { W.pre.push(v); return; }     // v125: 2.1 s (the Close Call test is on P + 68, 2.3 s; a slow confirm left none in 1.5 s)
     if (W.pre.length < 3) { fb2Outcome('unread', { why: 'no HP picture before the test' }); return; }
     W.ref = [0, 1, 2, 3].map(i => W.pre.map(x => x[i]).sort((a, b) => a - b)[W.pre.length >> 1]);
   }
