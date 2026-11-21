@@ -36,7 +36,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(e['647.2'].works && e['647.2'].p > 0.55 && e['647.2'].p < 0.66, '3. 647.2 on a 1-frame window (647): works, chance weighed toward 647 (' + JSON.stringify(e['647.2']) + ')');
   ok(e['647.54'].p > 0.3 && e['647.54'].p < 0.5, '3. 647.54 (console 19:14 T3, "0%", Bowser missed): weighed over 647 / 648, not a flat 0% (' + JSON.stringify(e['647.54']) + ')');
   ok(!e['647.91'].works && e['647.91'].p < 0.3, '3. 647.91: fails, mostly 648 (' + JSON.stringify(e['647.91']) + ')');
-  ok(/works [3-9]\d% · fails [1-6]\d% \(this frame\)/.test(e.msg) && /inside \(frame 647\)/.test(e.msg) && !/works 100%/.test(e.msg), '3. the T1 skip A (labels differ) shows this frame\'s chance, not "works 100%" (' + e.msg.slice(0, 110) + ')');
+  ok((/works [3-9]\d% · fails [1-6]\d% \(this frame\)/.test(e.msg) || /You hit ?frame 647 · works [3-9]\d%/.test(e.msg)) && /inside \(frame 647\)/.test(e.msg) && !/works 100%/.test(e.msg), '3. the T1 skip A (labels differ) shows this frame\'s chance, not "works 100%" (' + e.msg.slice(0, 110) + ')');
   ok(r.v === 'v124', 'page version v121');
   ok(r.left && r.afterFb === r.f1, '1. a 10 s hide on Final Bowser T1 (left the Hallway 0 hides ago) keeps the route on Final Bowser (step ' + r.afterFb + ', T1 lever ' + r.f1 + ')');
   ok(r.afterHw === r.hi, '1. a long hide on a Hallway step still steps back to Hallway T1 (a retry: step ' + r.afterHw + ')');

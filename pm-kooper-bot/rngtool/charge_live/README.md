@@ -14,6 +14,16 @@ step (route text "T3: Bounce x5; Spiny Flip", aim5) picks its frame on the 5+ ma
 the plan's p stays the 4+ chance, and the 3 s look-ahead (hwpb4 in KEY_LATER_S) looks for a 5+ frame at 90% (log 11:20: 4+ 100% on
 a 17-frame window, 5+ 87% on 1 frame). test_v117's replays run without the look-ahead (they check the frame live planned on).
 
+**The % box and the page clock** (the runner: "a % for the ideal aim frame and the frame that i actually hit ... in a box near the top
+... on the right of" the lock badge; "is being able to see the time on the stream helpful?"): right of the LOCKED badge a large box shows
+the beeped plan's chance, and after a press the chance of the frame hit (green / red) with the aimed frame's under it (pctBoxShow; the
+press table's one Chance row is now "Aimed" / "You hit" where the plan's per-frame chances are known); beside it the page clock in
+seconds (the saved log's t / 1000, 10 Hz, off the strip's animation frames), so a clip lines up with the log.
+
+**T6 no lock** (console 11:38: no carried state was left at the Peach Beam, the full T6 search found nothing, and the headline stayed
+"WAIT: reading the seed" for 18 s): a finished no-lock on T6 / the backup T7 now says "No lock on T6 ... Do Nothing now, no beep is
+coming"; the empty carry is logged (fb14T6None).
+
 **The final bounce's press readout** (console 11:27, the T7 Power Bounce read -2.78 frames, "works ✗"): v123 read it on the FB2 clock
 (fb2Pic, as the Do Nothing), whose frame k picture is 3 frames from where fb2PressT puts the press; it is read now as Time Out's target
 screen is (the plan's tLast, the B screen's vanish), -1.6 on that press.

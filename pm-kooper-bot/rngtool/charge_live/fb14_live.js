@@ -1416,7 +1416,7 @@ function fb14SkipTick() {
 function fb14Peach() {
   if (!FB14.on || !FB14.pb || FB14.pb.F == null) return;
   const F = FB14.pb.F, out = []; fb14Advance(Math.min(fb14Horizon(performance.now()), F));
-  const Wg = fb14Weigh(F); if (!Wg.list.length) { FB14.why = 'no state left at the Peach Beam'; fb14Show(); return; }
+  const Wg = fb14Weigh(F); if (!Wg.list.length) { FB14.why = 'no state left at the Peach Beam'; slog('fb14T6None', { F, why: 'no state left at the Peach Beam' }); fb14Show(); return; }     // v124: logged (console 11:38)
   for (const S of Wg.list.slice(0, 200)) { const T = fbClone(S); fbRun(T, F - T.l); out.push({ s: T.s >>> 0, w: T.w * T.lw, l: T.l, F: F - T.l }); }
   FB14.t6 = { at: F, bases: out, doubt: Wg.doubt };
   slog('fb14T6Ready', { F, bases: out.length, doubt: +Wg.doubt.toFixed(3) });

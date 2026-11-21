@@ -60,6 +60,10 @@ h2 { font-family: var(--display); font-size: 1.05rem; letter-spacing: .06em; tex
 .lockb b { font-family: var(--display); font-weight: 700; font-size: 1.45rem; letter-spacing: .06em; white-space: nowrap; }
 .lockb small { display: block; max-width: 100%; font-family: var(--mono); font-size: .68rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .92; }
 .lockb.ok { background: var(--lock-ok); color: var(--lock-ok-ink); }
+.pctb { box-sizing: border-box; width: 150px; height: 54px; flex: 0 0 150px; display: grid; align-content: center; justify-items: center; border-radius: 8px; background: color-mix(in srgb, var(--ink) 10%, transparent); color: var(--ink); }
+.pctb b { font-family: var(--display); font-weight: 700; font-size: 1.7rem; line-height: 1; }
+.pctb small { font-family: var(--mono); font-size: .68rem; font-weight: 700; white-space: nowrap; opacity: .9; }
+.pctb.good { background: var(--run3); color: #fff; } .pctb.bad { background: var(--run1); color: #fff; }
 .lockb.no { background: var(--lock-no); color: var(--lock-no-ink); }
 .lockb.doubt { background: var(--lock-doubt); color: var(--lock-doubt-ink); }
 .side details#route-details > summary { font-size: .8rem; margin: 0; }
@@ -138,6 +142,8 @@ details[open] summary { margin-bottom: 10px; }
       <h2 style="margin:0">Confirm frames ahead</h2>
       <div class="count" id="count" hidden title="Time until the press">0.0<small> s</small></div>
       <div class="lockb no" id="lock-badge" role="status" aria-live="polite" data-state="no" title="Green LOCKED: the page holds a seed it trusts (a plan can beep). Amber DOUBTFUL: a seed is held but the coin fits it badly (doubt 50%+), or it was recovered and is not confirmed yet. Red NOT LOCKED: no seed, or the tracker lost it."><b id="lock-badge-text">NOT LOCKED</b><small id="lock-badge-why">no seed</small></div>
+      <div class="pctb" id="pct-box" title="v124: the beeped plan's chance; after a press, the chance of the frame you hit (and the aimed frame's)"><b id="pct-big">–</b><small id="pct-small">no plan</small></div>
+      <div class="pctb" id="pg-clock-box" title="v124: the page's own clock (seconds since the page opened): the saved log's t / 1000, so a clip lines up with the log"><b id="pg-clock">0.0</b><small>page clock (log t)</small></div>
       <label class="f" style="flex:0 0 auto">Zoom<select id="s-zoom">
         <option value="12">12 s (all)</option><option value="6">6 s</option><option value="3">3 s</option><option value="1.5" selected>1.5 s</option>
       </select></label>
@@ -1726,6 +1732,10 @@ const fb2WaitT = locked => (typeof fb2BackupOn === 'function' && fb2BackupOn() ?
 function fb2WaitArm() { const s = isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_k' || (typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null)) return; st.msg = fb2WaitT(false); slog('fb2WaitShown', { step: routeStep }); render(); }
 function makePlan() {
   if (typeof fb14Plan === 'function' && fb14Plan()) return;     // Final Bowser T1-T4 (fb14_live.js)
+  // v124 (console 11:38: the T6 Charge did not lock - no carried state was left at the Peach Beam, the full search found nothing - and
+  // the headline stayed "WAIT: reading the seed" for 18 s): a finished no-lock on T6 / the backup T7 says so at once
+  { const z = isRoute() && RT()[routeStep]; if (z && z.turn === 'fb2_k' && typeof CHG !== 'undefined' && CHG.state === 'nolock' && !(typeof FB2 !== 'undefined' && FB2.on) && (!st.msg || /^WAIT/.test(st.msg))) {
+    st.msg = 'No lock on ' + (typeof fb2BackupOn === 'function' && fb2BackupOn() ? 'T7' : 'T6') + ' (the Charge rays matched no seed): Do Nothing now, no beep is coming (' + fb2Txt().blind + ').'; slog('fb2NoLockShown', { step: routeStep }); render(); return; } }
   if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k' && FB2.on && FB2.pObs == null && FB2.plan && FB2.plan.lost && !st.plan) { slog('fb2Replan', { why: 'plan lost', from: FB2.plan.k }); fb2PlanP(); if (!st.plan && !(FB2.plan && FB2.plan.none) && !st.msg) { st.msg = 'No edge: the T6 Do Nothing plan was lost and no new one fits. Do Nothing whenever you like (' + fb2Txt().blind + ').'; render(); } return; }     // v99: a T6 plan cancelled from outside is made again (beeps or an explicit No edge)
   // v102 (console log fb0449 T6: the beeped frame passed with no Do Nothing read, then nothing on the screen for 8 s): a T6 plan
   // whose press time is 0.6 s past with no confirm read is made again on a later frame (beeps, or "No edge" with its reason)
@@ -2114,7 +2124,20 @@ function lockBadgeShow() {
   const el = $('lock-badge'); if (!el) return B;
   if (el.dataset.state !== B.state) { el.dataset.state = B.state; el.className = 'lockb ' + B.state; $('lock-badge-text').textContent = LOCKB_TEXT[B.state]; }
   if ($('lock-badge-why').textContent !== B.why) $('lock-badge-why').textContent = B.why;
+  pctBoxShow();
   return B;
+}
+/* v124 (the runner: "a % for the ideal aim frame and the frame that i actually hit ... in a box near the top and make it large, ... on the
+ * right of" the lock badge): before the press the beeped plan's chance; after it the hit frame's chance (green / red as the press
+ * table's badge), the aimed frame's beside it */
+function pctBoxShow() {
+  const box = $('pct-box'); if (!box) return; const pc = x => Math.round(100 * Math.max(0, Math.min(1, x))) + '%', now = performance.now(), P = st.plan, ps = st.pressShow;
+  let big = '–', small = 'no plan', cls = 'pctb';
+  if (ps && ps.src === 'press' && (!P || P.tMade < ps.t) && now - ps.t < 120000) {
+    const at = c => (ps.chance && ps.chance[Math.round(c) - ps.first] != null ? +ps.chance[Math.round(c) - ps.first] : null), qA = at(ps.target), qH = ps.p != null ? ps.p : at(ps.hit);
+    big = qH != null ? pc(qH) : ps.works ? '✓' : '✗'; small = 'you hit' + (qA != null ? ' · aimed ' + pc(qA) : ''); cls += ps.works ? ' good' : ' bad';
+  } else if (P && P.mix && P.mix.p != null && !P.stopped && P.tPress > now - 1500) { big = pc(P.mix.p); small = 'plan · aim frame ' + Math.round(P.target); }
+  if (box.className !== cls) box.className = cls; if ($('pct-big').textContent !== big) $('pct-big').textContent = big; if ($('pct-small').textContent !== small) $('pct-small').textContent = small;
 }
 /* what the strip shows, in words (the strip's state line and the overlay on stale or waiting frames) */
 /* v111 (ii), the runner's spec: at most one marker above the beeped frame, on every strip (Jr., Duplighosts, Time Out, fb14, fb2):
@@ -2302,6 +2325,7 @@ function calibrate() {
   }
 }
 function loop() { drawStrip(); calibrate(); requestAnimationFrame(loop); }
+setInterval(() => { const el = $('pg-clock'), v = (performance.now() / 1000).toFixed(1); if (el && el.textContent !== v) el.textContent = v; }, 100);     // v124: the page clock (off the strip's animation frames)
 
 /* ---------- automatic mode: read the coin from the OBS Virtual Camera ---------- */
 const V = { stream: null, video: document.createElement('video'), small: document.createElement('canvas'), draw: 'coin',
@@ -2871,7 +2895,11 @@ function pressTable(o) {
   // v120 (the runner: "the last press - 1 frame late in green should be the thing saying if it worked or not"; no "?"): the
   // badge is green when the frame hit works, red when it fails; the chance row carries the odds
   let good = o.on4 ? (o.hit4 ? true : null) : o.works != null ? !!o.works : q == null ? null : q >= MARK_SOLID ? true : q < 0.2 ? false : null;
-  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win], ['Chance', chance]].filter(([, v]) => v !== '–');     // v120: no empty rows
+  // v124 (the runner: "would it be a good idea to have a % for the ideal aim frame and the frame that i actually hit?"): the aimed
+  // frame's chance and the hit frame's, from the plan's per-frame chances (the strip's shading), in place of the one Chance row
+  const PS = o.chance ? o : (st.pressShow && st.pressShow.chance && st.pressShow.target === o.target ? st.pressShow : null), at = c => (PS && c != null && PS.chance[Math.round(c) - PS.first] != null ? +PS.chance[Math.round(c) - PS.first] : null);
+  const qA = at(o.target), qH = o.q != null ? q : at(o.f), two = qA != null && qH != null && o.f != null && o.target != null;
+  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win]].concat(two ? [['Aimed', 'frame ' + Math.round(o.target) + ' · ' + goal + ' ' + pc(qA)], ['You hit', 'frame ' + Math.round(o.f) + ' · ' + goal + ' ' + pc(qH)]] : [['Chance', chance]]).filter(([, v]) => v !== '–');     // v120: no empty rows
   // the badge keeps the press's colour (a hit on a coin-flip plan is not a bad press); the Result row says what happened
   if (o.outcome) rows.push(['Result', o.outcome === 'dodge' ? 'dodged' : o.outcome === 'hit' ? 'hit' + (q != null && q > 0 && q < 1 ? ' (the ' + pc(1 - q) + ')' : '') : o.outcome]);
   const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--run2)', ink = good === null ? '#1b1404' : '#fff';
