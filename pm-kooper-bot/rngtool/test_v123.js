@@ -44,7 +44,7 @@ const REC = { fb14: [1.93, 1, -0.26, 1.83, 1.7, 0.83, 1.72, 1.42], jr: [-1, -0.1
     E('FB2B.on = true; FB2.on = true; FB2.rate = 33.427; CHG.trig = { t: performance.now() - (420 + 2 - 16 + 0.2) * 33.427 }');
     const now = performance.now(), d = 420, tab = new Array(40).fill(false); for (let c = 419; c <= 421; c++) tab[c - 400] = true;
     T.st.plan = { prof: 'fb2', tMade: now - 3000, target: d, w: { start: 419, end: 421, length: 3 }, tab, first: 400, tPress: now, rate: 33.427, tLast: now - 400 * 33.427 };
-    const trig = E('CHG.trig.t'), tObs = trig + (d + 2 - 16 + 0.2) * 33.427; E('checkPress(' + tObs + ')');
+    const tObs = T.st.plan.tLast + (d + 2 + 0.2) * 33.427 + E('num("vlag")');     /* the plan's clock: c = (tObs - tLast - vlag) / rate - 2 */ E('checkPress(' + tObs + ')');
     const pr = T.SLOG.filter(e => e.ev === 'press' && e.prof === 'fb2').pop(); const note = E('V.pressNote'); E('FB2B.on = false; FB2.on = false');
     return { pr, note, tail: T.SLOG.slice(-6).map(e => e.ev), step: T.step(), i8 }; });
   console.log(JSON.stringify(r3));

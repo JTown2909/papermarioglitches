@@ -14,6 +14,10 @@ step (route text "T3: Bounce x5; Spiny Flip", aim5) picks its frame on the 5+ ma
 the plan's p stays the 4+ chance, and the 3 s look-ahead (hwpb4 in KEY_LATER_S) looks for a 5+ frame at 90% (log 11:20: 4+ 100% on
 a 17-frame window, 5+ 87% on 1 frame). test_v117's replays run without the look-ahead (they check the frame live planned on).
 
+**The final bounce's press readout** (console 11:27, the T7 Power Bounce read -2.78 frames, "works ✗"): v123 read it on the FB2 clock
+(fb2Pic, as the Do Nothing), whose frame k picture is 3 frames from where fb2PressT puts the press; it is read now as Time Out's target
+screen is (the plan's tLast, the B screen's vanish), -1.6 on that press.
+
 **Jr. Troopa's Close Call reads, looked at and not changed**: today's 1-frame Do Nothing Close Calls read -1.05 / -0.47 / -0.45 / -0.39
 dodged and -0.10 / -0.06 / +0.12 / +0.58 were hit (three dead on the planned frame; one +0.09 dodged the night before), as if the
 Strategies box's read were ~0.6 frame late. Moving those reads 0.6 frame later broke test_v117's j1729 replay (the clip's 5 bounces:

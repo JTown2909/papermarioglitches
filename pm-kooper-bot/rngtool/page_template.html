@@ -2774,7 +2774,7 @@ function checkPress(tObs) {
 /* v123 (console 09:09, the backup T8 Power Bounce: "it not showing anything at the end distracted me"): the final Power Bounce
  * (main T7 / backup T8) gets the same last-press readout as every other lever: the frame hit against the beeped window */
 function fb2PbPress(P, tObs, stp) {
-  const c = typeof fb2Pic === 'function' && typeof CHG !== 'undefined' && CHG.trig ? fb2Pic(tObs) - VAN.B() - num('pfix') : (tObs - P.tLast - num('vlag')) / P.rate - VAN.B() - num('pfix'), f = Math.round(c), err = c - P.target;     // the FB2 clock, as fb2Confirm reads the Do Nothing
+  const c = (tObs - P.tLast - num('vlag')) / P.rate - VAN.B() - num('pfix'), f = Math.round(c), err = c - P.target;     // read as Time Out's target screen is (measurePress: the plan's tLast, the B screen's vanish); console 11:27: the FB2 clock (fb2Pic) read this press ~1.2 frames earlier still
   const inWin = P.w && f >= P.w.start && f <= P.w.end, works = !!(P.tab && P.first != null && P.tab[f - P.first]);
   const label = 'Final Bowser ' + (stp.b8 ? 'T8' : 'T7') + ': Power Bounce';
   slog('press', { prof: 'fb2', step: routeStep, err: +err.toFixed(2), inWin, works, onBeeps: Math.abs(err) <= 5 });
