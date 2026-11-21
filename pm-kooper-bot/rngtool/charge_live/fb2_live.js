@@ -33,8 +33,9 @@ const fb2BackupOn = () => !!(FB2B && FB2B.on);
  * Danger (6 / 6 roll sequences exact with fb2model.py dmg0 18), so 18 + 17 + 16 + 15 + 14 = 80: 5 bounces end the fight */
 const FB2B_DMG0 = 18, FB2B_GOAL = 5;
 // (FB2 is reset when the backup starts, so every FB2 lock / plan while it is on belongs to the backup T7 / T8)
-const fb2Dmg0 = () => (fb2BackupOn() ? FB2B_DMG0 : FB2_DMG0), fb2Goal = () => (fb2BackupOn() ? FB2B_GOAL : FB2_GOAL7);     /* v123 (the runner: "need 6 or 7 bounce"): the main T7 plans for 6+ (6 or 7 both win on the route), the backup T8 for 5 */
-const FB2_GOAL7 = 6;
+const fb2Dmg0 = () => (fb2BackupOn() ? FB2B_DMG0 : FB2_DMG0), fb2Goal = () => (fb2BackupOn() ? FB2B_GOAL : FB2_GOAL7());     /* v123 (the runner: "need 6 or 7 bounce"): the main T7 plans for 6+ (6 or 7 both win on the route), the backup T8 for 5 */
+/* the runner: "if we get a 5 cap in phase 1, we need a 6 cap in phase 2, if we get a 3/4 cap in phase 1, we need a 7 cap" (route row: P1 bounce) */
+const FB2_GOAL7 = () => ((typeof $ === 'function' && $('s-fbp1cap') && $('s-fbp1cap').value === '34') ? 7 : 6);
 /* the step's words (T6 main / the backup T7) */
 const fb2Txt = () => (fb2BackupOn() ? { turn: 'T7', goal: 'a Body Slam / Claw (no wave, Mario in Danger)', blind: 'a Body Slam / Claw about 8%', b: 0.08 } : { turn: 'T6', goal: 'Close Call', blind: 'Close Call about 30%', b: 0.3 });
 const fb2Leg = () => { const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; return s && s.b7 ? 'b7' : s && s.b8 ? 'b8' : 'main'; };

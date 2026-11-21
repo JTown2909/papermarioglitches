@@ -49,6 +49,8 @@ const REC = { fb14: [1.93, 1, -0.26, 1.83, 1.7, 0.83, 1.72, 1.42], jr: [-1, -0.1
     return { pr, note, tail: T.SLOG.slice(-6).map(e => e.ev), step: T.step(), i8 }; });
   console.log(JSON.stringify(r3));
   ok(r3.pr && Math.abs(r3.pr.err - 0.2) < 0.01 && r3.pr.works && r3.pr.inWin && /Last press · on the frame ✓/.test(r3.note || ''), 'the backup T8 Power Bounce press gets a last-press readout (' + (r3.note || '') + ')');
+  const g = await p.evaluate(() => { const E = c => window.__tot.v111.ev(c), sel = document.getElementById('s-fbp1cap'); const out = { def: E('fb2Goal()') }; sel.value = '34'; sel.dispatchEvent(new Event('change')); out.c34 = E('fb2Goal()'); out.saved = JSON.parse(localStorage.getItem('tot-settings')).fbp1cap; sel.value = '5'; sel.dispatchEvent(new Event('change')); out.c5 = E('fb2Goal()'); return out; });
+  ok(g.def === 6 && g.c34 === 7 && g.c5 === 6 && g.saved === '34', 'Phase 1 bounce cap: a 5 cap plans T7 for 6+, a 3 / 4 cap for 7, remembered ' + JSON.stringify(g));
   ok(errs.length === 0, 'no page errors ' + errs.join(' | '));
   await b.close(); srv.close(); console.log(fails ? fails + ' FAILED' : 'all passed'); process.exit(fails ? 1 : 0);
 })();

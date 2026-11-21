@@ -35,8 +35,11 @@
   rolls of their own, and the 34% Do Nothing plan had no frame at 50%); the T8 countdown said the same. The status line
   and the note now follow the FB2 plan, and the Do Nothing strip colours its best frames (as T7's), so an on-time press on the
   aimed frame no longer reads "on time ✗".
-- **Main T7 goal 6+** (the runner: "need 6 or 7 bounce"): the T7 plan, its edge and the T6 popup's tie-break count 6+ bounces
-  (FB2_GOAL7), not 7 only (the clip 09:39 run: 6+ was 40% with normal timing on the beeped frame, 7+ 27%).
+- **Main T7 goal from Phase 1** (the runner: "if we get a 5 cap in phase 1, we need a 6 cap in phase 2, if we get a 3/4 cap in
+  phase 1, we need a 7 cap"; Bowser 99 HP: 99 - (6+5+4+3+2) - (15+14+13+12+11+10) = 4, then a Bomb; 99 - (6+5+4) - (15+...+9) = 0):
+  the route row's "P1 bounce" (5 cap: need 6+, the default / 3-4 cap: need 7, Settings key fbp1cap) sets the T7 plan's goal, its
+  edge and the T6 popup's tie-break (FB2_GOAL7). The clip 09:39 run: on the beeped frame 6+ was 40% with normal timing, 7+ 27%.
+  The bounce simulation's kill at 80 HP falls on the 7th bounce for every Phase 2 HP these give (79 / 81 / 84).
 - test_v123.js; test_console_v96 / test_fb14_v86 pin the new lever rule.
 
 # Time Out Timer v122: the backup T7 beeps against its blind odds; lever records in the saved log; boots change keeps the fight (Nov 20)
