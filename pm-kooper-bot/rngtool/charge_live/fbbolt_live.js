@@ -115,39 +115,44 @@ function fbbDrawAt(s, g, ph, kind) {
   if (circ) s = fbRi(s, 359);
   fbRi(s, 359); return { ty, v: FBV };
 }
-// the state's factor: its bolt of the reading's kind on the frames the reading's lifetimes give (d = F1 - L0 + 1, clock;
-// logic = clock - lag)
-function fbbFactor(R, ph, lag, valueAt) {
-  const K = FBB_KINDS[R.kind || 'sky'];
-  for (let L0 = K.L0[0]; L0 <= K.L0[1]; L0++) { const g = R.F1 - L0 + 1 - lag;
+// the state's factor: its bolt of the reading's kind on a frame of FBB_WIN before the first picture (clock; logic = clock -
+// lag), the value its seed draws there, scored on the best lifetime row. v128 (the runner's 09:17 run, v127: 13 readings,
+// every state at the floor on 12 of them): the picture shows a frame some frames after the page clock's (the coin's shines
+// are matched 4.8 frames after their picture), so the draw was not on F1 - L0 + 1. The window holds at most one sky bolt
+// (their slots are 10+ frames apart), and the delay each matched state implies is logged (boltRead lat) to pin it down.
+const FBB_WIN = [1, 9];
+function fbbFactor(R, ph, lag, valueAt, out) {
+  for (let back = FBB_WIN[0]; back <= FBB_WIN[1]; back++) { const g = R.F1 - back - lag;
     const has = R.kind === 'fr' ? fbbM1(g, ph) === FBB_FRSLOT : !!FBB_SLOT[fbbM2(g, ph)];
-    if (!has) continue; const x = valueAt(g); if (!x) return 1; return fbbLik(R, x.ty, x.v, L0); }
+    if (!has) continue; const x = valueAt(g); if (!x) return 1;
+    const K = FBB_KINDS[R.kind || 'sky']; let best = 0, bL = 0; for (let L0 = K.L0[0]; L0 <= K.L0[1]; L0++) { const f = fbbLik(R, x.ty, x.v, L0); if (f > best) { best = f; bL = L0; } }
+    if (out) { out.back = back; out.L0 = bL; } return best; }
   return FBB_FLOOR;      // the state draws no such bolt there, yet one was seen
 }
 function fbbApply(R) {
-  let w0 = 0, w1 = 0, n = 0; const kind = R.kind || 'sky', want = e => kind === 'fr' ? ((e >> 9) & 7) === 5 : ((e >> 9) & 7) !== 5;
+  let w0 = 0, w1 = 0, n = 0; const lat = {}, o1 = {}; const note = f => { if (f > 0.5 && o1.back != null) { const k = (o1.back - o1.L0 + 1); lat[k] = (lat[k] || 0) + 1; } o1.back = null; }; const kind = R.kind || 'sky', want = e => kind === 'fr' ? ((e >> 9) & 7) === 5 : ((e >> 9) & 7) !== 5;
   if (R.k === 'fb14' && FB14.states && FB14.states.length) {
     for (const S of FB14.states) {
       const f = fbbFactor(R, S.ph, S.l, g => {
         if (g < S.f) { for (const e of [S.b0, S.b1, S.b2, S.b3]) if (e && Math.floor(e / 4096) === g && want(e)) return { ty: (e >> 9) & 7, v: e & 511 }; return null; }
         const T = fbClone(S); fbRun(T, g); return fbbDrawAt(T.s, g, T.ph, kind);
-      });
+      }, o1); note(f);
       w0 += S.w; S.w *= f; w1 += S.w; n++;
     }
   } else if (R.k === 'fb2' && typeof FB2 !== 'undefined') {
     const T7 = FB2.t7 && FB2.t7.states;
     if (T7 && T7.length) {
       for (const o of T7) {
-        const f = fbbFactor(R, o.h.ph, o.l || 0, g => { if (g < o.a.T + 1) return null; const S = { s: o.a.S.s, nc: o.a.S.nc }; fb2Idle(S, o.a.T + 1, g, o.h.ph); return fbbDrawAt(S.s, g, o.h.ph, kind); });
+        const f = fbbFactor(R, o.h.ph, o.l || 0, g => { if (g < o.a.T + 1) return null; const S = { s: o.a.S.s, nc: o.a.S.nc }; fb2Idle(S, o.a.T + 1, g, o.h.ph); return fbbDrawAt(S.s, g, o.h.ph, kind); }, o1); note(f);
         w0 += o.w; o.w *= f; w1 += o.w; n++;
       }
     } else if (FB2.hyps && FB2.hyps.length) {
       for (const h of FB2.hyps) {
         let f = 0, wl = 0;
-        for (const [l, wlag] of FB2_LAGS) { f += wlag * fbbFactor(R, h.ph, l, g => { if (g < 61) return null; const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, g, h.ph); return fbbDrawAt(S.s, g, h.ph, kind); }); wl += wlag; }
+        for (const [l, wlag] of FB2_LAGS) { f += wlag * fbbFactor(R, h.ph, l, g => { if (g < 61) return null; const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, g, h.ph); return fbbDrawAt(S.s, g, h.ph, kind); }, o1); note(f); wl += wlag; }
         f /= wl || 1; w0 += h.w; h.w *= f; w1 += h.w; n++;
       }
     }
   }
-  return { states: n, kept: n ? +(w1 / (w0 || 1)).toFixed(3) : null };
+  return { states: n, kept: n ? +(w1 / (w0 || 1)).toFixed(3) : null, lat };     // lat: the picture's delay (frames) the well-matched states imply, by count
 }
