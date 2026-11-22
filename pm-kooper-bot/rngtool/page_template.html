@@ -1962,7 +1962,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v125';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v126';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
@@ -2398,17 +2398,25 @@ function hudWatch(t, present) {
     slog('hudConfirm', { id: pr.id, at: Math.round(V.hudGone) }); preConfirm(pr, tc); }
   else { const h = HUD_HIDE[stp.turn]; if (h == null) return; slog('hudConfirm', { id: stp.turn, at: Math.round(V.hudGone) }); checkPress(V.hudGone - (h - (VAN[stp.cat] || VAN.M)()) * rate); }
 }
+// v126 (Jr. Troopa logs Nov 21 20:23: 76-91% of a Charge read's pictures dropped, gaps of 33 ms, while the 30 s frame stats
+// read 18 ms): what each picture costs while a Charge is armed or read, by part, goes into chargeMaps (cost), so the next
+// logs show which part keeps the page from taking every picture
 function onFrame(t) {
+  const a = performance.now(); V.fcm = [a]; try { onFrame0(t); } finally { if (typeof chgCostAdd === 'function') chgCostAdd(a, performance.now(), V.fcm); }
+}
+function onFrame0(t) {
   if (!dims()[0]) return;
   V.lastFrameT = performance.now(); if (V.stalled) { slog('captureResumed', { afterMs: Math.round(V.lastFrameT - V.stalled) }); V.stalled = null; V.camEnded = null; }
   V.frames++; if (t - V.fpsT > 1000) { V.fps = V.frames * 1000 / (t - V.fpsT); V.frames = 0; V.fpsT = t; }
 /*@include shared/coin_detect.frag.js*/
+  V.fcm.push(performance.now());
   if (steady) V.steadyT = t;
-  chgFrame(t, present);
+  chgFrame(t, present); V.fcm.push(performance.now());
   if (typeof jrFrame === 'function') jrFrame(t, present);
-  if (typeof jrEarlyPlan === 'function') jrEarlyPlan(t);
+  if (typeof jrEarlyPlan === 'function') jrEarlyPlan(t); V.fcm.push(performance.now());
   if (typeof hwHpFrame === 'function') hwHpFrame(t, present);     // Hallway T1: Mario's HP, the Life Shroom watch (hwcc_live.js)
   if (typeof fb14Frame === 'function') fb14Frame(t, present);     // Final Bowser T1-T4 and the T5 carry (fb14_live.js)
+  V.fcm.push(performance.now());
   // target screen
   if (V.ref) {
     const g = sample(V.boxes.target, 24, 16); let diff = 0;

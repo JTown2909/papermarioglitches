@@ -254,6 +254,13 @@ function chgGrab() {
 }
 /* per video frame (onFrame): arm on Hallway T1 while the status bar is hidden (the Charge confirm hides it 10 game
  * frames before frame 0), trigger on the burst, keep ~110 capture frames */
+// v126: per picture while armed or capturing: the whole onFrame and its parts (coin box, Charge, Jr., HP/FB, the rest)
+function chgCostAdd(a, b, m) {
+  if (CHG.replay || (CHG.state !== 'armed' && CHG.state !== 'capture')) return;
+  const C = CHG.cost || (CHG.cost = { n: 0, tot: 0, over: 0, max: 0, p: [0, 0, 0, 0, 0] }), d = b - a; C.n++; C.tot += d; if (d > 16) C.over++; C.max = Math.max(C.max, d);
+  const pts = m.concat([b]); for (let k = 0; k < 5 && k + 1 < pts.length; k++) C.p[k] += pts[k + 1] - pts[k];
+}
+function chgCostSum() { const C = CHG.cost; if (!C || !C.n) return null; const f = x => +(x / C.n).toFixed(1); return { n: C.n, ms: f(C.tot), over16: +(C.over / C.n).toFixed(2), max: Math.round(C.max), coin: f(C.p[0]), chg: f(C.p[1]), jr: f(C.p[2]), hpfb: f(C.p[3]), rest: f(C.p[4]) }; }
 function chgFrame(t, present) {
   if (V.frames % 15 === 0) chgShow();
   if (!chgEnabled() || !CHG_WASM || CHG_WASM.length < 100) return;
@@ -270,7 +277,7 @@ function chgFrame(t, present) {
     if (P.trigMin && !real) { CHG.hideT = -1e12; CHG.armP = null; return; }   // not a confirm: the bar was not up
     CHG.hideT = t; CHG.armP = P; CHG.menu = CHG.menuSince ? { from: CHG.menuSince + 1000, to: t - 4 * FRAME, taps: (V.hist || []).filter(x => x > CHG.menuSince + 1000 && x < t) } : null;
   }
-  if (CHG.state === 'idle' || CHG.state === 'notseen') { const P = CHG.armP || chgProfNow(); if (t - CHG.hideT > P.trigMax) return; if (typeof fb14ArmOk === 'function' && !fb14ArmOk(P, t)) return; if (typeof fbp1ArmOk === 'function' && !fbp1ArmOk(P, t)) return; CHG.state = 'armed'; CHG.ring = []; CHG.means = []; CHG.prof = P; }
+  if (CHG.state === 'idle' || CHG.state === 'notseen') { const P = CHG.armP || chgProfNow(); if (t - CHG.hideT > P.trigMax) return; if (typeof fb14ArmOk === 'function' && !fb14ArmOk(P, t)) return; if (typeof fbp1ArmOk === 'function' && !fbp1ArmOk(P, t)) return; CHG.state = 'armed'; CHG.ring = []; CHG.means = []; CHG.prof = P; CHG.cost = null; }
   const g = sample(chgGame(), 32, 24); let m = 0; for (let i = 0; i < g.length; i += 4) m += 0.299 * g[i] + 0.587 * g[i + 1] + 0.114 * g[i + 2]; m /= 768;
   const tg = performance.now(), last = CHG.state === 'capture' ? CHG.frames[CHG.frames.length - 1] : CHG.ring[CHG.ring.length - 1];
   // FB2: a repeated picture (same coarse brightness) reuses the raster: half the grabs. v75: only right after a fresh grab
@@ -567,7 +574,7 @@ if (window.__chgDebug) {
     CHG.dbgRaw = CHG.frames.map(f => { const a = []; for (let y = 4; y < 480; y += 8) for (let x = 4; x < 640; x += 8) a.push(f.Y[y * 640 + x]); return [Math.round(f.t - CHG.trig.t), a]; });
     }
     if (window.__chgDebug) CHG.G0 = G.map(f => (f ? Math.round(f.t - CHG.trig.t) : null));
-    const raw = CHG.frames; CHG.info = { raw: raw.length, spanMs: Math.round(raw[raw.length - 1].t - raw[0].t), grabMs: +(CHG.grabMs || 0).toFixed(1), gaps: raw.slice(1).map((f, i) => Math.round(f.t - raw[i].t)).join(','), frames: G.slice(0, CHG_N).filter(Boolean).length, mario: +sh.dx.toFixed(1), marioNcc: +sh.ncc.toFixed(2), dxWorld: +dxw.toFixed(2), mapsMs: Math.round(t1 - t0) };
+    const raw = CHG.frames; CHG.info = { raw: raw.length, spanMs: Math.round(raw[raw.length - 1].t - raw[0].t), grabMs: +(CHG.grabMs || 0).toFixed(1), gaps: raw.slice(1).map((f, i) => Math.round(f.t - raw[i].t)).join(','), frames: G.slice(0, CHG_N).filter(Boolean).length, mario: +sh.dx.toFixed(1), marioNcc: +sh.ncc.toFixed(2), dxWorld: +dxw.toFixed(2), mapsMs: Math.round(t1 - t0), cost: chgCostSum() }; CHG.cost = null;
     if (sh.wide) CHG.info.marioWide = true;
     // v106 (console logs Nov 14: dropped pictures, gaps of 30 ms or more, 1-67% of a read; fb1001's T1 Charge had 64% and did
     // not lock): over CHG_DROP_WARN of the read's pictures dropped is said on the page (and logged)
