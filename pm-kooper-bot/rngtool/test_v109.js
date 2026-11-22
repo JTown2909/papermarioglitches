@@ -154,8 +154,8 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     });
     console.log('6', JSON.stringify(r).slice(0, 600));
     ok(r.works === true && /Last press · on time ✓/.test(r.msg), '6. a Final Bowser press on a working frame: the Press check row in green with ✓ ("' + r.msg.slice(0, 80) + '")');
-    ok(r.src === 'press' && Math.abs(r.hit - 769.7) < 1e-9 && /works ✓/.test(r.state.text), '6. after the route moves on the strip keeps the window and the frame hit: "' + r.state.text.slice(0, 90) + '"');
-    ok(r.fail === false && /fails ✗/.test(r.state2.text), '6. a press off the window (fb0709 T2 794 on 791-792): red ✗');
+    ok(r.src === 'press' && Math.abs(r.hit - 769.7) < 1e-9 && /last press is in the boxes/.test(r.state.text), '6. after the route moves the strip keeps the press (window and frame hit; v128: its line points to the press boxes, no repeat): "' + r.state.text.slice(0, 90) + '"');
+    ok(r.fail === false && /last press is in the boxes/.test(r.state2.text), '6. a press off the window (fb0709 T2 794 on 791-792): fails (v128: the result in the press boxes, the strip line points there)');
     ok(r.after === 'plan', '6. the next plan replaces it');
     const want = ['T1: Charge; Do Nothing', 'T3: Charge; Bomb',     // (v110: the Duplighosts Charge route is the default)
        'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T2: Time Out; Spiny Flip', 'T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', 'T3: Jammin\' Jelly; Do Nothing', 'T4: Charge; Do Nothing - Block Wave', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7'];

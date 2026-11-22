@@ -15,7 +15,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     E('st.plan = null'); const s = T.stripState(); out.src = E('stripData().src'); out.text = s.text; out.cls = s.cls;
     return out; });
   console.log(JSON.stringify(r));
-  ok(r.src === 'press' && /frame 204/.test(r.text) && /window 203-206/.test(r.text) && /works ✓/.test(r.text) && r.cls === 'plan', 'a Duplighosts press: the strip keeps the window and the frame hit (' + (r.text || '').slice(0, 90) + ')');
+  ok(r.src === 'press' && /last press is in the boxes/.test(r.text) && r.cls === 'wait', 'a Duplighosts press: the strip keeps the press (v128: its line points to the press boxes, no repeat) (' + (r.text || '').slice(0, 90) + ')');
   ok(!errs.length, 'no page errors ' + errs.join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();
