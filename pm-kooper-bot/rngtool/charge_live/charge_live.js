@@ -622,7 +622,10 @@ if (window.__chgDebug) {
     let res;
     let cands = CHG.replay ? CHG.replay.cands : !E && chgP().id === 'fb2' && chgFb2Wide() && typeof fb2T7Cands === 'function' && (CHG.c7 = fb2T7Cands()) ? CHG.c7 : !E && chgP().id === 'fb2' && typeof fb14T6Cands === 'function' ? fb14T6Cands() : !E && chgP().id === 'fb1' && typeof fb14ChgCands === 'function' ? fb14ChgCands() : null;   // v87: T2 / T4 on the carried stream too
     // v89: no carried stream: the window after this attempt's last Charge lock (fb14_live.js fbStreamCands), on its own threshold
-    const SW = !E && chgP().id === 'fb1' && typeof fbStreamCands === 'function' ? (CHG.replay ? CHG.replay.stream : typeof fbStreamWin === 'function' ? fbStreamWin() : fbStreamOk() ? FB14.stream : null) : null;   // v91: the window scaled with the time since the kept lock
+    let SW = !E && chgP().id === 'fb1' && typeof fbStreamCands === 'function' ? (CHG.replay ? CHG.replay.stream : typeof fbStreamWin === 'function' ? fbStreamWin() : fbStreamOk() ? FB14.stream : null) : null;   // v91: the window scaled with the time since the kept lock
+    // v131 (log 15:31: T1's window ran 117 s back to the last attempt's T4 lock, 17177 steps; the stream search took 9.2 s and the lock
+    // came after Cloud Nine's message window): past the in-fight window (FBS_HI) the full search (~4 s) goes first
+    if (SW && !CHG.replay && typeof FBS_HI === 'number' && (SW.hi || 0) > FBS_HI) { slog('fbStreamSkipped', { hi: SW.hi, why: 'past the in-fight window: the full search is sooner' }); SW = null; }
     if (CHG.rec && cands) CHG.rec.cands = cands;
     if (CHG.rec && SW) CHG.rec.stream = { seed: (SW.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: SW.hi || FBS_HI };
     const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };

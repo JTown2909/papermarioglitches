@@ -11,7 +11,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v130', 'page version v129');
+  ok(await E(`VERSION`) === 'v131', 'page version v129');
   // states: the menu aura pattern, one lightning phase pair, different seeds; the turn's AI ahead
   await E(`window.__mk = (turn) => { const c = new Uint8Array(20); [2,0,1,1,1,0,1,1,2,1,1,0,0,0,2,0,1,1,0,1].forEach((v, i) => c[i] = v); const L = [];
     for (let i = 0; i < 40; i++) { const S = fbNew({ s: (0x13579bdf + i * 0x9E3779B9) >>> 0, nc: 130 + (i % 24), f: 100, c, ph: [37 + (i % 5), 151], l: i % 2, w: 1 + (i % 7) / 10, lw: 1 }); S.out = turn > 1 ? { 1: { atk: 'fire', v: 60, miss: true, ok: true } } : {}; fbRun(S, 140); L.push(S); } return L; }; 1`);
@@ -31,7 +31,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
     const inner = fb14Share(L, 170, 180, 2, 'nothing'), want = fb14ShareSync(L, 170, 180, 2, 'nothing');
     let mx = 0; for (let i = 0; i < want.length; i++) mx = Math.max(mx, Math.abs(want[i] - inner[i]));
     L[0].w *= 1.5; fbsBegin(); const st0 = FBS.stale || 0; fb14Share(L, 165, 215, 2, 'nothing'); const missed = FBS.want.length; FBS.live = false; FBS.want = [];
-    const L2 = __mk(2).map(S => { const T = fbClone(S); T.s = (T.s ^ 0x5a5a5a5a) >>> 0; return T; }); fbsBegin(); const st1 = FBS.stale || 0; fb14Share(L2, 165, 215, 2, 'nothing'); const missed2 = FBS.want.length; FBS.live = false; FBS.want = [];
+    const L2 = __mk(2).map(S => { const T = fbClone(S); T.s = (T.s ^ 0x5a5a5a5a) >>> 0; return T; }); FB14.lockN = (FB14.lockN || 0) + 1; fbsBegin(); const st1 = FBS.stale || 0; fb14Share(L2, 165, 215, 2, 'nothing'); const missed2 = FBS.want.length; FBS.live = false; FBS.want = [];
     out.live = { zeros: z.every(x => x === 0), sent, innerMaxDiff: mx, staleUsed: (FBS.stale || 0) - st0, missedAfterWeightChange: missed, otherStatesStale: (FBS.stale || 0) - st1, otherStatesMissed: missed2 };
     return JSON.stringify(out); })()`));
   console.log(JSON.stringify(r));

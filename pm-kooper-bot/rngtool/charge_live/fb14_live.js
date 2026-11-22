@@ -1047,6 +1047,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (FB14.hit) { st.msg = 'No edge: Mario was hit on T' + FB14.hit + '. ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; FB14.plan = { none: 'hit', turn }; fb14Show(); if (cAt == null) { cancelBeeps(); render(); } return true; }
   // v91 (logs E 1511.16 s, F): no plan once this turn's lever was confirmed
   if (cAt == null && FB14.pT && FB14.pT[turn] != null && !(turn === 1 && skp)) { if (FB14.afterConf !== turn) { FB14.afterConf = turn; slog('fb14PlanAfterConfirm', { turn }); } cancelBeeps(); return true; }
+  // v131 (log 15:27 T4: a 330 ms page stall every 500 ms while the plan waited on the worker: each plan-loop try weighed all 24000
+  // states, sampled and copied them again): a plan this turn already waits on is left to the worker's answer (fbsDone plans again)
+  if (cAt == null && typeof fbsWaiting === 'function' && fbsWaiting(turn)) return true;
   // v93 (log a87486a0 attempt 2 T1, 259.67 s: a second plan, target 273, 0.34 s after the bar hid on Cloud Nine's confirm and
   // 0.03 s before that hide was taken as the confirm): the plan's beeps had played, the page's own plan loop asked again. The
   // bar gone on a lever step is a confirm being read: no plan until the hide watch has decided (FB14_C9WAIT)
