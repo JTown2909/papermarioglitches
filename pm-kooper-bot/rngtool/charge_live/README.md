@@ -1,3 +1,27 @@
+# Time Out Timer v126: Charge reads fed by a frame worker; Final Bowser T2/T3 wait for a 90% frame (Nov 21)
+
+- **Dropped pictures in Charge reads**: the Nov 21 Jr. Troopa reads lost 76-91% of their pictures (33 ms gaps) while the 30 s
+  frame stats read 18 ms, and Final Bowser's 31-46%. The page has one thread: when it is still busy with a picture, the video
+  callbacks skip the next frame. Now a worker (shared/capture.js) reads the camera's frames; while a Charge is armed or read it
+  turns each one into the read's 640x480 luma raster and the trigger's coarse brightness on its own thread and closes the frame
+  at once (frames held for the page made the camera drop frames: tried first). The page gets every raster in order (chgWkPic ->
+  chgPic) stamped on the capture clock (bgPair: the track's stamps against the video callbacks' capture times, median V.bgAdj;
+  0.2-0.4 ms in the test). During such a read the video callbacks do nothing and onFrame runs on the worker's pictures, every
+  other one, skipping any over 40 ms old: an overloaded page otherwise ran the callbacks back to back and the worker's messages
+  waited (2 pictures a second reached the read). Chrome 153 cannot hand the track itself to a worker (DataCloneError), so the
+  frames are relayed through the page's thread on their way; a 60 ms stall still loses a few. The hidden-page fallback now gets
+  whole pictures (copies) from the worker. No worker (or window.__noBgWorker): the old path. chargeMaps logs `wk` (the share of
+  the read's pictures from the worker) and `cost` (what each picture cost the page while armed / reading, by part).
+  test_v126 (a Jr. Troopa clip as the fake camera, the page made busy): rasters identical to the page's own grab (mean |dY| 0);
+  with stalls 5% dropped vs 10%; overloaded (20 ms a picture) 19% vs 68%, and the worker read locks the clip's seed where the
+  old path did not lock.
+- **Final Bowser T2 and T3** may wait up to 3 s for a 90% frame, as T4 (the runner: the T2-T7 menus can wait; T1's Lakilester
+  menu closes by itself, so not T1).
+- **Notes from the Nov 21 logs and the game's code**: Bowser's fire looks different boosted (Star Rod: the large flame) and not
+  (the small flame growing, fading by time); its colour is fixed and its jitter a lookup table, not the RNG. The T4 wave tests
+  Mario with the same Cloud Nine roll (rand_int(100) < 50) as every attack, then Lakilester: 21 of 21 misses since v121 means
+  the T4 plans land, not that the wave cannot hit.
+
 # Time Out Timer v125: T6 / backup T7 narrow locks must agree with the full search; Final Bowser shines logged again (Nov 21)
 
 - **Narrow locks with no runner-up**: the T6 Charge (and the backup T7's) is searched first on the seeds carried from T1-T5. When no

@@ -278,13 +278,35 @@ function chgFrame(t, present) {
     CHG.hideT = t; CHG.armP = P; CHG.menu = CHG.menuSince ? { from: CHG.menuSince + 1000, to: t - 4 * FRAME, taps: (V.hist || []).filter(x => x > CHG.menuSince + 1000 && x < t) } : null;
   }
   if (CHG.state === 'idle' || CHG.state === 'notseen') { const P = CHG.armP || chgProfNow(); if (t - CHG.hideT > P.trigMax) return; if (typeof fb14ArmOk === 'function' && !fb14ArmOk(P, t)) return; if (typeof fbp1ArmOk === 'function' && !fbp1ArmOk(P, t)) return; CHG.state = 'armed'; CHG.ring = []; CHG.means = []; CHG.prof = P; CHG.cost = null; }
+  if (chgWkSync()) return;      // v126: the worker reads this Charge's pictures (chgWkPic)
   const g = sample(chgGame(), 32, 24); let m = 0; for (let i = 0; i < g.length; i += 4) m += 0.299 * g[i] + 0.587 * g[i + 1] + 0.114 * g[i + 2]; m /= 768;
+  chgPic(t, m, null, 0);
+}
+/* v126: the frame worker (capture.js) while a Charge is armed or read: every picture, in order, from its own thread; the
+ * page's video callbacks then grab nothing for the Charge. On from the frame after the arming one, off once the read is in
+ * (or disarmed). A picture within 8 ms of the last one taken is the same frame seen twice at the switch. */
+function chgWkWant() { return !!(V.bgWorker && !CHG.replay && !window.__noBgWorker && (CHG.state === 'armed' || CHG.state === 'capture')); }
+function chgWkSync() {
+  const w = chgWkWant();
+  if (w !== !!CHG.wkOn) { CHG.wkOn = w; CHG.wkArmed = false; V.wkFeed = false; if (w) { const [SX, OX, SY, OY] = chgMap(), G = chgGame(); bgWorkerGrab({ SX, OX, SY, OY, gx: G.x, gy: G.y, gw: G.w, gh: G.h }); } else bgWorkerGrab(null); }
+  return w && CHG.wkArmed;
+}
+function chgWkPic(t, m, Y, ms) {
+  if (!CHG.wkOn) return;
+  if (!chgWkWant()) { chgWkSync(); return; }     // the read is in (or disarmed): the worker stops grabbing
+  CHG.wkArmed = true; V.wkFeed = true;
+  const last = CHG.state === 'capture' ? CHG.frames[CHG.frames.length - 1] : CHG.ring[CHG.ring.length - 1];
+  if (last && t < last.t + 8) return;
+  chgPic(t, m, Y, ms);
+  if (!chgWkWant()) chgWkSync();
+}
+function chgPic(t, m, Yw, msW) {
   const tg = performance.now(), last = CHG.state === 'capture' ? CHG.frames[CHG.frames.length - 1] : CHG.ring[CHG.ring.length - 1];
   // FB2: a repeated picture (same coarse brightness) reuses the raster: half the grabs. v75: only right after a fresh grab
   // (each game frame shows on 2 captures): two game frames in a row with the same coarse brightness made the second a
   // copy of the first, a skipped frame in the placement, and the T6 Charge of an end-to-end run never locked
   const rep = chgP().id === 'fb2' && last && !last.rep && Math.abs(last.m - m) < 0.02;
-  const fr = { t, m, Y: rep ? last.Y : chgGrab(), rep }; if (!rep) CHG.grabMs = (CHG.grabMs || 0) * 0.9 + 0.1 * (performance.now() - tg);
+  const fr = { t, m, Y: rep ? last.Y : (Yw || chgGrab()), rep, wk: !!Yw }; if (!rep) CHG.grabMs = (CHG.grabMs || 0) * 0.9 + 0.1 * (Yw ? msW : performance.now() - tg);
   if (CHG.state === 'armed') {
     CHG.ring.push(fr); if (CHG.ring.length > 16) CHG.ring.shift(); CHG.means.push(m); if (CHG.means.length > 12) CHG.means.shift();
     const P0 = CHG.prof || CHG_PROF.hw;
@@ -574,7 +596,7 @@ if (window.__chgDebug) {
     CHG.dbgRaw = CHG.frames.map(f => { const a = []; for (let y = 4; y < 480; y += 8) for (let x = 4; x < 640; x += 8) a.push(f.Y[y * 640 + x]); return [Math.round(f.t - CHG.trig.t), a]; });
     }
     if (window.__chgDebug) CHG.G0 = G.map(f => (f ? Math.round(f.t - CHG.trig.t) : null));
-    const raw = CHG.frames; CHG.info = { raw: raw.length, spanMs: Math.round(raw[raw.length - 1].t - raw[0].t), grabMs: +(CHG.grabMs || 0).toFixed(1), gaps: raw.slice(1).map((f, i) => Math.round(f.t - raw[i].t)).join(','), frames: G.slice(0, CHG_N).filter(Boolean).length, mario: +sh.dx.toFixed(1), marioNcc: +sh.ncc.toFixed(2), dxWorld: +dxw.toFixed(2), mapsMs: Math.round(t1 - t0), cost: chgCostSum() }; CHG.cost = null;
+    const raw = CHG.frames; CHG.info = { raw: raw.length, spanMs: Math.round(raw[raw.length - 1].t - raw[0].t), grabMs: +(CHG.grabMs || 0).toFixed(1), gaps: raw.slice(1).map((f, i) => Math.round(f.t - raw[i].t)).join(','), frames: G.slice(0, CHG_N).filter(Boolean).length, mario: +sh.dx.toFixed(1), marioNcc: +sh.ncc.toFixed(2), dxWorld: +dxw.toFixed(2), mapsMs: Math.round(t1 - t0), cost: chgCostSum(), wk: +(raw.filter(f => f.wk).length / raw.length).toFixed(2) }; CHG.cost = null;
     if (sh.wide) CHG.info.marioWide = true;
     // v106 (console logs Nov 14: dropped pictures, gaps of 30 ms or more, 1-67% of a read; fb1001's T1 Charge had 64% and did
     // not lock): over CHG_DROP_WARN of the read's pictures dropped is said on the page (and logged)
