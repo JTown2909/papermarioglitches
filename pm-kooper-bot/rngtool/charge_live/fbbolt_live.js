@@ -22,6 +22,8 @@ function fbbReset() { FBB = { col: null, base: null, det: {}, reads: [], busy: f
 function fbbFrBox() { const [SX, OX, SY, OY] = chgMap(); return { x: (OX + 200 * SX) / 1280, y: (OY + 195 * SY) / 720, w: 108 * SX / 1280, h: 35 * SY / 720 }; }
 // the clock of the fight the page is in: phase 2 from the T6 / T7 Charge (fb2Pic), phase 1 from T1's confirm (fbPic)
 function fbbClock(t) {
+  // only on a Final Bowser step (v128: the 09:20 Hallway run read bolts on the clock a Final Bowser fight left behind)
+  const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; if (!s || !(s.fb14 || s.fb5 || (s.turn && String(s.turn).startsWith('fb2')))) return null;
   if (typeof FB2 !== 'undefined' && FB2.on && typeof CHG !== 'undefined' && CHG.trig && typeof chgP === 'function' && chgP().id === 'fb2') return { k: 'fb2', F: fb2Pic(t) };
   if (typeof FB14 !== 'undefined' && FB14.on && FB14.t0 != null) return { k: 'fb14', F: fbPic(t) };
   return null;
