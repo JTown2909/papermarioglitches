@@ -158,3 +158,23 @@ function fbbApply(R) {
   }
   return { states: n, kept: n ? +(w1 / (w0 || 1)).toFixed(3) : null, lat };     // lat: the picture's delay (frames) the well-matched states imply, by count
 }
+
+/* v128: bolts read in the menu before a fresh lock's Charge. A fresh fit's states start after the rays; its seed at the start
+ * of the Charge's frame M + 13 (x0) is run back frame by frame through Mario's menu (every frame there is idle: its bolts,
+ * the coin on coin frames, the aura's 20-frame pattern, the step; the emulator, fb2_route/bolt_shape/menu_draws.py, from the
+ * menu through M + 12), with the coin frames the fit's own coin chain gives (fbBackShines cf), to each reading taken in that
+ * menu, and scored as fbbFactor does. Only readings after the chain is sure of its coins (B.end) and after the menu opened. */
+function fbbPreLock(x0, F0, B, c, ph, l, menuF) {
+  if (!FBB.reads.length) return 1;
+  const lo = Math.max(menuF, B.end != null ? B.end : -1e9), coins = new Set(B.cf || []);
+  let f = 1;
+  for (const R of FBB.reads) {
+    if (R.k !== 'fb14' || R.F1 - FBB_WIN[1] - l < lo || R.F1 - FBB_WIN[0] - l >= F0) continue;
+    f *= fbbFactor(R, ph, l, g => {
+      if (g < lo || g >= F0) return null;
+      let X = x0 >>> 0; for (let h = F0 - 1; h >= g; h--) { const n = fbBolts(h, ph) + (coins.has(h) ? 1 : 0) + c[mod20(h)] + 1; for (let i = 0; i < n; i++) X = Math.imul((X - 1) >>> 0, 0x6A76AE6D) >>> 0; }
+      return fbbDrawAt(X, g, ph, R.kind || 'sky');
+    });
+  }
+  return f;
+}

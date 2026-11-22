@@ -211,7 +211,7 @@ function fb14Lock(res) {
   const hitF = FB14.hitT != null && FB14.hitT < trigT ? Math.ceil(fbPic(FB14.hitT) + FB14_REVIVE_F) : null;
   if (hitF != null && hitF > menuF && menuF < M) { slog('fb14MenuAfterHit', { M, menuF, hitF }); menuF = M; }
   const afterHit = hitF != null;
-  const back0 = (x0, F0, q, c, pa) => { const r = fbBackShines(x0, F0, q, c, pa, menuF); return { ok: r.ok, sh: r.sh.sort((a, b) => a - b), from: Math.min(menuF, F0) }; };
+  const back0 = (x0, F0, q, c, pa) => { const r = fbBackShines(x0, F0, q, c, pa, menuF); return { ok: r.ok, sh: r.sh.sort((a, b) => a - b), from: Math.min(menuF, F0), cf: r.cf, end: r.end }; };
   // v87: the fresh fits are built only when no carried state drew these rays (about 1 s on the page's thread)
   const buildFresh = () => {
   let fresh = [];
@@ -248,7 +248,8 @@ function fb14Lock(res) {
         const F0 = M + 13; let x0 = Math.imul(((H.a >>> 0) - 1) >>> 0, 0x6A76AE6D) >>> 0;   // the seed before A's base-angle draw
         for (let i = fbBolts(F0, pa); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;   // before frame 0's bolts
         const B = back0(x0, F0, F0 + h.q, c, pa);
-        for (const [rg, wr] of fb14RgList()) fresh.push(fbNew({ s: s48 >>> 0, nc: M + 13 + nc48, f: M + 61, c, ph: pa, l, rg, w: wr * wl * AV.w * (B.ok ? 1 : 1e-3), from: B.from, sh: B.sh.concat(E.sh), key: key + ':' + rg, tag: turn }));
+        const bw = typeof fbbPreLock === 'function' ? fbbPreLock(x0, F0, B, c, pa, l, menuF) : 1;     // v128: bolts read in the menu before this Charge
+        for (const [rg, wr] of fb14RgList()) fresh.push(fbNew({ s: s48 >>> 0, nc: M + 13 + nc48, f: M + 61, c, ph: pa, l, rg, w: wr * wl * AV.w * (B.ok ? 1 : 1e-3) * bw, from: B.from, sh: B.sh.concat(E.sh), key: key + ':' + rg, tag: turn }));
       }
     }
     }
@@ -401,7 +402,7 @@ function fbAuraVariants(h, best) {
 function fbBackShines(sR0, F0, q, c, ph, fromF) {
   const back = (x, n) => { for (let i = 0; i < n; i++) x = Math.imul((x - 1) >>> 0, 0x6A76AE6D) >>> 0; return x; };
   const per = f => fbBolts(f, ph) + c[mod20(f)] + 1;     // a menu frame's draws besides the coin
-  let X = sR0, f = F0, nc = q, isR0 = true; const sh = [];
+  let X = sR0, f = F0, nc = q, isR0 = true; const sh = [], cf = [];     // cf (v128): every coin frame found (fbbolt_live.js fbbPreLock)
   for (let k = 0; k < 40; k++) {
     let found = null, n = 0;
     for (const gap of [24, 48]) {
@@ -411,10 +412,10 @@ function fbBackShines(sR0, F0, q, c, ph, fromF) {
       let d = 1 + c[mod20(f1)] + 1; for (let g = f1 + 1; g < f; g++) d += per(g); if (!isR0) d += fbBolts(f, ph);
       const Y = back(X, d); fbRi(Y, 100); if ((FBV >= 70) === (gap === 48)) { found = [f1, Y, FBV]; n++; }
     }
-    if (n !== 1) return { sh, ok: n === 2 || nc - 24 < fromF };
-    f = found[0]; X = found[1]; nc = f; isR0 = false; if (found[2] >= 70) sh.push(f);
+    if (n !== 1) return { sh, cf, ok: n === 2 || nc - 24 < fromF, end: f };     // end: the earliest frame whose coins are known
+    f = found[0]; X = found[1]; nc = f; isR0 = false; cf.push(f); if (found[2] >= 70) sh.push(f);
   }
-  return { sh, ok: true };
+  return { sh, cf, ok: true, end: null };
 }
 /* a Charge's trigger with the tracker on (T2, T4): the carried states get that Charge's rays (their creations), so the
  * new lock can be checked against them; T3's Jelly and the partner confirms come in the same way */

@@ -1,5 +1,6 @@
 /* v128: the front-right bolt (bolt 5: the circulating loop's third, z 113 -> 121) read as the sky bolts are (v127).
  * 1. Drawn from the game's formula (lifetimes 2-3, 4 frames): u mod 120 within 3, the lifetime right.
+ * 3. Pre-lock (fbbPreLock): a state run back through a menu reproduces its forward seeds; a bolt read there favours the true seed.
  * 2. In the page, phase 1: 60 states with one seed's phases; a front-right bolt drawn from one state's own value: that state
  *    keeps most of its weight (the softer likelihood), most others fall; a sky reading still uses the sky bolt only.
  * (Emulator, 33 front-right bolts: 17 within 3, most within 10: fb2_route/bolt_shape/README.md.) */
@@ -8,6 +9,7 @@
  *    page reads, some stray violet): u mod 120 within 2 and the lifetime right; the true value keeps a high likelihood.
  *    (On 55 emulator bolts, rendered with the runner's ROM and checked against the game's RAM, the same reader read
  *    54 within 3: fb2_route/bolt_shape/README.md. Those pictures are not in the repository.)
+ * 3. Pre-lock (fbbPreLock): a state run back through a menu reproduces its forward seeds; a bolt read there favours the true seed.
  * 2. In the page, phase 1: 60 Final Bowser states with one seed's lightning phases and different seeds; a bolt drawn from
  *    one state's own value: that state keeps its weight, most others fall to the floor.
  * 3. Phase 2: the same with T7 states (FB2.t7.states). */
@@ -56,12 +58,28 @@ let seed = 7; const rnd = () => (seed = (Math.imul(seed, 1103515245) + 12345) >>
     // a copy run to the bolt (a state behind it) gives the same value
     const S0 = fbNew({ s: 0x1234abcd >>> 0, nc: 100000, f: 0, c: new Uint8Array(20), ph, l: 0, w: 1 }); fbRun(S0, g - 3); const x0 = (() => { const C = fbClone(S0); fbRun(C, g); return fbbDrawAt(C.s, g, C.ph, 'fr'); })();
     out.p1.copyV = x0 && x0.v;
+    // pre-lock: a state run forward through a menu (frames 100 .. 400, the page's model); its seed at each frame's start and
+    // its coin frames; run back from frame 400 with fbbPreLock's unwinding: the same seeds; a bolt drawn from it scores it
+    { const c = new Uint8Array(20); [2,0,1,1,1,0,1,1,2,1,1,0,0,0,2,0,1,1,0,1].forEach((v, i) => c[i] = v);
+      const S = fbNew({ s: 0x2468ace1 >>> 0, nc: 117, f: 100, c, ph, l: 0, w: 1 }), seeds = {}, cf = [];
+      while (S.f < 400) { seeds[S.f] = S.s >>> 0; if (S.f === S.nc) cf.push(S.f); fbStep(S); }
+      const x0 = S.s >>> 0, F0 = 400, B = { cf, end: 100 };
+      let ok = 0, n = 0; for (const g of [399, 350, 301, 250, 200, 150, 101]) { let X = x0; for (let h = F0 - 1; h >= g; h--) { const k = fbBolts(h, ph) + (cf.includes(h) ? 1 : 0) + c[mod20(h)] + 1; for (let i = 0; i < k; i++) X = Math.imul((X - 1) >>> 0, 0x6A76AE6D) >>> 0; } n++; ok += (X >>> 0) === seeds[g]; }
+      let g = 380; while (!FBB_SLOT[fbbM2(g, ph)]) g--;
+      const T = fbNew({ s: seeds[100], nc: 117, f: 100, c, ph, l: 0, w: 1 }); fbRun(T, g); const x = fbbDrawAt(T.s, g, ph, 'sky');
+      FBB.reads = [read('sky', x.ty, x.v, 2, g + 1, 'fb14')];
+      const fTrue = fbbPreLock(x0, F0, B, c, ph, 0, 100);
+      let fOther = 0; for (let i = 1; i <= 20; i++) fOther += fbbPreLock((x0 ^ (i * 0x9E3779B9)) >>> 0, F0, B, c, ph, 0, 100) > 0.5 ? 1 : 0;
+      FBB.reads = []; out.pre = { unwound: ok + '/' + n, fTrue, fOther, g, v: x.v }; }
     FB14.on = false; FB14.states = [];
     JSON.stringify(out); }`));
   console.log(JSON.stringify(r));
   ok(r.p1.trueW > 0.6, 'phase 1: the state whose front-right bolt it is keeps its weight (' + r.p1.trueW.toFixed(2) + '; value ' + r.p1.v + ', read ' + r.p1.read + ')');
   ok(r.p1.others <= 12, 'phase 1: most other states fall (' + r.p1.others + ' of 59 keep over half; weight kept ' + r.p1.kept + ')');
   ok(r.p1.copyV === r.p1.v, 'a state run to the bolt on a copy draws the same front-right value (' + r.p1.copyV + ')');
+  ok(r.pre.unwound === '7/7', 'pre-lock: run back through the menu, the seed at every frame tried is the forward run\'s (' + r.pre.unwound + ')');
+  ok(r.pre.fTrue > 0.8, 'pre-lock: a bolt read in the menu before the Charge favours the true seed (' + r.pre.fTrue.toFixed(2) + ')');
+  ok(r.pre.fOther <= 3, 'pre-lock: other seeds mostly fall (' + r.pre.fOther + ' of 20 over half)');
   ok(errs.length === 0, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? 'FAIL ' + fails : 'all ok'); process.exit(fails ? 1 : 0);
 })();
