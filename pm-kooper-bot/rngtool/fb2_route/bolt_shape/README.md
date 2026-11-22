@@ -23,7 +23,18 @@ about 7 frames.
   ends free, the fit drifts: the area overlap is only ~0.25 (the bolt's texture and alpha are not modelled) and the ends
   trade off against u.
 
-**Next:** fix the ends from the stage's world coordinates and the battle camera (read the projection from the
+- The screen mapping is not a similarity: the bolt plane (z = -91) maps about 1.57x sideways vs 1.03x vertically in
+  the emulator's 640x480 (an affine from the four sky bolts' ends, which bolt is which from the stage loop's order:
+  fits within ~7 px). With the world ends and that affine fixed, only u and the lifetime free:
+  `blind2.py` (area): 45 -> 42, 2 -> 0 right; 51 -> 38, 1 -> 33, 114 -> 8 wrong.
+  `blind3.py` (centre line): 45 -> 50, 51 -> 57, 2 -> 0 within 6; 1 -> 28, 114 -> 19 wrong. Residuals 10-25 px remain,
+  so something in the shape or the mapping is still off.
+
+**Next (was):** fix the ends from the stage's world coordinates and the battle camera (read the projection from the
 emulator, or fit one homography for the z = -91 plane from all four sky bolts' ends), so only u and the lifetime are
 free; model the texture's bright core instead of the whole strip; then repeat the blind test, and then on the runner's
 clips (`scan.py` finds violet events, `grab.py` takes full-resolution masks).
+
+**Next:** read the true vertex positions (`boltVertexPosX/Y` in the effect's data) from the emulator's memory each frame
+(a breakpoint in `lightning_bolt_appendGfx`), to check the vertex formula directly and fit the exact projection from
+vertices to pixels. Only once the blind test is right on emulator bolts is it worth reading the runner's clips.

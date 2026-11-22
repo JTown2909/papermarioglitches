@@ -51,3 +51,18 @@ def raster(u, L, S, E, shape, mir=1, wscale=1.0):
         if w[i] <= 0 and w[i + 1] <= 0: continue
         dr.polygon([tuple(a), tuple(c), tuple(d), tuple(b)], fill=1)
     return np.asarray(im, bool)
+
+SKY = {1: ((-22, 190), (-88, 21)), 2: ((-1, 190), (88, 24)), 3: ((-67, 190), (-122, 10)), 4: ((57, 190), (-4, 17))}
+def world_raster(u, L, bolt, A, shape, origin=(0, 0)):
+    """the strip built in world x/y (the stage's ends, half-width 8 * width / 10 world units) and mapped to the screen
+    by the 2x3 affine A (screen = A @ [x, y, 1]); origin: the raster's top-left in screen pixels"""
+    from PIL import Image, ImageDraw
+    S, E = SKY[bolt]
+    V, w, pts = strip(u, L, S, E, 1, 1.0)
+    P = lambda p: tuple(A[:, :2] @ np.asarray(p) + A[:, 2] - np.asarray(origin))
+    im = Image.new('L', (shape[1], shape[0]), 0); dr = ImageDraw.Draw(im)
+    for i in range(len(pts) - 1):
+        if w[i] <= 0 and w[i + 1] <= 0: continue
+        a, b = pts[i]; c, d = pts[i + 1]
+        dr.polygon([P(a), P(c), P(d), P(b)], fill=1)
+    return np.asarray(im, bool)
