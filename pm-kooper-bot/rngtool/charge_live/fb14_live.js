@@ -1065,7 +1065,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (skp) { const [w0, w1] = fb14SkipWin(); from = Math.max(from, w0); W = w1 - from;
     if (W < 0) { const pl = { none: 'the message window is over', turn, sk: true }; FB14.plan = pl; if (cAt != null) return pl; st.msg = 'No edge: Cloud Nine\'s message window is over. ' + fb14BlindText(1)[0].toUpperCase() + fb14BlindText(1).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'skip window over' }); cancelBeeps(); fb14Show(); render(); return true; } }
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
-  const keyT = turn === 4 && !skp && cAt == null && !window.__noKeyLater, KF = keyT ? Math.round(FB14_KEY_S * 1000 / fbRate()) : 0;     // v124: T4 (the wave must miss Mario) may wait FB14_KEY_S more for a 90% frame (zwChoose's key look-ahead)
+  const keyT = turn >= 2 && turn <= 4 && !skp && cAt == null && !window.__noKeyLater, KF = keyT ? Math.round(FB14_KEY_S * 1000 / fbRate()) : 0;     // v124: T4 (the wave must miss Mario) may wait FB14_KEY_S more for a 90% frame (zwChoose's key look-ahead); v126: T2 and T3 too (the runner: T2-T7 menus can wait; T1's Lakilester menu closes by itself, so not T1)
   const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + KF + X + D, turn), ms = Math.round(performance.now() - t1);
   const prof = { id: 'fb14', key: keyT ? FB14_KEY_S : 0, share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
   // v101 (e2e 2b7e1516 T1: zwChoose's "later" reach picked + 315, past the message: a skip that does nothing): a skip plan's frames
