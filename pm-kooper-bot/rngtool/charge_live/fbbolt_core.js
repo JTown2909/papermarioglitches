@@ -14,6 +14,9 @@ const FBB_WID = [[10,9,3,1,0,0,0,0,0,0,0,0],[8,7,6,5,4,3,2,1,0,0,0,0],[10,13,15,
 // phase 18, 78, 88, 178 (fbBolts' m2), in this order
 const FBB_SKY = { 1: [-22, 190, -88, 21], 2: [-1, 190, 88, 24], 3: [-67, 190, -122, 10], 4: [57, 190, -4, 17] }, FBB_SKYZ = -91;
 const FBB_SLOT = { 18: 1, 78: 2, 88: 3, 178: 4 };
+// the circulating loop's third bolt (CirculatingBoltPositions[2]: the front right, z 113 -> 121; fbBolts' m1 = 113): bolt 5
+const FBB_FR = [146, 1, 113, 38, -15, 121], FBB_FRSLOT = 113;
+const fbbEnds = type => type === 5 ? FBB_FR : [FBB_SKY[type][0], FBB_SKY[type][1], FBB_SKYZ, FBB_SKY[type][2], FBB_SKY[type][3], FBB_SKYZ];
 // the battle camera in the menus (gCameras[1]: eye, look-at, vfov 25, viewport 296x200 at 12, 20 of the 320x240 frame)
 const FBB_CAM = { eye: [0, 129.6279754638672, 495.1170349121094], obj: [0, 60, 0], fov: 25, vp: [296, 200, 12, 20] };
 const FBB_L = [2, 7];         // the lifetimes read (1: a straight line, nothing to read; 8+: fading)
@@ -41,12 +44,12 @@ function fbbVerts(u, L, S, E) {
   }
   return { V, w: wid };
 }
-// the drawn centre line of sky bolt `type` (u, L) on the raster: 12 points and which of the 11 segments are drawn
+// the drawn centre line of bolt `type` (1-4 the sky bolts, 5 the front right) (u, L) on the raster: 12 points and which of the 11 segments are drawn
 const FBB_CACHE = new Map();
 function fbbLine(type, u, L) {
   const key = (type * 16 + L) * 360 + u; let r = FBB_CACHE.get(key); if (r) return r;
-  const b = FBB_SKY[type], { V, w } = fbbVerts(u, L, [b[0], b[1]], [b[2], b[3]]), P = new Float32Array(24), ok = new Uint8Array(11);
-  for (let i = 0; i < 12; i++) { const p = fbbProj(V[i][0], V[i][1], FBB_SKYZ); P[2 * i] = p[0]; P[2 * i + 1] = p[1]; }
+  const b = fbbEnds(type), { V, w } = fbbVerts(u, L, [b[0], b[1]], [b[3], b[4]]), P = new Float32Array(24), ok = new Uint8Array(11);
+  for (let i = 0; i < 12; i++) { const p = fbbProj(V[i][0], V[i][1], b[2] + (b[5] - b[2]) * i / 11); P[2 * i] = p[0]; P[2 * i + 1] = p[1]; }     // the vertices' z: start to end (deltaZ 0)
   for (let i = 0; i < 11; i++) ok[i] = w[i] > 0 && w[i + 1] > 0 ? 1 : 0;
   r = { P, ok }; if (FBB_CACHE.size > 40000) FBB_CACHE.clear(); FBB_CACHE.set(key, r); return r;
 }
@@ -120,10 +123,10 @@ function fbbScore(obs, types, done, ms) {
 }
 // the best (type, L0, u) of a table, and the cost of every u at it
 function fbbBest(C) { let b = null; for (const ty in C) for (let L0 = FBB_L[0]; L0 <= FBB_L[1]; L0++) { const a = C[ty][L0]; if (!a) continue; for (let u = 0; u < 360; u++) if (!b || a[u] < b.c) b = { c: a[u], type: +ty, L0, u }; } return b; }
-const FBB_T = 0.4, FBB_FLOOR = 0.1;      // the likelihood's temperature (px of cost) and its floor (a misread never cuts a state)
+const FBB_T = 0.4, FBB_T5 = 1.0, FBB_FLOOR = 0.1;     // FBB_T5: the front-right bolt (emulator: the true value's cost gap up to 1.02, vs 0.62 on the sky bolts)      // the likelihood's temperature (px of cost) and its floor (a misread never cuts a state)
 // a state's factor: its own sky bolt (type, value v) drawn d0 frames before the first picture's frame (lifetime L0 = d0 + 1)
 function fbbLik(R, type, v, L0) {
   const a = R.C[type] && R.C[type][L0]; if (!a) return FBB_FLOOR;
-  return FBB_FLOOR + (1 - FBB_FLOOR) * Math.exp(-(a[v] - R.best.c) / FBB_T);
+  return FBB_FLOOR + (1 - FBB_FLOOR) * Math.exp(-(a[v] - R.best.c) / (type === 5 ? FBB_T5 : FBB_T));
 }
-if (typeof module !== 'undefined') module.exports = { fbbCorridor, fbbObsFor, FBB_SKY, FBB_SKYZ, FBB_SLOT, FBB_CAM, FBB_L, fbbProj, fbbVerts, fbbLine, fbbEdt, fbbObs, fbbCost1, fbbScore, fbbBest, fbbLik, FBB_T, FBB_FLOOR };
+if (typeof module !== 'undefined') module.exports = { FBB_FR, FBB_FRSLOT, fbbEnds, fbbCorridor, fbbObsFor, FBB_SKY, FBB_SKYZ, FBB_SLOT, FBB_CAM, FBB_L, fbbProj, fbbVerts, fbbLine, fbbEdt, fbbObs, fbbCost1, fbbScore, fbbBest, fbbLik, FBB_T, FBB_FLOOR };

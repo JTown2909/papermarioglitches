@@ -89,7 +89,7 @@ function fbStep(S) {
   // has run past them (a late T2 lock: v86 skipped every carried state then, "matched 0 of 8000")
   if (S.ca && S.ca.s61 == null && f === S.ca.f61) { S.ca.s61 = s >>> 0; S.ca.nc61 = S.nc; }
   const m1 = (f + S.ph[0]) % 130, m2 = (f + S.ph[1]) % 220;
-  if (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118) s = fbRi(s, 359);
+  if (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118) { s = fbRi(s, 359); if (m1 === 113) { S.b3 = S.b2; S.b2 = S.b1; S.b1 = S.b0; S.b0 = f * 4096 + 5 * 512 + FBV; } }     // v128: the front-right bolt's value too (fbbolt_live.js)
   if (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178) { s = fbRi(s, 359); { const e = f * 4096 + (m2 === 18 ? 1 : m2 === 78 ? 2 : m2 === 88 ? 3 : 4) * 512 + FBV; S.b3 = S.b2; S.b2 = S.b1; S.b1 = S.b0; S.b0 = e; } }     // v127: the last 4 sky bolts' values (fbbolt_live.js; plain fields: a typed array per state slowed the Charge reads' state builds)
   while (S.ev.length && S.ev[0].f <= f) {
     const e = S.ev.shift(); if (e.f !== f) continue;
