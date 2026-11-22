@@ -5,7 +5,7 @@
  * lifetime of the first picture (FBB_L0) and value u. Each state then gets the factor of its own bolt: the sky bolt its
  * lightning phase draws on the frame d = F1 - L0 + 1 (clock frames; F1 the first picture's frame), and the value its seed
  * draws there; a state with no sky bolt on those frames gets the floor. Never a cut (FBB_FLOOR).
- * Phase 1 (fb14 states): a state that has run past that frame reads its value from the ring its bolts left (fbStep, S.bv);
+ * Phase 1 (fb14 states): a state that has run past that frame reads its value from the last 4 its bolts left (fbStep, S.b0-b3);
  * one that has not is run to it on a copy. Phase 2 (FB2): the T6 seeds (FB2.hyps, from frame 61) and the T7 states
  * (FB2.t7.states, from Bowser's T6 turn) are run to it on a copy. Logged: boltRead (the best reading, how much weight the
  * states kept); the plan is made again unless its beeps are under 1.5 s away. */
@@ -103,7 +103,7 @@ function fbbApply(R) {
   if (R.k === 'fb14' && FB14.states && FB14.states.length) {
     for (const S of FB14.states) {
       const f = fbbFactor(R, S.ph, S.l, g => {
-        if (g < S.f) { if (!S.bv) return null; for (let i = 0; i < 8; i++) { const e = S.bv[i]; if (e && Math.floor(e / 4096) === g) return { ty: (e >> 9) & 7, v: e & 511 }; } return null; }
+        if (g < S.f) { for (const e of [S.b0, S.b1, S.b2, S.b3]) if (e && Math.floor(e / 4096) === g) return { ty: (e >> 9) & 7, v: e & 511 }; return null; }
         const T = fbClone(S); fbRun(T, g); return fbbDrawAt(T.s, g, T.ph);
       });
       w0 += S.w; S.w *= f; w1 += S.w; n++;

@@ -65,8 +65,8 @@ const fbBolts = (f, ph) => { const m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 22
  * 0 <= ph), l (console lag: logic frame = clock frame - l), w, resp (ray respawns, a 64-frame ring), ev (script events,
  * sorted by frame), wv (the frame of Bowser's AI when it chose the wave), prev (Bowser's last attack), out (per turn:
  * attack, test value, miss, ok), sh (logic frames of the predicted shines), from (the state's first frame) } ---- */
-function fbClone(S) { return { bv: S.bv ? S.bv.slice() : null, bi: S.bi || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1 }; }
-function fbNew(o) { return Object.assign({ resp: new Uint8Array(64), ev: [], wv: -1e9, lv: -1e9, rg: 0, prev: null, out: {}, sh: [], lw: 1, err: 0, bv: new Int32Array(8), bi: 0 }, o); }
+function fbClone(S) { return { b0: S.b0 || 0, b1: S.b1 || 0, b2: S.b2 || 0, b3: S.b3 || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1 }; }
+function fbNew(o) { return Object.assign({ resp: new Uint8Array(64), ev: [], wv: -1e9, lv: -1e9, rg: 0, prev: null, out: {}, sh: [], lw: 1, err: 0, b0: 0, b1: 0, b2: 0, b3: 0 }, o); }
 function fbEv(S, e) { let i = S.ev.length; while (i > 0 && S.ev[i - 1].f > e.f) i--; S.ev.splice(i, 0, e); }
 const mod20 = f => ((f % 20) + 20) % 20;
 /* v86: Bowser's actor vars before his turn `turn` (TurnCount after the increment), from the attacks the state already
@@ -90,7 +90,7 @@ function fbStep(S) {
   if (S.ca && S.ca.s61 == null && f === S.ca.f61) { S.ca.s61 = s >>> 0; S.ca.nc61 = S.nc; }
   const m1 = (f + S.ph[0]) % 130, m2 = (f + S.ph[1]) % 220;
   if (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118) s = fbRi(s, 359);
-  if (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178) { s = fbRi(s, 359); if (S.bv) { S.bv[S.bi & 7] = f * 4096 + (m2 === 18 ? 1 : m2 === 78 ? 2 : m2 === 88 ? 3 : 4) * 512 + FBV; S.bi = (S.bi + 1) & 7; } }     // v127: the sky bolts' values (fbbolt_live.js)
+  if (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178) { s = fbRi(s, 359); { const e = f * 4096 + (m2 === 18 ? 1 : m2 === 78 ? 2 : m2 === 88 ? 3 : 4) * 512 + FBV; S.b3 = S.b2; S.b2 = S.b1; S.b1 = S.b0; S.b0 = e; } }     // v127: the last 4 sky bolts' values (fbbolt_live.js; plain fields: a typed array per state slowed the Charge reads' state builds)
   while (S.ev.length && S.ev[0].f <= f) {
     const e = S.ev.shift(); if (e.f !== f) continue;
     if (e.k === 'chg') { if (!S.ca || S.ca.mk !== S.mk) S.ca = { mk: S.mk, a: fbAdv(s) >>> 0, f61: f + 48, s61: null, nc61: null };

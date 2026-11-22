@@ -11,7 +11,7 @@
   against a base picture from before. Each sky bolt is scored on its own corridor's violet only (Bowser's Star Rod
   colours cycle through violet). Sliced, ~0.8 s. Each state then gets the factor of its own bolt: the sky bolt its
   lightning phase draws on the reading's frames and the value its seed draws there, floor 0.1 (a misread never cuts):
-  phase 1 the fb14 states (their bolt values kept in a ring as they step, S.bv; a state not there yet run on a copy),
+  phase 1 the fb14 states (their last 4 bolt values kept as they step, S.b0-b3; a state not there yet run on a copy),
   phase 2 the T6 seeds (FB2.hyps, both lags) or the T7 states. Logged: boltOnset, boltRead (bolt, u mod 120, lifetime,
   cost, how much weight the states kept), boltReadDrop. The plan is made again unless its beeps are under 1.5 s away.
 - test_v127: bolts drawn from the formula read within 2 (12 of 12, lifetime right); in the page one bolt leaves the

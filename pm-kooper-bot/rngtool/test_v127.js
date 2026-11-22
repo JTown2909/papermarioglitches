@@ -50,7 +50,7 @@ let seed = 7; const rnd = () => (seed = (Math.imul(seed, 1103515245) + 12345) >>
     for (let i = 0; i < 60; i++) { const S = fbNew({ s: (0x1234abcd + i * 0x9E3779B9) >>> 0, nc: 100000, f: 0, c: new Uint8Array(20), ph, l: 0, w: 1 }); fbRun(S, 300); FB14.states.push(S); }
     // a sky bolt the phases draw before frame 300: the latest slot
     let g = 299; while (!FBB_SLOT[(g + ph[1]) % 220]) g--;
-    const T = FB14.states[0], ent = Array.from(T.bv).find(e => e && Math.floor(e / 4096) === g), ty = (ent >> 9) & 7, v = ent & 511, L0 = 3, F1 = g + L0 - 1;
+    const T = FB14.states[0], ent = [T.b0, T.b1, T.b2, T.b3].find(e => e && Math.floor(e / 4096) === g), ty = (ent >> 9) & 7, v = ent & 511, L0 = 3, F1 = g + L0 - 1;
     const R1 = read(ty, v, L0, F1, 'fb14'); const res1 = fbbApply(R1);
     const w = FB14.states.map(S => S.w);
     out.p1 = { g, ty, v, read: R1.best.u % 120, trueW: w[0], others: w.slice(1).filter(x => x > 0.5).length, kept: res1.kept, n: res1.states };
