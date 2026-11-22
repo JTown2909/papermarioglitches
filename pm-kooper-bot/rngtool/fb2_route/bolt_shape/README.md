@@ -35,6 +35,26 @@ emulator, or fit one homography for the z = -91 plane from all four sky bolts' e
 free; model the texture's bright core instead of the whole strip; then repeat the blind test, and then on the runner's
 clips (`scan.py` finds violet events, `grab.py` takes full-resolution masks).
 
-**Next:** read the true vertex positions (`boltVertexPosX/Y` in the effect's data) from the emulator's memory each frame
-(a breakpoint in `lightning_bolt_appendGfx`), to check the vertex formula directly and fit the exact projection from
-vertices to pixels. Only once the blind test is right on emulator bolts is it worth reading the runner's clips.
+**Solved (Nov 22):**
+- `bolt_truth.py` (emulator, breakpoint on `lightning_bolt_appendGfx` = 0xE00BC374, the effect's data read from RAM each
+  frame): `model.verts` matches the game's 12 vertices to 0.03 world units on all 116 + 784 renders (lifetime as read).
+- `cam_read.py`: the battle camera in the menus is fixed: eye (0, 129.63, 495.12), looking at (0, 60, 0), vfov 25,
+  viewport 296x200 at (12, 20) of the 320x240 frame. `cam.py` projects world points with it; the projected true
+  vertices land on the drawn bolts.
+- The emulator screenshot shows the frame after the logged one (one frame late).
+- The bright violet is the texture's core along the vertex path; the strip's full width is mostly transparent, so the
+  match is on the centre line (two-way chamfer), not the area.
+- `blind5.py` (exact geometry, the camera, u and the lifetime free): the four sky bolts, 16 bolts over three seeds:
+  u mod 120 within 3 on 15, within 5 on all 16; the lifetime right every time. The circulating bolts read badly
+  (partly off screen or hidden), except the front-right one (146, 1, z 113): 0, 0, 3, 7.
+- The runner's capture: `clipread.py` maps the camera's 320-space through the page's CHG_MAP0 (the Charge rays' capture
+  layout). The 20:40:53 clip's bolt at 6.7 s reads as sky bolt 4, u mod 120 = 19 (139 or 259 or 19), with both
+  halves of its frames reading 18-19 on their own, and the projected shape lies on the bolt frame after frame.
+
+**What a bolt gives:** u mod 120 to about +-3, ~4 bits, plus its lifetime (so its frame). The page's Final Bowser states
+already simulate the stage's bolt draws (`fbBolts`, a `rand_int(359)` each); each state's value at that draw can be
+weighed by the reading.
+
+**Next:** on the page: after a sky-bolt onset (`fbBoltFrame` finds them), keep ~6 game frames of the sky's violet mask,
+score u (0..358) x lifetime for the bolt type the stage loop's phase gives, and weigh the Final Bowser states by the
+value each one draws there. Test on the emulator truth runs first, then on clips where the page was locked.
