@@ -145,7 +145,10 @@ function fbbApply(R) {
     const T7 = FB2.t7 && FB2.t7.states;
     if (T7 && T7.length) {
       for (const o of T7) {
-        const f = fbbFactor(R, o.h.ph, o.l || 0, g => { if (g < o.a.T + 1) return null; const S = { s: o.a.S.s, nc: o.a.S.nc }; fb2Idle(S, o.a.T + 1, g, o.h.ph); return fbbDrawAt(S.s, g, o.h.ph, kind); }, o1); note(f);
+        // v128 (09:40 run: 24243 T7 states, each read ran every one from Bowser's turn to the bolt, ~0.2 s): each state keeps where it
+        // got to (o._bb: the frame and the seed at its start) and steps on from there
+        const f = fbbFactor(R, o.h.ph, o.l || 0, g => { if (g < o.a.T + 1) return null; let B = o._bb; if (!B || B.f > g) B = o._bb = { f: o.a.T + 1, s: o.a.S.s, nc: o.a.S.nc };
+          const S = { s: B.s, nc: B.nc }; fb2Idle(S, B.f, g, o.h.ph); B.f = g; B.s = S.s; B.nc = S.nc; return fbbDrawAt(S.s, g, o.h.ph, kind); }, o1); note(f);
         w0 += o.w; o.w *= f; w1 += o.w; n++;
       }
     } else if (FB2.hyps && FB2.hyps.length) {

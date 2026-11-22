@@ -75,7 +75,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     console.log(JSON.stringify(r).slice(0, 900));
     ok(r.before === 'locked' && r.after !== 'locked' && r.log === 1, '5. x1425: a T1 lock landing after T1\'s Do Nothing (the rearm confirm) arms the reader for the T2 Charge (' + r.before + ' -> ' + r.after + ')');
     ok(r.plan && r.note === false && r.relock, '5. a Charge relock clears the frozen "Seed changed" mark so the plan is scored again (seedNote ' + r.note + ')');
-    ok(/on time ✓/.test(r.t1) && /dodge 53% · hit 47%/.test(r.t1) && !/coin flip|\?|Expected|Frame/.test(r.t1), '5. d1423 (v120 table): a working frame on a 53% plan: green ✓, the odds in the Chance row, no "?" / Expected / Frame (' + r.t1.slice(0, 90) + ')');
+    ok(/on time ✓/.test(r.t1) && !/dodge \d+% · hit|Chance|You hit/.test(r.t1) && !/coin flip|\?|Expected|Frame/.test(r.t1), '5. d1423 (v120 table; v128: the odds are the % box\'s, not a row here): a working frame on a 53% plan: green ✓, no odds row, no "?" / Expected / Frame (' + r.t1.slice(0, 90) + ')');
     ok(/Result ?hit \(the 47%\)/.test(r.t2), '5. after the hit (v113 table): a Result row "hit (the 47%)" (' + r.t2.slice(0, 90) + ')');
     ok(/✓/.test(r.t3) && !/coin flip|\?/.test(r.t3), '5. a 92% plan keeps its ✓ (' + r.t3.slice(0, 70) + ')');
     ok(/^Capture dropping 44% of frames: check OBS\. y/.test(r.drop), '6. the capture-drop line comes first (' + r.drop.slice(0, 60) + ')');

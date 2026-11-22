@@ -26,7 +26,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(r.v === 'v128', 'page version v120');
   ok(r.t5, '1. route: "T5: Peach Beam; Do Nothing - Danger"');
   ok(/^Last press · 1 frame late ✓ /.test(r.late.text) && r.late.good === true, '2. "Last press · 1 frame late ✓", green: the frame hit works (' + r.late.text + ')');
-  ok(/Window: outside \(window 160-161, aimed 161\) \/ Chance: works 74% · fails 26%/.test(r.late.text) && !/Frame|Expected|\?|Final Bowser/.test(r.late.text), '2. rows Window and Chance only; no Frame / Expected / "?" / label');
+  ok(/Window: outside \(window 160-161, aimed 161\)/.test(r.late.text) && !/Chance|You hit|Frame|Expected|\?|Final Bowser/.test(r.late.text), '2. rows: Window only (v128: the odds are the % box\'s); no Chance / Frame / Expected / "?" / label');
   ok(/border:1px solid/.test(r.late.html), '2. a gridded table');
   ok(/^Last press · 2\.2 frames early ✗/.test(r.fail.text) && r.fail.good === false, '2. a failing frame: red ✗ (' + r.fail.text.slice(0, 60) + ')');
   ok(r.bare === 'Last press · 0.8 frames late ', '2. nothing known: no "?" and no empty rows ("' + r.bare + '")');

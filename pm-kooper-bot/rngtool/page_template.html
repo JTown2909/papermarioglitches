@@ -2178,7 +2178,8 @@ function drawMarker(ctx, M, x, y, gold, white) {
 }
 function stripState(d) {
   const now = performance.now(), P = st.plan, sc = st.seedChange && now - st.seedChange.t < 4000 ? st.seedChange : null;
-  if (d && d.src === 'press') return { cls: d.works ? 'plan' : 'stale', text: 'Last press · frame ' + Math.round(d.hit) + ' (aimed ' + d.target + (d.w && d.w.length > 1 ? ', window ' + d.w.start + '-' + d.w.end : '') + ') – ' + (d.works ? 'works ✓' + (d.p != null && d.p < MARK_SOLID ? ' (works ' + Math.round(100 * d.p) + '% · fails ' + (100 - Math.round(100 * d.p)) + '%)' : '') : 'fails ✗') + '. Shown until the next plan beeps.' };     // v109
+  // v128 (the runner: "there's probably a few things listed twice"): the last press is the badge's and the % box's; this line says only that the page waits
+  if (d && d.src === 'press') return { cls: 'wait', text: 'Waiting for the next plan · your last press is in the boxes above and below.' };
   if (!PROF().rolls.length && !(P && P.prof === 'fb2')) return { cls: 'wait', text: 'Nothing to time on this step: just play it.' };     // v123 (clip 09:30: shown under the T7 / T8 countdowns)
   if (P && P.stopped) return { cls: 'stale', text: (zw.dead ? 'Seed lost' : 'Beeps stopped') + ' – the coin ruled the planned frame out. Press normally.', overlay: zw.dead ? 'Seed lost – beeps stopped' : 'Beeps stopped' };
   if (P && d.stale) return { cls: 'stale', text: 'Seed lost – showing old prediction. Press normally.', overlay: 'Seed lost – old prediction' };
@@ -2814,6 +2815,7 @@ function fb2PbPress(P, tObs, stp) {
   const label = 'Final Bowser ' + (stp.b8 ? 'T8' : 'T7') + ': Power Bounce';
   slog('press', { prof: 'fb2', step: routeStep, err: +err.toFixed(2), inWin, works, onBeeps: Math.abs(err) <= 5 });
   try { pressShow(P, c, label); } catch (e) {}
+  try { leverPressNote(label, err, 'fb2pb', works); } catch (e) {}     // v128 (the runner's screenshot: the badge still showed T6's press after the T7 bounce): the badge is this press's
   V.pressNote = 'Last press · ' + (Math.abs(err) < 0.5 ? 'on the frame' : Math.abs(err).toFixed(1) + ' frame' + (Math.abs(err) >= 1.5 ? 's' : '') + (err < 0 ? ' early' : ' late')) + ' ' + (works ? '✓' : '✗');
   try { showPresses(); } catch (e) {}
 }
@@ -2910,7 +2912,7 @@ function pressTable(o) {
   // frame's chance and the hit frame's, from the plan's per-frame chances (the strip's shading), in place of the one Chance row
   const PS = o.chance ? o : (st.pressShow && st.pressShow.chance && st.pressShow.target === o.target ? st.pressShow : null), at = c => (PS && c != null && PS.chance[Math.round(c) - PS.first] != null ? +PS.chance[Math.round(c) - PS.first] : null);
   const qA = at(o.target), qH = o.q != null ? q : at(o.f), two = qA != null && qH != null && o.f != null && o.target != null;
-  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win]].concat(two ? [['Aimed', 'frame ' + Math.round(o.target) + ' · ' + goal + ' ' + pc(qA)], ['You hit', 'frame ' + Math.round(o.f) + ' · ' + goal + ' ' + pc(qH)]] : [['Chance', chance]]).filter(([, v]) => v !== '–');     // v120: no empty rows
+  const rows = [['Window', o.on4 && o.off4 ? 'not the beeped window: the all-4 frame beside it' : win]].filter(([, v]) => v !== '–');     // v120: no empty rows; v128 (the runner: "i dont think we need the chance and chance this frame down below if that information is in the topright box above"): the odds and the aimed / hit frames are the % box's (pctBoxShow), not repeated here
   // the badge keeps the press's colour (a hit on a coin-flip plan is not a bad press); the Result row says what happened
   if (o.outcome) rows.push(['Result', o.outcome === 'dodge' ? 'dodged' : o.outcome === 'hit' ? 'hit' + (q != null && q > 0 && q < 1 ? ' (the ' + pc(1 - q) + ')' : '') : o.outcome]);
   const col = good === true ? 'var(--run3)' : good === false ? 'var(--run1)' : 'var(--run2)', ink = good === null ? '#1b1404' : '#fff';
