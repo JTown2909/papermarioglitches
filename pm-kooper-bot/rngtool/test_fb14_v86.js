@@ -34,10 +34,10 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     for (let i = 0; i < 300; i++) { t += 33.4; if (blank && i > 100) ten = 0; X.hpWatch(t, true); }   // Bowser's turn (a hit at ~3.4 s)
     X.turnOver(2);
     window.__jrTensTest = null;
-    return { hit: FB.hit, missed: FB.missed, log: T.SLOG.filter(e => /^fb14(Hit|Missed|MissUnread)$/.test(e.ev)).slice(-2).map(e => e.ev) };
+    return { hit: FB.hit, hits: FB.hits, missed: FB.missed, log: T.SLOG.filter(e => /^fb14(Hit|Missed|MissUnread)$/.test(e.ev)).slice(-2).map(e => e.ev) };
   }, blankAfter);
   const h = await watch(true), m = await watch(false);
-  check(h.hit === 1, '1. a hit on T1 is read after the route moved to T2\'s step (v82-v85 watched T2 instead: none read) ' + JSON.stringify(h));
+  check(h.hits && h.hits[1] && h.hit == null, '1. a hit on T1 is read after the route moved to T2\'s step (v82-v85 watched T2 instead: none read; v129: kept in FB14.hits, the revive is modelled) ' + JSON.stringify(h));
   check(!m.hit && m.missed && m.missed[1] === true, '2. 10 HP through Bowser\'s T1 turn, T2 begins: T1 read as a miss ' + JSON.stringify(m));
   // ---- 3. log C fight 1
   if (!fs.existsSync(LOGC)) console.log('skip 3: log C not present');

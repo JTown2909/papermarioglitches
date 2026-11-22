@@ -448,7 +448,7 @@ function chgMarioShift1(M, Y0) {
 /* ridge maps: for each game frame, each integer angle and each 4-unit step from the centre, the luma on the projected
  * ray minus beside it (+-2 px in 320 space); each angle's median over distance is subtracted (the radial burst);
  * prefix sums along distance. Same as readouts/charge_obs.py polar_ridge + the median step. */
-function chgMaps(G, cen, nf, prev) {     // prev (FB2): the early maps; a frame on the same picture is copied from them
+function* chgMapsGen(G, cen, nf, prev) {     // prev (FB2): the early maps; a frame on the same picture is copied from them
   const N = nf || CHG_N, ND = CHG_ND, CAMS = chgP().cams(), S = new Float32Array(N * 360 * (ND + 1)), C = new Float32Array(N * 360 * (ND + 1));
   const cs = new Float32Array(360), sn = new Float32Array(360); for (let a = 0; a < 360; a++) { cs[a] = Math.cos(a * Math.PI / 180); sn[a] = Math.sin(a * Math.PI / 180); }
   const Rv = new Float32Array(ND), ok = new Uint8Array(ND), tmp = new Float32Array(ND);
@@ -474,8 +474,18 @@ function chgMaps(G, cen, nf, prev) {     // prev (FB2): the early maps; a frame 
       const o = (n * 360 + a) * (ND + 1); let sa = 0, ca = 0;
       for (let d = 0; d < ND; d++) { if (ok[d]) { sa += Rv[d] - med; ca++; } S[o + d + 1] = sa; C[o + d + 1] = ca; }
     }
+    yield n;
   }
   return { S, C };
+}
+// v129 (lag: ~0.3 s held after every Charge read): the maps frame by frame (chgMapsGen); chgMaps runs it through, chgMapsA in
+// slices of CHG_MAPS_MS with the page free in between (the read's own maps and the retries' in chgSolve)
+const CHG_MAPS_MS = 12;
+function chgMaps(G, cen, nf, prev) { const g = chgMapsGen(G, cen, nf, prev); let r; do { r = g.next(); } while (!r.done); return r.value; }
+async function chgMapsA(G, cen, nf, prev) {
+  if (window.__chgMapsSync) return chgMaps(G, cen, nf, prev);
+  const g = chgMapsGen(G, cen, nf, prev); let r, t0 = performance.now();
+  for (;;) { r = g.next(); if (r.done) return r.value; if (performance.now() - t0 > CHG_MAPS_MS) { await new Promise(res => setTimeout(res, 0)); t0 = performance.now(); } }
 }
 const CHG_INVN = 0x6A76AE6D | 0;   // inverse of the LCG multiplier 0x5D588B65 mod 2^32
 function chgBack(s, n) { let x = s >>> 0; for (let i = 0; i < n; i++) x = Math.imul((x - 1) >>> 0, CHG_INVN) >>> 0; return x; }
@@ -590,7 +600,7 @@ async function chgSolve() {
       slog('chargeNotSeen', { why: 'no Mario', mario: +(+sh.dx).toFixed(1), marioNcc: +(+sh.ncc).toFixed(2), scan }); chgPendDrop('no Mario'); chgShow(); return;
     }
     if (chgP().id === 'hw' && !CHG.replay) { st.hwBurstT = CHG.trig.t; chgPendResolve(); }      // the Charge is real: its confirm counts now (and the route is on Hallway T1)
-    const maps = chgMaps(G, cen, CHG_N, E && E.prev), t1 = performance.now();
+    const maps = await chgMapsA(G, cen, CHG_N, E && E.prev), t1 = performance.now();
 if (window.__chgDebug) {
     CHG.dbg = G.map(f => { if (!f) return null; const a = []; for (let y = 4; y < 480; y += 8) for (let x = 4; x < 640; x += 8) a.push(f.Y[y * 640 + x]); return [Math.round(f.t - CHG.trig.t), a]; });
     CHG.dbgRaw = CHG.frames.map(f => { const a = []; for (let y = 4; y < 480; y += 8) for (let x = 4; x < 640; x += 8) a.push(f.Y[y * 640 + x]); return [Math.round(f.t - CHG.trig.t), a]; });
@@ -627,7 +637,7 @@ if (window.__chgDebug) {
       if (HW) { const RH = weak ? CHG_RATIO : FBH_RATIO;
         for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
           chgSearch.joint = null;
-          const r2 = await chgSearch(d ? chgMaps(fbShiftG(G, d), cen, CHG_N) : maps, { cands: HW.cands, stream: true, m2: HW.cands.length, keepJoint: true }), q = rOf(r2);
+          const r2 = await chgSearch(d ? await chgMapsA(fbShiftG(G, d), cen, CHG_N) : maps, { cands: HW.cands, stream: true, m2: HW.cands.length, keepJoint: true }), q = rOf(r2);
           const T0 = r2.top[0], tr = { d, hist: true, best: T0 && Math.round(T0.sc), ratio: +q.toFixed(2), seed: T0 && (T0.seed >>> 0).toString(16) }; tries.push(tr);
           // every seed here is fully scored, so one a few steps from the true one on its stream (it shares B's rays and every
           // respawn) can score best: console replays, 3 of 42 (9-52 steps off). Their initial rays (A's) tell them apart: the
@@ -640,7 +650,7 @@ if (window.__chgDebug) {
           // a weak or a same-stream miss goes straight to the wide window, ~2 s sooner)
           if (!(T0 && T0.sc >= FBS_MIN)) break; } }
       if (!hist) for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
-        const r2 = await chgSearch(d ? chgMaps(fbShiftG(G, d), cen, CHG_N) : maps, { cands: wc, stream: true }), q = rOf(r2);
+        const r2 = await chgSearch(d ? await chgMapsA(fbShiftG(G, d), cen, CHG_N) : maps, { cands: wc, stream: true }), q = rOf(r2);
         tries.push({ d, best: r2.top[0] && Math.round(r2.top[0].sc), ratio: +q.toFixed(2), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) });
         if (r2.top[0] && (!res0 || r2.top[0].sc > res0.top[0].sc)) { res0 = r2; rat = q; sh = d; }
         if (r2.top[0] && r2.top[0].sc >= FBS_MIN && q >= RQ) break; }
@@ -680,7 +690,7 @@ if (window.__chgDebug) {
         if (!b) { if (!first) return false; if (chgP().id === 'fb2' && typeof chgFb2Wide === 'function' && chgFb2Wide()) return true; lone = r; return false; } return T[0].sc / b.sc >= CHG_RATIO; };     // the backup T7's candidates come from the T6 lock by the gap rule (README v120): not checked again     // (the unshifted pictures' pick only: a shifted one would need its trigger moved)
       res = await chgSearch(maps, { cands }); let ok = okOf(res), sh = 0;
       // (a second's work each: the pictures one frame earlier / later, before the full search)
-      for (const d of [1, -1]) { if (ok || typeof fbShiftG !== 'function') break; const r2 = await chgSearch(chgMaps(fbShiftG(G, d), cen, CHG_N), { cands }); slog('chargeNarrowShift', { d, best: r2.top[0] && Math.round(r2.top[0].sc), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) }); if (okOf(r2)) { res = r2; ok = true; sh = d; CHG.trig.t += d * FRAME; } }
+      for (const d of [1, -1]) { if (ok || typeof fbShiftG !== 'function') break; const r2 = await chgSearch(await chgMapsA(fbShiftG(G, d), cen, CHG_N), { cands }); slog('chargeNarrowShift', { d, best: r2.top[0] && Math.round(r2.top[0].sc), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) }); if (okOf(r2)) { res = r2; ok = true; sh = d; CHG.trig.t += d * FRAME; } }
       CHG.info.narrow = { cands: cands.length, ms: Math.round(performance.now() - CHG.tSearch), locked: !!ok, shift: sh };
       if (ok) { const N0 = near(res.top[0].seed); res.top = [res.top[0]].concat(res.top.slice(1).filter(x => !N0.has(x.seed >>> 0))); }
       slog('chargeNarrow', CHG.info.narrow);
@@ -694,7 +704,7 @@ if (window.__chgDebug) {
     // v114 (console fb1810): on the backup T7 a no-lock is searched again on the pictures one / two frames off (chgFb2Wide)
     if (chgP().id === 'fb2' && chgFb2Wide() && !chgLockOk(res)) {
       const A = { tries: [] }, t1a = performance.now();
-      for (const d of [-1, 1, -2, 2]) { if (typeof fbShiftG !== 'function') break; const r2 = await chgSearch(chgMaps(fbShiftG(G, d), cen, CHG_N)), a2 = r2.top[0];
+      for (const d of [-1, 1, -2, 2]) { if (typeof fbShiftG !== 'function') break; const r2 = await chgSearch(await chgMapsA(fbShiftG(G, d), cen, CHG_N)), a2 = r2.top[0];
         A.tries.push({ d, seed: a2 ? (a2.seed >>> 0).toString(16).padStart(8, '0') : null, score: a2 ? Math.round(a2.sc) : null, ok: chgLockOk(r2) });
         if (chgLockOk(r2)) { res = r2; A.shift = d; CHG.trig.t += d * FRAME; CHG.trig.n -= d; CHG.G = fbShiftG(G, d); break; } }
       A.ms = Math.round(performance.now() - t1a); CHG.info.shiftAssist = A; if (!CHG.replay) slog('chargeShiftAssist', A);

@@ -184,7 +184,8 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
       check(rf.plan && (rf.plan.none || rf.plan.doubt >= 0.5), '4. no T2 beep plan from it (' + JSON.stringify(rf.plan).slice(0, 120) + '); v81: doubt 0.007, 70%, and Bowser hit');
       check(rf.b2.state !== 'ok', '4. the badge after the T2 lock: ' + rf.b2.state + ' (' + rf.b2.why + ')');
     }
-    // the hit: the "1" of 10 HP before the lever, blank after it = Mario was hit (the route is over for this attempt)
+    // the hit: the "1" of 10 HP before the lever, blank after it = Mario was hit (v129: on T1-T3 the Life Shroom revive is
+    // modelled: the hit is weighed into the states, the plans go on; v80-v128 stopped with "No edge")
     const rh = await p.evaluate(() => {
       const T = window.__tot, X = window.__fb14, FB = X.FB14; X.reset(); T.setStep(T.RT().findIndex(s => s.fb14 === 1 && s.fb14role === 'lever'));
       Object.assign(FB, { on: true, t0: performance.now() - 10000, rate: 33.367, states: [{ s: 1, nc: 100, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1, resp: new Uint8Array(64), ev: [], wv: -1e9, prev: null, out: {}, sh: [], lw: 1, err: 0 }] });
@@ -194,9 +195,9 @@ const readLog = f => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) 
       FB.pT[1] = t - 3000; ten = 0;
       for (let i = 0; i < 30; i++) { t += 16.7; T.fb14Frame(t, true); }
       window.__jrTensTest = null; T.st.plan = null; T.makePlan();
-      return { hit: FB.hit, badge: T.lockBadgeState(), log: T.SLOG.filter(e => e.ev === 'fb14Hit').length, msg: (T.st.msg || '').slice(0, 40) };
+      return { hit: FB.hit, hits: FB.hits, badge: T.lockBadgeState(), log: T.SLOG.filter(e => e.ev === 'fb14Hit').length, msg: (T.st.msg || '').slice(0, 40) };
     });
-    check(rh.hit === 1 && rh.log === 1 && rh.badge.state === 'no' && /No edge/.test(rh.msg), '4. HP 10 then blank after the lever = a hit: no edge for the attempt (' + JSON.stringify(rh) + ')');
+    check(rh.hit == null && rh.hits && rh.hits[1] && rh.log === 1 && !/No edge/.test(rh.msg), '4. HP 10 then blank after the lever = a hit on T1, weighed into the states (the revive is modelled), no "No edge" (' + JSON.stringify(rh) + ')');
     await p.close();
   }
   check(!errs.length, 'no page errors ' + errs.slice(0, 3).join(' | '));

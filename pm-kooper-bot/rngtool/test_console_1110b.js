@@ -24,7 +24,7 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
   const b = await chromium.launch(), p = await b.newPage(), errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame' })); } catch (e) {} });
   await p.goto('file://' + PAGE);
-  check(await p.evaluate(() => window.__tot.VERSION) === 'v128', 'page version v106');
+  check(await p.evaluate(() => window.__tot.VERSION) === 'v129', 'page version v106');
   // ---- 1. the stream
   const X = await p.evaluate(() => window.__fb14.FBS());
   for (const S of FIX.streams) {
@@ -67,13 +67,13 @@ const steps = (a, b, max) => { let s = parseInt(a, 16) >>> 0; const t = parseInt
     X.plan(); X.plan(); out.hit = FB.plan && FB.plan.none;
     X.reset(); Object.assign(FB, { on: true, t0: performance.now() - 30000, hit: 4, routeOff: 'T4\'s wave hit Mario' }); X.plan(); out.off = FB.plan && FB.plan.none; out.offMsg = X.msg();
     // hysteresis: the weighing stubbed at a doubt between the two lines
-    out.stub = true;
+    out.stub = true; window.__fbsSync = true;     // (v129: the plan's gates, planned on the page's thread: the share worker answers later)
     if (out.stub) {
       const S = X.fbNew({ s: 1, nc: 0, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, rg: 0, w: 1, from: 0, sh: [], tag: 2 });
       const at = d => { window.__fb14WeighTest = () => ({ list: [S], doubt: d, sum: 1 }); try { X.plan(); } catch (e) {} return FB.plan && FB.plan.none === 'doubt'; };
       X.reset(); Object.assign(FB, { on: true, t0: performance.now() - 30000, states: [S], M: { 2: 0 } });   // (v92: T2's Charge seen)
       out.h = { d45first: at(0.45), d52: at(0.52), d45after: at(0.45), d38: at(0.38) };
-      window.__fb14WeighTest = null;
+      window.__fb14WeighTest = null; window.__fbsSync = false;
     }
     X.reset(); X.chgState('search'); X.plan(); out.wait = document.getElementById('headline').textContent; X.chgState('idle');
     return out; });

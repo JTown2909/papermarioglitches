@@ -37,8 +37,9 @@ function fbbGrab() {
   const c = fbbCtx, [vw, vh] = dims(), [SX, OX, SY, OY] = chgMap(), kx = 1280 / vw, ky = 720 / vh;
   c.setTransform(4 / SX * kx, 0, 0, 4 / SY * ky, 1 - 4 / SX * (0.5 + OX), 1 - 4 / SY * (0.5 + OY));
   c.fillStyle = '#000'; c.fillRect(-1e4, -1e4, 3e4, 3e4); c.drawImage(V.src || V.video, 0, 0, vw, vh); c.setTransform(1, 0, 0, 1, 0, 0);
-  const d = c.getImageData(0, 0, 1280, 960).data, m = new Uint8Array(640 * 480);
-  for (let y = 0; y < 960; y++) for (let x = 0; x < 1280; x++) { const i = (y * 1280 + x) * 4, r = d[i], g = d[i + 1], b = d[i + 2]; if (b > 140 && b - g > 60 && r > g + 10) m[(y >> 1) * 640 + (x >> 1)] = 1; }
+  // v129 (CPU): only the rows the reader scores (raster y >= 60, fbbRead), one 32-bit read per pixel (little-endian RGBA)
+  const d = new Uint32Array(c.getImageData(0, 120, 1280, 840).data.buffer), m = new Uint8Array(640 * 480);
+  for (let y = 0, i = 0; y < 840; y++) { const row = ((y + 120) >> 1) * 640; for (let x = 0; x < 1280; x++, i++) { const p = d[i], b = (p >>> 16) & 255; if (b <= 140) continue; const r = p & 255, g = (p >>> 8) & 255; if (b - g > 60 && r > g + 10) m[row + (x >> 1)] = 1; } }
   return m;
 }
 // a box (capture units 0..1) at the capture's own resolution: its violet pixels
@@ -68,12 +69,23 @@ function fbbOnset(kind, F) {
   if (ok) { D.quiet = 0; D.n = nw; }
   return ok;
 }
+/* v129: Bowser's turn on T1-T4 shows the menus' fixed battle camera from 59 frames before his AI's draws to that frame
+ * (emulator, gCameras[1] per frame, fire / claw / slam alike: bolt_shape/cam_atk.py); the HUD is down there. A state's AI
+ * frame (logic) is its 'ai' event, or the last turn's out[].ai once run past it. FBB_BT: the logic frames read, relative. */
+const FBB_BT = [-57, -1];
+function fbbAiOf(S) { for (const e of S.ev) if (e.k === 'ai') return e.f; let a = null; for (const k in S.out) { const o = S.out[k]; if (o && o.ai != null && (a == null || o.ai > a)) a = o.ai; } return a; }
+function fbbBtWin() {     // clock frames of the heaviest state's window, or null
+  if (typeof FB14 === 'undefined' || !FB14.on || !FB14.states || !FB14.states.length) return null;
+  let S = FB14.states[0]; for (const x of FB14.states) if (x.w > S.w) S = x; const a = fbbAiOf(S); return a == null ? null : [a + S.l + FBB_BT[0], a + S.l + FBB_BT[1]];
+}
 function fbbFrame(t, present) {
   if (window.__noBoltRead) return;
   const ck = fbbClock(t); if (!ck) return;
-  const busy = !present || (typeof CHG !== 'undefined' && (CHG.state === 'armed' || CHG.state === 'capture'));
+  let bt = false; if (!present && ck.k === 'fb14') { const W = fbbBtWin(), F = Math.round(ck.F); bt = !!W && F >= W[0] && F <= W[1]; }
+  const busy = (!present && !bt) || (typeof CHG !== 'undefined' && (CHG.state === 'armed' || CHG.state === 'capture'));
   const C = FBB.col;
   if (C) {     // collecting: one picture per game frame after the onset's
+    if (bt) C.bt = true;
     if (busy || ck.k !== C.k) { slog('boltReadDrop', { kind: C.kind, why: busy ? 'menu closed' : 'clock changed', got: C.pics.length }); FBB.col = null; return; }
     const F = Math.round(ck.F), nf = FBB_KINDS[C.kind].nf;
     if (F > C.Fon && !C.pics.some(p => p.F === F) && C.pics.length < nf) C.pics.push({ F, m: fbbGrab() });
@@ -82,14 +94,16 @@ function fbbFrame(t, present) {
   }
   if (busy) { FBB.det = {}; FBB.base = null; return; }
   const F = Math.round(ck.F);
+  // v129 (lag): the onset boxes every other picture (the lifetime is read from the shape: the onset's own frame is not needed)
+  if ((FBB.tick = (FBB.tick || 0) + 1) % 2) return;
   for (const kind of ['sky', 'fr']) {
     if (fbbOnset(kind, F) && FBB.base && !FBB.busy) {
       if (kind === 'sky') FBB.lastOn = F;
-      FBB.col = { kind, k: ck.k, Fon: F, ton: t, base: FBB.base, pics: [] }; slog('boltOnset', { kind, clk: ck.k, F, n: FBB.det[kind].n }); return;
+      FBB.col = { kind, k: ck.k, Fon: F, ton: t, base: FBB.base, pics: [], bt }; slog('boltOnset', { kind, clk: ck.k, F, n: FBB.det[kind].n }); return;
     }
   }
   const D = FBB.det.sky;
-  if (D && D.quiet >= 2 && (FBB.qn = (FBB.qn + 1) % FBB_BASE_EVERY) === 0) FBB.base = fbbGrab();     // a quiet picture: the base
+  if (D && D.quiet >= 2) { FBB.qn = (FBB.qn + 1) % FBB_BASE_EVERY; if (!FBB.base || FBB.qn === 0) FBB.base = fbbGrab(); }     // a quiet picture: the base (v129: the first one at once, for Bowser's short window)
 }
 // score a collection (the pictures on consecutive frames from the first), then weigh the states
 function fbbRead(C) {
@@ -101,10 +115,10 @@ function fbbRead(C) {
   const L = FBB_L.slice(); FBB_L[0] = K.L0[0]; FBB_L[1] = K.L0[1];
   fbbScore(obs, K.types, T => {
     FBB_L[0] = L[0]; FBB_L[1] = L[1]; FBB.busy = false;
-    const R = { kind: C.kind, k: C.k, F1: P[0].F, n, C: T, best: fbbBest(T), ms: Math.round(performance.now() - t0) };
+    const R = { kind: C.kind, k: C.k, F1: P[0].F, n, bt: !!C.bt, C: T, best: fbbBest(T), ms: Math.round(performance.now() - t0) };
     FBB.reads.push(R); if (FBB.reads.length > 40) FBB.reads.shift();
     const res = fbbApply(R);
-    slog('boltRead', { kind: R.kind, clk: R.k, F1: R.F1, frames: n, type: R.best.type, u: R.best.u % 120, L0: R.best.L0, cost: +R.best.c.toFixed(2), ms: R.ms, ...res });
+    slog('boltRead', { kind: R.kind, clk: R.k, F1: R.F1, frames: n, bt: R.bt || undefined, type: R.best.type, u: R.best.u % 120, L0: R.best.L0, cost: +R.best.c.toFixed(2), ms: R.ms, ...res });
     if (res.states && typeof makePlan === 'function' && (!st.plan || !st.plan.tPress || st.plan.tPress - performance.now() > 1500)) { st.plan = null; makePlan(); }
   }, FBB_MS);
 }
@@ -135,6 +149,8 @@ function fbbApply(R) {
   let w0 = 0, w1 = 0, n = 0; const lat = {}, o1 = {}; const note = f => { if (f > 0.5 && o1.back != null) { const k = (o1.back - o1.L0 + 1); lat[k] = (lat[k] || 0) + 1; } o1.back = null; }; const kind = R.kind || 'sky', want = e => kind === 'fr' ? ((e >> 9) & 7) === 5 : ((e >> 9) & 7) !== 5;
   if (R.k === 'fb14' && FB14.states && FB14.states.length) {
     for (const S of FB14.states) {
+      // v129: a reading from Bowser's turn counts for a state only if all its pictures fall in that state's own window
+      const ai = R.bt ? fbbAiOf(S) : null; if (R.bt && (ai == null || R.F1 - S.l < ai + FBB_BT[0] || R.F1 + R.n - 1 - S.l > ai + FBB_BT[1])) { n++; w0 += S.w; w1 += S.w; continue; }
       const f = fbbFactor(R, S.ph, S.l, g => {
         if (g < S.f) { for (const e of [S.b0, S.b1, S.b2, S.b3]) if (e && Math.floor(e / 4096) === g && want(e)) return { ty: (e >> 9) & 7, v: e & 511 }; return null; }
         const T = fbClone(S); fbRun(T, g); return fbbDrawAt(T.s, g, T.ph, kind);

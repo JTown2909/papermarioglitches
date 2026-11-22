@@ -118,7 +118,7 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
     'each turn reads "Tn: actions" (v87: no step numbers)');
   check(/^T1: Charge; Bomb/.test(r.list.cur || ''), 'the current step\'s turn line is highlighted');
   check(!r.list.lis.some(x => /Life Shroom|Spiny Flip \[/.test(x)), 'v87: no Life Shroom and no Spiny Flip numbers in the route texts');
-  check(r.version === 'v128' && r.ver === 'v128', 'version v110 in the log and the header');
+  check(r.version === 'v129' && r.ver === 'v129', 'version v110 in the log and the header');
   check(r.title === 'Paper Mario Any% (No ACE) (RNG Manipulation)' && /RNG Manipulation/.test(r.h1), 'the page\'s new name in the title and header');
   await p.close();
   // 8. the Final Bowser plan / re-score
@@ -135,7 +135,10 @@ const cls = seen => { const n = [...seen].filter(c => c === 'C').length; return 
         const S1 = F.fbClone(S0); S1.l = 1; S0.w = 0.75; S1.w = 0.25; S0.lw = S1.lw = 1; S0.from = S1.from = S0.f;
         T.setStep(lever); X.on = true; X.states = [S0, S1]; X.taps = []; X.vis = []; X.visFrom = null; X.bg = 0; X.bgFrom = 0; X.rate = rate; X.gone = false; X.allOutLogged = false;
         X.t0 = performance.now() - (OFF + 220) * rate; X.lastT = null; T.st.plan = null; X.M = { 2: OFF };   // (v92: T2's Charge seen)
-        const n0 = T.SLOG.length; F.plan(); const P = T.st.plan; if (!P) { out.runs.push({ none: true, msg: T.st.msg }); continue; }
+        const n0 = T.SLOG.length; F.plan();
+        // (v129: a live plan's shares come from the worker: "Planning…" first, the plan when its answer is in)
+        for (let i = 0; i < 200 && !T.st.plan && T.v111.ev('FBS.pend.size'); i++) await new Promise(r => setTimeout(r, 25));
+        const P = T.st.plan; if (!P) { out.runs.push({ none: true, msg: T.st.msg }); continue; }
         const pNow = [];
         while (performance.now() < P.tPress - 50) { await new Promise(r => setTimeout(r, 250)); F.tick(performance.now()); if (P.mix.pNow != null) pNow.push(P.mix.pNow); }
         const ev = T.SLOG.slice(n0).map(e => e.ev);

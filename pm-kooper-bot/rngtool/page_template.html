@@ -287,7 +287,8 @@ details[open] summary { margin-bottom: 10px; }
   </section>
 
   <section class="panel">
-    <h2>In the run (automatic)</h2>
+    <details id="howto-d"><!-- v129 (the runner: "there's probably a few things listed twice"): the setup steps, collapsed (the camera panel says the essentials) -->
+    <summary>In the run (automatic): setup steps</summary>
     <ol class="steps">
       <li><b>Once, before runs.</b> Save for OBS mode and open that file in Chrome or Edge. In OBS, right-click your game capture source and choose Windowed Projector (Source); leave that window open (it can sit behind other windows, but not minimized). Here, keep the source on "A window", press Start watching and pick the projector window. Drag the gold box tightly around the status-bar coin. Go to Time Out's target screen (hand on Bowser), click Time Out's Hand on Hallway, drag the blue box over the クッパ name box in the top-left corner, and press Save target screen. The boxes and the target screen are remembered.</li>
       <li><b>Calibrate (a few practice presses).</b> After each confirm, Press check under the strip reads from the video which frame you actually pressed on, against the aimed frame. Once it agrees over a few presses, open Calibrate… under the strip, check what it will change and confirm: it moves the beep offset and the visual offset by the measured error. Pick Red (one exact frame) as the window to test the timing; Green (3+) for runs.</li>
@@ -296,6 +297,7 @@ details[open] summary { margin-bottom: 10px; }
     </ol>
     <p class="note" style="margin-top:10px">The OBS Virtual Camera also works as a source (start it in OBS first). The page only ever keeps the OBS camera open, never a capture card that OBS is using. The seed search uses 2 threads by default so OBS keeps its CPU; it takes about 20 s.</p>
     <p class="note" style="margin-top:10px">Shines come 48 frames after a shine and 24 after a normal spin; one game frame is 33.4 ms. The Time Out roll comes 386 frames after the confirm and works on 30 or less, a 30.7% chance on a random frame. Verified frame for frame in an emulator, including after Super Jump Charge, Spiny Flip and Bowser's first attack.</p>
+    </details>
   </section>
 
   <section class="panel" id="auto">
@@ -1720,6 +1722,7 @@ function zwTick(now) {
 /*@include charge_live/fb2_live.js*/
 /*@include charge_live/jr_live.js*/
 /*@include charge_live/fb14_live.js*/
+/*@include charge_live/fb14_sharew.js*/
 /*@include charge_live/fbbolt_core.js*/
 /*@include charge_live/fbbolt_live.js*/
 /*@include charge_live/fbp1_live.js*/
@@ -1964,7 +1967,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v128';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v129';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
@@ -2027,6 +2030,7 @@ function render() {
   else if (st.chain.length && !st.prevLock) setText('Collecting shines across rooms: ' + (chainShines() + nSh) + ' so far',
     'The coin has been hidden ' + st.chain.length + ' time' + (st.chain.length > 1 ? 's' : '') + '; the shines from before are kept (a gap costs less than one shine). It searches by itself once there are enough. Avoid rooms with enemies on screen while it is collecting.' + (st.note ? ' ' + st.note : ''));
   else if (st.note) setText(nSh ? 'Re-finding the seed: ' + nSh + ' shine' + (nSh > 1 ? 's' : '') : 'Lost track, watching again', st.note);
+  else if (V.stream) setText(nSh ? nSh + ' shine' + (nSh > 1 ? 's' : '') + ' seen' : 'Watching the coin', 'The shines are read from the video (nothing to tap); the seed is found by itself.');     // v129: the tapping instructions only without the camera
   else setText(nSh ? nSh + ' shine' + (nSh > 1 ? 's' : '') + ' tapped' : 'Tap Shine each time the status-bar coin flashes white.',
     nSh >= 12 ? 'Press Find seed. If more than one seed fits, keep tapping.' : 'Normal spins fill themselves in from the timing between shines. After about 13 shines (45 seconds) press Find seed.');
   // spins
@@ -2196,13 +2200,13 @@ function stripState(d) {
     : { cls: 'live', text: 'Tracking ' + (ZWD.done ? ZWD.done.n : '?') + ' possible state' + (ZWD.done && ZWD.done.n === 1 ? '' : 's') + ' – the beeps start on ' + (PROF().id === 'dup3' ? 'the Partner’s Strategies screen (hand on Do Nothing)' : PROF().group === 'jr' ? 'this turn\'s target screen (' + PROF().short + ')' : 'Time Out\'s target screen') };
   if (d.src === 'clock') return d.stale ? { cls: 'stale', text: 'Seed lost – showing old prediction (resyncing from the next shines).', overlay: 'Seed lost – old prediction' } : { cls: 'live', text: 'Locked – live frames; the beeps start on the target screen' };
   const cs = typeof CHG !== 'undefined' ? CHG.state : 'idle';
-  if (zw.on && !zw.dead && !d.tab.length && zw.parts.length) return { cls: 'wait', text: 'Following the turn (Bowser\'s attack is being simulated)…', overlay: 'Following the turn…' };
-  if (cs === 'capture' || cs === 'maps' || cs === 'search') return { cls: 'wait', text: 'Reading the Charge rays…', overlay: 'Reading the Charge…' };
+  if (zw.on && !zw.dead && !d.tab.length && zw.parts.length) return { cls: 'wait', text: '', overlay: 'Following the turn…' };
+  if (cs === 'capture' || cs === 'maps' || cs === 'search') return { cls: 'wait', text: '', overlay: 'Reading the Charge…' };
   if (jrStepNow() && PROF().group === 'jr' && !(zw.on && zw.fight === 'jr') && !(RT()[routeStep].nb && PROF().id === 'jrpb5n')) return { cls: 'stale', text: 'Jr. Troopa: ' + jrNoLockMsg().replace(/^No beeps: /, '') + ' Example frames.', overlay: jrStepAt10() ? 'No roll this turn' : 'No lock – play it blind' };
   if ((cs === 'nolock' || cs === 'failed' || cs === 'notseen') && dupStepNow()) return { cls: 'stale', text: 'No Charge lock – play it blind: Do Nothing whenever you like (3+ copies about 47%, all 4 about 13%). Example frames.', overlay: 'No lock – play it blind' };
   if (cs === 'nolock' || cs === 'failed') return { cls: 'stale', text: 'No Charge lock – press Time Out normally (a blind press works 31%). Example frames.', overlay: 'No lock – example frames' };
   if (zw.on && zw.dead) return { cls: 'stale', text: 'Seed lost – nothing tracked fits what the coin did. Press normally.', overlay: 'Seed lost' };
-  return { cls: 'wait', text: 'Waiting for lock – example frames', overlay: 'Waiting for lock' };
+  return { cls: 'wait', text: '', overlay: 'Waiting for lock' };     // v129: the overlay says it (no repeated line)
 }
 // eased display correction: a clock change moves the frames by at most 50 ms of clock per second
 function stripClock(d, pn) {
@@ -2301,7 +2305,7 @@ function drawStrip() {
     ctx.strokeStyle = S.cls === 'stale' ? css('--warn') : muted; ctx.lineWidth = 1.5; ctx.strokeRect(bx, Y0 + CH / 2 - 15, tw + 24, 30);
     ctx.fillStyle = S.cls === 'stale' ? css('--warn') : css('--ink'); ctx.fillText(S.overlay, bx + 12, Y0 + CH / 2 + 5);
   }
-  const el = $('strip-state'); if (el.textContent !== S.text) el.textContent = S.text; if (el.dataset.cls !== S.cls) { el.className = 'strip-state ' + S.cls; el.dataset.cls = S.cls; }
+  const el = $('strip-state'); if (el.textContent !== S.text) el.textContent = S.text; el.hidden = !S.text; if (el.dataset.cls !== S.cls) { el.className = 'strip-state ' + S.cls; el.dataset.cls = S.cls; }
   lockBadgeShow();
   let note = 'Example seed 0x12345678. Your own frames appear once the seed is locked (the Charge on Hallway turn 1, or shines).';
   if (nowD !== null) note = st.plan ? 'Press A on the last, higher beep, or when the gold aim marker (the middle of the aimed frame) reaches the now-line. Visual offset moves the strip so the two happen together.' :
