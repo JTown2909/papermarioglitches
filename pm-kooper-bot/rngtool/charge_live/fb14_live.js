@@ -28,6 +28,8 @@ const fb14K = (k, d) => (typeof window !== 'undefined' && window.__fb14cfg && wi
 // the hit's test frame: the claw's or slam's sparks (rvclaw, rvslam*), the energy effect (rv205), two bursts (rvburst) with the frame's events; the sparkles after the aura.
 const FB14_REVIVE_SP = (() => { const o = {}; [[360,1],[362,1],[363,1],[364,1],[365,1],[390,1],[391,1],[392,1],[393,1],[395,1]].forEach(([d, n]) => { o[d] = n; }); for (let d = 366; d < 390; d++) o[d] = (d - 366) % 3 === 1 ? 1 : 2; return o; })();     // sets of 6 sparkle draws
 const FB14_DELTA = { slam: 52, claw: 62, fire: 55, wave: 72, lightning: 99 }, FB14_AIAFTER = { cn: 332, nothing: 13 }, FB14_JELLY = 118;
+// v132: the Power Bounce's continue thresholds (powerbounce/fb2model.py TH: 120, 72, 43, ...), for the Phase 1 T2 rolls (fbp1_live.js)
+const FB14_PBTH = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 60 / 100); t.push(c); } return t; })();
 const FB14_WAVE_POST = (() => { const o = { 66: 1, 68: 2, 70: 3, 72: 4, 74: 5, 76: 6, 78: 7, 80: 8, 126: 8, 128: 7, 130: 6, 132: 5, 134: 4, 136: 3, 138: 2, 140: 1 }; for (let d = 82; d <= 124; d += 2) o[d] = 9; return o; })();
 // blind chances per lever frame (fb2_route/README.md section 3: route_build miss strings and the 20000-window study)
 /* v87 (debug-core chain log of e2e 13579bdf, T4 popup left alone): 1 of 13 T4 waves split its e00742fc particles over odd
@@ -68,7 +70,7 @@ const fbBolts = (f, ph) => { const m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 22
  * 0 <= ph), l (console lag: logic frame = clock frame - l), w, resp (ray respawns, a 64-frame ring), ev (script events,
  * sorted by frame), wv (the frame of Bowser's AI when it chose the wave), prev (Bowser's last attack), out (per turn:
  * attack, test value, miss, ok), sh (logic frames of the predicted shines), from (the state's first frame) } ---- */
-function fbClone(S) { return { rv: S.rv, shroom: S.shroom, b0: S.b0 || 0, b1: S.b1 || 0, b2: S.b2 || 0, b3: S.b3 || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1 }; }
+function fbClone(S) { return { rv: S.rv, shroom: S.shroom, b0: S.b0 || 0, b1: S.b1 || 0, b2: S.b2 || 0, b3: S.b3 || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1, p1m: S.p1m, gd: S.gd, pbn: S.pbn }; }
 function fbNew(o) { return Object.assign({ resp: new Uint8Array(64), ev: [], wv: -1e9, lv: -1e9, rg: 0, prev: null, out: {}, sh: [], lw: 1, err: 0, b0: 0, b1: 0, b2: 0, b3: 0 }, o); }
 function fbEv(S, e) { let i = S.ev.length; while (i > 0 && S.ev[i - 1].f > e.f) i--; S.ev.splice(i, 0, e); }
 const mod20 = f => ((f % 20) + 20) % 20;
@@ -100,6 +102,14 @@ function fbStep(S) {
       s = fbRi(s, 360); for (let i = 0; i < 10; i++) { s = fbRi(s, 10); s = fbRi(s, 10); for (let n = f + 9 + FBV; n < f + 45; n += 10) S.resp[n & 63]++; } }
     else if (e.k === 'jelly') { for (let i = 0; i < 10; i++) { s = fbRi(s, 359); s = fbRi(s, 10); s = fbRi(s, 10); } }
     else if (e.k === 'puff') { s = fbRi(s, 40); s = fbRi(s, 30); }
+    // v132: Final Bowser Phase 1 (fbp1_live.js; fb2_route/p1model.py, p1g_log.py): no Cloud Nine, so no dodge test draw; every
+    // T1 attack is boosted and kills Mario (10 HP), the Life Shroom revives him as in phase 2. A guarded Body Slam (S.gd) has no
+    // rand_int(2) pair and no star bursts after its hit; a guarded Claw / Fire Breath draws as an unguarded one.
+    else if (e.k === 'p1hit') { const o = S.out[e.turn]; o.v = null; o.miss = false; o.ok = false;
+      if (o.atk === 'claw') fbEv(S, { k: 'rvclaw', f: f + 2 }); else if (o.atk === 'slam') { fbEv(S, { k: 'rvclaw', f: f + 17 }); if (!S.gd) { fbEv(S, { k: 'rvslam2', f: f + 22 }); for (const d of [75, 81, 87]) fbEv(S, { k: 'rvslam6', f: f + d }); } }
+      if (S.shroom !== 0) { const r0 = f + (o.atk === 'slam' ? 15 : 0); S.rv = r0; S.shroom = 0; fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }
+    // v132: the Phase 1 T2 Power Bounce's continue rolls (no damage, no stars: Bowser is enchanted): roll n on D + 71 + 27n
+    else if (e.k === 'pbr') { s = fbRi(s, 100); S.pbn = e.n + 2; if (FBV <= FB14_PBTH[e.n] && e.n < 29) fbEv(S, { k: 'pbr', f: f + 27, n: e.n + 1 }); }
     else if (e.k === 'ai') {
       // v86: Bowser's whole EVS_TakeTurn_Inner (final_bowser_2.c; as pmrng_core.js fbnbAi, emulator-checked), from the
       // state's own history: the Recover check (S.rg: Mario's HP % more than 25 over Bowser's), the Star Rod (not while
@@ -113,7 +123,7 @@ function fbStep(S) {
       }
       if (!atk) { s = fbRi(s, 80); if (FBV < 20 && V.sinceSlam >= 2) atk = 'slam'; else { s = fbRi(s, 60); atk = FBV < 20 && V.sinceClaw >= 2 ? 'claw' : 'fire'; } }
       S.out[e.turn] = { atk, ai: f }; S.prev = atk;
-      if (FB14_DELTA[atk] != null) fbEv(S, { k: 'test', f: f + FB14_DELTA[atk], turn: e.turn });
+      if (FB14_DELTA[atk] != null) fbEv(S, { k: S.p1m ? 'p1hit' : 'test', f: f + FB14_DELTA[atk], turn: e.turn });     // v132: Phase 1 (no dodge test)
       else Object.assign(S.out[e.turn], { v: null, miss: false, ok: false, off: true });     // Recover / Star Rod: off the route (not modelled further)
       if (atk === 'wave') S.wv = f; else if (atk === 'lightning') S.lv = f;
     }
@@ -1332,7 +1342,7 @@ function fb14PhaseFit(pts) {      // pts: [frames from the trigger, level - base
  * dropped at the lock; the levels are kept in CHG.Fm (charge_live.js); v94 read CHG.frames only (its test filled CHG.frames by hand), so the anchor never ran live
  * (906bfb29 T4's capture fits -1.0: its clock stayed a frame off). */
 function fb14TrigPhase() {
-  const tr = CHG.trig, P = CHG.prof; if (!tr || !P || P.id !== 'fb1' || tr.base == null) return 0;
+  const tr = CHG.trig, P = CHG.prof; if (!tr || !P || (P.id !== 'fb1' && P.id !== 'fbp1') || tr.base == null) return 0;     // v132: Phase 1's Charge too
   const pts = ((CHG.frames && CHG.frames.length ? CHG.frames : CHG.Fm) || []).filter(f => f && !f.rep && Number.isFinite(f.m)).map(f => [(f.t - tr.t) / FRAME, f.m - tr.base]);
   const d = fb14PhaseFit(pts); const shift = d == null ? 0 : d <= -0.5 ? -1 : d >= 0.5 ? 1 : 0;
   slog('fb14TrigPhase', { fit: d, shift, n: pts.length });
@@ -1682,7 +1692,7 @@ async function fb14Refine1(res, G) {
     // v92: a narrowed (carried) read sent only the fits' end seeds (fb1h light: 0.6 s, not 4 s); its rays matched none of
     // the carried states, so the fresh fits need the whole list now
     if (out.fb1 && out.fb1.hyps && out.fb1.hyps.light) { const r = await one(maps, [{ type: 'fb1h', s0: top.seed, tol: FB14_NTOL, max: 20000 }]); out = Object.assign({}, out, { fb1: Object.assign({}, out.fb1, { hyps: r[0] }) }); }
-    out.maps0 = maps; out.joint = await fb14Joint(out, maps, one).catch(e => { slog('fb14JointError', { msg: String(e && e.message || e) }); return null; });
+    out.maps0 = maps; out.joint = CHG.prof && CHG.prof.id === 'fbp1' ? null : await fb14Joint(out, maps, one).catch(e => { slog('fb14JointError', { msg: String(e && e.message || e) }); return null; });     // v132: no joint fit for Phase 1 (phase 2's Charges are another fight)
     return out;
   } catch (e) { slog('fb14PlacementError', { msg: String(e && e.message || e) }); return res; }
 }

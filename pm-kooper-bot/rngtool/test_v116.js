@@ -24,7 +24,7 @@ const stepsBack = (from, to, max) => { let x = from >>> 0; for (let k = 0; k <= 
     await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', boots: 'ultra', lead: '1.5', zwwin: '1' })); } catch (e) {} });
     await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v131', '0. page version v116');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v132', '0. page version v116');
   const replay = (cap, opts) => p.evaluate(async ({ cap, opts }) => { const r = await window.__tot.chgReplay(cap, opts || {}); return { state: r.state, best: r.best, alt: r.alt }; }, { cap, opts });
   if (!fs.existsSync(L1612)) console.log('skip 1-3: the session logs are not in ' + U);
   else {
@@ -62,16 +62,17 @@ const stepsBack = (from, to, max) => { let x = from >>> 0; for (let k = 0; k <= 
       out.lock = run('lock', { seed: '9bb456e7', score: 6776, ratio: 2.44 }); out.nolock = run('nolock', { seed: '12345678', score: 2100, ratio: 1.4 });
       // a screen close on Phase 2 T1's Charge step during the hold keeps the route
       T.setStep(p1); E('fbp1Reset()'); E('FBP1').t = performance.now(); T.setStep(c1); E('checkPress')(performance.now() + 1000); out.closeKept = T.step() === c1;
-      T.setStep(p1); E('checkPress')(performance.now() + 1000); out.p1Kept = T.step() === p1;
+      T.setStep(p1); E('checkPress')(performance.now() + 1000); out.p1Kept = T.step() === p1 + 1;     // v132: on to the Do Nothing step
       return out; });
     console.log('4.', JSON.stringify(r).slice(0, 900));
-    ok(r.p1 >= 0 && r.c1 === r.p1 + 1 && /^Final Bowser/.test(r.p1t) && r.prof === 'fbp1', '4. the Phase 1 step sits before Phase 2 T1\'s Charge step and reads with the Phase 1 profile (' + r.prof + ')');
+    ok(r.p1 >= 0 && r.c1 === r.p1 + 3 && /^Final Bowser/.test(r.p1t) && r.prof === 'fbp1', '4. the Phase 1 steps (v132: Charge, Do Nothing, Power Bounce) sit before Phase 2 T1\'s Charge step; the Charge reads with the Phase 1 profile (' + r.prof + ')');
     ok(r.lineOn, '4. on the Phase 1 step the status line says its Charge is read and shown only');
     ok(r.lock.ev && r.lock.ev.seed === '9bb456e7' && r.lock.step === r.c1 && r.lock.chg === 'idle' && !r.lock.plan && !r.lock.fb14on, '4. a Phase 1 lock: logged, the route on Phase 2 T1\'s Charge step, the reader idle, no plan, no Final Bowser tracker');
     ok(r.lock.arm === false && r.lock.armLate === true && r.lock.keep === true && r.lock.keepLate === false, '4. Phase 2 T1\'s step arms no read and keeps the route on screen closes for 90 s after the Phase 1 Charge, then as before');
-    ok(/seed 9bb456e7 read/.test(r.lock.line) && /Nothing is beeped in Phase 1/.test(r.lock.line), '4. the status line: "' + r.lock.line.trim() + '"');
+    ok(/seed 9bb456e7 read/.test(r.lock.line) && /no Power Bounce beep this time/.test(r.lock.line),     // v132: a lock with no fits (this stub has none) moves on as v116
+      '4. the status line: "' + r.lock.line.trim() + '"');
     ok(r.nolock.ev && r.nolock.ev.outcome === 'nolock' && r.nolock.ev.seed === null && r.nolock.step === r.c1 && /no clear seed/.test(r.nolock.line), '4. a Phase 1 no-lock moves on the same way, no seed shown');
-    ok(r.closeKept && r.p1Kept, '4. screen closes keep the route on the Phase 1 step and on Phase 2 T1 during the hold');
+    ok(r.closeKept && r.p1Kept, '4. a screen close on Phase 2 T1 during the hold keeps the route; on the Phase 1 Charge step it moves to the Do Nothing step (v132)');
   }
   // ---- 5. the Hallway step back keeps the Hallway's last seen time
   { const r = await p.evaluate(() => {

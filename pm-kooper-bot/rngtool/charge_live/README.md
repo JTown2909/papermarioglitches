@@ -1,3 +1,29 @@
+# Time Out Timer v132: Final Bowser Phase 1 is tracked to its T2 Power Bounce (Nov 22)
+
+- **The runner:** "i can not do phase 1 because the bounce is still not tracked". Before v132 Phase 1's T1 Charge was read
+  and shown only.
+- **What the emulator shows** (fb2_route/p1g_log.py from states/boss_2304_p1_menu.st, Bowser's HP set to 99; p1model.py):
+  Bowser is Star Rod enchanted from Phase 1's start (TurnCount 0, part flag 0x80000), so his T1 attack is boosted (Body
+  Slam / Claw 16, Fire Breath 20; a guard takes 1: checked by Mario's HP raised after the AI) and Mario (10 max HP) dies
+  to any of them, guarded or not; the Life Shroom revives him. His AI is on Lakilester's Do Nothing confirm P + 13
+  (RandInt 80, maybe 60: no recover or Star Rod draws on T1). The hit is on AI + 57 / 64 / 69 (fire / claw / slam), the T2
+  menu on the hit + 404. Every draw from the AI to the menu is fixed per attack, the same as phase 2's death and revive
+  (fbStep's rvclaw / rvslam / rv205 / rvburst / sparkles), with no Cloud Nine dodge test; a guarded Body Slam has no
+  rand_int(2) pair and no star bursts (a guarded Claw / Fire Breath draws as an unguarded one). The T2 Power Bounce does no
+  damage (no stars: Bowser is enchanted) but its continue rolls run on D + 71 + 27n as phase 2's.
+- **The page's model** (fb14_live.js fbStep 'p1hit', 'pbr'): test_v132 replays 12 emulator logs exactly (every 10th
+  frame's seed from Bowser's AI through the revive, the menu and the rolls; all three attacks, a guarded slam).
+- **On the page** (fbp1_live.js): three Phase 1 steps. T1 Charge (hand on Mario): its read takes phase 2's placement
+  (fb14Refine, no joint fit) and its fits become states (fb14Lock's fresh path). T1 Do Nothing (Lakilester's Strategies
+  screen): its close gives P (phase 2's Do Nothing shifts); a Body Slam state splits into guarded (70%) and not. T2 Power
+  Bounce (hand on Bowser): on its target screen the plan beeps the target A with the best 5+ share (a 5 cap: Phase 2 T7
+  then needs 6+), on Settings > Best chance as every plan; the press is read against it. The coin weighs the states all
+  the way. After the press the route goes to Phase 2 T1's Charge step and holds 90 s (Phase 2 locks afresh).
+- **Console check** (log 484e3220, 16:12, the Phase 1 Charge): 524 states from the lock, 3668 after a Do Nothing 10.6 s on,
+  every one revived by the T2 menu, a plan in 0.7 s (5+ 70% with a perfect press on that run's states). The session's
+  Phase 1 shines were not matched by any state at the page's clock (open: the menu shines before a Charge are not
+  matched on phase 2's fresh locks of that log either).
+
 # Time Out Timer v127: Final Bowser reads the stage lightning's zigzag (Nov 22)
 
 - **What a bolt gives:** each sky bolt draws one rand_int(359) (u). Its 12 vertices come from u and its lifetime alone

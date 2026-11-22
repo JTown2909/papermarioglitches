@@ -972,11 +972,14 @@ function chgDecide() {
   }
   CHG.F0 = null;
   // v82 (tests): a Final Bowser read replayed into the tracker, as live (fb14Refine, fb14Lock), for the log replays
-  if (CHG.replay && CHG.replay.fb14 && CHG.res.fb1) { CHG.state = 'locked'; fb14Refine(CHG.res, G).then(r => { fb14Lock(r); chgReplayDone({ state: 'locked', fb14: FB14.states.length }); }); return; }
+  if (CHG.replay && CHG.replay.fb14 && CHG.res.fb1) { CHG.state = 'locked'; if (CHG.replay.menuRel != null) CHG.menuSince = CHG.trig.t + CHG.replay.menuRel; fb14Refine(CHG.res, G).then(r => { fb14Lock(r); chgReplayDone({ state: 'locked', fb14: FB14.states.length }); }); return; }
+  if (CHG.replay && CHG.replay.fbp1 && CHG.res.fb1 && typeof fbp1Build === 'function') { CHG.state = 'locked'; if (CHG.replay.menuRel != null) CHG.menuSince = CHG.trig.t + CHG.replay.menuRel; fb14Refine(CHG.res, G).then(r => { const n = fbp1Build(r, r.trigT != null ? r.trigT : CHG.trig.t); chgReplayDone({ state: 'locked', fbp1: n, trigT: r.trigT, trig0: CHG.trig ? CHG.trig.t - (CHG.info.placementShift || 0) * FRAME : null, place: CHG.info.placementShift || 0 }); }); return; }     // v132 (tests): a Phase 1 read replayed into the Phase 1 states
   if (CHG.replay && CHG.replay.fb2 && fb2) { CHG.state = 'locked'; fb2Lock(CHG.res); chgReplayDone({ state: 'locked', fb2: FB2.hyps ? FB2.hyps.length : 0 }); return; }     // v108 (tests): an FB2 read replayed into the T6 tracker, as live
   if (CHG.replay) { const qs = []; if (a.qs) a.qs.forEach((s, q) => { if (s >= a.sc * (1 - CHG_QTOL)) qs.push(q); }); CHG.state = 'locked'; chgReplayDone({ state: 'locked', qsRays: qs }); return; }
   if (fb2) { CHG.state = 'locked'; CHG.qs = [a.q]; slog('chargeLock', Object.assign({ fb2: true, scored: CHG.res.fb2.scored }, CHG.info)); chgRecEnd('lock'); fb2Lock(CHG.res); chgShow(); return; }
-  if (CHG.res.fb1 && chgP().id === 'fbp1' && typeof fbp1Done === 'function') { CHG.state = 'locked'; CHG.qs = []; slog('chargeLock', Object.assign({ fbp1: true }, CHG.info)); fbp1Done('lock'); return; }     // v116: Final Bowser Phase 1 (fbp1_live.js)
+  // v132: Phase 1's read takes phase 2's placement too (fb14Refine: the burst's frame, the rays re-read a frame either side; no joint
+  // fit), then its fits become the Phase 1 states (fbp1_live.js)
+  if (CHG.res.fb1 && chgP().id === 'fbp1' && typeof fbp1Done === 'function') { CHG.state = 'locked'; CHG.qs = []; slog('chargeLock', Object.assign({ fbp1: true }, CHG.info)); if (typeof fb14Refine === 'function') fb14Refine(CHG.res, G).then(r => fbp1Done('lock', r)); else fbp1Done('lock'); return; }     // v116: Final Bowser Phase 1 (fbp1_live.js)
   if (CHG.res.fb1) { CHG.state = 'locked'; CHG.qs = []; if (CHG.res.fb1.times) CHG.info.stage = CHG.res.fb1.times; slog('chargeLock', Object.assign({ fb1: true, hyps: CHG.res.fb1.hyps ? CHG.res.fb1.hyps.n : 0 }, CHG.info)); chgRecEnd('lock');
     // v87: a lock on the carried stream (T2 / T4 narrowed) goes to the carried states at once; the placement and the joint
     // fit (5-7 s) only when none of them drew these rays

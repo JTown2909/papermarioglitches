@@ -23,7 +23,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     const fail = E(`pressTable({ label: 'x', err: -2.2, f: 158, target: 161, w: { start: 160, end: 161 }, inWin: false, works: false, p: 0.74 })`);
     const bare = E(`pressTable({ label: 'x', err: 0.8, works: null })`);
     return { v: T.VERSION, t5: li.some(t => /T5: Peach Beam; Do Nothing - Danger/.test(t)), late: { text: late.text, good: late.good, html: late.html }, fail: { text: fail.text, good: fail.good }, bare: bare.text }; });
-  ok(r.v === 'v131', 'page version v120');
+  ok(r.v === 'v132', 'page version v120');
   ok(r.t5, '1. route: "T5: Peach Beam; Do Nothing - Danger"');
   ok(/^Last press · 1 frame late ✓ /.test(r.late.text) && r.late.good === true, '2. "Last press · 1 frame late ✓", green: the frame hit works (' + r.late.text + ')');
   ok(/Window: outside \(window 160-161, aimed 161\)/.test(r.late.text) && !/Chance|You hit|Frame|Expected|\?|Final Bowser/.test(r.late.text), '2. rows: Window only (v128: the odds are the % box\'s); no Chance / Frame / Expected / "?" / label');

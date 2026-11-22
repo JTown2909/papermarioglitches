@@ -577,8 +577,11 @@ const ENDGAME = [
   // v110 (ff, the runner): shown as "Ultra Boots Laki Final Bowser", Phase 1 (text lines: not tracked yet, untested) before Phase 2
   { h: 'Final Bowser', disp: 'Ultra Boots Laki Final Bowser', turns: [
     // v116: Phase 1's T1 Super Charge is read (the aura profile) and shown; nothing is planned or beeped there (fbp1_live.js)
-    { text: 'T1: Charge; Do Nothing', phase: 'Phase 1:', steps: [{ label: 'Phase 1 Super Charge: its rays are read and the seed shown (nothing beeped in Phase 1; the Peach battle comes before Phase 2, so Phase 2 T1 locks afresh)', cat: 'M', chg: 'fbp1', fbp1: true }] },
-    { text: 'T2: Bounce x5; Do Nothing', steps: [], timed: true, untested: 'Phase 1: only T1\'s Charge is read (v116, shown); the T2 Power Bounce is not beeped (Phase 1\'s turns are not modelled, README v116). Damage (README v110 (ff), from the formula, not seen on console): 5,4,3,2,1,1 a bounce with one Charge, so caps 3/4/5/6 deal 12/14/15/16; with T7 at 15,14,13,.. (7 bounces 84) a 3 cap and a 7 cap kill exactly, and no Phase 1 cap lets T7 need fewer than 7 (6 bounces 75 needs 21 here): aim 3+, nothing to gain past it' },
+    // v132: Phase 1 is tracked to its T2 Power Bounce (the Charge's lock, Lakilester's Do Nothing read, Bowser's attack and the
+    // Life Shroom revive on the model, the coin): the Power Bounce is beeped for 5 bounces
+    { text: 'T1: Charge; Do Nothing', phase: 'Phase 1:', steps: [{ label: 'Phase 1 Super Charge (hand on Mario): its rays lock the seed', cat: 'M', chg: 'fbp1', fbp1: true },
+      { label: 'Lakilester: Do Nothing whenever you like (its frame is read; guard Bowser\'s attack if you can: Mario falls either way, the Life Shroom revives him)', cat: 'S', chg: 'fbp1', fbp1dn: true }] },
+    { text: 'T2: Bounce x5; Do Nothing', steps: [{ label: 'Phase 1 Power Bounce (hand on Bowser) → 5 on the beep (Bowser takes no damage in Phase 1: only the cap counts)', cat: 'B', fbp1pb: true }] },
     { text: 'T3: Star Beam', steps: [] },
     { text: 'T1: Charge; Cloud Nine', phase: 'Phase 2:', steps: [{ label: 'Super Charge (hand on Mario): its rays lock the seed (Close Call equipped before the fight: T6 needs it)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'charge' },
       { label: 'Cloud Nine (hand on Mario), then A on the beep to skip its message → Bowser misses (Settings: Confirm Cloud Nine on the beep for the old lever)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'lever' }] },
@@ -1737,6 +1740,7 @@ const fb2WaitT = locked => (typeof fb2BackupOn === 'function' && fb2BackupOn() ?
 function fb2WaitArm() { const s = isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_k' || (typeof FB2 !== 'undefined' && FB2.plan && FB2.plan.k != null)) return; st.msg = fb2WaitT(false); slog('fb2WaitShown', { step: routeStep }); render(); }
 function makePlan() {
   if (typeof fb14Plan === 'function' && fb14Plan()) return;     // Final Bowser T1-T4 (fb14_live.js)
+  if (typeof fbp1Plan === 'function' && fbp1Plan()) return;     // v132: Final Bowser Phase 1 T2 Power Bounce (fbp1_live.js)
   // v124 (console 11:38: the T6 Charge did not lock - no carried state was left at the Peach Beam, the full search found nothing - and
   // the headline stayed "WAIT: reading the seed" for 18 s): a finished no-lock on T6 / the backup T7 says so at once
   { const z = isRoute() && RT()[routeStep]; if (z && z.turn === 'fb2_k' && typeof CHG !== 'undefined' && CHG.state === 'nolock' && !(typeof FB2 !== 'undefined' && FB2.on) && (!st.msg || /^WAIT/.test(st.msg))) {
@@ -1819,6 +1823,7 @@ function addShine(t, auto) {
   if (auto) chgTap(t);
   if (auto && typeof fb2Tap === 'function') fb2Tap(t);
   if (auto && typeof fb14Tap === 'function') fb14Tap(t);
+  if (auto && typeof fbp1Tap === 'function') fbp1Tap(t);     // v132: Final Bowser Phase 1
   if (auto && zw.on) zwTap(t);
   // v123 (the runner: the page lags "on the last few turns"; consoles 09:05 / 09:09: the walk's shine search ran on Final Bowser's
   // coin, its wide and torch-room searches on the main thread): on Final Bowser the coin is read by its own trackers above only
@@ -1967,7 +1972,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v131';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v132';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
@@ -2424,6 +2429,7 @@ function onFrame0(t) {
   if (typeof hwHpFrame === 'function') hwHpFrame(t, present);     // Hallway T1: Mario's HP, the Life Shroom watch (hwcc_live.js)
   if (typeof fb14Frame === 'function') fb14Frame(t, present);     // Final Bowser T1-T4 and the T5 carry (fb14_live.js)
   if (typeof fbbFrame === 'function') fbbFrame(t, present);       // v127: the stage lightning's zigzag (fbbolt_live.js)
+  if (typeof fbp1Frame === 'function') fbp1Frame(t, present);     // v132: Final Bowser Phase 1 to its T2 Power Bounce (fbp1_live.js)
   V.fcm.push(performance.now());
   // target screen
   if (V.ref) {
@@ -2553,7 +2559,7 @@ function applyProfile() {
         if (!tu.steps.length) return ph + (tu.timed ? '<li class="rturn" style="list-style:none; margin-left:-2.5em; display:flex; flex-wrap:nowrap; align-items:flex-start">' + starSpan(true, 'RNG-manipulated turn (not beeped yet: untested)') + '<span style="flex:1 1 auto; min-width:0" title="' + esc(tu.untested || '') + '">' + tu.text + '</span></li>' : '<li style="list-style:none; margin-left:-1.4em">' + tu.text + '</li>');
         const i0 = k; k += tu.steps.length; const cur = routeStep >= i0 && routeStep < k;
         // v109 (the runner): a star left of each turn the page times (a beeped lever), outside the clickable chip; the text is unchanged
-        const timed = tu.steps.some(s => !!s.prof || s.timed || s.fb14role === 'lever' || s.turn === 'fb2_k' || s.turn === 'fb2_pb'), star = '<span class="rngstar" aria-hidden="true" title="' + (tu.steps.some(s => s.timed && s.nomodel) ? 'RNG-manipulated turn (not beeped yet: untested)' : 'RNG-manipulated: the page beeps this turn') + '" style="flex:0 0 1.1em; width:1.1em; line-height:1.6; color:var(--gold)">' + (timed ? '★' : '') + '</span>';
+        const timed = tu.steps.some(s => !!s.prof || s.timed || s.fbp1pb || s.fb14role === 'lever' || s.turn === 'fb2_k' || s.turn === 'fb2_pb'), star = '<span class="rngstar" aria-hidden="true" title="' + (tu.steps.some(s => s.timed && s.nomodel) ? 'RNG-manipulated turn (not beeped yet: untested)' : 'RNG-manipulated: the page beeps this turn') + '" style="flex:0 0 1.1em; width:1.1em; line-height:1.6; color:var(--gold)">' + (timed ? '★' : '') + '</span>';
         // v110 (the runner's screenshot: a long step wrapped and the star sat on a line of its own above the box): each turn is a
         // no-wrap flex row, the star (or the same blank spacer) a fixed column, the box takes the rest and wraps inside itself
         return ph + '<li class="rturn" style="list-style:none; margin-left:-2.5em; display:flex; flex-wrap:nowrap; align-items:flex-start">' + star + '<span data-i="' + i0 + '" class="chip' + (cur ? ' on' : '') + '" title="' + esc(tu.steps.map((s, j) => s.label + (s.optional ? ' (optional)' : '')).join('\n')) + '" style="cursor:pointer; margin:2px 4px 2px 0; display:block; flex:1 1 auto; min-width:0; overflow-wrap:anywhere; border-radius:10px' + (cur ? '; font-weight:700' : '') + '">' + tu.text + '</span></li>';
@@ -3009,6 +3015,7 @@ const pressMaybeIn = P => !!(P && V.hudGone && V.hudGone > (P.tMade || 0) && V.h
 function autoPlan() {
   if (typeof fb14Step === 'function' && fb14Step() && fb14Step().fb14role === 'lever') { if (st.plan && performance.now() < st.plan.tPress + 600) return; if (st.planTry && performance.now() - st.planTry < 500) return; st.planTry = performance.now(); makePlan(); return; }
   if (FB2.on && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_pb') { if (st.plan && performance.now() < st.plan.tPress + 600) return; makePlan(); return; }
+  if (isRoute() && RT()[routeStep] && RT()[routeStep].fbp1pb) { if (st.plan && st.plan.prof === 'fbp1' && performance.now() < st.plan.tPress + 600) return; if (st.planTry && performance.now() - st.planTry < 300) return; st.planTry = performance.now(); makePlan(); return; }     // v132
   if (isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { if (st.plan && performance.now() < st.plan.tPress + 600) return; if (st.planTry && performance.now() - st.planTry < 500) return; st.planTry = performance.now(); makePlan(); return; }     // v99: T6 on its screen: the plan, a lost plan made again, or the No edge / WAIT text
   // a seed search from shines (the turn-2 menu's coin can start a chain search) must not hold up the zero-wait plan: it
   // needs no search (live log 1793757328924, last attempt: the search started on the 2nd shine of the turn-2 menu and the

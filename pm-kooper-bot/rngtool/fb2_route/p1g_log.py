@@ -31,7 +31,9 @@ while bstate(e) != 13 and n < 4000:
     r.step(b); n += 1
     if ai is None:
         ev = [mx for nm, mx in r.rows[-1]['d'] if nm == 'evt']
-        if 80 in ev: ai = r.rows[-1]['f']
+        if 80 in ev:
+            ai = r.rows[-1]['f']
+            if os.environ.get('MHPAI'): e.w8(PLAYER_DATA + 2, int(os.environ['MHPAI']))   # DIAGNOSTIC (study only): Mario HP after Bowser's pick, to read the damage
 m2 = r.f; hp1 = e.s8(PLAYER_DATA + 2); bh1 = r.bowser_hp()
 hpf = [x['f'] for i, x in enumerate(r.rows[1:], 1) if x['hp'] != r.rows[i - 1]['hp']]
 r.idle(20); r.power_bounce(D, wheel=0, sub=PBSUB); dc = r.marks['pb']

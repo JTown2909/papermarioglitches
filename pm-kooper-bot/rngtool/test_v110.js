@@ -31,7 +31,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       for (let i = 0; i < 8; i++) X.leverAdd('jr', 0); out.back = X.leverBias('jr');
       return out; });
     console.log('0', JSON.stringify(r));
-    ok(r.ver === 'v131', '0. page version v110');
+    ok(r.ver === 'v132', '0. page version v110');
     ok(r.set.off === '-4.5' && r.set.voff === '-4' && r.set.zoom === '1.5' && r.set.duproute === 'charge' && r.set.dupgoal === 'run2', '0. fresh page: the runner\'s tuned defaults (' + JSON.stringify(r.set) + ')');
     ok(r.set.jrfix === '0' && r.set.pfix === '0' && r.set.fbnbroute === 'cap', '0. the Settings corrections default to 0 (fine-tune on top of the built-in values)');
     ok(r.fix.jr === -0.5 && r.fix.hw === 0 && r.fix.dup === 0 && r.fix.fb14 === 0, '0. built-in read corrections per fight: Jr. -0.5, Hallway / Duplighosts / Final Bowser 0');
@@ -135,7 +135,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   { const p = await open({ prof: 'endgame', duproute: 'charge' });
     const rows = await p.evaluate(() => [...document.querySelectorAll('#route-list li')].map(l => l.textContent));
     const i = rows.indexOf('Ultra Boots Laki Final Bowser');
-    ok(i >= 0 && rows.slice(i + 1, i + 6).join('|') === 'Phase 1:|T1: Charge; Do Nothing|★T2: Bounce x5; Do Nothing|T3: Star Beam|Phase 2:', '3. Ultra Boots Laki Final Bowser: Phase 1 lines (T2 starred, untested) before Phase 2 (' + rows.slice(i, i + 8).join(' | ') + ')');
+    ok(i >= 0 && rows.slice(i + 1, i + 6).join('|') === 'Phase 1:|T1: Charge; Do Nothing|★T2: Bounce x5; Do Nothing|T3: Star Beam|Phase 2:', '3. Ultra Boots Laki Final Bowser: Phase 1 lines (T2 starred: beeped since v132) before Phase 2 (' + rows.slice(i, i + 8).join(' | ') + ')');
     const d = rows.indexOf('Duplighosts'); ok(rows.slice(d + 1, d + 3).join('|') === '★T1: Charge; Do Nothing|T2: Jump x2; Power Bomb', '3. Duplighosts (Charge route): ' + rows.slice(d + 1, d + 3).join(' | '));
     await p.close(); }
   ok(!errs.length, 'no page errors ' + errs.slice(0, 3).join(' | '));
