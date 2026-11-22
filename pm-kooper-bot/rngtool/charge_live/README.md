@@ -1,3 +1,25 @@
+# Time Out Timer v127: Final Bowser reads the stage lightning's zigzag (Nov 22)
+
+- **What a bolt gives:** each sky bolt draws one rand_int(359) (u). Its 12 vertices come from u and its lifetime alone
+  (checked against the emulator's RAM to 0.03 units on 900 renders), the battle camera in the menus is fixed (read from
+  RAM), and the bright violet is the texture's core along the vertex path (fb2_route/bolt_shape/README.md). Scored
+  against every u and lifetime, a bolt gives u mod 120 to about +-3 and the frame it was drawn: on 55 emulator bolts
+  the page's reader (charge_live/fbbolt_core.js) read 54 within 3, the true value typically one of 3-15 of the 360.
+- **On the page** (fbbolt_live.js): in a Final Bowser menu (the HUD up), a sky bolt's onset (new violet in the upper
+  sky box, read at the capture's own resolution: on the runner's 1280x720 a bolt is ~3 px wide, lost on a 64 x 21 grid)
+  starts a collection of 5 pictures, one per game frame, grabbed at 4x the 320-space and kept as any-violet 2x2 blocks,
+  against a base picture from before. Each sky bolt is scored on its own corridor's violet only (Bowser's Star Rod
+  colours cycle through violet). Sliced, ~0.8 s. Each state then gets the factor of its own bolt: the sky bolt its
+  lightning phase draws on the reading's frames and the value its seed draws there, floor 0.1 (a misread never cuts):
+  phase 1 the fb14 states (their bolt values kept in a ring as they step, S.bv; a state not there yet run on a copy),
+  phase 2 the T6 seeds (FB2.hyps, both lags) or the T7 states. Logged: boltOnset, boltRead (bolt, u mod 120, lifetime,
+  cost, how much weight the states kept), boltReadDrop. The plan is made again unless its beeps are under 1.5 s away.
+- test_v127: bolts drawn from the formula read within 2 (12 of 12, lifetime right); in the page one bolt leaves the
+  true state ~0.9 of its weight while all but 1-2 of 59 others fall to ~0.1 (phase 1 and the T7 states); the runner's
+  20:40 clip played as the camera: the page reads its bolt as sky bolt 4, u mod 120 = 19, as the offline study.
+- Not yet: readings from before a fresh lock are not applied to its new states; the front-right circulating bolt (it
+  reads well on the emulator) is not read; the old onset log (fb14Bolt) still uses the coarse grid.
+
 # Time Out Timer v126: Charge reads fed by a frame worker; Final Bowser T2/T3 wait for a 90% frame (Nov 21)
 
 - **Dropped pictures in Charge reads**: the Nov 21 Jr. Troopa reads lost 76-91% of their pictures (33 ms gaps) while the 30 s
