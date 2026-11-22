@@ -175,7 +175,16 @@ function fbbApply(R) {
       }
     }
   }
-  return { states: n, kept: n ? +(w1 / (w0 || 1)).toFixed(3) : null, lat };     // lat: the picture's delay (frames) the well-matched states imply, by count
+  // v130 (diagnostic: the 11:21 run's reads matched no state): the heaviest state's phases and lag, the backs where it has a bolt
+  // slot (and its type), and the second phase that would put a slot of the read's type 2-4 frames before the first picture
+  let top = null; const L = R.k === 'fb14' ? FB14.states : (typeof FB2 !== 'undefined' && FB2.t7 && FB2.t7.states) || [];
+  for (const x of L || []) if (!top || x.w > top.w) top = x;
+  let dx = null;
+  if (top) { const ph = top.ph || (top.h && top.h.ph), l = top.l || 0, sl = [];
+    if (ph) for (let b = FBB_WIN[0]; b <= FBB_WIN[1]; b++) { const g = R.F1 - b - l, t = (R.kind === 'fr') ? (fbbM1(g, ph) === FBB_FRSLOT ? 5 : 0) : FBB_SLOT[fbbM2(g, ph)] || 0; if (t) sl.push(b + ':' + t); }
+    const want = R.best && R.best.type, imp = []; if (want && want <= 4) { const m = +Object.keys(FBB_SLOT).find(k => FBB_SLOT[k] === want); for (let b = 2; b <= 4; b++) imp.push((((m - (R.F1 - b - l)) % 220) + 220) % 220); }
+    dx = { ph: ph ? ph.slice() : null, l, slots: sl.join(' '), ph1For: imp.join('/') }; }
+  return { states: n, kept: n ? +(w1 / (w0 || 1)).toFixed(3) : null, lat, top: dx };     // lat: the picture's delay (frames) the well-matched states imply, by count
 }
 
 /* v128: bolts read in the menu before a fresh lock's Charge. A fresh fit's states start after the rays; its seed at the start

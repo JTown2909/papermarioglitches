@@ -19,7 +19,7 @@ const fwd = (s, n) => { let x = s >>> 0; for (let i = 0; i < n; i++) x = (Math.i
   const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
   await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', boots: 'ultra', lead: '1.5', zwwin: '1' })); } catch (e) {} });
   await p.goto('file://' + PAGE); await p.waitForFunction(() => window.__tot);
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v129', '0. page version v119');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v130', '0. page version v119');
   // ---- 1. the window
   const w = await p.evaluate(() => { const E = window.__tot.v111.ev, S = { seed: 0x92e644c9 };
     const H = E('fbHistCands')(S, 30.2), N = E('fbHistCands')(S, 0), B = E('FBH_BUILT'), R = E('FBH_RATE');

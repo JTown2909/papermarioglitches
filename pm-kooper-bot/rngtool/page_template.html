@@ -1543,7 +1543,7 @@ function likelyText(m, top) {
 }
 function ppText(m, prof, long) {
   if (!m) return '';
-  const pc = x => Math.round(100 * x) + '%', conf = m.doubt != null ? ' · seed confidence ' + pc(1 - m.doubt) : '';
+  const pc = x => Math.round(100 * x) + '%', dd = m.floor != null ? Math.max(m.floor, m.doubt || 0) : m.doubt, conf = dd != null ? ' · seed confidence ' + pc(1 - dd) : '';     // v130: the floored doubt where the plan has one (Final Bowser T3)
   if (m.pp == null) return (long ? 'the aimed frame works for ' + pc(m.p) + ', counting your press spread.' : pc(m.p) + ' chance') + conf;
   const ws = n => (n ? 'window ' + n + ' frame' + (n === 1 ? '' : 's') : 'no window');
   const part = (name, pp, ps, n) => name + (ps >= 0.995 ? '' : ' for ' + pc(ps) + ' of the states') + ' (' + ws(n) + ')';
@@ -1967,7 +1967,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v129';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v130';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
