@@ -1,3 +1,38 @@
+# Time Out Timer v134: no catch-up stalls; the T4 re-read survives a reset reader (Nov 23)
+
+- **Lag** (console 20:36 T1-T2, log 63b2fac9: page stalls of 300-630 ms after the T1 lock and the T2 Charge's input). The
+  states are stepped toward the horizon a few ms a picture (v110 fb14Prefetch), but a lock or a Charge input leaves them ~200
+  frames behind (the lock lands 2-5 s after the burst; a held Charge stops them at M + 10), and the next plan / tick stepped
+  them all at once: ~1 ms a frame for 12000 states (profiled on the log's T1 replay). Now a live plan or tick that finds them
+  more than FB14_CATCH_F (24) frames behind leaves them to the prefetch at FB14_CATCH_MS (10 ms) a picture and plans once they
+  are there, when that is more than FB14_CATCH_WORK (300000) frames x states (fb14Behind, fb14CatchUp / fb14CaughtUp in the log); after FB14_CATCH_MAX (700 ms) it steps them itself as before.
+  The inputs (confirms) still step their states at once: they cannot wait.
+- **The T4 read lost after a T3 death** (same log). What happened:
+  1. T3's plan said 82% (98.7% on its states) and Bowser hit: his T3 attack was a Body Slam (claw is impossible after T2's
+     claw: sinceClaw), Mario died, the Life Shroom revived him. The states were already off before the hit; not explained yet
+     (the emulator's T3 Jelly + Do Nothing + slam death, fb2_route/t14_log.py on a rebuilt route, replays exactly through
+     fbStep from the test frame, 479 frames, at 5 and 10 HP).
+  2. T4's Charge read on the carried stream (3097 random numbers after T2's seed) matched 2156 held states, but the coin ruled
+     all of them out (fb14CarryWeak); replayed, the matches are other histories (mostly T2's claw hitting), the true one
+     (fire miss, claw miss, slam hit) is 13-22 numbers off. The shines the bar showed from T3's menu to T4's Charge sit on one
+     24-frame lattice (1429, 1477, 1645, 1717, 1765, 1910): no lag frames between.
+  3. **The bug**: the fresh re-read (fb14Refine: the placement, one frame early, then the whole fit list) threw on
+     CHG.info.placementShift (the reader had been reset for the next Charge meanwhile), returned the light fits, and the lock
+     found nothing: no T4 plan. Fixed (test_v134 replays the log's T4 capture with the reader reset: fresh lock, 10160 states).
+  4. A T1-T3 hit (the revive) now sets FB14.hitT as a T4 hit does, so a fresh lock's menu coin skips the revive (v108).
+- **The guard on Bowser's hit.** The clip (20:33, the same attempt) shows "ナイス" on T3's Body Slam (15, the death) and on T6's
+  Claw: the runner guards. The model had only unguarded hits. Emulator (t14_log.py T3 with an A on the hit's frame - 3 .. - 1, the
+  hit = the 11 sparks, test + 17): a guarded Body Slam draws no rand_int(2) x 2 (test + 22) and none of the three 6-spark bursts
+  (+ 75 / 81 / 87): 20 numbers fewer (the replayed true history was 13-22 off); the revive is the same; claw and fire drew the same
+  with the A on any frame tried. Now:
+  - a T1-T3 Body Slam that hits splits there (fbStep S.kids, adopted in fb14Advance / fb14Prefetch: fb14SlamGuardSplit):
+    FB14_SLAMGUARD (0.7) of the weight guarded (S.gd2 = 1); fixtures/t3_slam_guard.json, both runs 479 frames exact (test_v134);
+  - the backup T7's Body Slam / Claw carry (fb2SetP) keeps a guarded copy (FB2B_GUARD 0.7) on Phase 1's guarded tables (only the
+    10 sparks; the T8 menu on AI + 144 / 126): Phase 1's unguarded tables are exactly FB2B_HIT, so the same scripts.
+  With the split the replayed true history draws T4's seed; the replay's coin still rules it out (its states' coin was off
+  before T3 already: the replay has no weighing between inputs, so its cap kept other states than the live page's). The T3
+  plan's own miss (82%, Bowser hit) stays unexplained.
+
 # Time Out Timer v133: Phase 1 is battle 2303; the route reaches its bounce; reads after a clock fix; backup T7 (Nov 23)
 
 - **The route stuck on Phase 1's Do Nothing** (console 20:20, log e284a73c + clip): the Phase 1 read locked 1.2 s after

@@ -24,7 +24,7 @@ const stepsBack = (from, to, max) => { let x = from >>> 0; for (let k = 0; k <= 
     await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', boots: 'ultra', lead: '1.5', zwwin: '1' })); } catch (e) {} });
     await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v133', '0. page version v116');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v134', '0. page version v116');
   const replay = (cap, opts) => p.evaluate(async ({ cap, opts }) => { const r = await window.__tot.chgReplay(cap, opts || {}); return { state: r.state, best: r.best, alt: r.alt }; }, { cap, opts });
   if (!fs.existsSync(L1612)) console.log('skip 1-3: the session logs are not in ' + U);
   else {

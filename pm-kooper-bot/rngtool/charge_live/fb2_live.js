@@ -89,7 +89,12 @@ function fb2AI(S0, E, ph, slamOk, clawOk, dn) {
  * T8 menu are fixed (FB2B_HIT, frames after the AI; FB2B_MENU: the T8 menu), so the carry runs on to the T8 Power Bounce. */
 const FB2B_RECAST = 15, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new Array(10).fill(359)), 223: new Array(6).fill(359) },
   slam: { 69: new Array(10).fill(359), 74: [2, 2], 127: new Array(6).fill(359), 133: new Array(6).fill(359), 139: new Array(6).fill(359) } }, FB2B_MENU = { claw: 279, slam: 212 };
-function fb2AI7(S0, E, ph, slamOk, clawOk) {
+/* v134: the same attack guarded (an A on the hit's frame - 3 .. - 1; the runner's clips show "ナイス" on Bowser's hits): Phase 1's
+ * guarded tables (fb2_route/p1model.py, 28 emulator logs exact: these unguarded ones are its claw_u / slam_u) and phase 2's T3
+ * slam (t14_log.py with the A, test_v134): only the 10 sparks on the hit, the T8 menu sooner. A Body Slam / Claw carry splits:
+ * FB2B_GUARD of the weight guarded. */
+const FB2B_HIT_G = { claw: { 64: new Array(10).fill(359) }, slam: { 69: new Array(10).fill(359) } }, FB2B_MENU_G = { claw: 126, slam: 144 }, FB2B_GUARD = 0.7;
+function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null }, ri = m => { const r = R.randInt(S.s, m); S.s = r[0]; return r[1]; };
   for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
   let atk;
@@ -99,10 +104,10 @@ function fb2AI7(S0, E, ph, slamOk, clawOk) {
   if (E === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([E, c >= 70]); }
   S.s = R.adv(S.s);
   const good = atk === 'slam' || atk === 'claw'; let T = E;
-  if (good) { const H = FB2B_HIT[atk]; T = E + FB2B_MENU[atk];
+  if (good) { const H = (gd ? FB2B_HIT_G : FB2B_HIT)[atk]; T = E + (gd ? FB2B_MENU_G : FB2B_MENU)[atk];
     for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0]; for (const m of H[f - E] || []) ri(m);
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
-  return { lucky: good, ok7: good || atk === 'recast', cc: null, atk, T, menu: T, S };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
+  return { lucky: good, ok7: good || atk === 'recast', cc: null, atk, T, menu: T, S, gd: good ? !!gd : undefined };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
 }
 const fb2Edge = b => (b < 0.15 ? Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b)) : num('zwedge'));     // v122: the edge against low blind odds (the backup T7); else Best chance
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
@@ -267,7 +272,9 @@ function fb2SetP(c) {
   combos.sort((x, y) => x.P - y.P);
   for (const h of FB2.hyps) { const S = { s: h.s, nc: h.nc, coins: [] }; let at = 61;
     for (const cb of combos) { fb2Idle(S, at, cb.P + FB2_DNAI, h.ph); at = Math.max(at, cb.P + FB2_DNAI);
-      for (const [so, co, wf] of F) { const a = b7 ? fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co) : fb2AI(S, cb.P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l: cb.l, P: cb.P, a, w: h.w * cb.w * wf }); } } }
+      for (const [so, co, wf] of F) { const a = b7 ? fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co) : fb2AI(S, cb.P + FB2_DNAI, h.ph, so, co, true), w = h.w * cb.w * wf;
+        if (b7 && a.lucky) { out.push({ h, l: cb.l, P: cb.P, a, w: w * (1 - FB2B_GUARD) }); out.push({ h, l: cb.l, P: cb.P, a: fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co, true), w: w * FB2B_GUARD }); }     // v134: guarded or not
+        else out.push({ h, l: cb.l, P: cb.P, a, w }); } } }
   const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + ((b7 ? o.a.ok7 : o.a.lucky) ? o.w : 0), 0) / tot;
   const atk = {}; out.forEach(o => { atk[o.a.atk] = (atk[o.a.atk] || 0) + o.w / tot; });
   const hitAtk = {}, hw = out.reduce((x, o) => x + (o.a.lucky ? 0 : o.w), 0); out.forEach(o => { if (!o.a.lucky) hitAtk[o.a.atk] = (hitAtk[o.a.atk] || 0) + o.w / (hw || 1); });
