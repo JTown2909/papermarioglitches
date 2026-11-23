@@ -16,7 +16,7 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v137', 'page version v134');
+  ok(await E(`VERSION`) === 'v138', 'page version v134');
   // (1) the catch-up
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb14, V = X.v134; X.reset();
     T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever'));
@@ -89,6 +89,14 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
     FBP1.pfRef = Array.from({ length: 400 }, (_, i) => mk(i)); FBP1.pfI = 350; FBP1.states = Array.from({ length: 50 }, (_, i) => mk(i)); let err = null;
     try { fbp1Advance(120, 5); } catch (e) { err = String(e); } const f = FBP1.states.map(S => S.f); [FBP1.states, FBP1.pfI, FBP1.pfRef] = sv; return JSON.stringify({ err, ok: f.every(x => x >= 120) }); })()`));
   ok(r7.err === null && r7.ok, '7. Phase 1: the budgeted advance after the list shrank runs from its start (no throw)' + (r7.err ? ' ERR ' + r7.err : ''));
+  // (8) v137 (console 17:28): a retry with the route left on Phase 1's Do Nothing step: an earlier attempt's read (60 s+) holds neither
+  // the reader nor the confirm
+  const r8 = JSON.parse(await E(`(() => { const T = window.__tot, sv = [FBP1.outcome, FBP1.lockT, FBP1.states, FBP1.t0, FBP1.ended], now = performance.now(), P = { id: 'fbp1' };
+    T.setStep(T.RT().findIndex(s => s.fbp1dn)); FBP1.outcome = 'lock'; FBP1.states = [fbNew({ s: 1, nc: 1, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1 })]; FBP1.t0 = now - 5000; FBP1.ended = false;
+    FBP1.lockT = now - 120000; const oldArm = fbp1ArmOk(P, now), oldOn = fbp1On();
+    FBP1.lockT = now - 5000; const newArm = fbp1ArmOk(P, now), newOn = fbp1On();
+    [FBP1.outcome, FBP1.lockT, FBP1.states, FBP1.t0, FBP1.ended] = sv; return JSON.stringify({ oldArm, oldOn, newArm, newOn }); })()`));
+  ok(r8.oldArm === true && r8.oldOn === false && r8.newArm === false && r8.newOn === true, '8. Phase 1 retry: a 2-minute-old read neither blocks the reader nor takes the confirm; a 5-second-old one does (' + JSON.stringify(r8) + ')');
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

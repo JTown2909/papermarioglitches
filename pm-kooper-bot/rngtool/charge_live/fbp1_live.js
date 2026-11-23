@@ -28,7 +28,12 @@ const fbp1StepI = k => RT().findIndex(x => x[k]);
 function fbp1Hold(t) { return !!FBP1 && FBP1.t != null && (t != null ? t : performance.now()) - FBP1.t < FBP1_HOLD; }
 const fbp1Pic = t => (t - FBP1.t0) / FBP1.rate;
 const fbp1PressT = d => FBP1.t0 + (d + 3 - 4.7 + num('off')) * FBP1.rate - num('vlag');     // (fb2PressT with t0 = the burst - 16 frames)
-const fbp1On = () => !!(FBP1 && FBP1.states && FBP1.t0 != null && !FBP1.ended);
+/* v137 (console 17:28, log b87c9527: a retry with the route left on the Do Nothing step: the reader never armed (fbp1ArmOk held it for
+ * the earlier attempt's read) and Lakilester's confirm went to that attempt's states): a Phase 1 read is this attempt's for
+ * FBP1_STALE ms after its lock (the Charge -> Power Bounce takes ~25 s) */
+const FBP1_STALE = 60000;
+const fbp1Fresh = t => FBP1.lockT == null || (t != null ? t : performance.now()) - FBP1.lockT < FBP1_STALE;     // (no lock time: tests, replays)
+const fbp1On = () => !!(FBP1 && FBP1.states && FBP1.t0 != null && !FBP1.ended && fbp1Fresh());
 const fbp1StepOn = () => { const s = isRoute() && RT()[routeStep]; return !!(s && (s.fbp1 || s.fbp1dn || s.fbp1pb)); };
 /* the Phase 1 read is over (chgDecide / chgRetryStop) */
 function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its placement and trigT)
@@ -164,11 +169,11 @@ const fbp1HasRow = (S, d0, d1) => !!(S._pb && d0 >= S._pb.lo && d1 <= S._pb.lo +
 function fbp1Plan(cScr) {
   const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1pb) return false;
   if (cScr == null && typeof seriesHold === 'function' && seriesHold('fbp1')) return true;
-  if (!fbp1On()) { st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (5 cap about 32%).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (5 cap about 32%).'; if (cScr == null) render(); return true; }
-  if (FBP1.P == null) { st.msg = 'No edge: Lakilester\'s Do Nothing confirm was not read (its Strategies screen closing). Power Bounce normally (5 cap about 32%).'; if (cScr == null) render(); return true; }
+  if (!fbp1On()) { st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (5 cap about 13%).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
+  if (FBP1.P == null) { st.msg = 'No edge: Lakilester\'s Do Nothing confirm was not read (its Strategies screen closing). Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
   const now = performance.now(), rate = FBP1.rate, cNow = cScr != null ? cScr : fbp1Pic(now + num('vlag')), h = Math.floor(cNow) - 10;
   fbp1Advance(h); const Wt = fbp1Weigh(h), L = Wt.list, dz = Wt.doubt;
-  if (!L.length || dz >= 0.5) { FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (5 cap about 32%).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
+  if (!L.length || dz >= 0.5) { FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (5 cap about 13%).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
   const G = FBP1_GOAL, W = Math.max(0, Math.round(Math.max(1, num('zwwin')) * 1000 / rate));
   let from = Math.ceil(cNow + num('lead') * 1000 / rate + 1);
   if (cScr == null) for (let i = 0; i < 300 && fbp1PressT(from) < earliestPress(now); i++) from++;
@@ -198,7 +203,7 @@ function fbp1Plan(cScr) {
 /* Phase 2 T1's Charge step during the hold: no arming (chgFrame); Phase 1's Do Nothing step after the read: no second read */
 function fbp1ArmOk(P, t) {
   const s = isRoute() && RT()[routeStep];
-  if (P && P.id === 'fbp1' && s && s.fbp1dn && FBP1.outcome != null) return false;
+  if (P && P.id === 'fbp1' && s && s.fbp1dn && FBP1.outcome != null && FBP1.lockT != null && fbp1Fresh(t)) return false;     // v137: an earlier attempt's read does not hold it
   if (!P || P.id !== 'fb1' || !fbp1Hold(t)) return true; return !(s && s.fb14 === 1 && s.fb14role === 'charge');
 }
 /* a screen close on a Phase 1 step (checkPress): the Charge's moves on to the Do Nothing step; the Do Nothing's gives P; the

@@ -1,3 +1,12 @@
+# Time Out Timer v138: a Phase 1 retry reads its own Charge (Nov 23)
+
+- **Console 17:28 ("it did not lock the charge on turn 1")**: a retry with the route still on Phase 1's Do Nothing step. fbp1ArmOk
+  held the Charge reader there whenever FBP1.outcome was set, and that was the earlier attempt's: no trigger, no read; Lakilester's
+  confirm then went to the earlier attempt's states (fbP1Confirm locked: true, F 2018). A Phase 1 read now counts as this
+  attempt's for FBP1_STALE (60 s) after its lock (fbp1Fresh; Charge -> Power Bounce takes ~25 s): an older one neither holds the
+  reader nor takes the confirm. test_v134 (8).
+- The "no edge" texts said a blind 5 cap is about 32%; the model's is about 13% (rolls pass at 51%, then 26%).
+
 # Time Out Timer v137: Phase 1 no longer throws after its Do Nothing; no stall over the Strategies box (Nov 23)
 
 - **Console 17:09 ("no lock")**: the read locked (6000 states), then every picture threw in fbp1Advance ("reading 'aiF'"): the
