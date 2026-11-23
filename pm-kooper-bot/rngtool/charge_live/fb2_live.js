@@ -342,7 +342,7 @@ function fb2Frame(t, present) {
     return;
   }
   // the coin through Bowser's turn and the T7 menu
-  fb2HpWatch(t, present);
+  fb2HpWatch(t, present); fb2B7Watch(t, present);
   if (!CHG.trig) return;      // v114: a hit read just now started the backup (chgReset)
   if (present && FB2.visFrom == null) FB2.visFrom = fb2Pic(t) + 30;
   if (!present && FB2.visFrom != null) { FB2.vis.push([FB2.visFrom, fb2Pic(t) - 4]); FB2.visFrom = null; }
@@ -454,6 +454,36 @@ function fb2HpWatch(t, present) {
   if (late) return;
   if (d <= FB2_HP_SAME && t >= FB2.pT + FB2_DODGE_MS) { W.ok++; if (W.ok >= FB2_DODGE_N) fb2Outcome('dodge', { afterMs: Math.round(t - FB2.pT), frames: W.ok }); }
 }
+/* v134: the backup T7's hit read off the HP number. Mario is at 10 after the revive; Body Slam leaves 2 (guarded 3), Claw 1
+ * (guarded 2), the Draining Shockwave 4. The ones digit (320-space x 68..76, y 27..36, beside JR_TENS; 8 x 9 white cells, the
+ * templates from the 20:33 clip's HP countdown 10 -> 0, the closest two digits 13 cells apart) once the tens is blank and the digit
+ * has held FB2_B7HP_N pictures: each carried state whose attack and guard give another number keeps FB2_B7HP_W of its weight.
+ * Also: no change for FB2_B7HP_SAME ms = the shield (v133's message: the HP watch is off on the backup leg, so it never came). */
+const FB2_ONES = [68, 27, 76, 36], FB2_ONES_T = {"0": "000000000011110000111110011111100110011001100010111001100111111000111100", "9": "011111001111111011000110111001001111110000111100000110000011100000111000", "8": "011111001111110011000110111011100111110011111110111001111111111001111100", "7": "001111100111111111100110010001100000110000011000000110000001100000111000", "6": "000110000011100000110000011110000111110011100110110001100111111001111100", "5": "000111100111111001110000011111001111111011100111000011100001110000111000", "4": "000110000011100001110000011110001110110011001110111111101111110000011000", "3": "001110000111111011111110000011000001100000001100010011101111111001111100", "2": "000110000111110011111110111111100001110000111000011100001111111011111110", "1": "000011000011110001111100001111000001100000011000000110000011100000110000"};
+const FB2_B7HP_N = 20, FB2_B7HP_W = 0.02, FB2_B7HP_SAME = 12000, FB2_B7HP_EXP = { slam: [2, 3], claw: [1, 2] };
+function fb2OnesMask() {
+  if (window.__fb2OnesTest) return window.__fb2OnesTest();     // (tests: a mask string)
+  const [SX, OX, SY, OY] = chgMap(), [x0, y0, x1, y1] = FB2_ONES, g = sample({ x: (OX + x0 * SX) / 1280, y: (OY + y0 * SY) / 720, w: (x1 - x0) * SX / 1280, h: (y1 - y0) * SY / 720 }, 8, 9);
+  let m = ''; for (let i = 0; i < g.length; i += 4) m += g[i] > 150 && g[i + 1] > 150 && g[i + 2] > 150 ? '1' : '0'; return m;
+}
+function fb2OnesDigit(m) {
+  let best = null, b = 99, b2 = 99; for (const d in FB2_ONES_T) { const T = FB2_ONES_T[d]; let h = 0; for (let i = 0; i < T.length; i++) if (T[i] !== m[i]) h++; if (h < b) { b2 = b; b = h; best = +d; } else if (h < b2) b2 = h; }
+  return b <= 8 && b2 - b >= 5 ? best : null;
+}
+function fb2B7Watch(t, present) {
+  if (!fb2BackupOn() || fb2Leg() === 'main' || FB2.pT == null) return; const T7 = FB2.t7; if (!T7 || T7.hpRead != null || T7.shield) return;     // (the T7 confirm moves the route to T8's step)
+  const B = window.__fb2OnesTest ? { since: -1e9 } : (typeof JRT !== 'undefined' ? JRT.bar : null); if (!present || !B || !B.since || t - B.since < 6 * FRAME) return;
+  const W = T7.b7w || (T7.b7w = { d: null, run: 0, ten: 0, pT: FB2.pT }); if (W.pT !== FB2.pT) Object.assign(W, { d: null, run: 0, ten: 0, pT: FB2.pT });
+  const tens = window.__fb2OnesTest ? (window.__fb2TensVal != null ? window.__fb2TensVal : 0) : (typeof jrTens === 'function' ? jrTens() : 1);
+  if (tens >= JR_TENS_MIN) { W.ten++; W.d = null; W.run = 0; if (t - FB2.pT > FB2_B7HP_SAME && W.ten > 60) { T7.hpRead = 10; fb2Outcome('dodge', { why: 'HP 10 held', afterMs: Math.round(t - FB2.pT) }); } return; }
+  const d = fb2OnesDigit(fb2OnesMask()); if (d == null) { W.run = 0; return; }
+  if (d === W.d) W.run++; else { W.d = d; W.run = 1; } if (W.run < FB2_B7HP_N || t < FB2.pT + 1500) return;
+  T7.hpRead = d; let keep = 0, tot = 0;
+  for (const o of T7.states) { const e = FB2_B7HP_EXP[o.a.atk], want = e ? e[o.a.gd ? 1 : 0] : null; tot += o.w; if (want !== d) o.w *= FB2_B7HP_W; else keep += o.w; }
+  slog('fb2B7Hp', { hp: d, kept: tot ? +(keep / tot).toFixed(3) : 0, states: T7.states.length, afterMs: Math.round(t - FB2.pT), means: d === 3 ? 'Body Slam guarded' : d === 2 ? 'Body Slam, or Claw guarded' : d === 1 ? 'Claw' : d === 4 ? 'the wave' : 'off the model' });
+  if (d === 4 || !(d >= 1 && d <= 3)) { st.msg = 'T7: HP ' + d + ' after Bowser\'s attack (' + (d === 4 ? 'the wave: the route is off' : 'not a Body Slam / Claw') + '). T8\'s beep, if any, is off the model.'; }
+  fb2Show(); if (typeof render === 'function') render();
+}
 /* v114: the HP number changed after a dodge was read (within FB2_LATE_MS of the confirm): it was a hit */
 function fb2HitLate(info) {
   const T7 = FB2.t7; if (!T7) return; T7.outcome = null; slog('fb2HitLate', info); fb2Outcome('hit', info);
@@ -465,7 +495,7 @@ function fb2Outcome(o, info) {
   if (o === 'hit') { T7.hit = true; if (st.plan && st.plan.prof === 'fb2') { cancelBeeps(); st.plan = null; } }
   // v133: on the backup T7 no HP change is Bowser's shield (the Star Rod recast: no attack); the carried states are Body Slam / Claw only,
   // so T8 has no modelled states after it (no beep: the shield's draws to the T8 menu are not measured)
-  if (o === 'dodge' && fb2BackupOn() && fb2Leg() === 'b7') { T7.shield = true; T7.states = []; slog('fb2Shield', { why: 'no HP change on the backup T7: the shield; T8 not modelled' }); st.msg = 'Bowser shielded on T7 (a success for the route): T8\'s Power Bounce is not modelled after the shield, so no beep; bounce blind.'; }
+  if (o === 'dodge' && fb2BackupOn() && fb2Leg() !== 'main') { T7.shield = true; T7.states = []; slog('fb2Shield', { why: 'no HP change on the backup T7: the shield; T8 not modelled' }); st.msg = 'Bowser shielded on T7 (a success for the route): T8\'s Power Bounce is not modelled after the shield, so no beep; bounce blind.'; }
   fb2Show();
   if (o === 'hit' && !fb2BackupOn() && fb2Leg() === 'main' && typeof isRoute === 'function' && isRoute() && RT()[routeStep] && /^fb2_(k|pb)$/.test(RT()[routeStep].turn || '')) fb2Backup(info);     // on the main T6 / T7 steps only
 }
@@ -543,4 +573,4 @@ function fb2Show() {
     (T && T.plan ? '<br>T7: ' + (T.plan.none ? 'no edge (' + (T.plan.none === 'edge' ? 'best ' + fb2Goal() + '+ ' + pc(T.plan.pp7) + ' with a perfect press' : T.plan.none) + ')' : 'target A on +' + T.plan.d + ': perfect press ' + fb2Goal() + '+ bounces ' + pc(T.plan.pp7 != null ? T.plan.pp7 : T.plan.p7) + (T.plan.win ? ' (window ' + T.plan.win + ')' : '') + ', 6+ ' + pc(T.plan.pp6 != null ? T.plan.pp6 : T.plan.p6) + '; with your press spread 7 ' + pc(T.plan.p7) + ', 6+ ' + pc(T.plan.p6) + ' (' + T.plan.states + ' states)') : '');
 }
 fb2Reset();
-window.__fb2 = { v123: { assume: () => fb2T8Assume() }, v122: { planT7: () => fb2PlanT7(), maxS: FB2_T7_MAXS, budget: FB2_T7_BUDGET }, v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests
+window.__fb2 = { v134: { onesDigit: m => fb2OnesDigit(m), T: FB2_ONES_T, watch: (t, p) => fb2B7Watch(t, p), EXP: FB2_B7HP_EXP }, v123: { assume: () => fb2T8Assume() }, v122: { planT7: () => fb2PlanT7(), maxS: FB2_T7_MAXS, budget: FB2_T7_BUDGET }, v114: { ai7: (s, nc, ph, P, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, P, P + FB2_DNAI, ph); const a = fb2AI7(S, P + FB2_DNAI, ph, so !== false, co !== false); return { atk: a.atk, lucky: a.lucky, T: a.T, s: a.S.s >>> 0, nc: a.S.nc }; }, pb: (s, nc, ph, f0, d) => fb2PB({ s: s >>> 0, nc }, f0, d, ph), backupOn: () => fb2BackupOn(), FB2B, backup: i => fb2Backup(i), hpVec: t => fb2HpVec(t), txt: () => fb2Txt() }, v108: { outcome: (o, i) => fb2Outcome(o, i), prune: c => fb2Prune(c), hpWatch: (t, pr) => fb2HpWatch(t, pr) }, FB2, ai: (s, nc, ph, E, so, co) => { const S = { s: s >>> 0, nc }; fb2Idle(S, 61, E, ph); const a = fb2AI(S, E, ph, so !== false, co !== false, true); return { atk: a.atk, cc: a.cc, lucky: a.lucky, T: a.T, menu: a.menu }; }, van: () => (typeof fb14Van === 'function' ? fb14Van('S') : null), bias: () => fb2Bias(), planPAt: k => fb2PlanP(k), confirm: t => fb2Confirm(t), setP: c => fb2SetP(c), dnPressT: k => fb2DnPressT(k), seenK: (k, how) => fb2SeenK(k, how || 'test'), planKAt: k => fb2PlanK(k), setK: (k, how, k0) => fb2SetK(k, how || 'test', k0), planT7At: c => fb2PlanT7(c), pic: t => fb2Pic(t), pressT: k => fb2PressT(k), prune: c => fb2Prune(c).length };   // for tests

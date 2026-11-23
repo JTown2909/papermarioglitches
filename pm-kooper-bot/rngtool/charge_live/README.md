@@ -1,3 +1,31 @@
+# Time Out Timer v135: no bolt read while the camera moves; the guard read on the backup T7; the guard on every attack checked (Nov 23)
+
+- **The guard on T1-T3, all three attacks** (emulator, phase 2 T2 / T3 off route_build 1234abcd, Mario's HP logged every frame:
+  10 -> 0 on the hit's frame): the Body Slam's guard window is the hit - 4 .. - 2 (A on 296-298 for the HP drop on 300; 299 too
+  late) and it removes rand_int(2) x 2 and the 3 x 6 sparks (v134); an A on every frame of the Claw's window (289-295, HP on 295)
+  and the Fire Breath's (279-288, HP on 288) changes no draw. So v134's model holds for all three: only the slam splits.
+- **Where the guard decides a plan**: after a T1-T3 hit the next plan waits for the next Charge, whose exact seed matches only
+  the right copy (guarded or not): no read needed. On the backup T7 the T8 Power Bounce is planned with no Charge between, and
+  Mario lives: the HP number says it. **fb2B7Watch** reads the HP ones digit (320-space x 68..76, y 27..36, beside JR_TENS; 8 x 9
+  white cells against templates from the 20:33 clip's HP countdown 10 -> 0, the closest two digits 13 cells apart) once the
+  tens is blank and the digit has held 20 pictures: Body Slam 2 / guarded 3, Claw 1 / guarded 2, the wave 4; each carried
+  state whose attack and guard give another number keeps 2% of its weight (log fb2B7Hp). HP 10 held 12 s after the confirm is
+  Bowser's shield: v133's shield message hung off the HP watch, which is off on the backup leg, so it never came; it does now.
+- **No bolt read while Bowser's turn moves the camera** (fbbolt_live.js fbbCamMoving). The bolt read projects with the menu's
+  battle camera and its gate was the HUD bar, which stays up through Bowser's attack. The emulator (t6_render.py with gCameras[1]
+  logged every frame, 15 T6 runs off route_build 1234abcd) has the camera off the menu's from his AI + 1 to the next menu, on a path
+  that is the attack's own (4 Fire Breath dodges identical, 2 Body Slam dodges identical): back on AI + 188 (Fire Breath dodged),
+  + 152 (Body Slam), + 144 (Claw), + 430 or later after a hit and the revive; the front-right bolt is off screen meanwhile, the sky
+  bolts shift right by up to 0.4 of the half-width. The 20:36 log read sky bolts on T1 577 (inside the fire breath: AI 443), T3
+  1606 / 1674 (the slam, the death) and the backup T7's 318, each weighing the states to their floor with the wrong camera. Now
+  no read from each lever input's AI - 2 to + 192 (after a hit read that turn: to the next turn's Charge / Jelly), fb2 from the
+  Do Nothing confirm + 13 - 2 to + 192 (backup T7: + 290); log boltReadDrop 'camera moving'. Replayed without any bolt read the
+  20:36 T3 plan still gives the miss 85% (the slam hit 0.1%): not what lost T3.
+- Not done: reading the bolts with the moving camera (the paths above are measured; the onset box and the scoring need them, and no
+  console clip of a T6 dodge with a bolt checks it yet).
+- Not done: "ナイス" itself is not read (it moves with the camera, beside the white damage star; the HP number settles the
+  only case that needs it).
+
 # Time Out Timer v134: no catch-up stalls; the T4 re-read survives a reset reader (Nov 23)
 
 - **Lag** (console 20:36 T1-T2, log 63b2fac9: page stalls of 300-630 ms after the T1 lock and the T2 Charge's input). The

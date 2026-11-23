@@ -78,15 +78,35 @@ function fbbBtWin() {     // clock frames of the heaviest state's window, or nul
   if (typeof FB14 === 'undefined' || !FB14.on || !FB14.states || !FB14.states.length) return null;
   let S = FB14.states[0]; for (const x of FB14.states) if (x.w > S.w) S = x; const a = fbbAiOf(S); return a == null ? null : [a + S.l + FBB_BT[0], a + S.l + FBB_BT[1]];
 }
+/* v135 (log 63b2fac9, 20:36: sky bolts read on T1 frame 577, inside Bowser's fire breath (AI 443), and on T3 1606 / 1674, inside the
+ * Body Slam and Mario's death, each cut the states to their floor; the backup T7's 318 the same): Bowser's turn moves the battle
+ * camera from his AI + 1 until the next menu (emulator, t6_render.py with gCameras[1] logged every frame, 15 T6 runs: the path is
+ * the attack's own, the same for every seed; the camera is back on AI + 188 after a dodged Fire Breath, + 152 Body Slam, + 144 Claw;
+ * after a hit and the revive, + 430 or later), while the bolt read projects with the menu camera. No bolt is read in that window:
+ * fb14 from each lever input's AI (Do Nothing + 13, the skip A + 17, Cloud Nine + 332; -2) to + FBB_CAMEND, or after a hit read
+ * that turn to the next turn's Charge / Jelly; fb2 from the Do Nothing confirm + 13 to + FBB_CAMEND (the backup T7: + FBB_CAMEND7). */
+const FBB_CAMEND = 192, FBB_CAMEND7 = 290, FBB_AIOFF = { nothing: 13, skip: 17, cn: 332 };
+function fbbCamWins(k) {
+  const W = [];
+  if (k === 'fb14' && typeof FB14 !== 'undefined') {
+    const ins = (FB14.inputs || []).filter(x => FBB_AIOFF[x.kind] != null), byTurn = {};
+    for (const x of ins) { const F = x.t != null && FB14.t0 != null && typeof fbPic === 'function' ? Math.round(fbPic(x.t) - (x.off || 0)) : x.F; const ai = F + FBB_AIOFF[x.kind]; if (!byTurn[x.turn] || x.kind === 'skip') byTurn[x.turn] = ai; }
+    for (const tn in byTurn) { const ai = byTurn[tn], nx = (FB14.inputs || []).filter(x => x.turn === +tn + 1 && x.kind === 'jelly').map(x => x.F).concat(FB14.M && FB14.M[+tn + 1] != null ? [FB14.M[+tn + 1]] : []);
+      const hit = FB14.hits && FB14.hits[tn] || FB14.hit === +tn; W.push([ai - 2, hit ? (nx.length ? Math.min(...nx) : ai + 900) : ai + FBB_CAMEND]); }
+  } else if (k === 'fb2' && typeof FB2 !== 'undefined' && FB2.pObs != null) { const ai = Math.round(FB2.pObs) + 13; W.push([ai - 2, ai + (typeof fb2BackupOn === 'function' && fb2BackupOn() ? FBB_CAMEND7 : FBB_CAMEND)]); }
+  return W;
+}
+function fbbCamMoving(ck) { const F = Math.round(ck.F); return fbbCamWins(ck.k).some(([a, b]) => F >= a && F <= b); }
 function fbbFrame(t, present) {
   if (window.__noBoltRead) return;
   const ck = fbbClock(t); if (!ck) return;
   let bt = false; if (!present && ck.k === 'fb14') { const W = fbbBtWin(), F = Math.round(ck.F); bt = !!W && F >= W[0] && F <= W[1]; }
-  const busy = (!present && !bt) || (typeof CHG !== 'undefined' && (CHG.state === 'armed' || CHG.state === 'capture'));
+  const moving = present && fbbCamMoving(ck);     // v135: Bowser's turn moves the camera
+  const busy = (!present && !bt) || moving || (typeof CHG !== 'undefined' && (CHG.state === 'armed' || CHG.state === 'capture'));
   const C = FBB.col;
   if (C) {     // collecting: one picture per game frame after the onset's
     if (bt) C.bt = true;
-    if (busy || ck.k !== C.k) { slog('boltReadDrop', { kind: C.kind, why: busy ? 'menu closed' : 'clock changed', got: C.pics.length }); FBB.col = null; return; }
+    if (busy || ck.k !== C.k) { slog('boltReadDrop', { kind: C.kind, why: moving ? 'camera moving' : busy ? 'menu closed' : 'clock changed', got: C.pics.length }); FBB.col = null; return; }
     const F = Math.round(ck.F), nf = FBB_KINDS[C.kind].nf;
     if (F > C.Fon && !C.pics.some(p => p.F === F) && C.pics.length < nf) C.pics.push({ F, m: fbbGrab() });
     if (C.pics.length >= nf || F > C.Fon + nf + 3) { FBB.col = null; fbbRead(C); }
@@ -206,3 +226,4 @@ function fbbPreLock(x0, F0, B, c, ph, l, menuF) {
   }
   return f;
 }
+window.__fbbV135 = { wins: k => fbbCamWins(k), moving: ck => fbbCamMoving(ck), CAMEND: FBB_CAMEND, CAMEND7: FBB_CAMEND7 };
