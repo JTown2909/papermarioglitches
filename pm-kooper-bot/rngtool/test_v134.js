@@ -16,7 +16,7 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v135', 'page version v134');
+  ok(await E(`VERSION`) === 'v136', 'page version v134');
   // (1) the catch-up
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb14, V = X.v134; X.reset();
     T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever'));
@@ -74,7 +74,7 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
     delete window.__fb2OnesTest; delete window.__fb2TensVal; FB2B.on = false; FB2.t7 = null; FB2.pT = null;
     return JSON.stringify(out); })()`));
   ok(r5.ok === r5.n && r5.blank === null, '5. the HP ones digit: ' + r5.ok + ' / ' + r5.n + ' templates with 2 cells flipped read right, a blank box reads none');
-  ok(r5.read === 3 && r5.w[1] === 0.25 && r5.w.filter(x => x < 0.01).length === 3, '5. backup T7, HP 3 held: only the guarded Body Slam keeps its weight (' + r5.w.map(x => x.toFixed(3)).join(' ') + ')');
+  ok(r5.read === 3 && r5.w.every(x => x === 0.25), '5. backup T7, HP 3 held: read and logged, no weight changed (v136: the HP table is unmeasured) (' + r5.w.map(x => x.toFixed(3)).join(' ') + ')');
   // (6) v135: no bolt read while Bowser's turn moves the camera (the 20:36 log's frames)
   const r6 = JSON.parse(await E(`(() => { const sv = [FB14.inputs, FB14.hits, FB14.M, FB14.t0, FB2.pObs, FB2B.on];
     FB14.inputs = [{ kind: 'cn', F: 125, turn: 1 }, { kind: 'skip', F: 426, turn: 1 }, { kind: 'nothing', F: 983, turn: 2 }, { kind: 'jelly', F: 1171, turn: 3 }, { kind: 'nothing', F: 1422, turn: 3 }];

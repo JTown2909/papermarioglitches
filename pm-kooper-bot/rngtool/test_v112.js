@@ -114,7 +114,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     ok(r.lbl === 'Final Bowser route' && JSON.stringify(r.ultra) === '["Ultra Boots Laki"]' && JSON.stringify(r.back) === '["Ultra Boots Laki"]', '3. Ultra Boots: one route, "Ultra Boots Laki"');
     ok(JSON.stringify(r.normal) === JSON.stringify(['Normal Boots Power Bounce cap', 'Normal Boots Goombario (untested)']) && r.val === 'goomba' && r.saved === 'cap' && r.nb === 'cap', '3. Normal Boots: its two routes, the saved fbnbroute shown and kept (' + r.val + ' -> ' + r.saved + ')');
     await p.close(); }
-  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v135', '0. page version v112'); await p.close(); }
+  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v136', '0. page version v112'); await p.close(); }
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

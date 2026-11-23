@@ -1,3 +1,10 @@
+# Time Out Timer v136: the backup T7's HP read weighs nothing (Nov 23)
+
+- The runner: a guarded Body Slam and a guarded Claw both leave Mario at 3, a guarded Fire Breath at 1 (he lives). v135's table
+  (Body Slam 2 / guarded 3, Claw 1 / guarded 2) came from the damage in FB2B's comment (8 / 9), not from a measurement: after a
+  guarded Claw it would have dropped the right states. fb2B7Watch still reads and logs the HP (fb2B7Hp), FB2_B7HP_ON = false
+  until the backup T7 is measured in the emulator (the fix, next).
+
 # Time Out Timer v135: no bolt read while the camera moves; the guard read on the backup T7; the guard on every attack checked (Nov 23)
 
 - **The guard on T1-T3, all three attacks** (emulator, phase 2 T2 / T3 off route_build 1234abcd, Mario's HP logged every frame:
