@@ -104,7 +104,7 @@ function fbp1Split(S, out) {
 }
 /* every state to logic frame h (- its lag), at most FBP1_PF_MS of work when budgeted */
 function fbp1Advance(h, budget) {
-  const L = FBP1.states; if (!L || !L.length) return true; const t0 = performance.now(), add = []; let i = budget ? FBP1.pfI || 0 : 0, done = true;
+  const L = FBP1.states; if (!L || !L.length) return true; const t0 = performance.now(), add = []; let i = budget && FBP1.pfRef === L ? FBP1.pfI || 0 : 0, done = true; if (!(i < L.length)) i = 0; FBP1.pfRef = L;     // v136 (console 17:09: the Do Nothing input cut 42000 states to 6000 and a stale pfI past the new list's end threw on every picture: no plan)
   for (let n = 0; n < L.length; n++) { const S = L[i]; i = i + 1 < L.length ? i + 1 : 0;
     if (S.aiF != null && S.gd === null && S.f < h - S.l) { fbRun(S, Math.min(h - S.l, S.aiF + 1)); fbp1Split(S, add); }
     if (S.f < h - S.l) fbRun(S, h - S.l);

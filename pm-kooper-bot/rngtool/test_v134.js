@@ -16,7 +16,7 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v136', 'page version v134');
+  ok(await E(`VERSION`) === 'v137', 'page version v134');
   // (1) the catch-up
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb14, V = X.v134; X.reset();
     T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever'));
@@ -84,6 +84,11 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
     [FB14.inputs, FB14.hits, FB14.M, FB14.t0, FB2.pObs, FB2B.on] = sv; return JSON.stringify(out); })()`));
   ok(r6.f577 && r6.f1606 && r6.f1674 && r6.b318, '6. the 20:36 reads inside Bowser\'s turns are not taken: T1 577 (fire), T3 1606 / 1674 (slam, death), backup T7 318');
   ok(!r6.f636 && !r6.f795 && !r6.f955 && !r6.f1393 && !r6.f1950 && !r6.b156, '6. the menu reads still are: 636, 795, 955, 1393, 1950, backup 156 (windows ' + JSON.stringify(r6.w) + ')');
+  // (7) v137: Phase 1's budgeted advance after the Do Nothing cut the list (console 17:09: a stale FBP1.pfI past the new list's end threw)
+  const r7 = JSON.parse(await E(`(() => { const sv = [FBP1.states, FBP1.pfI, FBP1.pfRef]; const mk = i => fbNew({ s: i + 1, nc: 9999, f: 100, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1 });
+    FBP1.pfRef = Array.from({ length: 400 }, (_, i) => mk(i)); FBP1.pfI = 350; FBP1.states = Array.from({ length: 50 }, (_, i) => mk(i)); let err = null;
+    try { fbp1Advance(120, 5); } catch (e) { err = String(e); } const f = FBP1.states.map(S => S.f); [FBP1.states, FBP1.pfI, FBP1.pfRef] = sv; return JSON.stringify({ err, ok: f.every(x => x >= 120) }); })()`));
+  ok(r7.err === null && r7.ok, '7. Phase 1: the budgeted advance after the list shrank runs from its start (no throw)' + (r7.err ? ' ERR ' + r7.err : ''));
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

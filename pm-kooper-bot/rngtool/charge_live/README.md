@@ -1,3 +1,18 @@
+# Time Out Timer v137: Phase 1 no longer throws after its Do Nothing; no stall over the Strategies box (Nov 23)
+
+- **Console 17:09 ("no lock")**: the read locked (6000 states), then every picture threw in fbp1Advance ("reading 'aiF'"): the
+  Do Nothing input cut 42000 states to 6000 and the budgeted advance resumed at a stale FBP1.pfI past the new list's end. It
+  now remembers which list the position belongs to (FBP1.pfRef, as fb14Prefetch). test_v134 (7).
+- **Console 17:10 ("fail")**: the Strategies box was up ~150 ms (Lakilester's Do Nothing 3.3 s after the burst) and a 233 ms page
+  stall covered it: the confirm was never read, no plan. In all three logs a 170-320 ms stall sat at 2.2-3.3 s (the end of the
+  Charge search's stage 1: the heaps merged, ~260k candidates built and sorted on the page's thread) and another at the lock
+  (fb14Refine's two shifted maps, built in one go). Now stage 1's end yields between its parts (and every 25 ms while it builds
+  the candidates), and the re-read's maps are built with chgMapsA: on the 17:07 / 17:10 captures the longest task went from
+  137 / 315 ms to about 100 ms.
+- Phase 1 note (17:07 "3 cap"): that live read built only 24 states from 6 fits (a replay of the same capture builds 7118), so
+  its plan (450: 23%) was weak; replayed, the press frame 451 gives 4+ 36%, 5+ 3% (3 bounces happened); the window's best was
+  380 (5+ 51%, 4+ 81%).
+
 # Time Out Timer v136: the backup T7's HP read weighs nothing (Nov 23)
 
 - The runner: a guarded Body Slam and a guarded Claw both leave Mario at 3, a guarded Fire Breath at 1 (he lives). v135's table

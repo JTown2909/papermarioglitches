@@ -751,23 +751,27 @@ function chgSearch(maps, opts) {
       if (finishing) return; finishing = true; times.stage1 = Math.round(performance.now() - tS);
       const t2 = performance.now();
       const hs = await Promise.all(W.map(w => call(w, { type: 'heaps' }, 'heaps')));
+      // v136 (console 17:10: a 233 ms stall here, 3.3 s after the burst, hid Lakilester's Strategies box (up ~150 ms): the Do Nothing
+      // confirm was never read, no Phase 1 plan): the page's part of the end of stage 1 runs in slices, the page draws between them
+      const yieldP = () => new Promise(r => setTimeout(r, 0));
       const lists = [0, 1].map(e => { const a = []; for (const h of hs) { const L = h.out[e]; for (let i = 0; i < L.s.length; i++) a.push([L.s[i], L.d[i]]); } a.sort((x, y) => y[0] - x[0]); return a.slice(0, P.bolts ? CHG_K_FB2 : opts.wide ? CHG_K_WIDE : CHG_K); });
       // joint initial-ray score: candidate s0 (the seed before A's base-angle draw) with A's and B's initial rays (B's
       // base-angle draw is P.offs + 1 LCG steps after s0: Hallway 25 or 26)
-      const items = [];
+      await yieldP(); const items = [];
       for (const [sc, s1] of lists[0]) items.push([0, s1, chgBack(s1, 1), sc]);
       // (B's candidates: the seed P.offs + 1 steps back, stepped back once per offset instead of from B each time: the aura
       // profile has 15 offsets, and this runs on the page's thread)
       const oMin = Math.min(...P.offs), oMax = Math.max(...P.offs);
-      for (const [sc, sb] of lists[1]) { let x = chgBack(sb, oMin + 1); for (let o = oMin; o <= oMax; o++) { if (P.offs.includes(o)) items.push([1, sb, x, sc, 0, o]); x = Math.imul((x - 1) >>> 0, CHG_INVN) >>> 0; } }
+      { let tY = performance.now(); for (const [sc, sb] of lists[1]) { let x = chgBack(sb, oMin + 1); for (let o = oMin; o <= oMax; o++) { if (P.offs.includes(o)) items.push([1, sb, x, sc, 0, o]); x = Math.imul((x - 1) >>> 0, CHG_INVN) >>> 0; } if (performance.now() - tY > 25) { await yieldP(); tY = performance.now(); } } }
+      await yieldP();
       const per = Math.ceil(items.length / W.length), parts = [];
       for (let k = 0; k < W.length; k++) { const it = items.slice(k * per, (k + 1) * per), e = new Uint8Array(it.length), s0 = new Uint32Array(it.length), sc = new Float32Array(it.length);
         it.forEach((x, i) => { e[i] = x[0]; s0[i] = x[2]; sc[i] = x[3]; });
         parts.push(call(W[k], { type: 'joint', e, s0, sc, offs: P.offs }, 'joint').then(r => r.sc.forEach((v, i) => { it[i][4] = v; if (it[i][0] === 0) it[i][5] = r.vb[i]; }))); }
-      await Promise.all(parts);
+      await Promise.all(parts); await yieldP();
       // the best few thousand by a typed-array threshold, then sorted (a full sort of the aura profile's ~260k items
       // stalled the page's thread)
-      let pool = items; if (items.length > 20000) { const v = Float32Array.from(items, x => x[4]).sort(); const thr = v[v.length - 8000]; pool = items.filter(x => x[4] >= thr); }
+      let pool = items; if (items.length > 20000) { const v = Float32Array.from(items, x => x[4]).sort(); const thr = v[v.length - 8000]; pool = items.filter(x => x[4] >= thr); await yieldP(); }
       pool.sort((a, b) => b[4] - a[4]); const seen = new Set(), top = [];
       const topV = [];
       for (const x of pool) { if (seen.has(x[2])) continue; seen.add(x[2]); top.push(x[2]); topV.push(x[5] != null ? x[5] - 24 : null); if (top.length >= (opts.wide ? CHG_M2_WIDE : CHG_M2)) break; }

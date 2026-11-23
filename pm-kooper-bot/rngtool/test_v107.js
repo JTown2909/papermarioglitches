@@ -13,7 +13,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   const r = await p.evaluate(() => { const L = window.__tot.v107.likelyText;
     return { v: window.__tot.VERSION, one: L({ p: 0.569, pp: 0.965, win: 1 }), three: L({ p: 0.83, pp: 0.97, win: 3 }), pb: L({ p: 0.89, p4: 0.6, win: 7 }, '6+'), none: L({ pp: 0.9 }),
       jrfix: !!document.getElementById('s-jrfix'), jrfixDef: document.getElementById('s-jrfix') && document.getElementById('s-jrfix').value }; });
-  ok(r.v === 'v136', 'page version v107');
+  ok(r.v === 'v137', 'page version v107');
   ok(r.one === 'LIKELY 57% with your press spread · 1 FRAME – coin flip', '1-frame window: "' + r.one + '"');
   ok(r.three === 'LIKELY 83% with your press spread', '3-frame window: "' + r.three + '"');
   ok(r.pb === 'LIKELY 89% (6+ 60%) with your press spread', 'Power Bounce: "' + r.pb + '"');

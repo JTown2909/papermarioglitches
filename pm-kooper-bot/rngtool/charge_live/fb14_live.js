@@ -1720,17 +1720,17 @@ async function fb14Refine1(res, G) {
     const t0 = performance.now(), sc = { 0: top.sc }, alt = {};
     // v92 (e2e 5eed0fb2 T2 on the stream: trigger -> plan 9 s, 2.8 s of it this re-read): a stream lock chose its placement
     // in the window's own search (as placed, then one frame early: no console read was late), so it is not re-read here
-    if (res.stream) { slog('fb14Placement', { kept: res.stream.shift || 0, skipped: 'stream' }); res.placeScores = sc; const maps = chgMaps(G, CHG.cen, CHG_N); let out = res;
+    if (res.stream) { slog('fb14Placement', { kept: res.stream.shift || 0, skipped: 'stream' }); res.placeScores = sc; const maps = await chgMapsA(G, CHG.cen, CHG_N); let out = res;
       if (out.fb1 && out.fb1.hyps && out.fb1.hyps.light) { const r = await one(maps, [{ type: 'fb1h', s0: top.seed, tol: FB14_NTOL, max: 20000 }]); out = Object.assign({}, out, { fb1: Object.assign({}, out.fb1, { hyps: r[0] }) }); }
       out.maps0 = maps; out.joint = await fb14Joint(out, maps, one).catch(e => { slog('fb14JointError', { msg: String(e && e.message || e) }); return null; }); return out; }
     // v99 (e2e 1234abcd T1 on this machine: the placement 3.05 s, the plan 0.1 s after the patient runner's 12 s): the two
     // shifted reads in parallel workers
-    for (const d of [-1, 1]) alt[d] = chgMaps(shifted(d), CHG.cen, CHG_N);
+    for (const d of [-1, 1]) alt[d] = await chgMapsA(shifted(d), CHG.cen, CHG_N);     // v136: in slices (the page stalled 230-320 ms here)
     const rs = await Promise.all([-1, 1].map(d => one(alt[d], [{ type: 'fb1', seeds: [top.seed], v: null }]))); [-1, 1].forEach((d, i) => { sc[d] = rs[i][0].out[0].sc; });
     let best = 0; for (const d of [-1, 1]) if (sc[d] > sc[best] * 1.03) best = d;
     slog('fb14Placement', { scores: { '-1': Math.round(sc[-1]), 0: Math.round(sc[0]), '+1': Math.round(sc[1]) }, kept: best, ms: Math.round(performance.now() - t0) });
     res.placeScores = sc;
-    let out = res, maps = best ? alt[best] : chgMaps(G, CHG.cen, CHG_N);
+    let out = res, maps = best ? alt[best] : await chgMapsA(G, CHG.cen, CHG_N);
     if (best) {
       const r = await one(alt[best], [{ type: 'fb1h', s0: top.seed, tol: FB14_TOL, max: 4000 }]);
       if (CHG.trig) { CHG.trig.t += best * FRAME; CHG.trig.n = (CHG.trig.n || 3) - best; }     // the trigger picture was frame 3 - best
