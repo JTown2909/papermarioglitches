@@ -13,7 +13,7 @@ const PIN = {
   'Final Bowser': ['T1: Charge; Do Nothing', 'T2: Bounce x5; Do Nothing', 'T3: Star Beam', 'T1: Charge; Cloud Nine',     // v110 (ff): Phase 1 first
     'T2: Charge; Do Nothing', "T3: Jammin' Jelly; Do Nothing", 'T4: Charge; Do Nothing - Block Wave', 'T5: Peach Beam; Do Nothing - Danger', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7',
     // v114: the runner's backup ending (his wording), shown once the T6 Close Call failed
-    'T6: Charge; Do Nothing - Close Call failed, Life Shroom', 'T7: Charge; Do Nothing - No Wave, Danger', 'T8: Bounce x5'],
+    'T6: Charge; Do Nothing - Close Call failed, Life Shroom', 'T7: Charge; Do Nothing - No Wave or Shield', 'T8: Bounce x5'],
   'Jr. Troopa (ENDGAME_JR)': ['T1: Charge; Bomb', 'T2: Bomb; Whacka [Up 1]', 'T3: Charge; Bomb', 'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T7: Star Storm if 4 capped / Shooting Star [Down 5] if 4 capped'],
   // v109, the runner's partnerless route, verbatim
   'Jr. Troopa: Ultra Boots Partnerless': ['T1: Charge; Do Nothing', 'T2: Charge; Do Nothing - Close Call', 'T3: Maple; Do Nothing - Close Call', 'T4: Charge; Do Nothing - Close Call', 'T5: Charge; Do Nothing - Close Call', 'T6: Whacka; Do Nothing', 'T7: Bounce x6'],

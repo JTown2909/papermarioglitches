@@ -26,7 +26,7 @@ const FB2_LAGS = [[0, 0.75], [1, 0.25]], FB2_BEEPS = 3, FB2_GAP = 300, FB2_DMG0 
 const FB2_TH = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 60 / 100); t.push(c); } return t; })();
 var FB2 = { on: false };      // var: charge_live.js calls fb2Reset (via chgReset) before this file has run
 /* v114: the runner's backup ending after a failed T6 Close Call (console fb1810): T6 "Close Call failed, Life Shroom", T7 "Charge;
- * Do Nothing - No Wave, Danger", T8 "Bounce x5". FB2B lives outside FB2 (chgReset -> fb2Reset clears FB2 for the T7 Charge's
+ * Do Nothing - No Wave or Shield" (v133), T8 "Bounce x5". FB2B lives outside FB2 (chgReset -> fb2Reset clears FB2 for the T7 Charge's
  * lock); the route shows the backup lines while it is on (fb2BackupOn), its T7 / T8 steps carry b7 / b8. */
 var FB2B = { on: false };
 const fb2BackupOn = () => !!(FB2B && FB2B.on);
@@ -102,7 +102,7 @@ function fb2AI7(S0, E, ph, slamOk, clawOk) {
   if (good) { const H = FB2B_HIT[atk]; T = E + FB2B_MENU[atk];
     for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0]; for (const m of H[f - E] || []) ri(m);
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
-  return { lucky: good, cc: null, atk, T, menu: T, S };
+  return { lucky: good, ok7: good || atk === 'recast', cc: null, atk, T, menu: T, S };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
 }
 const fb2Edge = b => (b < 0.15 ? Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b)) : num('zwedge'));     // v122: the edge against low blind odds (the backup T7); else Best chance
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
@@ -200,7 +200,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   for (const h of H) for (const [so, co, wf] of F) {
     const S = { s: h.s, nc: h.nc }; fb2Idle(S, 61, P0 + FB2_DNAI, h.ph);
     const L = new Uint8Array(P1 - P0 + 1);
-    for (let P = P0; P <= P1; P++) { const r = b7 ? fb2AI7(S, P + FB2_DNAI, h.ph, so, co) : fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); L[P - P0] = r.lucky ? 1 : 0; fb2Frame1(S, P + FB2_DNAI, h.ph); }
+    for (let P = P0; P <= P1; P++) { const r = b7 ? fb2AI7(S, P + FB2_DNAI, h.ph, so, co) : fb2AI(S, P + FB2_DNAI, h.ph, so, co, true); L[P - P0] = (b7 ? r.ok7 : r.lucky) ? 1 : 0; fb2Frame1(S, P + FB2_DNAI, h.ph); }
     rows.push({ h, w: h.w * wf, L });
   }
   const luck = (row, P) => row.L[Math.max(0, Math.min(P1 - P0, P - P0))];
@@ -268,7 +268,7 @@ function fb2SetP(c) {
   for (const h of FB2.hyps) { const S = { s: h.s, nc: h.nc, coins: [] }; let at = 61;
     for (const cb of combos) { fb2Idle(S, at, cb.P + FB2_DNAI, h.ph); at = Math.max(at, cb.P + FB2_DNAI);
       for (const [so, co, wf] of F) { const a = b7 ? fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co) : fb2AI(S, cb.P + FB2_DNAI, h.ph, so, co, true); out.push({ h, l: cb.l, P: cb.P, a, w: h.w * cb.w * wf }); } } }
-  const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + (o.a.lucky ? o.w : 0), 0) / tot;
+  const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + ((b7 ? o.a.ok7 : o.a.lucky) ? o.w : 0), 0) / tot;
   const atk = {}; out.forEach(o => { atk[o.a.atk] = (atk[o.a.atk] || 0) + o.w / tot; });
   const hitAtk = {}, hw = out.reduce((x, o) => x + (o.a.lucky ? 0 : o.w), 0); out.forEach(o => { if (!o.a.lucky) hitAtk[o.a.atk] = (hitAtk[o.a.atk] || 0) + o.w / (hw || 1); });
   FB2.t7 = { states: out.filter(o => o.a.lucky), pLucky: luck, atk, hitAtk };
@@ -456,6 +456,9 @@ function fb2Outcome(o, info) {
   const T7 = FB2.t7; if (!T7 || T7.outcome) return; T7.outcome = o; T7.outT = performance.now();
   slog(o === 'dodge' ? 'fb2Dodged' : o === 'hit' ? 'fb2HitSeen' : 'fb2OutcomeUnread', Object.assign({ pLucky: +(T7.pLucky || 0).toFixed(3), states: T7.states.length }, info || {}));
   if (o === 'hit') { T7.hit = true; if (st.plan && st.plan.prof === 'fb2') { cancelBeeps(); st.plan = null; } }
+  // v133: on the backup T7 no HP change is Bowser's shield (the Star Rod recast: no attack); the carried states are Body Slam / Claw only,
+  // so T8 has no modelled states after it (no beep: the shield's draws to the T8 menu are not measured)
+  if (o === 'dodge' && fb2BackupOn() && fb2Leg() === 'b7') { T7.shield = true; T7.states = []; slog('fb2Shield', { why: 'no HP change on the backup T7: the shield; T8 not modelled' }); st.msg = 'Bowser shielded on T7 (a success for the route): T8\'s Power Bounce is not modelled after the shield, so no beep; bounce blind.'; }
   fb2Show();
   if (o === 'hit' && !fb2BackupOn() && fb2Leg() === 'main' && typeof isRoute === 'function' && isRoute() && RT()[routeStep] && /^fb2_(k|pb)$/.test(RT()[routeStep].turn || '')) fb2Backup(info);     // on the main T6 / T7 steps only
 }

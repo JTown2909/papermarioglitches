@@ -30,6 +30,8 @@ const FB14_REVIVE_SP = (() => { const o = {}; [[360,1],[362,1],[363,1],[364,1],[
 const FB14_DELTA = { slam: 52, claw: 62, fire: 55, wave: 72, lightning: 99 }, FB14_AIAFTER = { cn: 332, nothing: 13 }, FB14_JELLY = 118;
 // v132: the Power Bounce's continue thresholds (powerbounce/fb2model.py TH: 120, 72, 43, ...), for the Phase 1 T2 rolls (fbp1_live.js)
 const FB14_PBTH = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 60 / 100); t.push(c); } return t; })();
+// v133: Phase 1 Bowser (battle 2303) has power-bounce chance 50, not phase 2's 60: 100, 50, 25, 12, 6, ... (fb2_route/p1model.py TH1)
+const FB14_PBTH1 = (() => { const t = []; let c = 200; for (let i = 0; i < 30; i++) { c = Math.floor(c * 50 / 100); t.push(c); } return t; })();
 const FB14_WAVE_POST = (() => { const o = { 66: 1, 68: 2, 70: 3, 72: 4, 74: 5, 76: 6, 78: 7, 80: 8, 126: 8, 128: 7, 130: 6, 132: 5, 134: 4, 136: 3, 138: 2, 140: 1 }; for (let d = 82; d <= 124; d += 2) o[d] = 9; return o; })();
 // blind chances per lever frame (fb2_route/README.md section 3: route_build miss strings and the 20000-window study)
 /* v87 (debug-core chain log of e2e 13579bdf, T4 popup left alone): 1 of 13 T4 waves split its e00742fc particles over odd
@@ -70,10 +72,12 @@ const fbBolts = (f, ph) => { const m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 22
  * 0 <= ph), l (console lag: logic frame = clock frame - l), w, resp (ray respawns, a 64-frame ring), ev (script events,
  * sorted by frame), wv (the frame of Bowser's AI when it chose the wave), prev (Bowser's last attack), out (per turn:
  * attack, test value, miss, ok), sh (logic frames of the predicted shines), from (the state's first frame) } ---- */
-function fbClone(S) { return { rv: S.rv, shroom: S.shroom, b0: S.b0 || 0, b1: S.b1 || 0, b2: S.b2 || 0, b3: S.b3 || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1, p1m: S.p1m, gd: S.gd, pbn: S.pbn }; }
+function fbClone(S) { return { rv: S.rv, shroom: S.shroom, b0: S.b0 || 0, b1: S.b1 || 0, b2: S.b2 || 0, b3: S.b3 || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1, p1m: S.p1m, gd: S.gd, pbn: S.pbn, dm0: S.dm0, pbgo: S.pbgo, pbk: S.pbk, aiF: S.aiF }; }
 function fbNew(o) { return Object.assign({ resp: new Uint8Array(64), ev: [], wv: -1e9, lv: -1e9, rg: 0, prev: null, out: {}, sh: [], lw: 1, err: 0, b0: 0, b1: 0, b2: 0, b3: 0 }, o); }
 function fbEv(S, e) { let i = S.ev.length; while (i > 0 && S.ev[i - 1].f > e.f) i--; S.ev.splice(i, 0, e); }
 const mod20 = f => ((f % 20) + 20) % 20;
+const FB14_P1X = { claw_g: { 64: new Array(10).fill(359) }, slam_g: { 69: new Array(10).fill(359) },     // v133: Phase 1's draws after the AI (p1hit)
+  claw_u: { 64: [100].concat(new Array(10).fill(359)), 223: new Array(6).fill(359) }, slam_u: { 69: new Array(10).fill(359), 74: [2, 2], 127: new Array(6).fill(359), 133: new Array(6).fill(359), 139: new Array(6).fill(359) } };
 /* v86: Bowser's actor vars before his turn `turn` (TurnCount after the increment), from the attacks the state already
  * has on turns 1 .. turn - 1 (the phase-2 start: TurnCount 0, TurnsSinceShockwave / StarBeam / Recover 0, ClawSwipe /
  * BodySlam 3, RecoversLeft 3; final_bowser_2.c EVS_Init). The Star Rod aura is up from the start to the Peach Beam
@@ -102,14 +106,22 @@ function fbStep(S) {
       s = fbRi(s, 360); for (let i = 0; i < 10; i++) { s = fbRi(s, 10); s = fbRi(s, 10); for (let n = f + 9 + FBV; n < f + 45; n += 10) S.resp[n & 63]++; } }
     else if (e.k === 'jelly') { for (let i = 0; i < 10; i++) { s = fbRi(s, 359); s = fbRi(s, 10); s = fbRi(s, 10); } }
     else if (e.k === 'puff') { s = fbRi(s, 40); s = fbRi(s, 30); }
-    // v132: Final Bowser Phase 1 (fbp1_live.js; fb2_route/p1model.py, p1g_log.py): no Cloud Nine, so no dodge test draw; every
-    // T1 attack is boosted and kills Mario (10 HP), the Life Shroom revives him as in phase 2. A guarded Body Slam (S.gd) has no
-    // rand_int(2) pair and no star bursts after its hit; a guarded Claw / Fire Breath draws as an unguarded one.
-    else if (e.k === 'p1hit') { const o = S.out[e.turn]; o.v = null; o.miss = false; o.ok = false;
-      if (o.atk === 'claw') fbEv(S, { k: 'rvclaw', f: f + 2 }); else if (o.atk === 'slam') { fbEv(S, { k: 'rvclaw', f: f + 17 }); if (!S.gd) { fbEv(S, { k: 'rvslam2', f: f + 22 }); for (const d of [75, 81, 87]) fbEv(S, { k: 'rvslam6', f: f + d }); } }
-      if (S.shroom !== 0) { const r0 = f + (o.atk === 'slam' ? 15 : 0); S.rv = r0; S.shroom = 0; fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }
-    // v132: the Phase 1 T2 Power Bounce's continue rolls (no damage, no stars: Bowser is enchanted): roll n on D + 71 + 27n
-    else if (e.k === 'pbr') { s = fbRi(s, 100); S.pbn = e.n + 2; if (FBV <= FB14_PBTH[e.n] && e.n < 29) fbEv(S, { k: 'pbr', f: f + 27, n: e.n + 1 }); }
+    // v133: Final Bowser Phase 1 is battle 2303 (fb2_route/p1model.py, p1g_log.py on states/boss_2303_p1r_menu.st; v132 modelled
+    // phase 2's battle by mistake): Bowser is not enchanted, Mario (10 HP) survives every T1 attack but an unguarded Fire Breath (10:
+    // the Life Shroom, phase 2's revive draws). Per attack and guard (S.gd) the draws after the AI are fixed (offsets from the AI):
+    // fire guarded none; claw guarded / slam guarded 10 sparks on the hit (AI + 64 / 69); claw unguarded rand_int(100) + 10 sparks on
+    // AI + 64, 6 on + 223 (his second swipe); slam unguarded 10 on + 69, rand_int(2) x 2 on + 74, 6 on + 127 / 133 / 139 (as the
+    // backup T7's FB2B_HIT). No dodge test draw (no Cloud Nine). The Power Bounce's first hit: 6 with T1's Charge, 4 after a KO.
+    else if (e.k === 'p1hit') { const o = S.out[e.turn]; o.v = null; o.miss = false; o.ok = false; const ai = o.ai, X = FB14_P1X[o.atk + (S.gd ? '_g' : '_u')] || {};
+      S.dm0 = o.atk === 'fire' && !S.gd ? 4 : 6;
+      for (const k in X) fbEv(S, { k: 'p1d', f: ai + +k, m: X[k] });
+      if (o.atk === 'fire' && !S.gd && S.shroom !== 0) { const r0 = f; S.rv = r0; S.shroom = 0; fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }
+    else if (e.k === 'p1d') { for (const m of e.m) s = fbRi(s, m); }
+    // v133: the Phase 1 T2 Power Bounce (D = the target-screen A): hit n lands on D + 45 + 27n and draws its damage stars (as phase 2's
+    // fb2PB); roll n on D + 71 + 27n (only while every roll so far passed); a failed roll still lets the bounce in the air land
+    else if (e.k === 'pbh') { const dm = Math.max(1, (S.dm0 || 6) - e.n); for (let i = dm >= 9 ? 11 : dm >= 5 ? 10 : dm >= 3 ? 8 : 6; i; i--) s = fbRi(s, 359);
+      S.pbn = e.n + 1; if (S.pbgo !== false && e.n < 29) fbEv(S, { k: 'pbr', f: f + 26, n: e.n }); }
+    else if (e.k === 'pbr') { s = fbRi(s, 100); S.pbgo = FBV <= FB14_PBTH1[e.n]; S.pbk = e.n; fbEv(S, { k: 'pbh', f: f + 1, n: e.n + 1 }); }
     else if (e.k === 'ai') {
       // v86: Bowser's whole EVS_TakeTurn_Inner (final_bowser_2.c; as pmrng_core.js fbnbAi, emulator-checked), from the
       // state's own history: the Recover check (S.rg: Mario's HP % more than 25 over Bowser's), the Star Rod (not while
@@ -178,6 +190,15 @@ function fb14PressList() { return typeof leverList === 'function' ? leverList('f
 function fb14Bias(id) { return typeof leverBias === 'function' ? leverBias(id || fb14CurLever()) : 0; }
 function fb14PressAdd(err, id) { return typeof leverAdd === 'function' ? leverAdd(id || 'fb14', err) : []; }
 const fbPressT = (F, id) => FB14.t0 + (F - 1.7 + num('off') + fb14Bias(id)) * fbRate() - num('vlag');
+/* v133 (console 20:29 T2: the plan and its beeps were made before T2's lock; the lock's clock fix 0.56 s before the press moved
+ * FB14.t0 by 2 frames, the beeps (in flight) stayed, and the press read +3.03 against the old frame number, fed into the press
+ * bias): the frame a plan's beeps marked, on the clock as it is now (its target while the clock has not moved) */
+const fb14BeepF = (P, id) => fbPic(P.tPress + num('vlag')) + 1.7 - num('off') - (P.bias != null ? P.bias : fb14Bias(id));
+function fb14AimF(P, id, turn) {
+  if (!P || P.tPress == null || FB14.t0 == null) return P ? P.target : null;
+  const b = fb14BeepF(P, id); if (Math.abs(b - P.target) < 0.5) return P.target;
+  slog('fb14ClockMoved', { turn, target: P.target, beepF: +b.toFixed(2) }); return b;
+}
 /* v101: Settings "Final Bowser T1: Confirm Cloud Nine on the beep" (s-fbc9): 'bar' keeps the v100 lever (the Cloud Nine press,
  * read from the bar, its message plays out); the default 'skip' makes the A that skips the message T1's lever. The skip phase:
  * Cloud Nine is in the states (its confirm read), the skip not read yet, the message window not over, T2's Charge not seen. */
@@ -1400,9 +1421,10 @@ function fb14Confirm(tObs, stp, shifts, src) {
   const c = fbPic(tObs) - fb14Van(stp.cat, src), F = Math.round(c);
   FB14.P[turn] = F; if (turn === 4) FB14.p4t = tObs; const P0 = st.plan && st.plan.fb14 === turn && !st.plan.sk ? st.plan : null;
   // v91 (logs E, F: the confirm logged at err -91 / -63 against a replan made after the press): the plan up at the press
-  const Ph = (FB14.plans || []).filter(x => x.turn === turn && !x.sk && x.tMade <= tObs).pop(), P = Ph && (!P0 || P0.tMade > tObs) ? Object.assign({}, P0 || {}, { target: Ph.target, tMade: Ph.tMade, bias: Ph.bias, stopped: false }) : P0;
-  slog('fb14Confirm', { turn, F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, src, lever: turn === 1 && fb14SkipMode() ? 'cloud nine (not the lever: the skip is)' : undefined });
-  if (P && !P.stopped && src !== 'bar' && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14'); slog('fb14PressBias', { n: L.length, bias: +fb14Bias().toFixed(2) }); const lb = 'Final Bowser T' + turn + ', ' + (turn === 1 ? 'Cloud Nine' : 'Do Nothing'), wk = typeof pressShow === 'function' ? pressShow(P0 && P0.target === P.target ? P0 : null, c, lb) : null; if (typeof leverPressNote === 'function') leverPressNote(lb, c - P.target, 'fb14', wk); }
+  const Ph = (FB14.plans || []).filter(x => x.turn === turn && !x.sk && x.tMade <= tObs).pop(), P = Ph && (!P0 || P0.tMade > tObs) ? Object.assign({}, P0 || {}, { target: Ph.target, tMade: Ph.tMade, tPress: Ph.tPress, bias: Ph.bias, stopped: false }) : P0;
+  const A = P ? fb14AimF(P, 'fb14', turn) : null;      // v133: the beeped frame on today's clock
+  slog('fb14Confirm', { turn, F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, aim: P && A !== P.target ? +A.toFixed(2) : undefined, errBeep: P && A !== P.target ? +(c - A).toFixed(2) : undefined, src, lever: turn === 1 && fb14SkipMode() ? 'cloud nine (not the lever: the skip is)' : undefined });
+  if (P && !P.stopped && src !== 'bar' && Math.abs(c - A) <= 5) { const L = fb14PressAdd(c - A - (P.bias || 0), 'fb14'); slog('fb14PressBias', { n: L.length, bias: +fb14Bias().toFixed(2) }); const lb = 'Final Bowser T' + turn + ', ' + (turn === 1 ? 'Cloud Nine' : 'Do Nothing'), P1 = P0 && P0.target === P.target ? (A !== P.target ? Object.assign({}, P0, { target: A }) : P0) : null, wk = typeof pressShow === 'function' ? pressShow(P1, c, lb) : null; if (typeof leverPressNote === 'function') leverPressNote(lb + (A !== P.target ? ' (the clock moved ' + (A - P.target).toFixed(1) + ' frames after the beeps: read against the beeped frame)' : ''), c - A, 'fb14', wk); }
   if (FB14.on) { const h = fb14Horizon(performance.now()); fb14Advance(Math.min(h, F - 3)); fb14Input(fb14Kind(turn), F, turn, shifts || (stp.cat === 'S' ? FB14_SHIFTS_S : FB14_SHIFTS), tObs, fb14Van(stp.cat, src)); }
   fb14Show();
 }
@@ -1444,8 +1466,9 @@ function fb14SkipConfirm(tObs) {
   const van = fb14Van('K'), c = fbPic(tObs) - van, F = Math.round(c), B0 = fb14SkipBase(), nat = F > B0 + FB14_SKIP.hi;
   const P = st.plan && st.plan.sk ? st.plan : (FB14.plans || []).filter(x => x.sk && x.tMade <= tObs).pop() || null;
   FB14.sk = F;
-  slog('fb14Confirm', { turn: 1, lever: 'skip', F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, base: B0, k: F - B0, natural: nat || undefined, src: 'box' });
-  if (P && !P.stopped && !nat && Math.abs(c - P.target) <= 5) { const L = fb14PressAdd(c - P.target - (P.bias || 0), 'fb14sk'); slog('fb14PressBias', { lever: 'fb14sk', n: L.length, bias: +fb14Bias('fb14sk').toFixed(2) }); const lb = 'Final Bowser T1, the A that skips Cloud Nine\'s message', wk = typeof pressShow === 'function' ? pressShow(P.tab ? P : null, c, 'Final Bowser T1, the skip A') : null; if (typeof leverPressNote === 'function') leverPressNote(lb, c - P.target, 'fb14sk', wk); }
+  const A = P ? fb14AimF(P, 'fb14sk', 1) : null;      // v133
+  slog('fb14Confirm', { turn: 1, lever: 'skip', F, c: +c.toFixed(2), planned: P ? P.target : null, err: P ? +(c - P.target).toFixed(2) : null, errBeep: P && A !== P.target ? +(c - A).toFixed(2) : undefined, base: B0, k: F - B0, natural: nat || undefined, src: 'box' });
+  if (P && !P.stopped && !nat && Math.abs(c - A) <= 5) { const L = fb14PressAdd(c - A - (P.bias || 0), 'fb14sk'); slog('fb14PressBias', { lever: 'fb14sk', n: L.length, bias: +fb14Bias('fb14sk').toFixed(2) }); const lb = 'Final Bowser T1, the A that skips Cloud Nine\'s message', wk = typeof pressShow === 'function' ? pressShow(P.tab ? P : null, c, 'Final Bowser T1, the skip A') : null; if (typeof leverPressNote === 'function') leverPressNote(lb, c - A, 'fb14sk', wk); }
   if (FB14.on) { fb14Advance(Math.min(fb14Horizon(performance.now()), F - 3)); fb14Input('skip', F, 1, FB14_SKSHIFTS, tObs, van); }
   if (st.plan && st.plan.sk) { if (st.plan.tPress > performance.now()) cancelBeeps(); st.plan = null; }
   fb14Show();

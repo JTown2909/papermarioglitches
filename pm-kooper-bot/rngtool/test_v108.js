@@ -18,7 +18,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (set) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e) + (process.env.STK ? e.stack : ''))); await p.addInitScript(s => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify(s)); } catch (e) {} }, set || { prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' }); await p.goto('file://' + PAGE); return p; };
   const p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v132', 'page version v108');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v133', 'page version v108');
 
   // ---- 1. beeps: the fb1548 T4 shape (3 beeps 500 ms apart)
   const r = await p.evaluate(async () => {

@@ -19,6 +19,7 @@ var FBP1 = { t: null, seed: null, outcome: null, score: null, ratio: null };
 var FBP1V = { taps: [], vis: [], visFrom: null };      // the coin's shines and the bar's stretches, kept from before the lock
 CHG_PROF.fbp1 = Object.assign({}, CHG_PROF.fb1, { id: 'fbp1' });
 CHG_PRESS.fbp1 = () => 20000;      // nothing waits on the lock: re-reads for 20 s
+const FBP1_AI = 12;     // v133: Bowser's AI on Lakilester's Do Nothing confirm + 12 (battle 2303; v132's + 13 was phase 2's battle)
 const FBP1_GOAL = 5, FBP1_MAXS = 6000, FBP1_PLANS = 1500, FBP1_BUDGET = 60, FBP1_GUARD = 0.7, FBP1_PF_MS = 4, FBP1_TICK = 250;
 function fbp1Reset() { Object.assign(FBP1, { t: null, seed: null, outcome: null, score: null, ratio: null, states: null, t0: null, rate: null, lockT: null, pT: null, P: null, plan: null, pbT: null, doubt: 0, n0: 0, why: null, tickT: 0, pfI: 0, nPlans: 0, ended: false, allOut: false, kept: null, edgeLogged: null }); }
 fbp1Reset();
@@ -47,13 +48,23 @@ function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its
   }
   chgShow(); return true;
 }
+/* v133 (console 20:20, log e284a73c: the Phase 1 read locked 1.2 s after Lakilester's Do Nothing; the route was still on the Charge
+ * step (its Mario screen never seen closing), so the Strategies box was not watched, the confirm was lost and the route never
+ * reached the Power Bounce): the Charge burst moves the route to the Do Nothing step, as fb14Trigger does on phase 2 (v76) */
+function fbp1Trigger() {
+  const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1) return;
+  const j = fbp1StepI('fbp1dn'); if (j < 0) return;
+  FBP1.pT = null; slog('fbP1StepByBurst', { from: routeStep, to: j }); setStep(j); st.lastStepClose = { t: performance.now(), to: j };
+}
 /* the lock's fits -> model states (fb14Lock's fresh path, no carry and no joint read: Phase 1's first Charge) */
 function fbp1Build(res, trigT) {
   const H = res && res.fb1 && res.fb1.hyps; if (!H || !H.hy || !H.hy.length) { FBP1.why = 'no hypotheses from the rays'; return 0; }
   const rate = chgRate(), P = fb2Patterns(), M = 0; FBP1.rate = rate; FBP1.t0 = trigT - 16 * rate;
   const menuT = CHG.menuSince || null, menuF = menuT != null ? Math.min(M, Math.max(M - 450, Math.ceil(fbp1Pic(menuT) + 30))) : M;
   const back = x => Math.imul((x - 1) >>> 0, 0x6A76AE6D) >>> 0, x0a = back(H.a >>> 0), combos = [];
-  for (const h of H.hy) for (const AV of fbAuraVariants(h, H.best)) combos.push([h, AV]);
+  // v133: battle 2303 has no Star Rod aura (emulator: the aura address draws only the Charge's own respawns, which 'chg' models; fbEnd48
+  // with c = 0 lands on the logged seed at M + 61): one aura variant, all zero
+  for (const h of H.hy) combos.push([h, { aura: new Uint8Array(20), w: Math.exp((h.sc - H.best) / Math.max(1, FB14_SIG * H.best)) }]);
   combos.sort((x, y) => y[1].w - x[1].w);
   const paOf = ph => [(((ph[0] - M) % 130) + 130) % 130, (((ph[1] - M) % 220) + 220) % 220], fresh = [], seen = new Set(); let nOk = 0;
   for (const [h, AV] of combos) {
@@ -80,17 +91,16 @@ function fbp1Input(tObs) {
   if (!fbp1On()) return; const c = fbp1Pic(tObs) - fb14Van('S', 'screen'), F = Math.round(c), out = [];
   fbp1Advance(F - 3);
   for (const S of FBP1.states) for (const [d, wd] of FB14_SHIFTS_S) {
-    const Fd = F + d - S.l; if (S.f > Fd + 13) continue;
-    const T = fbClone(S); T.w = S.w * wd; T.p1m = 1; T.gd = null; T.aiF = Fd + 13; fbEv(T, { k: 'ai', f: Fd + 13, turn: 1 }); out.push(T);
+    const Fd = F + d - S.l; if (S.f > Fd + FBP1_AI) continue;
+    const T = fbClone(S); T.w = S.w * wd; T.p1m = 1; T.gd = null; T.aiF = Fd + FBP1_AI; fbEv(T, { k: 'ai', f: Fd + FBP1_AI, turn: 1 }); out.push(T);
   }
   out.sort((x, y) => y.w * (y.lw || 1) - x.w * (x.lw || 1)); FBP1.states = out.slice(0, FBP1_MAXS); FBP1.P = F;
   slog('fbP1DoNothing', { F, c: +c.toFixed(2), states: FBP1.states.length, of: out.length });
 }
-/* a state past Bowser's AI: a Body Slam splits into guarded (FBP1_GUARD) and not; the other attacks draw the same either way */
+/* a state past Bowser's AI splits into guarded (FBP1_GUARD) and not: v133, every attack draws differently with the guard (battle 2303) */
 function fbp1Split(S, out) {
   if (S.gd !== null || S.aiF == null || S.f <= S.aiF) return;
-  const a = S.out[1] && S.out[1].atk; S.gd = 1;
-  if (a === 'slam') { const T = fbClone(S); T.gd = 0; T.w = S.w * (1 - FBP1_GUARD); S.w *= FBP1_GUARD; out.push(T); }
+  S.gd = 1; const T = fbClone(S); T.gd = 0; T.w = S.w * (1 - FBP1_GUARD); S.w *= FBP1_GUARD; out.push(T);
 }
 /* every state to logic frame h (- its lag), at most FBP1_PF_MS of work when budgeted */
 function fbp1Advance(h, budget) {
@@ -137,13 +147,13 @@ function fbp1Frame(t, present) {
 }
 function fbp1Tap(t) { FBP1V.taps.push(t); if (FBP1V.taps.length > 400) FBP1V.taps.shift(); }
 /* the bounces for target-A frames d0..d1 (logic) of state S: each value the bounce count, FBP1_GOAL meaning that many or more
- * (the roll that would end a 5 cap is the third: once rolls 0..GOAL-3 pass, 5+ is certain) */
+ * (v133: hits from D + 45 with their damage stars; a cap is the first failed roll + 2, so once rolls 0..GOAL-3 pass, 5+ is certain) */
 function fbp1Row(S, d0, d1) {
-  const B = fbClone(S); if (B.f > d0 + 71) return null; fbRun(B, d0 + 71); const out = new Int8Array(d1 - d0 + 1), end = 71 + 27 * (FBP1_GOAL - 3) + 1;
+  const B = fbClone(S); if (B.f > d0 + 45) return null; fbRun(B, d0 + 45); const out = new Int8Array(d1 - d0 + 1), end = 71 + 27 * (FBP1_GOAL - 3) + 1;
   for (let d = d0; d <= d1; d++) {
-    const T = fbClone(B); T.pbn = 0; fbEv(T, { k: 'pbr', f: d + 71, n: 0 });
-    while (T.f < d + end) { fbStep(T); if (T.pbn && !T.ev.some(e => e.k === 'pbr')) break; }
-    out[d - d0] = T.ev.some(e => e.k === 'pbr') ? FBP1_GOAL : T.pbn; fbStep(B);
+    const T = fbClone(B); T.pbn = 0; T.pbgo = true; T.pbk = -1; fbEv(T, { k: 'pbh', f: d + 45, n: 0 });
+    while (T.f < d + end && T.pbgo !== false) fbStep(T);
+    out[d - d0] = T.pbgo === false ? Math.min(FBP1_GOAL, T.pbk + 2) : FBP1_GOAL; fbStep(B);
   }
   return out;
 }

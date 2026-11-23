@@ -1,3 +1,31 @@
+# Time Out Timer v133: Phase 1 is battle 2303; the route reaches its bounce; reads after a clock fix; backup T7 (Nov 23)
+
+- **The route stuck on Phase 1's Do Nothing** (console 20:20, log e284a73c + clip): the Phase 1 read locked 1.2 s after
+  Lakilester's Do Nothing; the route stayed on the Charge step until the lock (its Mario screen was never seen closing), so the
+  Strategies box was not watched and the route never reached the Power Bounce. Now the Charge burst moves the route to the Do
+  Nothing step (fbp1Trigger, as fb14Trigger on phase 2 since v76), and its Strategies close counts from 2 frames (closeMinMs).
+- **v132 modelled the wrong battle.** states/boss_2304_p1 was phase 2's battle (2304: Bowser 1 / 99, Star Rod enchanted); its
+  HP was written to 99, so Mario died to every attack and the bounce did no damage. The clip showed otherwise: Fire Breath 9 through
+  a guard (Mario left at 1 HP), the bounce hurting Bowser (6, 5, 4). Phase 1 is **battle 2303** (powerbounce/README.md):
+  states/boss_2303_p1r_menu.st = 2303 started with the p1 state's gPlayerData (Bowser 99 / 99, no enchant). On it (p1g_log.py,
+  28 logs, p1model.py 28 / 28 exact, fixtures/fbp1_logs.json, test_v132):
+  - Bowser's AI on P + 12 (P = Lakilester's Do Nothing confirm). Mario survives every attack but an unguarded Fire Breath (10:
+    the Life Shroom, phase 2's revive draws); the guard (an A on hit - 3 .. hit - 1) changes the draws for every attack: fire
+    guarded none (menu AI + 160), claw guarded / slam guarded 10 sparks on the hit (menu + 126 / + 144), claw unguarded and slam
+    unguarded as the backup T7's FB2B_HIT (menu + 279 / + 211). Every state splits guarded (70%) / not after the AI.
+  - The Power Bounce hurts Bowser: hit n on D + 45 + 27n with phase 2's damage stars (first hit 6 with T1's Charge, 4 after the
+    KO); continue rolls on D + 71 + 27n against Phase 1's thresholds: his power-bounce chance is 50 (blueprint byte 0x1E; phase
+    2's 60 gives 120, 72, 43), so **100, 50, 25, 12**: 5+ bounces needs the 2nd roll <= 50 and the 3rd <= 25 (about 13% blind).
+  - No Star Rod aura in 2303 (the aura address draws only the Charge's respawns): Phase 1's states are built with aura 0 (fbEnd48
+    lands on the logged seed at M + 61).
+  - **Not verified on console:** the 20:20 lock's states do not reproduce the console's guarded Fire Breath and shines (best 3 of 4
+    shines within 2 frames, about what random states give). Phase 1's beep is untested; a recorded Phase 1 log + clip is needed.
+- **"3 frames off" on T2** (console 20:29): the T2 plan and its beeps were made before T2's lock; the lock's clock fix 0.56 s before
+  the press moved FB14.t0 by 2 frames, the beeps (in flight) stayed, the press read +3.03 against the old frame number and fed the
+  press bias. Now the press is read against the frame the beeps marked on the new clock (fb14AimF; the log's errBeep).
+- **Backup T7 "No Wave or Shield"** (the runner): Bowser's shield (the Star Rod recast) counts as a success in the plan (ok7); after it
+  (no HP change on the backup T7) T8 has no modelled states, so no beep.
+
 # Time Out Timer v132: Final Bowser Phase 1 is tracked to its T2 Power Bounce (Nov 22)
 
 - **The runner:** "i can not do phase 1 because the bounce is still not tracked". Before v132 Phase 1's T1 Charge was read

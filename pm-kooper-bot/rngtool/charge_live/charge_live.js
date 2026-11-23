@@ -319,7 +319,7 @@ function chgPic(t, m, Yw, msW) {
         // browser dropped frame 3's pictures the first one above the menu is frame 4 (+12.5) or 5 (+19.4), and v69 took it
         // as frame 3 (or, at +19.4, did not trigger at all): every frame after it one or two off, no lock
         const d0 = m - base, cut = P.trigCut || [9.85, 15.95], n0 = P.trigN ? (d0 < cut[0] ? 3 : d0 < cut[1] ? 4 : 5) : 3;
-        CHG.state = 'capture'; CHG.trig = { t: t - (n0 - 3) * FRAME, tRaw: t, n: n0, base, i: CHG.ring.length - 1, d0, cut }; CHG.trig0 = Object.assign({}, CHG.trig); CHG.Fm = null; CHG.shapeBad = 0; if (P.id === 'fb2' && typeof fb2Reset === 'function') fb2Reset(); CHG.frames = CHG.ring.slice(); CHG.ring = []; slog('chargeTrigger', { base: +base.toFixed(1), m: +m.toFixed(1) }); arenaNote(routeStep, t); if (P.id === 'fb1' && typeof fb14Trigger === 'function') fb14Trigger(); }
+        CHG.state = 'capture'; CHG.trig = { t: t - (n0 - 3) * FRAME, tRaw: t, n: n0, base, i: CHG.ring.length - 1, d0, cut }; CHG.trig0 = Object.assign({}, CHG.trig); CHG.Fm = null; CHG.shapeBad = 0; if (P.id === 'fb2' && typeof fb2Reset === 'function') fb2Reset(); CHG.frames = CHG.ring.slice(); CHG.ring = []; slog('chargeTrigger', { base: +base.toFixed(1), m: +m.toFixed(1) }); arenaNote(routeStep, t); if (P.id === 'fb1' && typeof fb14Trigger === 'function') fb14Trigger(); if (P.id === 'fbp1' && typeof fbp1Trigger === 'function') fbp1Trigger(); }
     }
     return;
   }

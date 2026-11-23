@@ -1,4 +1,4 @@
-"""Numbers-only fixture for test_v132.js from p1g_log.py logs (the Power Bounce runs and the menu-only runs): per log the seed at
+"""Numbers-only fixture for test_v132.js / test_v133.js (v133: battle 2303 logs, states/boss_2303_p1r_menu.st) from p1g_log.py logs (the Power Bounce runs and the menu-only runs): per log the seed at
 the start of Bowser's AI frame, the AI frame, the first coin frame from it, the aura counts by f mod 20, the bolt phases,
 whether a Body Slam was guarded, the target-A frame, the seeds every 10 frames, and the bounce rolls' frames.
 usage: python3 -I p1_fixture.py OUT.json LOG.json [...]"""
@@ -8,7 +8,7 @@ out = []
 for fn in sys.argv[2:]:
     d = json.load(open(fn)); R = d['rows']; ai = d['marks']['ai']; m2 = d['marks']['menu2']; dc = d['marks']['pb']
     hit = d['hpf'][0] - ai
-    g = d['marks']['guardA']; gd = hit == 69 and g is not None and 0 < 69 - (g - ai) <= 3
+    g = d['marks']['guardA']; gd = g is not None and 0 < hit - (g - ai) <= 3      # v133: the guard counts for every attack (battle 2303)
     au = [sum(1 for n, _ in r['d'] if n == 'aura') for r in R]
     bo = [sum(1 for n, _ in r['d'] if n == 'bolt') for r in R]
     c = [au[f] for f in range(ai, ai + 20)]                      # by (f - ai) mod 20; checked on clean stretches below
