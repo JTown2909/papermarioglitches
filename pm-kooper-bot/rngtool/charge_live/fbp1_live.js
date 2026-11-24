@@ -79,10 +79,10 @@ function fbp1Build(res, trigT) {
     const E = fbEnd48(x0, M, h.q, c, pa0); if (!(h.br ? !E.shq : (h.q + 24 >= 48 || E.shq))) continue; nOk++;
     for (const ph of P.list[h.p].ph) {
       const pa = paOf(ph); let y0 = x0a; for (let i = fbBolts(M + 13, pa); i; i--) y0 = back(y0);
-      const B = fbBackShines(y0, M + 13, M + 13 + h.q, c, pa, menuF);
+      const Bs = fbBackShinesAll(y0, M + 13, M + 13 + h.q, c, pa, menuF);     // v140: every coin history the RNG allows
       for (const [l, wl] of FB14_LAGS) {
         const key = E.s + ':' + E.nc + ':' + c.join('') + ':' + pa[0] + ':' + pa[1] + ':' + l; if (seen.has(key)) continue; seen.add(key);
-        fresh.push(fbNew({ s: E.s >>> 0, nc: E.nc, f: M + 61, c, ph: pa, l, rg: 0, w: wl * AV.w * (B.ok ? 1 : 1e-3), from: Math.min(menuF, M + 13), sh: B.sh.sort((a, b) => a - b).concat(E.sh), key, tag: 'p1' }));
+        Bs.forEach((B, bi) => fresh.push(fbNew({ s: E.s >>> 0, nc: E.nc, f: M + 61, c, ph: pa, l, rg: 0, w: wl * AV.w * B.w * (B.ok ? 1 : 1e-3), from: Math.min(menuF, M + 13), sh: B.sh.slice().sort((a, b) => a - b).concat(E.sh), key: key + (bi ? ':h' + bi : ''), tag: 'p1' })));
       }
     }
   }

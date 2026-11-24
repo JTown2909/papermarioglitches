@@ -1,3 +1,28 @@
+# Time Out Timer v140: a fresh lock keeps every coin history; the kernel lists its best aura splits (Nov 24)
+
+- **End-to-end batch (the runner's loadout: 10 HP, 15 FP, Power Bounce, Super Jump Charge, Power Rush, Close Call, Super
+  Lakilester; guard on; emulator renders through the page, presses on its beeps).** Phase 2 T1-T4 on v139: 5eed0001, a1000001-3,
+  b2000001-3 all four turns cleared but b2000001's T4 (a harness fault: after a fresh relock the first-plan runner kept T1's
+  clock origin and pressed blind; fb14_e2e.py now maps a plan through the latest fresh lock's origin). Re-run: 4/4 planned.
+- **Where carries died (TRUTH trace).** On every seed whose carry held, T1's lock kept ~5 states that follow the game's RNG
+  frame by frame; on b2000001 and b2000002 it kept none, and the carry died on T2 ("the coin rules every state out").
+- **b2000001: the coin history before the Charge.** fbBackShines walks the coin back from the first coin after the rays,
+  24 frames before a value < 70, 48 before one >= 70, and stopped where both fit (about one coin in five). The true fit's walk
+  stopped on its first coin: no menu shines, the two the page saw counted ~700x each against it, and the coin cut it (1e-5 of
+  the best of 4056). fbBackShinesAll follows both branches (an equal share each, up to FB14_BACK_BR = 8 histories); the lock
+  and Phase 1's lock build one fit per history. Re-run: T1 keeps 5 true states (was 0). test_v140.
+- **b2000002 (open): the lock never builds the true state.** A search over every lightning phase pair, next coin and lag from
+  the true seed after the rays finds one state that follows the game 90 frames (lag 1, next coin frame 79, phases 53 / 113, aura
+  10032000011120220010); its lightning phases are in none of the true-seed fits' patterns (those reach the true seed after the
+  rays through another aura split), and its aura split scored -21 against a tolerance of 54 but was not listed. Part fixed:
+  kernel.c fb1alts listed the first 600 splits its depth-first search met, not the 600 best; it keeps the best now (a full
+  list's worst gives way, the bound rises to it) and returns them best first (lock search 7.3 s, was 6.5 s). The seed still
+  cleared T1-T4 (fresh locks on T2 and T4).
+- Diagnostics (the e2e only, window.__fb14seeds): fb14TruthLock logs the true fit's coin error and why it was cut
+  (fb14TruthWhyOf), where fits on the true seed leave the game (div), the game's aura split against the listed ones (trueC,
+  cRows), and with V105T's ph whether the true lightning phase is in a true-seed fit's pattern (v140ph).
+- test_strip_geometry and test_v108 (4, fb1516 T2) fail the same on v139's build (not v140's); test_v131 passes alone (load).
+
 # Time Out Timer v139: the coin's measured miss rate; wider windows over 1-frame picks (Nov 24)
 
 - **Carries broke on missed coin shines.** The runner's 17:39 recording (400 s, Phase 1 into Phase 2) against its log (7a42652c):

@@ -465,15 +465,27 @@ EXPORT("fb1scorev") float fb1scorev(uint32_t a, int vlo, int vhi) {
 static uint8_t ALTS[4096 * 20]; static float ALTSC[4096]; static int NALT, ALTMAX; static uint8_t CUR[20]; static float ABEST, ATOL;
 EXPORT("altPtr") uint8_t *altPtr(void) { return ALTS; }
 EXPORT("altScPtr") float *altScPtr(void) { return ALTSC; }
+/* v140 (e2e b2000002 T1: every true-seed fit listed 600 splits, the game's not among them, 2 counts from the nearest): the
+ * search stopped at the first max it met in its own order; it keeps the max best now (a full list's worst gives way to a
+ * better one, and the bound rises to that worst) */
+static float ALOW; static int AWORST;
+static void altworst(void) { AWORST = 0; for (int i = 1; i < NALT; i++) if (ALTSC[i] < ALTSC[AWORST]) AWORST = i; ALOW = ALTSC[AWORST] - AINIT[A3V]; }
 static void altdfs(int j, int P, float suffix) {
-    if (NALT >= ALTMAX) return;
     float t = lterm(A3V, j, P); if (t < -1e29f) return; suffix += t;
-    if (j == 0) { if (P > A_CMAX) return; if (suffix < ABEST - ATOL) return; CUR[0] = (uint8_t)P; for (int i = 0; i < 20; i++) ALTS[NALT * 20 + i] = CUR[i]; ALTSC[NALT] = AINIT[A3V] + suffix; NALT++; return; }
-    for (int c = 0; c <= A_CMAX && c <= P; c++) { int Pp = P - c; float b = TD[j - 1][Pp]; if (b < -1e29f || b + suffix < ABEST - ATOL) continue; CUR[j] = (uint8_t)c; altdfs(j - 1, Pp, suffix); }
+    float lo = ABEST - ATOL; if (NALT >= ALTMAX && ALOW > lo) lo = ALOW;
+    if (j == 0) { if (P > A_CMAX) return; if (suffix < lo) return; if (NALT >= ALTMAX && suffix <= ALOW) return; CUR[0] = (uint8_t)P;
+        int at = NALT < ALTMAX ? NALT++ : AWORST; for (int i = 0; i < 20; i++) ALTS[at * 20 + i] = CUR[i]; ALTSC[at] = AINIT[A3V] + suffix;
+        if (NALT >= ALTMAX) altworst(); return; }
+    for (int c = 0; c <= A_CMAX && c <= P; c++) { int Pp = P - c; float b = TD[j - 1][Pp]; float lo2 = ABEST - ATOL; if (NALT >= ALTMAX && ALOW > lo2) lo2 = ALOW; if (b < -1e29f || b + suffix < lo2) continue; CUR[j] = (uint8_t)c; altdfs(j - 1, Pp, suffix); }
 }
 EXPORT("fb1alts") int fb1alts(int p, int q, int br, float tol, int max) {
     float r = fb1lanes(A3V, PAT[p], q, br, 0); if (r < -1e29f) return 0;
-    ABEST = TD[19][16]; ATOL = tol; NALT = 0; ALTMAX = max > 4096 ? 4096 : max; altdfs(19, 16, 0); return NALT;
+    ABEST = TD[19][16]; ATOL = tol; NALT = 0; ALOW = -1e30f; AWORST = 0; ALTMAX = max > 4096 ? 4096 : max; altdfs(19, 16, 0);
+    /* (best first: the page cuts the list by prior x score, FB14_AV) */
+    for (int i = 1; i < NALT; i++) { float x = ALTSC[i]; uint8_t tmp[20]; for (int k = 0; k < 20; k++) tmp[k] = ALTS[i * 20 + k]; int j = i - 1;
+        while (j >= 0 && ALTSC[j] < x) { ALTSC[j + 1] = ALTSC[j]; for (int k = 0; k < 20; k++) ALTS[(j + 1) * 20 + k] = ALTS[j * 20 + k]; j--; }
+        ALTSC[j + 1] = x; for (int k = 0; k < 20; k++) ALTS[(j + 1) * 20 + k] = tmp[k]; }
+    return NALT;
 }
 /* the score of a given aura pattern (XA[0..19], by rays frame mod 20) for candidate a with lightning pattern p, first
  * coin q and second coin br: the rays of several Charges together tell the fight's one pattern apart where one Charge's
