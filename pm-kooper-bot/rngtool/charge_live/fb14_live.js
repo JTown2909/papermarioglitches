@@ -336,6 +336,7 @@ function fb14Lock(res) {
   }
   let keep = null, how = 'fresh', fresh = [];
   let carriedL = held || FB14.states;
+  const t0Lock = FB14.t0;      // (v141: the clock before a carry's fix, for a carry the late check rules out)
   if (!first && carriedL.length) {      // the carried states: those that drew these very rays
     const a = H.a >>> 0; let match = [];
     const matchAll = () => {
@@ -372,6 +373,13 @@ function fb14Lock(res) {
       const Mt = +Object.keys(by).sort((x, y) => by[y] - by[x])[0], share = tot > 0 ? by[Mt] / tot : 0;
       if (Mt !== M && Number.isFinite(Mt)) { if (share >= 0.6) { slog('fb14ClockFix', { turn, M, Mt, share: +share.toFixed(3) }); FB14.t0 = trigT - (Mt + 16) * fbRate(); } else slog('fb14ClockKept', { turn, M, Mt, share: +share.toFixed(3) }); }
     }
+    // v141 (e2e c3000002 T2 after T1's hit: 909 of 1047 carried states drew the rays and passed at M + 61, but the lock landed
+    // ~280 frames after the Charge and the coin seen by then, on the clock the carry itself fixed, ruled out all 909 within
+    // 0.3 s: fb14CarryGone, T2 and T3 blind): the carry is weighed again on copies up to the newest frame seen, after the clock
+    // fix; one the coin has already ruled out is no carry (the clock goes back and the lock goes on as a fresh one)
+    if (match.length) { const hN = fb14Horizon(performance.now()); if (hN > M + 61 + FB14_CARRY_LATE) { const pc0 = FB14.pendChg, sv2 = [FB14.states, FB14.gone, FB14.allOutLogged]; FB14.pendChg = null; FB14.states = match.map(fbClone);
+      let w2 = null; try { fb14Advance(hN); w2 = fb14Weigh(hN); } finally { [FB14.states, FB14.gone, FB14.allOutLogged] = sv2; FB14.pendChg = pc0; }
+      if (!w2.list.length) { slog('fb14CarryWeakLate', { turn, M, h: hN, matched: match.length, carried: carriedL.length }); match = []; keep = null; how = 'fresh'; FB14.t0 = t0Lock; } } }
     slog('fb14Check', { turn, M, carried: carriedL.length, matched: match.length, held: held ? held.length : null, endsMiss: FB14.tEnds, endsMissTrue: FB14.tEndsTrue }); FB14.tEnds = FB14.tEndsTrue = undefined;
     if (!match.length && held) FB14.states = fb14Cap(held);
   }
@@ -1033,7 +1041,7 @@ function fb14Horizon(now) { return Math.floor(fbPic(Math.min(now, FB14.lastT || 
 /* v110 (fb0718: each plan 140-160 ms, each confirm 230-330 ms on the page's thread, the strip and the screen reads stalled):
  * between ticks the states are stepped to the same horizon the next tick / confirm would use (fb14Horizon, the held Charge's
  * M + 10), at most FB14_PF_MS a picture, from where the last picture stopped */
-const FB14_PF_MS = 4;
+const FB14_PF_MS = 4, FB14_CARRY_LATE = 24;     // (v141: a carry checked again at the newest frame once it is this far past M + 61)
 function fb14Prefetch(ms) {
   const L = FB14.states; if (!FB14.on || !L.length || FB14.t0 == null) return;
   let h = fb14Horizon(performance.now()); if (FB14.pendChg) h = Math.min(h, FB14.pendChg.M + 10);

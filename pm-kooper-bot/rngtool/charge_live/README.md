@@ -1,3 +1,24 @@
+# Time Out Timer v141: a carry the coin rules out a little later locks fresh instead of pressing blind (Nov 24)
+
+- **Corrected tally (v139/v140 runs, the runner's loadout).** Earlier I reported 13/14 clean; the reports say otherwise.
+  Clean T1-T4: 5eed0001, a1000001, a1000003, b2000003, c3000003, d4000002-06. One hit on T1-T3, revived by the Life Shroom,
+  then the wave on T4: a1000002, b2000001, b2000002, c3000001, c3000004, d4000001. Failed: c3000002 (v139: hit on T4; v140:
+  T1 hit, T2 pressed blind, T3 hit).
+- **c3000002 on v140, T2.** The carried states matched at M+61 (CarryWeak passed), ClockFix moved the clock 3 frames by
+  their vote, and the read stopped because the lock said "carried". A few coins later the coin ruled every state out, too
+  late for a fresh lock, so T2 was pressed blind. v141 weighs the matched states again at the latest coin when it is more
+  than FB14_CARRY_LATE = 24 frames past M+61. If none fits, it logs fb14CarryWeakLate, drops the carry, restores the clock
+  from before ClockFix, and locks fresh. The check runs after ClockFix; my first placement ran before it, and ClockFix then
+  moved the clock out from under it.
+- **e2e on v141:** c3000002, b2000001, d4000003 and c3000001 4/4 clean (final build). On the first placement:
+  b2000002 4/4 clean; c3000004 and d4000001 a T1 hit, then T2-T4 clean with the wave. fb14CarryWeakLate did not fire in these runs. On this re-run of c3000002, T1 missed and T2-T3 locked fresh
+  (fb14CarryGone), so the new path is not yet exercised end to end.
+- **Turn 1 hits (open).** The page's T1 pressed chance is about 0.65-0.70. On the hit seeds the aura is ambiguous on T1: the
+  game's split ranks about 635 of 2160 by prior. Raising the kernel's alts cap to 4096 did not stop the T1 hit (d4000001).
+  The Life Shroom covers one hit; every run with a T1 hit still cleared T4.
+- Unit tests on v141: test_carry_guard, test_carry_page, test_fb14_chain, test_fb14_v87/v101/v102, test_console_v96/1112,
+  test_v140 pass.
+
 # Time Out Timer v140: a fresh lock keeps every coin history; the kernel lists its best aura splits (Nov 24)
 
 - **End-to-end batch (the runner's loadout: 10 HP, 15 FP, Power Bounce, Super Jump Charge, Power Rush, Close Call, Super
