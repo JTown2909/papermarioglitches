@@ -337,7 +337,9 @@ if __name__ == '__main__':
             d = max(0, min(d, WAIT - 1))
         else:
             tgt = plans[0]['target'] if plans else None      # the first beeps are the ones pressed
-            d = (GM1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm
+            zs = [e.get('turn') for e in res.get('events', []) if e.get('ev') == 'fb14Lock' and e.get('M') == 0 and plans and e['t'] <= plans[0]['t']]
+            o1 = GMS.get(zs[-1], GM1) if zs else GM1         # v140: a fresh relock restarts the page's clock at that turn's Mario confirm
+            d = (o1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm
             blind = d is None or d < 0 or d >= WAIT
             if blind: d = WAIT // 2
         forced = None
