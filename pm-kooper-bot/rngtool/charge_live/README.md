@@ -1,3 +1,19 @@
+# Time Out Timer v139: the coin's measured miss rate; wider windows over 1-frame picks (Nov 24)
+
+- **Carries broke on missed coin shines.** The runner's 17:39 recording (400 s, Phase 1 into Phase 2) against its log (7a42652c):
+  all 12 bar hides line up (clip = page time - 26.26 s); of 37 coin shines the page logged 30, every logged one real; the 7 missed
+  are faint ~4-frame flashes (Phase 2's pictures come every 20-26 ms, as on v132's 20:36). The trackers took a miss as 2% likely
+  (ZW_PMISS) and dropped a state after 3 coin errors (ZW_MAXERR): 2-3 misses over a 40-60 s carry dropped the true state, the
+  "the coin rules every state out" of 17:15 (after the Jelly), 17:35 (before T4) and 17:45 (T2). The Final Bowser trackers
+  (fb14Weigh, fbp1Weigh, fb2's T7 / T8 weigh) now use FB_PMISS 0.2 and FB_MAXERR 6. Replayed on six Phase 2 logs (rplog2.js:
+  each turn's chance at the runner's own frame against Bowser's outcome): 17:45 T2 (hit) 0.50 -> 0.15 miss chance (its states
+  survive: a plan on 1123 at 69% instead of the blind 1086), 17:35 T2 (miss) 0.52 -> 0.61, 20:36 T2 (miss) 0.79 -> 0.76, the rest
+  the same. Still wrong either way: 17:20 T2 (sure hit, a miss) and 20:36 T3.
+- **Wider windows** (the runner: "aim for wider windows in situations where it's a 1 frame"; 17:15 T4, 17:23 T4, 17:33 T7 were
+  pressed within a frame of 1-frame plans): ppWiden moves a Final Bowser pick on a 1-frame window to the likeliest frame of a 2+
+  frame window when its perfect-press chance is within PP_WIDE_TOL (5 points): T1-T4 (zwChoose), T6's Do Nothing, the T7 / T8
+  Power Bounce, Phase 1's bounce. Logged widerWindow. test_v134 (9); test_fb2_v97's emulator frame accepted when widened from it.
+
 # Time Out Timer v138: a Phase 1 retry reads its own Charge (Nov 23)
 
 - **Console 17:28 ("it did not lock the charge on turn 1")**: a retry with the route still on Phase 1's Do Nothing step. fbp1ArmOk

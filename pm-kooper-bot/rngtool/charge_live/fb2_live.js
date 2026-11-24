@@ -213,7 +213,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   const pcc = k => { let v = 0; for (const r of rows) for (const [l, wl] of FB2_LAGS) for (const [d, q] of PRESS_ERR) v += r.w * wl * q * luck(r, k + d - l); return v / tot; };
   const ppk = k => { let v = 0; for (const r of rows) for (const [l, wl] of FB2_LAGS) v += r.w * wl * luck(r, k - l); return v / tot; };
   const a = kFirst - 1, b0 = kFirst + W + 1, sh = []; for (let k = a; k <= b0; k++) sh.push(k >= kFirst && k <= kFirst + W ? ppk(k) : 0);
-  let pk = ppPick(sh, null, a, b0, kFirst, W, pcc, 'safe3');
+  let pk = ppPick(sh, null, a, b0, kFirst, W, pcc, 'safe3'); pk = ppWiden(pk, sh, a, b0, kFirst, W, 'fb2dn');     // v139
   let k = pk.target; if (k == null || !(k >= kFirst)) { k = kFirst; for (let x = kFirst; x <= kFirst + W; x++) if (pcc(x) > pcc(k)) k = x; }
   // v124 (console 11:52: T6 beeped a 1-frame window at 47%, the Close Call missed; the backup T7 at 52%, the wave): on the Strategies
   // screen the Do Nothing can wait, so a plan under KEY_AIM looks FB2_KEY_S further for the first frame at KEY_AIM (else one KEY_GAIN likelier)
@@ -383,7 +383,7 @@ function fb2Prune(upto) {
   // 16 s after the confirm there), else FB2_T7_COIN_MS after the confirm; replayed: 93 states, doubt 0.02-0.37
   const okC = typeof CHG !== 'undefined' && CHG.trig, cut = okC && T7.outT != null ? fb2Pic(T7.outT) : okC && FB2.pT != null ? fb2Pic(FB2.pT + (fb2BackupOn() ? 0 : FB2_T7_COIN_MS)) : -1e9;     // v114: the backup T7's turn is modelled to the T8 menu (fb2AI7): its coin counts from the confirm
   const vis = FB2.vis.concat(FB2.visFrom != null ? [[FB2.visFrom, upto - 4]] : []).map(([a, b]) => [Math.max(a, cut), Math.min(b, upto - 4)]).filter(([a, b]) => b > a), taps = FB2.taps.filter(x => x < upto && x >= cut);
-  const Wd = 5.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - ZW_PMISS) / Wd, Lmiss = ZW_PMISS, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE);
+  const Wd = 5.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - FB_PMISS) / Wd, Lmiss = FB_PMISS, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE);
   const near = (x, f) => x - f >= -2 && x - f <= 3.5, out = []; let mx = 0, tot0 = 0;
   for (const o of T7.states) {
     tot0 += o.w;
@@ -394,7 +394,7 @@ function fb2Prune(upto) {
     const sh = S.coins.filter(c => c[1]).map(c => c[0] + o.l); let lw = 1, err = 0;
     for (const x of taps) if (sh.some(f => near(x, f))) lw *= Lm; else { lw *= Lf; err++; }
     for (const f of sh) if (vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= Lmiss; err++; }
-    if (err > ZW_MAXERR) continue;
+    if (err > FB_MAXERR) continue;
     const w = o.w * lw; out.push(Object.assign({}, o, { w, err })); mx = Math.max(mx, w);
   }
   const nVis = vis.reduce((a, [x, y]) => a + (y - x), 0), keep = out.filter(o => o.w >= mx * ZW_CUT), sum = keep.reduce((a, o) => a + o.w, 0), pL = T7.outcome === 'dodge' ? 1 : T7.pLucky != null ? Math.max(1e-3, T7.pLucky) : 1, bg = tot0 * (ZW_BG0 / (1 - ZW_BG0) + (1 - pL) / pL) * Math.exp(-ZW_RHO * nVis);
@@ -542,7 +542,7 @@ function fb2PlanT7(cScr) {
   // v83, the perfect press: the 7-bounce share on each frame itself (no spread), the centre of the widest run of frames
   // that give 7 for the states (ppPick); with no such frame, the best 7 frame as before. Spread-weighted p7 / p6 logged.
   let k = 0; for (let i = 1; i <= W; i++) if (s7[i] + 0.1 * s6[i] > s7[k] + 0.1 * s6[k] + 1e-12) k = i;
-  const pk = ppPick(e7, e6, from - 1, from + W + 1, from, W, x => (s7[x - from] || 0) / tot, 'safe3'); if (pk.ok) k = pk.target - from;
+  const pk = ppWiden(ppPick(e7, e6, from - 1, from + W + 1, from, W, x => (s7[x - from] || 0) / tot, 'safe3'), e7, from - 1, from + W + 1, from, W, 'fb2pb'); if (pk.ok) k = pk.target - from;     // v139: ppWiden
   const d = from + k, dz = S.doubt || 0, plan = { d, p7: (1 - dz) * s7[k] / tot, p6: (1 - dz) * s6[k] / tot, pp7: (1 - dz) * e7[k + 1], pp6: (1 - dz) * e6[k + 1], win: pk.ok ? pk.run.length : 0, doubt: +dz.toFixed(3), states: S.length, planned: SP.length, tPress: fb2PressT(d) };   // the background's share counts as no 7 (blind 7 is ~7%)
   // v95 (log 906bfb29 T7: p7 0, p6 0, win 0 at doubt 0.44 on 3 states, and the countdown played; the runner got 3): the
   // page's edge rule as every other plan (zwChoose): beeps only when the perfect-press 7 share, the background counted as

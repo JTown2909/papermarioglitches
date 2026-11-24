@@ -120,13 +120,13 @@ function fbp1Advance(h, budget) {
 /* the states' weights from the coin since their lock (fb14Weigh without the attack / bolt evidence) */
 function fbp1Weigh(h) {
   const V = FBP1V, vis = V.vis.concat(V.visFrom != null ? [[V.visFrom, null]] : []).map(([a, b]) => [fbp1Pic(a) + 30, Math.min(b == null ? h - 4 : fbp1Pic(b) - 4, h - 4)]).filter(([a, b]) => b > a);
-  const tapF = V.taps.map(t => fbp1Pic(t) - 4.8), Wd = 6.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - ZW_PMISS) / Wd, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE), near = (x, f) => x - f >= -2 && x - f <= 4.5;
+  const tapF = V.taps.map(t => fbp1Pic(t) - 4.8), Wd = 6.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - FB_PMISS) / Wd, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE), near = (x, f) => x - f >= -2 && x - f <= 4.5;
   let mx = 0, tot0 = 0; const out = [];
   for (const S of FBP1.states) {
     tot0 += S.w; const sh = S.sh.map(f => f + S.l), taps = tapF.filter(x => x < h && x >= S.from + S.l); let lw = 1, err = 0;
     for (const x of taps) if (sh.some(f => near(x, f))) lw *= Lm; else { lw *= Lf; err++; }
-    for (const f of sh) if (f < h - 6 && vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= ZW_PMISS; err++; }
-    S.lw = lw; S.err = err; if (err > ZW_MAXERR) continue; out.push(S); mx = Math.max(mx, S.w * lw);
+    for (const f of sh) if (f < h - 6 && vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= FB_PMISS; err++; }
+    S.lw = lw; S.err = err; if (err > FB_MAXERR) continue; out.push(S); mx = Math.max(mx, S.w * lw);
   }
   const keep = out.filter(S => S.w * S.lw >= mx * ZW_CUT), sum = keep.reduce((a, S) => a + S.w * S.lw, 0);
   let nVis = 0; for (const [a, b] of vis) nVis += Math.max(0, b - Math.max(a, 0));
@@ -186,7 +186,7 @@ function fbp1Plan(cScr) {
     for (let k = 0; k <= W; k++) for (const [d, q] of PRESS_ERR) s5[k] += w * q * (b[k + 1 + d] >= G ? 1 : 0);
     for (let i = 0; i < W + 3; i++) { if (b[i] >= G) e5[i] += w; if (b[i] >= G - 1) e4[i] += w; } }
   let k = 0; for (let i = 1; i <= W; i++) if (s5[i] > s5[k] + 1e-12) k = i;
-  const pk = ppPick(e5, e4, from - 1, from + W + 1, from, W, x => s5[x - from] || 0, 'safe3'); if (pk.ok) k = pk.target - from;
+  const pk = ppWiden(ppPick(e5, e4, from - 1, from + W + 1, from, W, x => s5[x - from] || 0, 'safe3'), e5, from - 1, from + W + 1, from, W, 'fbp1'); if (pk.ok) k = pk.target - from;     // v139: ppWiden
   const d = from + k, plan = { d, p5: (1 - dz) * s5[k], pp5: (1 - dz) * e5[k + 1], win: pk.ok ? pk.run.length : 0, doubt: +dz.toFixed(3), states: L.length, planned: SP.length, tPress: fbp1PressT(d) };
   FBP1.plan = plan; if (cScr != null) return plan;
   if (!(plan.pp5 >= num('zwedge'))) {

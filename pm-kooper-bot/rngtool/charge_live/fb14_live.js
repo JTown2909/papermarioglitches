@@ -21,6 +21,10 @@
  * confirm; the beam itself is not modelled, but it takes 8654-9351 more random numbers than frames to T6's Charge
  * (fb2_route/t5_steps.py, 120 emulator runs), so the T6 Charge is searched only on that stretch of the carried stream
  * (charge_live.js chgSearch opts.cands) instead of all 2^32 seeds: no slow fresh lock at T6. */
+/* v139 (console 17:39 clip against log 7a42652c: the page caught 30 of 37 coin shines - 81%; Phase 2's pictures come every 20-26 ms,
+ * and a shine is ~4 frames of a faint flash): the Final Bowser trackers' coin miss rate is the measured one, not ZW_PMISS's 2%,
+ * and a state is dropped after FB_MAXERR coin errors (a 40-60 s carry sees 2-3 missed shines: ZW_MAXERR's 3 dropped the true one) */
+var FB_PMISS = 0.2, FB_MAXERR = 6;
 const FB14_TOL = 0.008, FB14_SIG = 0.004, FB14_COMBOS = 1200, FB14_MAXH = 12000, FB14_LAGS = [[0, 0.75], [1, 0.25]];
 // v110 (diagnostic: tests / offline budget runs): window.__fb14cfg overrides a lock budget (combos, maxh = the lock's cap, maxc = the input cap, av)
 const fb14K = (k, d) => (typeof window !== 'undefined' && window.__fb14cfg && window.__fb14cfg[k] != null ? window.__fb14cfg[k] : d);
@@ -955,16 +959,16 @@ function fb14Weigh(h, noV) {     // noV (v100): without the picture's evidence (
   const tapF = FB14.taps.map(t => fbPic(t) - 4.8);
   // the match window: -2 .. +4.5 frames (the capture shows a flash up to ~3 frames after the console calibration in the
   // emulator renders, and a dropped picture reads it later still; v72's Duplighost tracker takes 4)
-  const Wd = 6.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - ZW_PMISS) / Wd, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE), nlo = FB14.wide ? FB14_WIDE[0] : -2, nhi = FB14.wide ? FB14_WIDE[1] : 4.5, near = (x, f) => x - f >= nlo && x - f <= nhi;
+  const Wd = 6.5 * (ZW_RHO + ZW_FALSE), Lm = (1 - FB_PMISS) / Wd, Lf = ZW_FALSE / (ZW_RHO + ZW_FALSE), nlo = FB14.wide ? FB14_WIDE[0] : -2, nhi = FB14.wide ? FB14_WIDE[1] : 4.5, near = (x, f) => x - f >= nlo && x - f <= nhi;
   let mx = 0, tot0 = 0; const out = [], cnt = { fire: 0, cls: 0, bolt: 0 }, bolts = !noV && FB14_BOLT_D != null && FB14.bolts.length ? FB14.bolts.map(t => fbPic(t) - FB14_BOLT_D) : null, useV = !noV && (bolts || Object.keys(FB14.atk || {}).length);
   for (const S of FB14.states) {
     tot0 += S.w; const sh = S.sh.map(f => f + S.l), taps = tapF.filter(x => x < h && x >= S.from + S.l); let lw = 1, err = 0;
     for (const x of taps) if (sh.some(f => near(x, f))) lw *= Lm; else { lw *= Lf; err++; }
-    for (const f of sh) if (f < h - 6 && vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= ZW_PMISS; err++; }
+    for (const f of sh) if (f < h - 6 && vis.some(([a, b]) => f >= a && f <= b) && !taps.some(x => near(x, f))) { lw *= FB_PMISS; err++; }
     if (FB14.missed) for (const k in FB14.missed) { const o = S.out[k]; if (o && (o.off || (o.v != null && !o.miss))) { lw *= FB14_MISSW; err++; } }
     if (FB14.hits) for (const k in FB14.hits) { const o = S.out[k]; if (o && (o.off || (o.v != null && o.miss))) { lw *= FB14_MISSW; err++; } }   // v129: Bowser was seen to hit that turn   // v86: Bowser was seen to miss that turn
     if (useV) lw *= fb14V100(S, h, null, cnt) * (bolts ? fb14BoltLik(S, h, bolts, cnt) : 1);     // v100: Bowser's attacks; v103: the lightning (soft)
-    S.lw = lw; S.err = err; if (err > ZW_MAXERR) continue; out.push(S); mx = Math.max(mx, S.w * lw);
+    S.lw = lw; S.err = err; if (err > FB_MAXERR) continue; out.push(S); mx = Math.max(mx, S.w * lw);
   }
   const keep = out.filter(S => S.w * S.lw >= mx * ZW_CUT), sum = keep.reduce((a, S) => a + S.w * S.lw, 0);
   if (window.__fb14seeds) FB14.wctx = { vis, tapF, nlo, nhi, mx, h };     // (diagnostic: the truth trace, fb14TruthWhy)
@@ -1154,7 +1158,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const live = cAt == null && typeof fbsOn === 'function' && fbsOn(); if (live) fbsBegin();
   const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + KF + X + D, turn), ms = Math.round(performance.now() - t1);
   if (live) {     // v129: the anchor's / broad check's states and the plan-without-the-picture's, over the same frames, in the same round
-    const B = FB14.states.filter(S => S.err == null || S.err <= ZW_MAXERR); if (B.length > Wg.list.length && !window.__fb14NoBroad) fb14ShareU(fb14Sample(B.map(S => { const Xs = Object.create(S); Xs.lw = 1; return Xs; }), FB14_NSAMPLE), from - D, from + W + KF + X + D, turn);
+    const B = FB14.states.filter(S => S.err == null || S.err <= FB_MAXERR); if (B.length > Wg.list.length && !window.__fb14NoBroad) fb14ShareU(fb14Sample(B.map(S => { const Xs = Object.create(S); Xs.lw = 1; return Xs; }), FB14_NSAMPLE), from - D, from + W + KF + X + D, turn);
     if (L0) fb14ShareU(L0, from - D, from + W + KF + X + D, turn);
     if (fbsEnd(turn)) { st.msg = 'Planning T' + turn + ' (in the background)…'; fb14Show(); render(); return true; } }
   const prof = { id: 'fb14', key: keyT ? FB14_KEY_S : 0, share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
@@ -1252,7 +1256,7 @@ function fb14Relock3(h) {
  * states still possible support. The target is the kept states' (the coin still picks the frame). */
 function fb14Broad(C, Wg, turn, d, PD) {
   if (C.none || C.target == null) return C;
-  const B = FB14.states.filter(S => S.err <= ZW_MAXERR); if (B.length <= Wg.list.length) return C;
+  const B = FB14.states.filter(S => S.err <= FB_MAXERR); if (B.length <= Wg.list.length) return C;
   const L = fb14Sample(B.map(S => { const X = Object.create(S); X.lw = 1; return X; }), FB14_NSAMPLE), Dm = Math.max(...(PD || [[0, 1]]).map(x => Math.abs(x[0])));
   const sh = fb14ShareU(L, C.target - Dm, C.target + Dm, turn), at0 = sh[Dm] || 0, bl = fb14Blind(turn); let v = 0; for (const [dd, q] of (PD || [[0, 1]])) v += q * (sh[dd + Dm] || 0);
   const pp = (1 - d) * at0 + d * bl, p = (1 - d) * v + d * bl; C.broad = { states: B.length, kept: Wg.list.length, pp: +pp.toFixed(3), ppKept: +C.pp.toFixed(3) };
@@ -1274,7 +1278,7 @@ function fb14Anchor(C, from, W, turn, PD, nKept) {
   PD = PD || [[0, 1]];
   const bl = fb14Blind(turn), at = c => C.share[c - C.a] || 0, honest = c => (1 - C.doubt) * at(c) + C.doubt * bl, thr = Math.max(num('zwedge'), C.pp - FB14_ANCHOR_TOL);
   const Dm = Math.max(...PD.map(x => Math.abs(x[0])));
-  let bsh = null; { const B = FB14.states.filter(S => S.err == null || S.err <= ZW_MAXERR); if (B.length > (nKept || 0) && !window.__fb14WeighTest && !window.__fb14NoBroad) { const L = fb14Sample(B.map(S => { const X = Object.create(S); X.lw = 1; return X; }), FB14_NSAMPLE); bsh = fb14ShareU(L, from - Dm, from + W + Dm, turn); } }
+  let bsh = null; { const B = FB14.states.filter(S => S.err == null || S.err <= FB_MAXERR); if (B.length > (nKept || 0) && !window.__fb14WeighTest && !window.__fb14NoBroad) { const L = fb14Sample(B.map(S => { const X = Object.create(S); X.lw = 1; return X; }), FB14_NSAMPLE); bsh = fb14ShareU(L, from - Dm, from + W + Dm, turn); } }
   const real = c => { let v = 0, vb = 0; for (const [d, q] of PD) { v += q * at(c + d); if (bsh) vb += q * (bsh[c + d - (from - Dm)] || 0); } const r = (1 - C.doubt) * v + C.doubt * bl; return bsh ? Math.min(r, (1 - C.doubt) * vb + C.doubt * bl) : r; };
   const cands = []; for (let c = from; c <= from + W; c++) if (honest(c) >= thr - 1e-12) cands.push([c, real(c)]);
   if (C.target >= from && C.target <= from + W && !cands.some(x => x[0] === C.target)) cands.push([C.target, real(C.target)]);

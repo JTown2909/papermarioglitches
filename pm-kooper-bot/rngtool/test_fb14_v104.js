@@ -33,8 +33,8 @@ const mk = (s, nc, o) => F.fbNew(Object.assign({ s: s >>> 0, nc, f: 0, c: new Ui
   const bl = F.v104.blind ? F.v104.blind(turn) : 0.495, C2 = { target, pp: 1, p: 1 }; V4.broad(C2, { list: kept, doubt: 0.1 }, turn, 0.1, PD);
   ok(Math.abs(C2.pp - (0.9 * missAll + 0.1 * bl)) < 1e-9, 'with the doubt: (1 - d) x broad + d x blind = ' + C2.pp.toFixed(3));
   const C3 = { target, pp: 1, p: 1 }; V4.broad(C3, { list: all, doubt: 0 }, turn, 0, PD); ok(C3.pp === 1 && !C3.broad, 'nothing dropped by the soft weighting: the claim left alone');
-  for (const S of all.slice(0, 50)) S.err = 4; const keptE = all.slice(50), C4 = { target, pp: 0.99, p: 0.99 }; V4.broad(C4, { list: keptE, doubt: 0 }, turn, 0, PD);
-  ok(C4.pp === 0.99 && !C4.broad, 'states ruled out by errors (over ZW_MAXERR) do not count');
+  for (const S of all.slice(0, 50)) S.err = 7; const keptE = all.slice(50), C4 = { target, pp: 0.99, p: 0.99 }; V4.broad(C4, { list: keptE, doubt: 0 }, turn, 0, PD);     // (v139: 7 errors, over FB_MAXERR's 6)
+  ok(C4.pp === 0.99 && !C4.broad, 'states ruled out by errors (over FB_MAXERR) do not count');
   for (const S of all) S.err = 0; window.__fb14NoBroad = true; const C5 = { target, pp: 1, p: 1 }; V4.broad(C5, { list: kept, doubt: 0 }, turn, 0, PD); delete window.__fb14NoBroad;
   ok(C5.pp === 1 && C5.broad && C5.broad.pp < 1, 'NOBROAD (the e2e\'s before run): logged (' + C5.broad.pp + '), the claim kept');
   const C6 = { target, pp: 0.9, p: 0.9 }; X.states = all.filter(S => !kept.includes(S)).slice(0, 4).concat(kept.slice(0, 1)); V4.broad(C6, { list: kept.slice(0, 1), doubt: 0 }, turn, 0, PD);

@@ -16,7 +16,7 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v138', 'page version v134');
+  ok(await E(`VERSION`) === 'v139', 'page version v134');
   // (1) the catch-up
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb14, V = X.v134; X.reset();
     T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever'));
@@ -97,6 +97,14 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
     FBP1.lockT = now - 5000; const newArm = fbp1ArmOk(P, now), newOn = fbp1On();
     [FBP1.outcome, FBP1.lockT, FBP1.states, FBP1.t0, FBP1.ended] = sv; return JSON.stringify({ oldArm, oldOn, newArm, newOn }); })()`));
   ok(r8.oldArm === true && r8.oldOn === false && r8.newArm === false && r8.newOn === true, '8. Phase 1 retry: a 2-minute-old read neither blocks the reader nor takes the confirm; a 5-second-old one does (' + JSON.stringify(r8) + ')');
+  // (9) v139: a Final Bowser 1-frame pick moves to a 2+ frame window within PP_WIDE_TOL (perfect press)
+  const r9 = JSON.parse(await E(`(() => { const mk = v => { const sh = new Float64Array(20); sh[5] = 0.80; sh[12] = v; sh[13] = v + 0.01; sh[14] = v; return sh; };
+    const pk = { ok: true, target: 105, run: { start: 105, end: 105, length: 1 } };
+    const A = ppWiden(pk, mk(0.77), 100, 119, 100, 19, 't'), B = ppWiden(pk, mk(0.70), 100, 119, 100, 19, 't'), C = ppWiden({ ok: true, target: 105, run: { start: 104, end: 106, length: 3 } }, mk(0.77), 100, 119, 100, 19, 't');
+    return JSON.stringify({ A: [A.target, A.run.length], B: [B.target, B.run.length], C: C.target, tol: PP_WIDE_TOL }); })()`));
+  ok(r9.A[0] === 113 && r9.A[1] === 3 && r9.B[0] === 105 && r9.C === 105, '9. 1-frame 80% beside a 3-frame 77-78% window: moves to it (' + r9.A + '); beside 70-71%: stays (' + r9.B + '); a 3-frame pick is left alone');
+  const src9 = await E(`[String(zwChoose).includes("ppWiden(pk, share, a, b, from, W, 'fb14')"), String(fb2PlanT7).includes('ppWiden('), String(fbp1Plan).includes('ppWiden(')].join()`);
+  ok(src9 === 'true,true,true', '9. T1-T4, the T7 / T8 Power Bounce and Phase 1 widen their 1-frame picks');
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();

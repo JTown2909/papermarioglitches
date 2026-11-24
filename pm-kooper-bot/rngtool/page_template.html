@@ -1459,6 +1459,19 @@ function ppPick(share, share4, a, b, from, W, sc, goal, later, solid) {      // 
   let next = null; for (let c = pick.run.end + 1; c <= from + W + later; c++) if (ok(c)) { const r = runOf(c); if (r.length > pick.run.length && (!next || r.length > next.length)) next = { start: r.start, length: r.length, sc: +sc(Math.floor((r.start + r.end) / 2)).toFixed(3) }; c = r.end; }
   return Object.assign(pick, { next, sc0: +s0.toFixed(3), scPick: +sc(pick.target).toFixed(3) });
 }
+/* v139 (the runner, after three Final Bowser misses within a frame of 1-frame plans - 17:15 T4, 17:23 T4, 17:33 T7 - "aim for wider
+ * windows in situations where it's a 1 frame"): a Final Bowser pick on a 1-frame window moves to the likeliest frame of a 2+ frame
+ * window (perfect press: share >= 0.5 on a neighbour too) when that frame's perfect-press chance is within PP_WIDE_TOL of the pick's */
+const PP_WIDE_TOL = 0.05;
+function ppWiden(pk, share, a, b, from, W, tag) {
+  if (!pk || !pk.ok || !pk.run || pk.run.length !== 1) return pk;
+  const at = c => (c >= a && c <= b ? share[c - a] || 0 : 0), p0 = at(pk.target); let best = null;
+  for (let c = from; c <= from + W; c++) { if (at(c) < 0.5) continue; let s0 = c, e0 = c; while (s0 - 1 >= a && at(s0 - 1) >= 0.5) s0--; while (e0 + 1 <= b && at(e0 + 1) >= 0.5) e0++; const L = e0 - s0 + 1;
+    if (L < 2 || at(c) < p0 - PP_WIDE_TOL - 1e-12) continue; if (!best || at(c) > best.p + 1e-12 || (Math.abs(at(c) - best.p) <= 1e-12 && L > best.run.length)) best = { c, p: at(c), run: { start: s0, end: e0, length: L } }; }
+  if (!best) return pk;
+  if (typeof slog === 'function') slog('widerWindow', { prof: tag, from: pk.target, pp: +p0.toFixed(3), to: best.c, ppTo: +best.p.toFixed(3), run: best.run.length });
+  return Object.assign({}, pk, { target: best.c, run: best.run, widened: { target: pk.target, pp: +p0.toFixed(3) } });
+}
 function ppPick0(share, share4, a, b, from, W, sc, goal) {
   const at = (sh, c) => (c >= a && c <= b ? sh[c - a] || 0 : 0);
   let best = 0; for (let c = from; c <= from + W; c++) best = Math.max(best, at(share, c));
@@ -1523,6 +1536,7 @@ function zwChoose(list, from, W, PD, prof, adj, goal, lim) {     // lim (v85): {
         pk = { target: c4, ok: true, run: run(c => at(share, c) >= 0.5), run4: run(c => at(share4, c) >= 0.5), four: true }; }
       // else the goal's own pick (a 2+ frame all-4 run, else the widest 3+ window)
     }
+    if (prof.id === 'fb14' && !share4) pk = ppWiden(pk, share, a, b, from, W, 'fb14');     // v139
     target = pk.target; w = pk.run;
     if (honest(share[target - a] || 0, 'b3') < num('zwedge')) none = 'edge';
   } else {
@@ -1972,7 +1986,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v138';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v139';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
