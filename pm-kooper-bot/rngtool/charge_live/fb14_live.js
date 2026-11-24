@@ -77,7 +77,9 @@ function fbRi(s, mx) {
   do { s = fbAdv(s); v = Math.floor(s / d); } while (v > m);
   FBV = mx === 1 ? (v >= 501 ? 1 : 0) : mx === 100 ? Math.floor(v / 10) : v; return s;
 }
-const fbBolts = (f, ph) => { const m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220; return (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118 ? 1 : 0) + (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178 ? 1 : 0); };
+// v142 (e2e f6000002 T2: the T1 menu's frames before the Charge are negative; JS % kept them negative, so no bolt there, a draw short
+// at the bolt on -56: the true coin history read as inconsistent, x 1e-3, a look-alike aura 290x ahead planned T2 into a hit)
+const fbBolts = (f, ph) => { let m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220; if (m1 < 0) m1 += 130; if (m2 < 0) m2 += 220; return (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118 ? 1 : 0) + (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178 ? 1 : 0); };
 /* ---- one state: { s, nc, f (the next logic frame to run), c (aura counts by f mod 20), ph (lightning phases, absolute,
  * 0 <= ph), l (console lag: logic frame = clock frame - l), w, resp (ray respawns, a 64-frame ring), ev (script events,
  * sorted by frame), wv (the frame of Bowser's AI when it chose the wave), prev (Bowser's last attack), out (per turn:
@@ -107,7 +109,7 @@ function fbStep(S) {
   // v87: the seed and coin on the frame after this Charge's rays (its M + 61), kept for a lock that lands after the state
   // has run past them (a late T2 lock: v86 skipped every carried state then, "matched 0 of 8000")
   if (S.ca && S.ca.s61 == null && f === S.ca.f61) { S.ca.s61 = s >>> 0; S.ca.nc61 = S.nc; }
-  const m1 = (f + S.ph[0]) % 130, m2 = (f + S.ph[1]) % 220;
+  let m1 = (f + S.ph[0]) % 130, m2 = (f + S.ph[1]) % 220; if (m1 < 0) m1 += 130; if (m2 < 0) m2 += 220;     // (v142: negative frames)
   if (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118) { s = fbRi(s, 359); if (m1 === 113) { S.b3 = S.b2; S.b2 = S.b1; S.b1 = S.b0; S.b0 = f * 4096 + 5 * 512 + FBV; } }     // v128: the front-right bolt's value too (fbbolt_live.js)
   if (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178) { s = fbRi(s, 359); { const e = f * 4096 + (m2 === 18 ? 1 : m2 === 78 ? 2 : m2 === 88 ? 3 : 4) * 512 + FBV; S.b3 = S.b2; S.b2 = S.b1; S.b1 = S.b0; S.b0 = e; } }     // v127: the last 4 sky bolts' values (fbbolt_live.js; plain fields: a typed array per state slowed the Charge reads' state builds)
   while (S.ev.length && S.ev[0].f <= f) {
@@ -1227,7 +1229,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   // v101 (diagnostic, the e2e's truth trace only): the true states' own share around the planned frame (v102: after the anchor,
   // the frame the beeps aim at; pp the plan's claim there)
   if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)), TlS = Tl.filter(fb14IsTrueS), nS = TlS.length, allS = FB14.states.filter(fb14IsTrueS), nAll = allS.length; if (allS.length) FB14.tRef = fbClone(allS[0]); else if (FB14.tRef) fb14TruthDiv(h); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
-    slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, nS, nAll, topK: fb14TruthTop(Wg.list), topA: fb14TruthTop(FB14.states), why: nS ? undefined : fb14TruthWhy(h), shS: nS ? Array.from(fb14Share(TlS, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2)) : undefined, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0, nS: 0, nAll, topA: fb14TruthTop(FB14.states), why: fb14TruthWhy(h) }); }
+    slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, nS, nAll, topK: fb14TruthTop(Wg.list), topA: fb14TruthTop(FB14.states), why: nS ? undefined : fb14TruthWhy(h), shS: nS ? Array.from(fb14ShareSync(TlS, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2)) : undefined, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0, nS: 0, nAll, topA: fb14TruthTop(FB14.states), why: fb14TruthWhy(h) }); }
   if (coinWarn && !C.none && C.pp < fb14Blind(turn) + FB14_COINWARN_GAIN) C.none = 'coin';
   if (C.none === 'coin') { const pl = { none: 'coin', turn, best: C.pp, doubt: +Wg.doubt.toFixed(3), coinWarn: true }; FB14.plan = pl; if (cAt != null) return pl;
     st.msg = 'No edge (the coin disagrees): this turn\'s Charge agreed with the carried seed, but the coin since does not (' + Math.round(100 * Wg.doubt) + '% that the states are off). The best frame would be ' + Math.round(100 * (C.pp || 0)) + '%, no better than blind. ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'coin', best: +(C.pp || 0).toFixed(3), doubt: +Wg.doubt.toFixed(3) }); cancelBeeps(); fb14Show(); render(); return true; }

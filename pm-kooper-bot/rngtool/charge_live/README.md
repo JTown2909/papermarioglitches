@@ -1,3 +1,38 @@
+# Time Out Timer v142: lightning bolts on the frames before T1's Charge (Nov 24)
+
+- **e2e f6000002 T2 (v141): planned at 0.998, Bowser hit.** The harness pressed the planned frame exactly (page 1118 = global 1226),
+  and Bowser also hit one frame either side. PLANCHECK replays: 2 of T2's 7 plans hit (1118 and 1687). The game's AI there draws
+  80 -> 73 and 60 -> 45 (fire), and the dodge test on + 68 rolls 89. The page's exactly-true state (replayed offline, fb14TruthSim)
+  gives the same fire and the same 89, so the model's prediction was right. The plan just held that state at 0.07% of the weight.
+  (The live trace's shS said the true states missed there; it came from the worker's share cache, which returned the plan's
+  shares; shS = sh in every row; it now calls fb14ShareSync.)
+- **Why:** both states explain every coin shine the same (lw equal); the true one's prior was 290x lower from T1's lock on.
+  The T1 lock walks the coin back from the rays (fbBackShinesAll) and found the true history inconsistent (x 1e-3): coins -3,
+  -27, -51, then no 24 or 48 gap fit at -75. The game draws a coin there (49, < 70: a 24 gap). The walk was one draw short:
+  fbBolts took (f + ph) % 130 / % 220 on T1's menu frames, which are negative (clock 0 = T1's Mario confirm), and JS's % keeps
+  them negative, so the bolt on -56 was never counted. fbBolts, fbStep's own bolt test and fb2nb now wrap negative frames.
+- **Effect on the same capture (offline):** the true T1 fit rises from rank 1867 (weight 0.05% of the best) to rank 112 (27%),
+  and T2's plans move onto it: its 7 plan frames all miss in the game from the saved T2 menu (v141's: 5 of 7).
+  This applies to every T1 lock (the walk always runs over negative frames). Whether it also cuts the T1 hits is being measured.
+- e2e on v141 after the v141 notes: e5000001-3, f6000003 4/4 clean (f6000003's T1 "no edge": best 0.38 under blind, blind press,
+  missed); f6000001 T1 hit, then T2-T4 clean; f6000002 T2 hit (above), then T3-T4 clean.
+- Unit tests on v142: test_carry_guard, test_carry_page, test_fb14_chain / model / ai / plan / v86 / v87 / v100-v105,
+  test_fb2_v97, test_console_v96 / 1112, test_v126-v130, test_v132-v134, test_v140 pass. Re-run alone on an idle machine:
+  test_v131 passes; test_fb14_v92 fails only check 4, the narrowed T2 read taking 2594-2749 ms against its 2500 ms limit.
+  The committed v141 build takes 2578-2715 ms on the same machine, so the limit is too tight for this container rather than
+  v142 slowing it down (the bolt fix adds two compares per step).
+- **e2e on v142 (the runner's loadout, 10 HP, guard), compared with v139-v141:**
+  f6000002 4/4 clean (v141: T2 hit). c3000004 4/4 clean (v139/v140: one hit, revived). b2000002 T1-T3 clean, T4 hit
+  pressed blind (v139/v140: one hit, then the wave). f6000001 T1 hit, then T2-T3 clean (same as v141). a1000002 T1-T2 clean,
+  T3 and T4 pressed blind and hit (v139/v140: one hit, then the wave). d4000001 T1 hit, then T2 the wave (v139/v140: T1 hit,
+  T2-T4 missed).
+- **d4000001 T2 is not a v142 regression.** The truth trace shows the true state out of the 2 kept states at every T2 plan
+  in v139, v140 and v142 alike (nS 0, trueAll 0). The earlier builds' dodges were lucky picks among wrong look-alikes; v142's
+  slightly different weights picked another frame (page 1366 against 1358), and Bowser hit it.
+- **The blind turns (a1000002 T3/T4, b2000002 T4) follow item turns.** After the harness's jelly turn, the relock reaches
+  doubt 0.90 against the 0.5 limit ("no edge") and the carry is dropped, so the page presses blind. This happened before v142
+  too; it's next on the list.
+
 # Time Out Timer v141: a carry the coin rules out a little later locks fresh instead of pressing blind (Nov 24)
 
 - **Corrected tally (v139/v140 runs, the runner's loadout).** Earlier I reported 13/14 clean; the reports say otherwise.

@@ -22,7 +22,7 @@ const spec = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
     if (spec.prevM != null) { X.FB14.on = true; }
     const rr = await T.chgReplay(cap, { fb14: true, t0: T0 }); if (rr.state !== 'locked') return { lock: rr.state };
     const { fbRun, fbClone, fbRi } = X; const fbRate = () => X.FB14.rate; const AIA = { cn: 332, nothing: 13 };
-    const fbBolts = (f, ph) => { const m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220; return (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118 ? 1 : 0) + (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178 ? 1 : 0); };
+    const fbBolts = (f, ph) => { let m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220; if (m1 < 0) m1 += 130; if (m2 < 0) m2 += 220; return (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118 ? 1 : 0) + (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178 ? 1 : 0); };
     const fbEv = (S, e) => { let i = S.ev.length; while (i > 0 && S.ev[i - 1].f > e.f) i--; S.ev.splice(i, 0, e); };
     const fbInputEv = (T, kind, F, turn) => { if (kind === 'chg') { fbEv(T, { k: 'chg', f: F + 13 }); fbEv(T, { k: 'chg', f: F + 16 }); } else if (kind === 'jelly') fbEv(T, { k: 'jelly', f: F + X.FB14_JELLY }); else if (kind === 'cn') { for (let i = 200; i < 210; i++) fbEv(T, { k: 'puff', f: F + i }); fbEv(T, { k: 'ai', f: F + AIA.cn, turn }); } else if (kind === 'nothing') fbEv(T, { k: 'ai', f: F + AIA.nothing, turn }); };
     const FB14 = X.FB14, ph = T.SLOG.filter(e => e.ev === 'fb14TrigPhase').pop(), pl = T.SLOG.filter(e => e.ev === 'fb14Placement').pop();

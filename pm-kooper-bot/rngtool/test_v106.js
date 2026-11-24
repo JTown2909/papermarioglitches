@@ -20,7 +20,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const { chromium } = require('playwright'), b = await chromium.launch(), errs = [];
   const open = async (init) => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.addInitScript(init || (() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', off: '-5', vlag: '50', fbc9: 'skip' })); } catch (e) {} })); await p.goto('file://' + PAGE); return p; };
   let p = await open();
-  ok(await p.evaluate(() => window.__tot.VERSION) === 'v141', 'page version v106');
+  ok(await p.evaluate(() => window.__tot.VERSION) === 'v142', 'page version v106');
 
   // ---- 2. beeps
   const bp = await p.evaluate(async () => {
