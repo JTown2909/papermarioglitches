@@ -8,7 +8,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v152', 'page version v130');
+  ok(await E(`VERSION`) === 'v153', 'page version v130');
   // (a) the source: the chance array takes dEff; the text: a floor of 0.35 on doubt 0 reads 65%
   ok(await E(`String(fb14Plan).includes('chance.push((1 - dEff) * v + dEff')`), 'T3 per-frame chance uses the floored doubt');
   const t = await E(`ppText({ p: 0.82, pp: 0.82, ppStates: 1, win: 6, doubt: 0, floor: 0.35 }, 'fb14')`);

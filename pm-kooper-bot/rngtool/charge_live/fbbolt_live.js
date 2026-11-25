@@ -127,6 +127,9 @@ function fbbFrame(t, present) {
 }
 // score a collection (the pictures on consecutive frames from the first), then weigh the states
 function fbbRead(C) {
+  // v153 (console 11-25 17:14 T4 after T3's hit: four bolt reads on the 12000 carried states, ~2.3 s on the page's thread, while the full
+  // read that replaces them ran): no bolt read while the plan waits for a full read (fb14HoldForFull)
+  if (C.k === 'fb14' && typeof FB14 !== 'undefined' && FB14.holdRefine && performance.now() - FB14.holdRefine.t < FB14_HOLD_MS) { slog('boltReadDrop', { kind: C.kind, why: 'full read pending' }); return; }
   const K = FBB_KINDS[C.kind], P = C.pics.slice().sort((a, b) => a.F - b.F); let n = 1; while (n < P.length && P[n].F === P[0].F + n) n++;
   if (n < 3) { slog('boltReadDrop', { kind: C.kind, why: 'frames', got: P.length, run: n }); return; }
   const obs = P.slice(0, n).map(p => { const m = p.m; for (let i = 0; i < m.length; i++) if (C.base[i]) m[i] = 0; return fbbObs(m, 640, 480, [0, 60, 640, 480]); });

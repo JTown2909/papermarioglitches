@@ -11,7 +11,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v152', 'page version v133');
+  ok(await E(`VERSION`) === 'v153', 'page version v133');
   // (1) the burst moves the route; the Strategies close rule
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, r = T.RT(), p1 = r.findIndex(s => s.fbp1), dn = r.findIndex(s => s.fbp1dn);
     T.setStep(p1); const before = routeStep; fbp1Trigger(); const after = routeStep; const min = closeMinMs();

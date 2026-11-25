@@ -14,7 +14,7 @@ const UP = '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10167305f887', LG = pa
   const b = await chromium.launch(); const errs = [];
   const open = async () => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.goto('file://' + PAGE); return p; };
   { const p = await open(); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-    ok(await E('VERSION') === 'v152', 'page version v146');
+    ok(await E('VERSION') === 'v153', 'page version v146');
     // (1)
     const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb2, out = {};
       const run = chg => { const i6 = T.RT().findIndex(s => s.turn === 'fb2_k' && !s.backup); T.setStep(i6); X.v114.FB2B.on = false; fb2Reset();

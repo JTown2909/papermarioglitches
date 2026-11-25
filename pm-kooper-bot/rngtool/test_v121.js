@@ -37,7 +37,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   ok(e['647.54'].p > 0.3 && e['647.54'].p < 0.5, '3. 647.54 (console 19:14 T3, "0%", Bowser missed): weighed over 647 / 648, not a flat 0% (' + JSON.stringify(e['647.54']) + ')');
   ok(!e['647.91'].works && e['647.91'].p < 0.3, '3. 647.91: fails, mostly 648 (' + JSON.stringify(e['647.91']) + ')');
   ok(/inside \(frame 647\)/.test(e.msg) && !/works 100%|Chance|You hit/.test(e.msg), '3. the T1 skip A (labels differ): its window, no odds rows (v128: the % box has them), never "works 100%" (' + e.msg.slice(0, 110) + ')');
-  ok(r.v === 'v152', 'page version v121');
+  ok(r.v === 'v153', 'page version v121');
   ok(r.left && r.afterFb === r.f1, '1. a 10 s hide on Final Bowser T1 (left the Hallway 0 hides ago) keeps the route on Final Bowser (step ' + r.afterFb + ', T1 lever ' + r.f1 + ')');
   ok(r.afterHw === r.hi, '1. a long hide on a Hallway step still steps back to Hallway T1 (a retry: step ' + r.afterHw + ')');
   ok(r.pad === 30, '2. JR_FLOOR_PAD 30 (the Jr. Troopa early-plan floor without the beeps\' lead)');

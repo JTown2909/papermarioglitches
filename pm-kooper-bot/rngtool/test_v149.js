@@ -7,7 +7,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E('VERSION') === 'v152', 'page version v149');
+  ok(await E('VERSION') === 'v153', 'page version v149');
   const r = JSON.parse(await E(`(() => { const S = fbNew({ s: 1, nc: 0, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1 }); const seq = [];
     for (let i = 0; i < 4; i++) { const left = fbShroomLeft(S); seq.push(left); if (left) fbShroomUse(S); }
     const C = fbClone(S); return JSON.stringify({ n: FB14_SHROOMS, seq, left: S.shroom, cloned: C.shroom, k4: FB14_KEY_S4, k: FB14_KEY_S }); })()`));

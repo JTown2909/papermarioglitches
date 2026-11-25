@@ -478,7 +478,7 @@ function fb14Lock(res) {
   if (window.__fb14dbg) { const T = window.__fb14truth; window.__fb14dbg.push({ turn, M, how, n: FB14.states.length, truth: T ? FB14.states.filter(S => S.s === T.s && (T.nc == null || S.nc === T.nc)).map(S => ({ c: Array.from(S.c).join(''), ph: S.ph, l: S.l, w: S.w, lw: S.lw })) : null }); }
   if (false) window.__fb14dbg.push({ turn, M, how, states: FB14.states.slice(0, 3000).map(S => ({ s: S.s >>> 0, nc: S.nc, f: S.f, l: S.l, c: Array.from(S.c).join(''), ph: S.ph, w: S.w, lw: S.lw, sh: S.sh })) });
   if (!FB14.states.length && kept0.length) { slog('fb14LockKeptFits', { turn, fits: kept0.length }); FB14.states = kept0; }
-  if (turn === 4) FB14.states = fb14WaveSplit(FB14.states);     // v87: the T4 wave's second particle order
+  if (turn === 4) FB14.states = fb14Cap(fb14WaveSplit(FB14.states));     // v87: the T4 wave's second particle order (v153: capped: 17:14's 21620 states took 3.4 s to catch up)
   // v91 (B, log a53781d5: the hit of an earlier attempt kept every later plan at "hit", no log line): a fresh lock after a
   // hit (the Life Shroom revive) is this fight's seed again; its turns are planned
   if (FB14.hit && FB14.hit !== 4) { slog('fb14HitCleared', { hit: FB14.hit, turn, how }); FB14.hit = null; FB14.hitT = null; FB14.hpw = FB14.hpw ? { seen10: FB14.hpw.seen10, tenRun: 0, blankRun: 0, ok: {}, done: Object.assign({}, FB14.hpw.done) } : null; FB14.hitLogged = null; }
@@ -626,6 +626,8 @@ function fb14WaveSplit(L) {
  * the T2 / T4 Charge is searched on the carried stream instead (charge_live.js chgSearch opts.cands, as T6): every carried
  * state at each Charge frame FB14_CHGD gives the seed before A's base-angle draw (14-22 distinct seeds in the runs). The
  * Charge's input is held meanwhile (fb14Held), so the states have not run past it when the narrowed lock lands. */
+// v153: a hit since the last fresh lock (the carry is not narrowed on, nor its stream searched: the full search, ~3 s, is sooner)
+const fb14AfterHitFull = () => typeof FB14 !== 'undefined' && FB14.hitT != null && FB14.hitT > (FB14.freshT || 0);
 function fb14ChgCands() {
   const pc = FB14.pendChg; if (!pc || !FB14.on || !FB14.states.length || typeof CHG === 'undefined') return null;
   // v148 (the runner: "we can't afford to wait 15-20 seconds"): after a hit with no fresh lock since, the carry is not narrowed on (the

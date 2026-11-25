@@ -1,3 +1,18 @@
+# Time Out Timer v153: T4 after a hit plans sooner (Nov 25)
+
+- Console 11-25 17:14 (v152, the runner: "no turn 4 lock. this should be solved by now. i got 17/17 previously"): T1 and T3 were hit
+  (revives), so T4 needed a full read: the stream window from T2's lock took 7.3 s, the lock landed 12.7 s after the Charge with 21620
+  states (the wave split, uncapped), their catch-up took 3.4 s, four bolt reads on the old carry ~2.3 s; the first plan 17.6 s, after
+  the runner's Do Nothing at 16.8 s. The 17 / 17 T4s had no earlier hit: a narrowed read on the carry, a plan in ~5 s.
+- After a hit with no fresh lock since (fb14AfterHitFull): no stream or weak window (the full search: ~3 s on console, T1 2.8 s); no
+  bolt read while the plan waits for the full read; T4's wave split capped (FB14_MAXH).
+- e2e, the exact published file (FADEB0=640, RUNNER=patient DL=25): c3000004 (forced T1 hit) T2 skipped the stream, held, planned 92%:
+  miss; b2000002 (forced T1 hit) T2 97%: miss, T3 78%: hit (the build's one Life Shroom was gone: down); d4000001 (no forced hit) T1,
+  T2 miss, T4 wave blocked. T3 of c3000004: the build's Jelly after a KO; of d4000001: Chromium "Target crashed". No page or worker
+  error in any log. (The e2e's beeps after a hit came 19-21 s after the Charge: its full search 4.7 s, the joint fit 6.5 s on the shared
+  CPU; on console the 17:14 log's full read + joint took ~4 s.)
+- `test_v153.js`.
+
 # Time Out Timer v152: the share worker had no Life Shroom helpers (v149-v151) (Nov 25)
 
 - Console 11-25 16:55 (v150): "fbShroomLeft is not defined" in the share worker (fbsWorkerError) right after T1's lock. v149 added

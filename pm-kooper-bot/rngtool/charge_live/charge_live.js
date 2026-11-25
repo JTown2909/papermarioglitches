@@ -626,6 +626,10 @@ if (window.__chgDebug) {
     // v131 (log 15:31: T1's window ran 117 s back to the last attempt's T4 lock, 17177 steps; the stream search took 9.2 s and the lock
     // came after Cloud Nine's message window): past the in-fight window (FBS_HI) the full search (~4 s) goes first
     if (SW && !CHG.replay && typeof FBS_HI === 'number' && (SW.hi || 0) > FBS_HI) { slog('fbStreamSkipped', { hi: SW.hi, why: 'past the in-fight window: the full search is sooner' }); SW = null; }
+    // v153 (console 11-25 17:14 T4 after T3's hit: the stream from T2's lock took 7.3 s, the full search ~3 s): after a hit with no fresh lock
+    // since, the stream is not searched (nor the weak window below)
+    const noStream = !CHG.replay && chgP().id === 'fb1' && typeof fb14AfterHitFull === 'function' && fb14AfterHitFull();
+    if (SW && noStream) { slog('fbStreamSkipped', { hi: SW.hi, why: 'after a hit: the full search is sooner' }); SW = null; }
     if (CHG.rec && cands) CHG.rec.cands = cands;
     if (CHG.rec && SW) CHG.rec.stream = { seed: (SW.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: SW.hi || FBS_HI };
     const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };
@@ -671,7 +675,7 @@ if (window.__chgDebug) {
       return res0;
     };
     // v118: no kept lock: the window after the last no-lock's best (fb14_live.js fbWeakNote), on the full lock ratio
-    const SWK = !SW && !cands && !E && chgP().id === 'fb1' && typeof fbWeakWin === 'function' ? (CHG.replay ? CHG.replay.weak : fbWeakWin()) : null;
+    const SWK = !SW && !cands && !E && !noStream && chgP().id === 'fb1' && typeof fbWeakWin === 'function' ? (CHG.replay ? CHG.replay.weak : fbWeakWin()) : null;
     if (CHG.rec && SWK) CHG.rec.weak = { seed: (SWK.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: SWK.hi || FBS_HI };
     if (SWK) {
       res = await streamTry(SWK, true);
