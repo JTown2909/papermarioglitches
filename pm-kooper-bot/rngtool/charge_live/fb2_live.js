@@ -250,6 +250,9 @@ function fb2Confirm(tObs) {
   slog('fb2Confirm', { c: +c.toFixed(2), planned: P ? P.k : null, err: P ? +(c - P.k).toFixed(2) : null });
   if (P && Math.abs(c - P.k) <= 5 && typeof fb14PressAdd === 'function') { const L = fb14PressAdd(c - P.k - (P.bias || 0)); slog('fb2PressBias', { n: L.length, bias: +fb2Bias().toFixed(2) }); const SP = st.plan && st.plan.prof === 'fb2' && st.plan.target === P.k ? st.plan : null, wk = typeof pressShow === 'function' ? pressShow(SP, c, 'Final Bowser T6, Do Nothing') : null; if (typeof leverPressNote === 'function') leverPressNote('Final Bowser T6, Do Nothing', c - P.k, 'fb14', wk); }
   FB2.pObs = c; FB2.pT = tObs; FB2.hpw = null; cancelBeeps(); if (st.plan && st.plan.prof === 'fb2') st.plan = null;
+  // v146 (console 11-24 20:56: T6's Charge did not lock, Bowser's Fire Breath took the Life Shroom, and the page never knew: the HP watch
+  // and the outcome hang on T7's states): without a lock T6's outcome is still read off the HP, on no states (a hit -> the backup ending)
+  if (!FB2.on && !FB2.t7) { FB2.t7 = { states: [], pLucky: 0, noLock: true }; slog('fb2NoLockWatch', { at: Math.round(tObs) }); }
   if (typeof isRoute === 'function' && isRoute() && RT()[routeStep] && RT()[routeStep].turn === 'fb2_k') { const i = RT().findIndex((x, j) => j > routeStep && x.turn === 'fb2_pb'); /* v114: the next one (T7 main / T8 backup) */ if (i >= 0) { slog('fb2StepByConfirm', { from: routeStep, to: i }); setStep(i); } }
   if (FB2.on) fb2SetP(c);
 }

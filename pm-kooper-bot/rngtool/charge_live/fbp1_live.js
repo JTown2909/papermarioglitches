@@ -21,7 +21,7 @@ CHG_PROF.fbp1 = Object.assign({}, CHG_PROF.fb1, { id: 'fbp1' });
 CHG_PRESS.fbp1 = () => 20000;      // nothing waits on the lock: re-reads for 20 s
 const FBP1_AI = 12;     // v133: Bowser's AI on Lakilester's Do Nothing confirm + 12 (battle 2303; v132's + 13 was phase 2's battle)
 const FBP1_GOAL = 5, FBP1_MAXS = 6000, FBP1_PLANS = 1500, FBP1_BUDGET = 60, FBP1_GUARD = 0.7, FBP1_PF_MS = 4, FBP1_TICK = 250;
-function fbp1Reset() { Object.assign(FBP1, { t: null, seed: null, outcome: null, score: null, ratio: null, states: null, t0: null, rate: null, lockT: null, pT: null, P: null, plan: null, pbT: null, doubt: 0, n0: 0, why: null, tickT: 0, pfI: 0, nPlans: 0, ended: false, allOut: false, kept: null, edgeLogged: null }); }
+function fbp1Reset() { Object.assign(FBP1, { t: null, seed: null, outcome: null, score: null, ratio: null, states: null, t0: null, rate: null, lockT: null, pT: null, P: null, plan: null, pbT: null, doubt: 0, n0: 0, why: null, tickT: 0, pfI: 0, nPlans: 0, ended: false, allOut: false, kept: null, edgeLogged: null, whyLogged: null, lastW: null }); }
 fbp1Reset();
 function fbp1T1I() { return RT().findIndex(x => x.fb14 === 1 && x.fb14role === 'charge'); }
 const fbp1StepI = k => RT().findIndex(x => x[k]);
@@ -40,7 +40,7 @@ function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its
   if (CHG.replay || chgP().id !== 'fbp1') return false;
   const I = CHG.info || {}, b = I.best || {}, trigT = R && R.trigT != null ? R.trigT : CHG.trig ? CHG.trig.t : performance.now();
   if (FBP1.pT != null && FBP1.pT < trigT) FBP1.pT = null;      // a confirm from an earlier attempt
-  Object.assign(FBP1, { ended: false, allOut: false, P: null, plan: null, pbT: null, kept: null, edgeLogged: null, nPlans: 0, seed: outcome === 'lock' ? b.seed || null : null, outcome, score: b.score != null ? b.score : null, ratio: b.ratio != null ? b.ratio : null, lockT: performance.now() });
+  Object.assign(FBP1, { ended: false, allOut: false, P: null, plan: null, pbT: null, kept: null, edgeLogged: null, whyLogged: null, lastW: null, nPlans: 0, seed: outcome === 'lock' ? b.seed || null : null, outcome, score: b.score != null ? b.score : null, ratio: b.ratio != null ? b.ratio : null, lockT: performance.now() });
   let n = 0; if (outcome === 'lock') { try { n = fbp1Build(R || CHG.res, trigT); } catch (e) { slog('fbP1BuildError', { msg: String(e && e.message || e).slice(0, 160) }); n = 0; } }
   slog('fbP1Read', { outcome, seed: FBP1.seed, score: FBP1.score, ratio: FBP1.ratio, alt: CHG.alt || 0, mario: I.mario, states: n, holdMs: FBP1_HOLD });
   if (CHG.rec && typeof chgRecEnd === 'function') chgRecEnd(outcome === 'lock' ? 'lock' : 'nolock');
@@ -170,18 +170,19 @@ const fbp1HasRow = (S, d0, d1) => !!(S._pb && d0 >= S._pb.lo && d1 <= S._pb.lo +
 function fbp1Plan(cScr) {
   const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1pb) return false;
   if (cScr == null && typeof seriesHold === 'function' && seriesHold('fbp1')) return true;
-  if (!fbp1On()) { st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (5 cap about 13%).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
-  if (FBP1.P == null) { st.msg = 'No edge: Lakilester\'s Do Nothing confirm was not read (its Strategies screen closing). Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
+  const why1 = w => { if (FBP1.whyLogged !== w) { FBP1.whyLogged = w; slog('fbP1NoPlan', Object.assign({ why: w, states: FBP1.states ? FBP1.states.length : null, ended: FBP1.ended, fresh: fbp1Fresh(), P: FBP1.P }, FBP1.lastW || {})); } };     // v146 (console 11-24 20:54: a lock, Lakilester read, no plan and no word why): each silent no-plan is logged once
+  if (!fbp1On()) { why1(FBP1.outcome === 'lock' ? 'states gone' : 'no lock'); st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (5 cap about 13%).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
+  if (FBP1.P == null) { why1('no Do Nothing confirm'); st.msg = 'No edge: Lakilester\'s Do Nothing confirm was not read (its Strategies screen closing). Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
   const now = performance.now(), rate = FBP1.rate, cNow = cScr != null ? cScr : fbp1Pic(now + num('vlag')), h = Math.floor(cNow) - 10;
-  fbp1Advance(h); const Wt = fbp1Weigh(h), L = Wt.list, dz = Wt.doubt;
-  if (!L.length || dz >= 0.5) { FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (5 cap about 13%).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
+  fbp1Advance(h); const Wt = fbp1Weigh(h), L = Wt.list, dz = Wt.doubt; FBP1.lastW = { h, kept: L.length, doubt: +dz.toFixed(3), taps: FBP1V.taps.map(x => +fbp1Pic(x).toFixed(1)).filter(x => x > 0 && x < h).slice(-8) };
+  if (!L.length || dz >= 0.5) { why1('coin'); FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (5 cap about 13%).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
   const G = FBP1_GOAL, W = Math.max(0, Math.round(Math.max(1, num('zwwin')) * 1000 / rate));
   let from = Math.ceil(cNow + num('lead') * 1000 / rate + 1);
   if (cScr == null) for (let i = 0; i < 300 && fbp1PressT(from) < earliestPress(now); i++) from++;
   const SP = L.length > FBP1_PLANS ? L.slice().sort((x, y) => y.w * y.lw - x.w * x.lw).slice(0, FBP1_PLANS) : L, tot = SP.reduce((a, S) => a + S.w * S.lw, 0);
   if (cScr == null) { const tb = performance.now(); let left = 0;
     for (const S of SP) { if (fbp1HasRow(S, from - 1 - S.l, from + W + 1 - S.l)) continue; if (performance.now() - tb > FBP1_BUDGET) { left++; continue; } fbp1RowC(S, from - 1 - S.l, from + W + 1 - S.l); }
-    if (left) { if (st.plan && st.plan.prof === 'fbp1') { st.plan = null; cancelBeeps(); } FBP1.plan = { none: 'working' }; st.msg = 'Phase 1 Power Bounce: working out the bounces for ' + SP.length + ' seeds (' + Math.round(100 * (1 - left / SP.length)) + '%). Stay on the target screen.'; render(); return true; } }
+    if (left) { why1('working'); if (st.plan && st.plan.prof === 'fbp1') { st.plan = null; cancelBeeps(); } FBP1.plan = { none: 'working' }; st.msg = 'Phase 1 Power Bounce: working out the bounces for ' + SP.length + ' seeds (' + Math.round(100 * (1 - left / SP.length)) + '%). Stay on the target screen.'; render(); return true; } }
   const s5 = new Array(W + 1).fill(0), e5 = new Array(W + 3).fill(0), e4 = new Array(W + 3).fill(0);
   for (const S of SP) { const b = fbp1RowC(S, from - 1 - S.l, from + W + 1 - S.l); if (!b) continue; const w = S.w * S.lw / tot;
     for (let k = 0; k <= W; k++) for (const [d, q] of PRESS_ERR) s5[k] += w * q * (b[k + 1 + d] >= G ? 1 : 0);

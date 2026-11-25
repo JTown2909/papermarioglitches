@@ -1,3 +1,22 @@
+# Time Out Timer v146: the runner's v145 attempts (Nov 24 20:54 / 20:56 / 21:00) (Nov 25)
+
+- **Phase 2 T1 with the fade (first live use):** 20:56 locked with fb14FadeUse 66% inside the fade's window (doubt 0.40, a 67% plan,
+  pressed 1.2 frames late inside its window: Bowser hit); 21:00 locked at doubt 0.008 (72%) and Bowser missed.
+- **v145's hit-fresh step threw on a narrowed read** (20:56 T2 after T1's hit: the narrowed read matched 446 of 656 carried states and
+  buildFresh ran on its light fits, which have no fit list: chargeError, the lock half done; T2 then beeped 87% on the carry alone and
+  Bowser hit). Now a carried narrowed read after a hit returns 'light' (logged `fb14HitFreshLight`): the refine fetches the whole fit
+  list and locks again, with the fresh fits.
+- **T6 without a lock** (20:56: the narrowed and full T6 reads disagreed, no lock; Bowser's Fire Breath took the Life Shroom and the page
+  never knew: the HP watch and fb2Outcome need T7's states). The Do Nothing confirm without a lock now sets a stateless T7 (logged
+  `fb2NoLockWatch`): the HP watch reads the hit and the route goes to the backup ending, or reads a dodge.
+- **Phase 1 (20:54): a lock (95ae4254), Lakilester's Do Nothing read, no Power Bounce plan, no word why.** Replayed from the capture:
+  the coin fits none of the kept states (doubt 0.85 by the target screen, 0.997 after its shines; the best states miss 3-6 coin
+  facts). The Phase 1 model is emulator-checked only (Body Slam guarded leaves 3 HP, as the clip shows); this is its first console
+  check and it fails: open. Each silent no-plan is now logged once (`fbP1NoPlan`: why, the doubt, the shines it weighed).
+- The % box's numbers already carry the lock's doubt (the plan's own odds): 20:56 T2's 87% was the carry's (doubt 0), wrong because the
+  hit-fresh step had thrown. 21:00 T4: a fresh lock after T3's hit, a 1-frame window at 55%; Bowser's wave hit.
+- Tests: `test_v146.js` (T6 no-lock hit -> backup, held -> dodge; the 20:54 Phase 1 replay logs 'coin'; the narrowed-read return).
+
 # Time Out Timer v145: a hit on T1 rebuilds the lock fresh as well (Nov 25)
 
 - **d4000001 (v143): after T1's hit, T2 carried 241 states and none was true.** The lock counted as "carried", so its fresh fits

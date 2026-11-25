@@ -17,7 +17,7 @@ const EDGE = 23 + 56;     // index of the first fade-in picture
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v145', 'page version v144');
+  ok(await E(`VERSION`) === 'v146', 'page version v144');
   // (1)
   const MEAS = [[71, 11], [62, 212], [61, 211], [82, 192], [44, 194], [60, 210], [70, 0]];
   const r1 = JSON.parse(await E(`(() => { const P = fb2Patterns(); let n = 0, bad = 0; const all = new Set();

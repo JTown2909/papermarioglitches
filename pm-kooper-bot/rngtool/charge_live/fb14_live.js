@@ -428,6 +428,9 @@ function fb14Lock(res) {
   // v145 (e2e d4000001 T2 after T1's hit: all 241 carried states drew T2's rays, "carried", but none followed the game: the T1 lock
   // had kept only look-alikes, and the hit said so): after a hit, a carried lock also takes this Charge's fresh fits, together
   // FB14_HIT_FRESH of the weight; the coin from here on picks between them
+  // v146 (console 11-24 20:56 T2 after T1's hit: the narrowed read matched the carry and buildFresh threw on its light fits, no
+  // H.hy: chargeError, the lock half done): a narrowed read goes on to the refine (the whole fit list), which locks again here
+  if (keep && how === 'carried' && afterHit && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14HitFreshLight', { turn, M, carried: keep.length }); return 'light'; }
   if (keep && how === 'carried' && afterHit) { const fr = buildFresh(); if (fr.length) { const sc = keep.reduce((x, S) => x + S.w, 0) || 1, sf = fr.reduce((x, S) => x + S.w, 0) || 1;
     fr.forEach(S => { S.w *= FB14_HIT_FRESH / (1 - FB14_HIT_FRESH) * sc / sf; }); slog('fb14HitFresh', { turn, M, carried: keep.length, fresh: fr.length }); keep = keep.concat(fr); fresh = fr; if (window.__fb14seeds) FB14.tLockCtx = { H, M, P, J: !!J }; } }
   const sum = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum; S.lw = 1; S.err = 0; });
