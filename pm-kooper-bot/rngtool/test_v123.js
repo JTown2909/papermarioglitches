@@ -18,7 +18,7 @@ const REC = { fb14: [1.93, 1, -0.26, 1.83, 1.7, 0.83, 1.72, 1.42], jr: [-1, -0.1
     const out = { v: E('VERSION'), b: {} }; for (const k of ['fb14', 'jr', 'hw', 'dup']) out.b[k] = +T.leverBias(k).toFixed(2);
     out.five = E('leverShrink([1, 1, 1, 1, 1])'); out.noisy = E('leverShrink([2, -2, 3, -3, 1, 0.5])'); out.steady = E('leverShrink([1, 1.1, 0.9, 1, 1, 1])'); return out; });
   console.log(JSON.stringify(r));
-  ok(r.v === 'v142', 'page version v123');
+  ok(r.v === 'v145', 'page version v123');
   ok(r.b.dup === 1.5 && r.b.fb14 === -1.22 && r.b.jr === 0.58 && r.b.hw === -0.27, 'the runner\'s records: Duplighosts +1.50 (was +1.05), Final Bowser -1.22 (was -0.85), Jr. Troopa +0.58 (was +0.45), Hallway -0.27 (unchanged: a small, noisy offset) ' + JSON.stringify(r.b));
   ok(Math.abs(r.five - 5 / 9) < 1e-9, 'under 6 presses the old shrink (n / (n + 4)): ' + r.five);
   ok(Math.abs(r.noisy - 0.6) < 1e-9, 'a noisy record keeps the old shrink: ' + r.noisy);

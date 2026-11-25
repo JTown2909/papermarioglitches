@@ -120,7 +120,7 @@ def fit(L):
     bolt = {r['f']: sum(1 for n, m in r['d'] if n == 'bolt') for r in rows}
     ph = None
     for p2 in range(220):
-        for p1 in range(p2 % 5, 130, 5):
+        for p1 in range(p2 % 10, 130, 10):
             if all(nbolts(f, p1, p2) == b for f, b in bolt.items()): ph = (p1, p2); break
         if ph: break
     nc = next(r['f'] for r in rows if any(n == 'coin' for n, m in r['d']))

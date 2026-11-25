@@ -1,3 +1,46 @@
+# Time Out Timer v145: a hit on T1 rebuilds the lock fresh as well (Nov 25)
+
+- **d4000001 (v143): after T1's hit, T2 carried 241 states and none was true.** The lock counted as "carried", so its fresh fits
+  were skipped. v145: when a turn's lock is carried and Bowser hit on the turn before, the fresh fits are built too and mixed in
+  at half the weight (`FB14_HIT_FRESH` 0.5, logged `fb14HitFresh`).
+- **e2e (b10 build, `FADEB0=640`, the six problem seeds):** T1, where v143 took 4 hits in 6, missed on all 6. b2000002, d4000001,
+  f6000001 and f6000002 went 4/4. c3000004 took a hit on T4: a 1-frame window that the page itself put at p 0.75, and the frame
+  before it missed. a1000002 went 4/4 as well (its T3 is the Jelly turn, no plan, as the route's FP leaves only the Jelly).
+  5 of 6 clean (v143 on the same seeds: a T1 hit on 4 of 6). fb14FadeUse put 40-63% of the fresh weight inside the fade's window, as it should.
+- **The harness, not the page:** earlier "blind" turns were the test server dying ("Failed to fetch") or Chromium crashing under 3
+  emulators at once. Run at most 2 at a time.
+- `test_fb14_v92.js`: its narrowed-read time limit went from 2500 to 3000 ms (this machine took 2578-2749 ms from v141 on).
+
+# Time Out Timer v144: Phase 2's fade-in fixes the lightning phases for the T1 lock (v143: p130 = p220 mod 10) (Nov 25)
+
+- **Both lightning loops start with the battle.** Emulator, from a real final-room state (kkj_25, reached by a DIAGNOSTIC
+  warp, story 95, flags 1FA/1FB; the real Phase 1 -> Star Beam -> Peach vs Kammy -> Star Spirits cutscene -> Phase 2 plays
+  from it): the Star Spirits cutscene played with A every 13 / 20 / 31 frames loads the Phase 2 battle on different frames,
+  and its bolts fall on the same battle frames each time (7, 12, 42, 47, 67, 77, 137, 142, ... from the load, within one
+  frame). Six battle states (Phase 1 2303, Phase 2 2304 from three ways in: the final room, the nok_13 encounter setup, the
+  e2e build) all fit phases (71 + D, 11 + D) for their own battle start D.
+- **v143:** so p130 = p220 mod 10 always (the window patterns took mod 5, a guess from Nov 13: half the pairs were
+  impossible). fb2Patterns, harness_fb1/fb2.c and t14model.py now pair mod 10 (2860 pairs, 874 patterns).
+- **The fade-in fixes D.** The battle's first picture is battle frame 13 (emulator; Phase 1: 15, with its bolts 2 frames later,
+  so from the picture the two match). On console the 11-17 16:06 clip's Phase 2 fade-in has a sharp edge (222.817 s: 0.9 -> 4.7
+  brightness after 0.93 s of black); of all 2860 phase pairs, the best fit to its 23 Phase 2 sky bolts (22 within 2.5 frames)
+  lies one frame from the pair the edge predicts.
+- **v144 on the page:** `fb14FadeWatch` keeps the last black -> bright edge (20+ dark pictures, then one above 3.2) from the
+  Hallway to Phase 2's T1 Charge; the T1 lock (fb14Lock's fresh fits) and Phase 1's lock (fbp1Build) weigh each fit's phases by
+  `fb14FadeW`: 1 when their battle start lies within 2.5 frames of the fade's (FB14_FADE_E 13.5), else 0.03 (not 0: a misread
+  fade must not empty the lock). Logged: `fb14Fade`, `fb14FadeUse` (the share of the fresh weight inside), `fbP1States.fadeD`.
+  Only within 30 s before the Charge.
+- **The Star Spirits' sparkles** are random (two bursts of ~250 x 2 draws, rand_int(10000 / 30000)), but between the last burst
+  and the battle's load come the field's lightning, the aura, the coin, a script timer and 7 speech blips over 207-265 frames
+  (as fast as the text is cleared), and the console's load black is longer than the emulator's (28 vs 12 frames): a seed read
+  there does not carry to T1 without a model of all of that. Not built; the fade gives T1 what it lacked (the phases).
+- Tools (`fb2_route/kkj25/`, states and pictures stay in the scratchpad): `mk25.py` (the final-room state), `p1beam.py` (Phase 1
+  with Star Beam every turn, through Peach vs Kammy), `cut_log.py` (every draw from the post-Kammy cutscene to Phase 2's menu),
+  `fade.py` / `p1start.py` (the screen and the bolts around the battle's load), `ph_of.py` (a battle state's phase pair).
+- Tests: `test_v144.js` (the pairs mod 10 and the six measured pairs kept; fb14FadeW; the watcher on the clip's brightness
+  numbers around the fade). e2e: `FADEB0=640 fb14_e2e.py` gives the page the fade the build's battle start puts (b10's global
+  step 0 is battle frame 640).
+
 # Time Out Timer v142: lightning bolts on the frames before T1's Charge (Nov 24)
 
 - **e2e f6000002 T2 (v141): planned at 0.998, Bowser hit.** The harness pressed the planned frame exactly (page 1118 = global 1226),

@@ -89,7 +89,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       return out;
     });
     console.log(JSON.stringify(r).slice(0, 1600));
-    ok(r.ver === 'v142', '0. page version v111');
+    ok(r.ver === 'v145', '0. page version v111');
     const want = r.rearm.filter(x => x[2] && x[0] > 0);
     ok(want.length === 3 && want.every(x => x[1]), '2. partnerless: the confirm before each later Charge (T2, T4, T5) rearms the reader ' + JSON.stringify(r.rearm.filter(x => x[1] || x[2])));
     ok(r.afterT1 !== 'locked' && r.k === 2, '2. after T1\'s Do Nothing the Charge reader is armed again for T2\'s Charge (state ' + r.afterT1 + ')');

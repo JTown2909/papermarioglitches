@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
   printf("ratio %.2f\n", J[0].sc / J[1].sc);
   { /* structured fit of the best: every lightning pattern x q x second coin */
     static const int P130[4] = {78, 83, 113, 118}, P220[4] = {18, 78, 88, 178}; int np = 0;
-    for (int p2 = 0; p2 < 220; p2++) for (int p1 = p2 % 5; p1 < 130; p1 += 5) {
+    for (int p2 = 0; p2 < 220; p2++) for (int p1 = p2 % 10; p1 < 130; p1 += 10) {
       uint8_t row[NMAX]; for (int n = 0; n < N; n++) { int c = 0; for (int i = 0; i < 4; i++) { c += (n + 13 + p1) % 130 == P130[i]; c += (n + 13 + p2) % 220 == P220[i]; } row[n] = (uint8_t)c; }
       int dup = 0; for (int k = 0; k < np && !dup; k++) if (!memcmp(PAT[k], row, N)) dup = 1;
       if (!dup && np < NPATMAX) memcpy(PAT[np++], row, N); }

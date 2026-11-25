@@ -80,6 +80,38 @@ function fbRi(s, mx) {
 // v142 (e2e f6000002 T2: the T1 menu's frames before the Charge are negative; JS % kept them negative, so no bolt there, a draw short
 // at the bolt on -56: the true coin history read as inconsistent, x 1e-3, a look-alike aura 290x ahead planned T2 into a hit)
 const fbBolts = (f, ph) => { let m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220; if (m1 < 0) m1 += 130; if (m2 < 0) m2 += 220; return (m1 === 78 || m1 === 83 || m1 === 113 || m1 === 118 ? 1 : 0) + (m2 === 18 || m2 === 78 || m2 === 88 || m2 === 178 ? 1 : 0); };
+/* v144: Phase 2's fade-in from black fixes the stage lightning's phases. Both loops start with the battle: in the emulator the
+ * bolts fall on battle frames 7, 12, 42, 47, 67, 77, 137, ... counted from the battle's load whatever the cutscene's timing (three
+ * runs of the Star Spirits cutscene with different text presses), and six battle states (Phase 1 and 2, three ways in) all sit on
+ * phases (71 + D, 11 + D) for one battle start D (so p130 = p220 mod 10, v143). The battle's first picture is battle frame 13
+ * (emulator); on console the 11-17 16:06 clip's fade-in edge put its 23 Phase 2 sky bolts on the best of all 2860 phase pairs
+ * within one frame. So the T1 lock weighs each fit's phases by how far their battle start lies from the fade's (FB14_FADE_TOL
+ * frames; outside it FB14_FADE_OUT, not 0: a fade misread must not empty the lock). */
+const FB14_HIT_FRESH = 0.5, FB14_FADE_E = 13.5, FB14_FADE_TOL = 2.5, FB14_FADE_OUT = 0.03, FB14_FADE_DARK = 2.5, FB14_FADE_UP = 3.2, FB14_FADE_MIN = 20, FB14_FADE_AGE = 30000;
+var FBFADE = { t: null, n: 0 };
+function fb14FadeWatch(t) {
+  // watched from the Hallway (the route moves to Phase 1 only at its Charge, after the battle's fade-in) to Phase 2's T1 Charge
+  if (!(typeof isRoute === 'function' && isRoute())) { FBFADE.n = 0; return; }
+  if (FBFADE.rt !== RT()) { const R = RT(); FBFADE.rt = R; FBFADE.lo = R.findIndex(x => x.turn === 'hw_spiny'); FBFADE.hi = R.findIndex(x => x.fb14 === 1 && x.fb14role === 'charge'); if (FBFADE.lo < 0) FBFADE.lo = R.findIndex(x => x.fbp1); }
+  if (FBFADE.hi < 0 || FBFADE.lo < 0 || routeStep < FBFADE.lo || routeStep > FBFADE.hi) { FBFADE.n = 0; return; }
+  const g = sample(chgGame(), 32, 24); let m = 0; for (let i = 0; i < g.length; i += 4) m += 0.299 * g[i] + 0.587 * g[i + 1] + 0.114 * g[i + 2]; m /= 768;
+  if (m < FB14_FADE_DARK) { FBFADE.n++; return; }
+  if (m > FB14_FADE_UP && FBFADE.n >= FB14_FADE_MIN) { FBFADE.t = t; slog('fb14Fade', { at: Math.round(t), dark: FBFADE.n, m: +m.toFixed(1) }); }
+  FBFADE.n = 0;
+}
+// the battle start the fade gives (battle frame = logic frame + D), for a state of lag l; null when no fade fits this T1
+// (Phase 1 too: its battle's first picture is battle frame 15 and its bolts come 2 frames later, so from the fade-in they match)
+function fb14FadeD(l, p1) {
+  const F = p1 ? window.__fbp1fadeF : window.__fb14fadeF; if (F != null) return FB14_FADE_E - F + l;      // (tests: the e2e's true fade, as a clock frame)
+  const T = FBFADE.t, t0 = p1 ? FBP1.t0 : FB14.t0; if (T == null || t0 == null || !(t0 - T > 0 && t0 - T < FB14_FADE_AGE)) return null;
+  return FB14_FADE_E - (p1 ? fbp1Pic(T) : fbPic(T)) + l;
+}
+function fb14FadeW(pa, l, p1) {
+  const D0 = fb14FadeD(l, p1); if (D0 == null) return 1;
+  const a = ((pa[0] - 71) % 130 + 130) % 130, b = ((pa[1] - 11) % 220 + 220) % 220;
+  for (let k = 0; k < 22; k++) { const D = a + 130 * k; if (D % 220 === b) { let d = ((D - D0) % 2860 + 2860) % 2860; if (d > 1430) d -= 2860; return Math.abs(d) <= FB14_FADE_TOL ? 1 : FB14_FADE_OUT; } }
+  return FB14_FADE_OUT;
+}
 /* ---- one state: { s, nc, f (the next logic frame to run), c (aura counts by f mod 20), ph (lightning phases, absolute,
  * 0 <= ph), l (console lag: logic frame = clock frame - l), w, resp (ray respawns, a 64-frame ring), ev (script events,
  * sorted by frame), wv (the frame of Bowser's AI when it chose the wave), prev (Bowser's last attack), out (per turn:
@@ -305,8 +337,9 @@ function fb14Lock(res) {
         const F0 = M + 13; let x0 = Math.imul(((H.a >>> 0) - 1) >>> 0, 0x6A76AE6D) >>> 0;   // the seed before A's base-angle draw
         for (let i = fbBolts(F0, pa); i; i--) x0 = Math.imul((x0 - 1) >>> 0, 0x6A76AE6D) >>> 0;   // before frame 0's bolts
         const Bs = back0(x0, F0, F0 + h.q, c, pa);
+        const fw = turn === 1 ? fb14FadeW(pa, l) : 1;     // v144: Phase 2's fade-in
         Bs.forEach((B, bi) => { const bw = typeof fbbPreLock === 'function' ? fbbPreLock(x0, F0, B, c, pa, l, menuF) : 1;     // v128: bolts read in the menu before this Charge
-          for (const [rg, wr] of fb14RgList()) fresh.push(fbNew({ s: s48 >>> 0, nc: M + 13 + nc48, f: M + 61, c, ph: pa, l, rg, w: wr * wl * AV.w * B.w * (B.ok ? 1 : 1e-3) * bw, from: B.from, sh: B.sh.concat(E.sh), key: key + ':' + rg + (bi ? ':h' + bi : ''), tag: turn })); });
+          for (const [rg, wr] of fb14RgList()) fresh.push(fbNew({ s: s48 >>> 0, nc: M + 13 + nc48, f: M + 61, c, ph: pa, l, rg, w: wr * wl * AV.w * B.w * (B.ok ? 1 : 1e-3) * bw * fw, from: B.from, sh: B.sh.concat(E.sh), key: key + ':' + rg + (bi ? ':h' + bi : ''), tag: turn })); });
       }
     }
     }
@@ -315,6 +348,8 @@ function fb14Lock(res) {
   // hold (when any is among them)
   if (!J && !first && FB14.states.length) { const cs = new Set(FB14.states.map(S => S.c.join(''))), f2 = fresh.filter(S => cs.has(S.c.join(''))); if (f2.length) fresh = f2; slog('fb14AuraKeep', { turn, fits: fresh.length, of: seen.size }); }
   if (window.__fb14seeds) FB14.tCombos = combos;     // (diagnostic: v105 fb14TruthLock)
+  if (turn === 1) { const D0 = fb14FadeD(0); let wi = 0, wa = 0; for (const S of fresh) { wa += S.w; if (fb14FadeW(S.ph, S.l) === 1) wi += S.w; }
+    slog('fb14FadeUse', { D0: D0 == null ? null : +D0.toFixed(1), fadeT: FBFADE.t == null ? null : Math.round(FBFADE.t), n: fresh.length, shareIn: wa ? +(wi / wa).toFixed(4) : 0 }); }     // v144
   return fresh; };
   const J = res.joint && res.joint.keep && res.joint.keep.size ? res.joint : null;
   // v87: a T2 / T4 Charge held for the narrowed search (fb14ChgCands): the carried states get it now, at the shifts whose
@@ -390,6 +425,11 @@ function fb14Lock(res) {
   // (fb14Refine) fetches the whole list and locks again; the turn is decided then, as before this call
   if (!keep && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14LightNoMatch', { turn, M, ms: Math.round(tL1 - tL0) }); return 'light'; }
   if (!keep) { fresh = buildFresh(); keep = fresh; if (window.__fb14seeds) FB14.tLockCtx = { H, M, P, J: !!J }; }
+  // v145 (e2e d4000001 T2 after T1's hit: all 241 carried states drew T2's rays, "carried", but none followed the game: the T1 lock
+  // had kept only look-alikes, and the hit said so): after a hit, a carried lock also takes this Charge's fresh fits, together
+  // FB14_HIT_FRESH of the weight; the coin from here on picks between them
+  if (keep && how === 'carried' && afterHit) { const fr = buildFresh(); if (fr.length) { const sc = keep.reduce((x, S) => x + S.w, 0) || 1, sf = fr.reduce((x, S) => x + S.w, 0) || 1;
+    fr.forEach(S => { S.w *= FB14_HIT_FRESH / (1 - FB14_HIT_FRESH) * sc / sf; }); slog('fb14HitFresh', { turn, M, carried: keep.length, fresh: fr.length }); keep = keep.concat(fr); fresh = fr; if (window.__fb14seeds) FB14.tLockCtx = { H, M, P, J: !!J }; } }
   const sum = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum; S.lw = 1; S.err = 0; });
   // the menu's coin before the Charge weighs the fits now (fbBackShines), before any are dropped for the cap: with the
   // weights all equal an even sample would lose the true one (T2 render: 1605 fits x their lightning phases x 2 lags)
@@ -748,6 +788,7 @@ function fb14T5Watch(t, present) {
   if (W.hidden) { W.back = present ? W.back + 1 : 0; if (W.back >= FB14_T5_BACK) { const i6 = RT().findIndex(x => x.turn === 'fb2_k'); slog('fb14T5Done', { to: i6, afterMs: Math.round(t - W.t0) }); FB14.t5w = null; if (i6 > routeStep) setStep(i6); } }
 }
 function fb14Frame(t, present) {
+  fb14FadeWatch(t);     // v144
   fb14T5Watch(t, present); fb14T3Hides(t, present);
   if (FB14.lastT !== t) { FB14.picPrev = FB14.lastT; } FB14.lastT = t; fb14GapCheck(t, present);
   if (FB14.pendChg && !['armed', 'capture'].includes(CHG.state) && !fb14Held()) { const { M, turn } = FB14.pendChg; FB14.pendChg = null; fb14Advance(Math.min(fb14Horizon(performance.now()), M + 10)); fb14Input('chg', M, turn, FB14_CHGD); if (window.__fb14seeds) fb14Truth('chg' + turn); }

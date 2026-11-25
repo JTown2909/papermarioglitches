@@ -314,6 +314,8 @@ if __name__ == '__main__':
         segA = ['%s/%sa_cap_j/%s' % (rel, tg, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
         zeros = [z for z in zeros if z[0] < len(frames)] + [[len(frames) + ncap(M), G + M]]
+        if os.environ.get('FADEB0') and start == 1:     # v144 (tests): Phase 2's fade-in as the build's battle start puts it
+            man['fadeF'] = 13.5 - (int(os.environ['FADEB0']) + GM1)   # (FADEB0 = the battle frame of the build's global step 0; b10: 640)
         if os.environ.get('NOBROAD') == '1': man['noBroad'] = True      # v104: the page claims as v103 did (fb14Broad logged only)
         if os.environ.get('TRUTH'):          # v87 (diagnostic): the true seeds, for the page's fb14Truth trace only
             # v102: zeros = each turn's Mario confirm (capture index, global step): a fresh lock after a hit restarts the page's

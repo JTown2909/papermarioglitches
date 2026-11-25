@@ -82,12 +82,13 @@ function fbp1Build(res, trigT) {
       const Bs = fbBackShinesAll(y0, M + 13, M + 13 + h.q, c, pa, menuF);     // v140: every coin history the RNG allows
       for (const [l, wl] of FB14_LAGS) {
         const key = E.s + ':' + E.nc + ':' + c.join('') + ':' + pa[0] + ':' + pa[1] + ':' + l; if (seen.has(key)) continue; seen.add(key);
-        Bs.forEach((B, bi) => fresh.push(fbNew({ s: E.s >>> 0, nc: E.nc, f: M + 61, c, ph: pa, l, rg: 0, w: wl * AV.w * B.w * (B.ok ? 1 : 1e-3), from: Math.min(menuF, M + 13), sh: B.sh.slice().sort((a, b) => a - b).concat(E.sh), key: key + (bi ? ':h' + bi : ''), tag: 'p1' })));
+        const fw = fb14FadeW(pa, l, true);     // v144: the battle's fade-in
+        Bs.forEach((B, bi) => fresh.push(fbNew({ s: E.s >>> 0, nc: E.nc, f: M + 61, c, ph: pa, l, rg: 0, w: wl * AV.w * B.w * (B.ok ? 1 : 1e-3) * fw, from: Math.min(menuF, M + 13), sh: B.sh.slice().sort((a, b) => a - b).concat(E.sh), key: key + (bi ? ':h' + bi : ''), tag: 'p1' })));
       }
     }
   }
   fresh.sort((x, y) => y.w - x.w); FBP1.states = fresh.slice(0, FBP1_MAXS); FBP1.n0 = fresh.length;
-  slog('fbP1States', { fits: H.hy.length, combos: nOk, states: FBP1.states.length, of: fresh.length, menuF });
+  slog('fbP1States', { fits: H.hy.length, combos: nOk, states: FBP1.states.length, of: fresh.length, menuF, fadeD: (D => D == null ? null : +D.toFixed(1))(fb14FadeD(0, true)) });
   return FBP1.states.length;
 }
 /* Lakilester's Do Nothing confirm (its Strategies screen closing, read at tObs): Bowser's AI on P + 13 in every state, the shifts

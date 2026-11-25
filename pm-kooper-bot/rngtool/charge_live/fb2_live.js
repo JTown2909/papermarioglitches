@@ -46,7 +46,7 @@ const fb2nb = (f, p1, p2) => (FB2_P130.includes(((f + p1) % 130 + 130) % 130) ? 
 function fb2Patterns() {
   if (fb2Patterns.c) return fb2Patterns.c;
   const idx = new Map(), list = [];
-  for (let p2 = 0; p2 < 220; p2++) for (let p1 = p2 % 5; p1 < 130; p1 += 5) {
+  for (let p2 = 0; p2 < 220; p2++) for (let p1 = p2 % 10; p1 < 130; p1 += 10) {     // v143: both loops start with the battle (p130 = p220 mod 10)
     const r = []; for (let n = 0; n < 48; n++) r.push(fb2nb(n + 13, p1, p2));
     const k = r.join(''); let i = idx.get(k); if (i == null) { i = list.length; idx.set(k, i); list.push({ r, ph: [] }); } list[i].ph.push([p1, p2]);
   }

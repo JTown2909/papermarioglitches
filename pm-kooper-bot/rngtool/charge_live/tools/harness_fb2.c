@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   uint32_t truth = argc > 2 ? strtoul(argv[2], 0, 16) : 0; int Kk = argc > 3 ? atoi(argv[3]) : 16384, onlyA = argc > 4 ? atoi(argv[4]) : 0;
   /* patterns */
   int np = 0;
-  for (int p2 = 0; p2 < 220; p2++) for (int p1 = p2 % 5; p1 < 130; p1 += 5) {
+  for (int p2 = 0; p2 < 220; p2++) for (int p1 = p2 % 10; p1 < 130; p1 += 10) {
     uint8_t row[NMAX]; for (int n = 0; n < N; n++) row[n] = (uint8_t)nb(n + 13, p1, p2);
     int dup = 0; for (int k = 0; k < np && !dup; k++) if (!memcmp(PAT[k], row, N)) dup = 1;
     if (!dup && np < NPATMAX) memcpy(PAT[np++], row, N); }
