@@ -14,7 +14,7 @@
  * The status-bar coin weighs the states all the way (the menu before the Charge, Mario's T2 menu). Phase 2 T1's Charge still
  * locks afresh (the Star Beam, a whole Peach battle and the Star Spirits come between): after the Power Bounce the route
  * moves to it and holds for FBP1_HOLD. */
-var FBP1_HOLD = 90000;     // (var: chgShow runs before this file is evaluated)
+var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.95;     // (var: chgShow runs before this file is evaluated)
 var FBP1 = { t: null, seed: null, outcome: null, score: null, ratio: null };
 var FBP1V = { taps: [], vis: [], visFrom: null };      // the coin's shines and the bar's stretches, kept from before the lock
 CHG_PROF.fbp1 = Object.assign({}, CHG_PROF.fb1, { id: 'fbp1' });
@@ -175,6 +175,10 @@ function fbp1Plan(cScr) {
   if (FBP1.P == null) { why1('no Do Nothing confirm'); st.msg = 'No edge: Lakilester\'s Do Nothing confirm was not read (its Strategies screen closing). Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
   const now = performance.now(), rate = FBP1.rate, cNow = cScr != null ? cScr : fbp1Pic(now + num('vlag')), h = Math.floor(cNow) - 10;
   fbp1Advance(h); const Wt = fbp1Weigh(h), L = Wt.list, dz = Wt.doubt; FBP1.lastW = { h, kept: L.length, doubt: +dz.toFixed(3), taps: FBP1V.taps.map(x => +fbp1Pic(x).toFixed(1)).filter(x => x > 0 && x < h).slice(-8) };
+  // v150 (console 11-25 16:43: "it said no lock and then suddenly tried to lock": doubt 0.68 at the target screen read "Power Bounce
+  // normally", the coin settled it to 0.22 4 s later and the plan beeped after the runner had pressed): while states are left and the
+  // doubt is under FBP1_GIVEUP the page says to wait on the target screen; "Power Bounce normally" only past it or with no state left
+  if (L.length && dz >= 0.5 && dz < FBP1_GIVEUP) { why1('coin-wait'); FBP1.plan = { none: 'coin wait' }; st.msg = 'WAIT on the target screen: the coin is still deciding between the Phase 1 seeds (' + Math.round(100 * dz) + '% doubt). The beeps come if it settles; it says "Power Bounce normally" if it does not.'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
   if (!L.length || dz >= 0.5) { why1('coin'); FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (5 cap about 13%).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
   const G = FBP1_GOAL, W = Math.max(0, Math.round(Math.max(1, num('zwwin')) * 1000 / rate));
   let from = Math.ceil(cNow + num('lead') * 1000 / rate + 1);

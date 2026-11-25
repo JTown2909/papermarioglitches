@@ -1,3 +1,14 @@
+# Time Out Timer v150: Phase 1 says WAIT while the coin decides (Nov 25)
+
+- Console 11-25 16:43 (Phase 1, the runner: "it said no lock and then suddenly tried to lock"): the Charge locked (ad82ca0e, 7455,
+  2.88x); after Bowser's Fire Breath the coin put the doubt at 0.68 on the target screen and the page said "No edge ... Power Bounce
+  normally"; 4 s later the coin had settled it (0.22, 45 states) and it planned (77%), after the runner had pressed (67 frames early).
+  Now, with states kept and a doubt under FBP1_GIVEUP (0.95), the message says to WAIT on the target screen (fbP1NoPlan 'coin-wait');
+  "Power Bounce normally" only past it or with no state left (20:54's 0.997 still says so).
+- The 16:43 capture does not replay (its webp pictures lose the read: another seed each run); `test_v150.js` checks the rule on the
+  page's own plan function.
+- (Tests only) fb14Truth's strict search looks at the seed-matching states only.
+
 # Time Out Timer v149: three Life Shrooms; T4 looks 10 s on (Nov 25)
 
 - **Turn 4 is the route's must (the runner).** Of the runner's 78 logs that reach T4 (a log that goes on past T4 = the wave avoided):
