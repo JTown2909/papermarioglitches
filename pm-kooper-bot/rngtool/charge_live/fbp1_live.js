@@ -14,7 +14,7 @@
  * The status-bar coin weighs the states all the way (the menu before the Charge, Mario's T2 menu). Phase 2 T1's Charge still
  * locks afresh (the Star Beam, a whole Peach battle and the Star Spirits come between): after the Power Bounce the route
  * moves to it and holds for FBP1_HOLD. */
-var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.95;     // (var: chgShow runs before this file is evaluated)
+var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.95, FBP1_MANIP = false, FBP1_OFF_MSG = 'Phase 1: no beeps (the route plays it straight: Bounce, then Spiny Flip; T3 Star Beam).';     // v151: no Phase 1 manipulation     // (var: chgShow runs before this file is evaluated)
 var FBP1 = { t: null, seed: null, outcome: null, score: null, ratio: null };
 var FBP1V = { taps: [], vis: [], visFrom: null };      // the coin's shines and the bar's stretches, kept from before the lock
 CHG_PROF.fbp1 = Object.assign({}, CHG_PROF.fb1, { id: 'fbp1' });
@@ -169,6 +169,7 @@ const fbp1HasRow = (S, d0, d1) => !!(S._pb && d0 >= S._pb.lo && d1 <= S._pb.lo +
  * 5+ share (fb2PlanT7's rule: the perfect-press share must reach Settings > Best chance) */
 function fbp1Plan(cScr) {
   const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1pb) return false;
+  if (!FBP1_MANIP) { FBP1.plan = { none: 'off' }; if (cScr != null) return FBP1.plan; if (st.msg !== FBP1_OFF_MSG) { st.msg = FBP1_OFF_MSG; render(); } return true; }     // v151: no Phase 1 manipulation
   if (cScr == null && typeof seriesHold === 'function' && seriesHold('fbp1')) return true;
   const why1 = w => { if (FBP1.whyLogged !== w) { FBP1.whyLogged = w; slog('fbP1NoPlan', Object.assign({ why: w, states: FBP1.states ? FBP1.states.length : null, ended: FBP1.ended, fresh: fbp1Fresh(), P: FBP1.P }, FBP1.lastW || {})); } };     // v146 (console 11-24 20:54: a lock, Lakilester read, no plan and no word why): each silent no-plan is logged once
   if (!fbp1On()) { why1(FBP1.outcome === 'lock' ? 'states gone' : 'no lock'); st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (5 cap about 13%).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }

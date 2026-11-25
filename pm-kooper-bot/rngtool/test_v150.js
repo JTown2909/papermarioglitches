@@ -10,11 +10,11 @@ const LG = '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10167305f887/3d751e7c-
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
-  ok(await p.evaluate(() => window.__tot.v111.ev('VERSION')) === 'v150', 'page version v150');
+  ok(await p.evaluate(() => window.__tot.v111.ev('VERSION')) === 'v151', 'page version v150');
   // the rule on the page's own plan function: a kept state and a doubt of 0.70 (wait) / 0.97 (bounce normally)
   const r = JSON.parse(await p.evaluate(() => window.__tot.v111.ev(`(() => { const T = window.__tot, out = {}, w0 = fbp1Weigh, a0 = fbp1Advance;
     const S = fbNew({ s: 1, nc: 0, f: 400, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1 }); Object.assign(FBP1, { states: [S], t0: 0, rate: 33.4, lockT: null, ended: false, P: 120, outcome: 'lock', whyLogged: null });
-    T.setStep(T.RT().findIndex(s => s.fbp1pb)); fbp1Advance = () => true;
+    T.setStep(T.RT().findIndex(s => s.fbp1pb)); FBP1_MANIP = true; fbp1Advance = () => true;
     for (const d of [0.70, 0.97]) { fbp1Weigh = () => ({ list: [S], doubt: d, n: 1 }); FBP1.whyLogged = null; const n0 = T.SLOG.length; fbp1Plan(500); const e = T.SLOG.slice(n0).filter(x => x.ev === 'fbP1NoPlan').pop(); out['d' + d] = { why: e && e.why, msg: st.msg }; }
     fbp1Weigh = w0; fbp1Advance = a0; FBP1.states = null; return JSON.stringify(out); })()`)));
   console.log('     ' + JSON.stringify(r).slice(0, 600));

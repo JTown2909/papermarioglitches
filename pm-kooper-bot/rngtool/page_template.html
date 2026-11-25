@@ -579,9 +579,12 @@ const ENDGAME = [
     // v116: Phase 1's T1 Super Charge is read (the aura profile) and shown; nothing is planned or beeped there (fbp1_live.js)
     // v132: Phase 1 is tracked to its T2 Power Bounce (the Charge's lock, Lakilester's Do Nothing read, Bowser's attack and the
     // Life Shroom revive on the model, the coin): the Power Bounce is beeped for 5 bounces
-    { text: 'T1: Charge; Do Nothing', phase: 'Phase 1:', steps: [{ label: 'Phase 1 Super Charge (hand on Mario): its rays lock the seed', cat: 'M', chg: 'fbp1', fbp1: true },
-      { label: 'Lakilester: Do Nothing whenever you like (its frame is read; guard Bowser\'s attack if you can: Mario falls either way, the Life Shroom revives him)', cat: 'S', chg: 'fbp1', fbp1dn: true }] },
-    { text: 'T2: Bounce x5; Do Nothing', steps: [{ label: 'Phase 1 Power Bounce (hand on Bowser) → 5 on the beep (Bowser takes no damage in Phase 1: only the cap counts)', cat: 'B', fbp1pb: true }] },
+    // v151 (the runner: "maybe we just do this instead and forget about manip here"): Phase 1 is T1 Charge + Spiny Flip, T2 Bounce +
+    // Spiny Flip, T3 Star Beam, with no beeps (FBP1_MANIP false); its steps stay so the route follows the fight to Phase 2 (the
+    // Charge burst, the screens' closes, the hold over T2 / T3 and the cutscenes: Phase 1's Charge is not read as Phase 2's)
+    { text: 'T1: Charge; Spiny Flip', phase: 'Phase 1:', steps: [{ label: 'Phase 1 Super Charge (no beeps in Phase 1: the page only follows the route to Phase 2)', cat: 'M', chg: 'fbp1', fbp1: true },
+      { label: 'Lakilester: Spiny Flip (no beep)', cat: 'B', chg: 'fbp1', fbp1dn: true }] },
+    { text: 'T2: Bounce; Spiny Flip', steps: [{ label: 'Phase 1 Power Bounce (no beep; then Lakilester: Spiny Flip)', cat: 'B', fbp1pb: true }] },
     { text: 'T3: Star Beam', steps: [] },
     { text: 'T1: Charge; Cloud Nine', phase: 'Phase 2:', steps: [{ label: 'Super Charge (hand on Mario): its rays lock the seed (Close Call equipped before the fight: T6 needs it)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'charge' },
       { label: 'Cloud Nine (hand on Mario), then A on the beep to skip its message → Bowser misses (Settings: Confirm Cloud Nine on the beep for the old lever)', cat: 'M', chg: 'fb1', fb14: 1, fb14role: 'lever' }] },
@@ -1986,7 +1989,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v150';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v151';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the

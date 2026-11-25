@@ -1,3 +1,11 @@
+# Time Out Timer v151: Phase 1 without manipulation (Nov 25)
+
+- The runner: "maybe we just do this instead and forget about manip here": Phase 1 is T1 Charge; Spiny Flip, T2 Bounce; Spiny Flip,
+  T3 Star Beam, no beeps (FBP1_MANIP false; fbp1Plan says so). 11-25 16:49: the Phase 1 plan was 38% with a 1-frame window, pressed
+  0.3 frames off: a 3 cap; 16:43: the doubt swung 0.68 -> 0.22 on the target screen (v150's WAIT message stays for FBP1_MANIP).
+- The Phase 1 steps stay (Charge, Spiny Flip - now a target screen, cat B - and the Power Bounce) so the route follows the fight to
+  Phase 2 and Phase 1's Charge is not read as Phase 2's. `test_v151.js`; test_v132 / v146 / v150 set FBP1_MANIP for their plans.
+
 # Time Out Timer v150: Phase 1 says WAIT while the coin decides (Nov 25)
 
 - Console 11-25 16:43 (Phase 1, the runner: "it said no lock and then suddenly tried to lock"): the Charge locked (ad82ca0e, 7455,

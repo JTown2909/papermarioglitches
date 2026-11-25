@@ -10,7 +10,7 @@ const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/fbp1_logs.json', 'u
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v150', 'page version v132');
+  ok(await E(`VERSION`) === 'v151', 'page version v132');
   await p.evaluate(fx => { window.__p1fx = fx; }, FX);
   const r = JSON.parse(await E(`JSON.stringify(window.__p1fx.map(o => {
     const c = new Uint8Array(20); o.c.forEach((v, i) => c[i] = v);
@@ -35,7 +35,7 @@ const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/fbp1_logs.json', 'u
       const cScr = FBP1.P + 12 + 70 + 404 + 120; a = performance.now(); fbp1Advance(cScr - 10); out.msAdv = Math.round(performance.now() - a);
       out.atk = {}; for (const S of FBP1.states) { const k = (S.out[1] && S.out[1].atk) + (S.gd === 0 ? '-unguarded' : ''); out.atk[k] = (out.atk[k] || 0) + 1; }
       out.revived = FBP1.states.filter(S => S.rv != null).length; out.n = FBP1.states.length;
-      T.setStep(pb); a = performance.now(); const pl = fbp1Plan(cScr); out.msPlan = Math.round(performance.now() - a); out.plan = pl && { d: pl.d, pp5: +(pl.pp5 || 0).toFixed(3), p5: +(pl.p5 || 0).toFixed(3), win: pl.win, states: pl.states, planned: pl.planned, none: pl.none || null };
+      T.setStep(pb); FBP1_MANIP = true; a = performance.now(); const pl = fbp1Plan(cScr); out.msPlan = Math.round(performance.now() - a); out.plan = pl && { d: pl.d, pp5: +(pl.pp5 || 0).toFixed(3), p5: +(pl.p5 || 0).toFixed(3), win: pl.win, states: pl.states, planned: pl.planned, none: pl.none || null };
       // the plan's 5+ share against the model run directly for the top state at the chosen frame
       const S = FBP1.states.slice().sort((x, y) => y.w * (y.lw || 1) - x.w * (x.lw || 1))[0], B = fbClone(S); fbRun(B, pl.d - S.l); B.pbn = 0; B.pbgo = true; fbEv(B, { k: 'pbh', f: pl.d - S.l + 45, n: 0 }); fbRun(B, pl.d - S.l + 71 + 27 * 12); out.topDirect = B.pbn; out.topRow = fbp1Row(S, pl.d - S.l, pl.d - S.l)[0];
       return JSON.stringify(out); })()`));

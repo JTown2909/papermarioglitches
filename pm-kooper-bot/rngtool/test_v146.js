@@ -14,7 +14,7 @@ const UP = '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10167305f887', LG = pa
   const b = await chromium.launch(); const errs = [];
   const open = async () => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e))); await p.goto('file://' + PAGE); return p; };
   { const p = await open(); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-    ok(await E('VERSION') === 'v150', 'page version v146');
+    ok(await E('VERSION') === 'v151', 'page version v146');
     // (1)
     const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb2, out = {};
       const run = chg => { const i6 = T.RT().findIndex(s => s.turn === 'fb2_k' && !s.backup); T.setStep(i6); X.v114.FB2B.on = false; fb2Reset();
@@ -41,7 +41,7 @@ const UP = '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10167305f887', LG = pa
     const r2 = await p.evaluate(async ({ cap, trigLog, conf, shines, bars }) => { const T = window.__tot, t0 = performance.now() + 5000, off = t0 - trigLog;
       const r = await T.chgReplay(cap, { maxAlts: 0, fbp1: true, t0, menuRel: bars[0][0] - trigLog });
       return JSON.parse(T.v111.ev(`(() => { const off = ${off}; for (const s of ${JSON.stringify(shines)}) fbp1Tap(s + off); for (const [a, z] of ${JSON.stringify(bars)}) FBP1V.vis.push([a + off, z + off]);
-        fbp1Input(${conf} + off); const T = window.__tot; T.setStep(T.RT().findIndex(s => s.fbp1pb)); FBP1.lockT = null; fbp1Plan(fbp1Pic(104000 + off));
+        fbp1Input(${conf} + off); const T = window.__tot; T.setStep(T.RT().findIndex(s => s.fbp1pb)); FBP1.lockT = null; FBP1_MANIP = true; fbp1Plan(fbp1Pic(104000 + off));
         const e = T.SLOG.filter(x => x.ev === 'fbP1NoPlan').pop(); return JSON.stringify({ lock: ${JSON.stringify(r.state)}, seed: ${JSON.stringify(r.best && r.best.seed)}, why: e && e.why, doubt: e && e.doubt, msg: st.msg }); })()`)); },
       { cap: Object.assign({}, C, { prof: 'fbp1' }), trigLog, conf, shines, bars });
     console.log('     ' + JSON.stringify(r2));
