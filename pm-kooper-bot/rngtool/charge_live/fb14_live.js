@@ -87,7 +87,7 @@ const fbBolts = (f, ph) => { let m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220;
  * (emulator); on console the 11-17 16:06 clip's fade-in edge put its 23 Phase 2 sky bolts on the best of all 2860 phase pairs
  * within one frame. So the T1 lock weighs each fit's phases by how far their battle start lies from the fade's (FB14_FADE_TOL
  * frames; outside it FB14_FADE_OUT, not 0: a fade misread must not empty the lock). */
-const FB14_HIT_FRESH = 0.5, FB14_FADE_E = 13.5, FB14_FADE_TOL = 2.5, FB14_FADE_OUT = 0.03, FB14_FADE_DARK = 2.5, FB14_FADE_UP = 3.2, FB14_FADE_MIN = 20, FB14_FADE_AGE = 30000;
+const FB14_HOLD_MS = 20000, FB14_HIT_FRESH = 0.5, FB14_FADE_E = 13.5, FB14_FADE_TOL = 2.5, FB14_FADE_OUT = 0.03, FB14_FADE_DARK = 2.5, FB14_FADE_UP = 3.2, FB14_FADE_MIN = 20, FB14_FADE_AGE = 30000;
 var FBFADE = { t: null, n: 0 };
 function fb14FadeWatch(t) {
   // watched from the Hallway (the route moves to Phase 1 only at its Charge, after the battle's fade-in) to Phase 2's T1 Charge
@@ -430,14 +430,14 @@ function fb14Lock(res) {
   // FB14_HIT_FRESH of the weight; the coin from here on picks between them
   // v146 (console 11-24 20:56 T2 after T1's hit: the narrowed read matched the carry and buildFresh threw on its light fits, no
   // H.hy: chargeError, the lock half done): a narrowed read goes on to the refine (the whole fit list), which locks again here
-  if (keep && how === 'carried' && afterHit && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14HitFreshLight', { turn, M, carried: keep.length }); return 'light'; }
+  if (keep && how === 'carried' && afterHit && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14HitFreshLight', { turn, M, carried: keep.length }); FB14.holdRefine = { turn, t: performance.now() }; return 'light'; }
   if (keep && how === 'carried' && afterHit) { const fr = buildFresh(); if (fr.length) { const sc = keep.reduce((x, S) => x + S.w, 0) || 1, sf = fr.reduce((x, S) => x + S.w, 0) || 1;
     fr.forEach(S => { S.w *= FB14_HIT_FRESH / (1 - FB14_HIT_FRESH) * sc / sf; }); slog('fb14HitFresh', { turn, M, carried: keep.length, fresh: fr.length }); keep = keep.concat(fr); fresh = fr; if (window.__fb14seeds) FB14.tLockCtx = { H, M, P, J: !!J }; } }
   const sum = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum; S.lw = 1; S.err = 0; });
   // the menu's coin before the Charge weighs the fits now (fbBackShines), before any are dropped for the cap: with the
   // weights all equal an even sample would lose the true one (T2 render: 1605 fits x their lightning phases x 2 lags)
   if (window.__fb14dbg) { const T = window.__fb14truth; window.__fb14dbg.push({ pre: true, turn, M, n: keep.length, truth: T ? keep.filter(S => S.s === T.s && (T.nc == null || S.nc === T.nc)).map(S => ({ c: Array.from(S.c).join(''), ph: S.ph, l: S.l, w: S.w, sh: S.sh })) : null }); }
-  FB14.states = keep; let n0 = keep.length;
+  FB14.states = keep; let n0 = keep.length; FB14.holdRefine = null;
   if (how === 'fresh' && keep.length > 1) { let Wg = fb14Weigh(M + 61);
     // v92 (e2e 5eed0fb2 T2 after T1's hit: the bar stayed up through Bowser's attack and the Life Shroom, 18 s; the
     // menu's coin window took in the revive's shines, which no menu draw explains, and every fit died: no T2 plan): when
@@ -740,7 +740,13 @@ function fb14IsTrueS(S) { if (!fb14IsTrue(S)) return false; const T = window.__f
 // v102 (tests only): a fresh lock restarts the clock on its own turn's Mario confirm; the truth offset follows (the harness's
 // zt: each turn's confirm on the page's time and its global step). v101's trace kept T1's offset after a hit: "no true state"
 function fb14TruthZero(t0) { const T = window.__fb14seeds; if (!T || !T.zt || !T.zt.length) return; let b = null; for (const z of T.zt) if (!b || Math.abs(z[0] - t0) < Math.abs(b[0] - t0)) b = z; if (Math.abs(b[0] - t0) > 3000) return; T.off = -b[1]; slog('fb14TruthZero', { off: T.off, dtMs: Math.round(b[0] - t0) }); }
-function fb14Truth(at) { if (!window.__fb14seeds) return; const L = FB14.states, n = L.filter(fb14IsTrue).length; let tot = 0, tw = 0; for (const S of L) { const v = S.w * (S.lw || 1); tot += v; if (fb14IsTrue(S)) tw += v; } slog('fb14Truth', { at, states: L.length, trueStates: n, strict: L.filter(fb14IsTrueS).length, trueShare: tot ? +(tw / tot).toFixed(4) : 0 }); fb14TruthPh(at); }
+// v147 (diagnostic, tests only): when the strictly true states die out between two checkpoints, the last one kept is run on against
+// the true seeds: the first frame it leaves them and its events around there (fb14TruthLost)
+function fb14TruthLost(at) { const T = window.__fb14seeds, K = FB14.tTrue; if (!K) return; FB14.tTrue = null; const C = fbClone(K.S); let first = null;
+  for (let k = 0; k < 6000; k++) { const i = C.f + C.l - T.off; if (i < 0 || i >= T.s.length) break; if ((C.s >>> 0) !== (T.s[i] >>> 0)) { first = C.f; break; } fbStep(C); }
+  slog('fb14TruthLost', { at, from: K.at, f0: K.S.f, first, out: JSON.stringify(C.out).slice(0, 300), shroom: C.shroom, rv: C.rv, gd: C.gd, ev: first == null ? null : K.S.ev.concat(C.ev).filter(e => Math.abs(e.f - first) < 400).map(e => e.k + '@' + e.f + (e.turn ? '/t' + e.turn : '')).filter((x, j, a) => a.indexOf(x) === j).slice(0, 30) }); }
+function fb14Truth(at) { if (!window.__fb14seeds) return; { const sT = FB14.states.find(fb14IsTrueS); if (sT) FB14.tTrue = { S: fbClone(sT), at }; else fb14TruthLost(at); }
+  const L = FB14.states, n = L.filter(fb14IsTrue).length; let tot = 0, tw = 0; for (const S of L) { const v = S.w * (S.lw || 1); tot += v; if (fb14IsTrue(S)) tw += v; } slog('fb14Truth', { at, states: L.length, trueStates: n, strict: L.filter(fb14IsTrueS).length, trueShare: tot ? +(tw / tot).toFixed(4) : 0 }); fb14TruthPh(at); }
 /* ---- the coin: shines (clock frame of the draw) and the stretches the coin was watched ---- */
 // the coin is kept in page time (ms) and read on the clock when the states are weighed: a lock re-anchors the clock, and
 // the shines of the menu the lock was searched in still count
@@ -1212,6 +1218,11 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (turn === 1 && fb14SkipMode() && !(FB14.pT && FB14.pT[1] != null) && cAt == null) { if (FB14.c9Msg !== FB14.lockN) { FB14.c9Msg = FB14.lockN; slog('fb14SkipFirst', { on: FB14.on }); }
     st.msg = 'T1: Cloud Nine now, no beep for it (hand on Mario, A). Then keep your thumb on A: ' + (FB14.on ? 'the beep says when to press A to skip its message (that A is the lever).' : 'once the seed is read (3-5 s after the Charge) the beep says when to press A to skip its message.'); FB14.plan = { none: 'Cloud Nine first', turn }; cancelBeeps(); fb14Show(); render(); return true; }
   if (!FB14.on && cAt == null && (['capture', 'maps', 'search'].includes(CHG.state) || FB14.refining)) { st.msg = 'WAIT, searching… The Charge rays are being read (about 3-5 s after the Charge; console Cloud Nine confirms came 4 s after it). Wait on ' + (turn === 1 ? 'Cloud Nine\'s target (hand on Mario)' : 'Lakilester\'s Do Nothing') + ': the beeps, or "No edge", come as soon as the seed is read.'; FB14.plan = { none: 'reading', turn }; fb14Show(); render(); return true; }
+  // v147 (e2e FORCE_HIT=1.1, 4 seeds: after T1's hit T2's narrowed read matched the carry, went for the whole fit list (v146), and the
+  // page beeped meanwhile on the carry: the true seed was in none of the 4 carries, doubt 0, 8-9 s before the full read's lock): after a
+  // hit the carry is not planned on until this Charge's full read has locked (FB14_HOLD_MS at most)
+  if (cAt == null && FB14.holdRefine && FB14.holdRefine.turn === turn && performance.now() - FB14.holdRefine.t < FB14_HOLD_MS) { if (FB14.holdLogged !== FB14.holdRefine.t) { FB14.holdLogged = FB14.holdRefine.t; slog('fb14HoldForFull', { turn }); }
+    st.msg = 'WAIT on Lakilester\'s Do Nothing: Bowser hit last turn, so the page waits for this Charge\'s full read (about 5-10 s) before the beep.'; FB14.plan = { none: 'full read', turn }; if (st.plan && st.plan.fb14) { st.plan = null; cancelBeeps(); } fb14Show(); render(); return true; }
   if (!FB14.on) { st.msg = 'No Final Bowser lock: ' + fb14BlindText(turn) + '.'; FB14.plan = { none: 'no lock', turn }; fb14Show(); if (cAt == null) render(); return true; }
   // v92 (e2e 5eed0fb2: T2's Do Nothing beeped during Bowser's T1 attack, 25 s before T2's Charge, at 95%; e2e 9e3779b9 /
   // 1234abcd: fb14NoDecision on T3 before its Jelly): a lever turn (T3: its Jelly)

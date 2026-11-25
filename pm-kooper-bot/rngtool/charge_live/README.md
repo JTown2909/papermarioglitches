@@ -1,3 +1,20 @@
+# Time Out Timer v147: after a hit, no beep until the Charge's full read (Nov 25)
+
+- **e2e FORCE_HIT=1.1 (v146, 4 seeds):** after T1's forced hit, T2's narrowed read matched the carry and went for the whole fit list
+  (v146), and the page beeped meanwhile on the carry: the true seed was in none of the 4 carries, doubt 0 (plans of 64-84%), 8-9 s
+  before the full read's lock. Console 20:56 T2 (87%, Bowser hit) was the same. Now, after a hit, the plan waits for this Charge's
+  full read (`fb14HoldForFull`, at most FB14_HOLD_MS 20 s; the message says to wait on Lakilester's Do Nothing). The full read lands
+  ~14 s after the Charge burst, so the runner waits ~10 s longer on that menu after a hit.
+- e2e (v147, FORCE_HIT=1.1): d4000001 T2-T4 clean after the forced hit (v146: T4 off); with the e2e's default runner (5.5 s) b2000002
+  and f6000002 pressed blind while held; with RUNNER=patient DL=25 (the runner waits for the beep): c3000004 and b2000002 T2 beeped
+  14-20 s after the Charge and Bowser missed (b2000002 T3 too). The forced-hit runs' T3 / T4 are not the page's: after the KO the
+  build's item menu says 今はつかえないぞ (no Jelly), FP stays 3 and T4 has no Super Charge.
+- Diagnostic (tests only): `fb14TruthLost` logs where the strictly true state leaves the true seeds between two checkpoints.
+- **Phase 1 (20:54) is not a model gap:** the real final room's Phase 1 (kkj25_battle.st, the real cutscene) and the built battle 2303
+  state draw the same kinds per frame (bolts, the coin every 24 frames, the Charge's aura, Bowser's AI): only their phases differ.
+  The 20:54 replay fits no state for any Do Nothing frame from P - 40 to P + 40 (doubt >= 0.995), with or without the aura variants;
+  earlier console Phase 1 attempts (11-23, v136-v138) planned. Most likely a wrong Charge lock (ratio 1.93); v146 logs it (fbP1NoPlan).
+
 # Time Out Timer v146: the runner's v145 attempts (Nov 24 20:54 / 20:56 / 21:00) (Nov 25)
 
 - **Phase 2 T1 with the fade (first live use):** 20:56 locked with fb14FadeUse 66% inside the fade's window (doubt 0.40, a 67% plan,
