@@ -1,3 +1,13 @@
+# Time Out Timer v152: the share worker had no Life Shroom helpers (v149-v151) (Nov 25)
+
+- Console 11-25 16:55 (v150): "fbShroomLeft is not defined" in the share worker (fbsWorkerError) right after T1's lock. v149 added
+  fbShroomLeft / fbShroomUse to the page's model but not to the worker's source (fb14_sharew.js builds it from function texts), so
+  every share job that reached a hit died and the plans ran on broken shares: T2 (pressed 0.45 frames off a 75% plan) and T3 (0.31 off a
+  62% plan) were both hit. The worker's source now carries FB14_SHROOMS and both helpers.
+- `test_v152.js`: every fb* / FB14_* name the worker's source uses is defined in it, and the helpers run there (on the v150 build it
+  fails with this exact error). test_v129 (the worker's share = the page's own, the revive model exact) passes.
+- Same attempt: T6's Charge did not lock; Bowser's hit was read without it (v146) and the route went to the backup T7.
+
 # Time Out Timer v151: Phase 1 without manipulation (Nov 25)
 
 - The runner: "maybe we just do this instead and forget about manip here": Phase 1 is T1 Charge; Spiny Flip, T2 Bounce; Spiny Flip,

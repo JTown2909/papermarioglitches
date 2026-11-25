@@ -11,6 +11,7 @@ function fbsSrc() {
   return 'let FBV = 0; const FB_RID = new Float64Array(1011);\nconst fbAdv = ' + fbAdv.toString() + ';\nconst mod20 = ' + mod20.toString() + ';\n'
     + 'const FB14_DELTA = ' + JSON.stringify(FB14_DELTA) + ', FB14_AIAFTER = ' + JSON.stringify(FB14_AIAFTER) + ', FB14_JELLY = ' + JSON.stringify(FB14_JELLY) + ', FB14_SKIP = ' + JSON.stringify(FB14_SKIP) + ', FB14_PBTH = ' + JSON.stringify(FB14_PBTH) + ', FB14_PBTH1 = ' + JSON.stringify(FB14_PBTH1) + ', FB14_P1X = ' + JSON.stringify(FB14_P1X) + ', FB14_SLAMGUARD = ' + FB14_SLAMGUARD + ';\n'
     + 'const FB14_WAVE_POST = ' + JSON.stringify(FB14_WAVE_POST) + ', FB14_WAVE_POST_B = ' + JSON.stringify(FB14_WAVE_POST_B) + ';\nconst FB14_REVIVE_SP = ' + JSON.stringify(FB14_REVIVE_SP) + ';\nlet FB14 = { box: null };\n'
+    + 'const FB14_SHROOMS = ' + FB14_SHROOMS + ';\nconst fbShroomLeft = ' + fbShroomLeft.toString() + ';\nconst fbShroomUse = ' + fbShroomUse.toString() + ';\n'     // v152 (console 11-25 16:55: v149's Life Shroom helpers were not in the worker: "fbShroomLeft is not defined", every share job after a hit died)
     + fns.map(f => f.toString()).join('\n')
     + '\nonmessage = e => { const d = e.data; FB14 = { box: d.boxP != null ? { P: d.boxP } : null }; const out = d.jobs.map(j => fb14ShareSync(j.L, j.a, j.b, d.turn, j.kind)); postMessage({ id: d.id, out }, out.map(x => x.buffer)); };';
 }
