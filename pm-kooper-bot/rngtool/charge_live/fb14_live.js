@@ -437,7 +437,7 @@ function fb14Lock(res) {
   // the menu's coin before the Charge weighs the fits now (fbBackShines), before any are dropped for the cap: with the
   // weights all equal an even sample would lose the true one (T2 render: 1605 fits x their lightning phases x 2 lags)
   if (window.__fb14dbg) { const T = window.__fb14truth; window.__fb14dbg.push({ pre: true, turn, M, n: keep.length, truth: T ? keep.filter(S => S.s === T.s && (T.nc == null || S.nc === T.nc)).map(S => ({ c: Array.from(S.c).join(''), ph: S.ph, l: S.l, w: S.w, sh: S.sh })) : null }); }
-  FB14.states = keep; let n0 = keep.length; FB14.holdRefine = null;
+  FB14.states = keep; let n0 = keep.length; FB14.holdRefine = null; if (fresh && fresh.length) FB14.freshT = performance.now();
   if (how === 'fresh' && keep.length > 1) { let Wg = fb14Weigh(M + 61);
     // v92 (e2e 5eed0fb2 T2 after T1's hit: the bar stayed up through Bowser's attack and the Life Shroom, 18 s; the
     // menu's coin window took in the revive's shines, which no menu draw explains, and every fit died: no T2 plan): when
@@ -622,6 +622,9 @@ function fb14WaveSplit(L) {
  * Charge's input is held meanwhile (fb14Held), so the states have not run past it when the narrowed lock lands. */
 function fb14ChgCands() {
   const pc = FB14.pendChg; if (!pc || !FB14.on || !FB14.states.length || typeof CHG === 'undefined') return null;
+  // v148 (the runner: "we can't afford to wait 15-20 seconds"): after a hit with no fresh lock since, the carry is not narrowed on (the
+  // narrowed read only matches the carry, which v147 then holds for the whole fit list anyway): the full search starts at once
+  if (FB14.hitT != null && FB14.hitT > (FB14.freshT || 0)) { slog('fb14NarrowSkipped', { turn: pc.turn, why: 'hit since the last fresh lock' }); FB14.holdRefine = { turn: pc.turn, t: performance.now() }; return null; }
   const dmap = new Map(), ds = FB14_CHGD.map(x => x[0]).sort((a, b) => a - b), P = FB14.pre, tc = performance.now();
   if (P && P.M === pc.M && P.ref === FB14.states && P.n === FB14.states.length) {      // v92: built during the burst
     while (P.i < P.n) { const S = P.ref[P.i], B = fbClone(S), nd = P.ds.length;       // (the rest of it, if the burst was short)

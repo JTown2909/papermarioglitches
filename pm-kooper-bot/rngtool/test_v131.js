@@ -9,7 +9,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v147', 'page version v131');
+  ok(await E(`VERSION`) === 'v148', 'page version v131');
   await E(`window.__mk = (k) => { const c = new Uint8Array(20); [2,0,1,1,1,0,1,1,2,1,1,0,0,0,2,0,1,1,0,1].forEach((v, i) => c[i] = v); const L = [];
     for (let i = 0; i < 40; i++) { const S = fbNew({ s: (0x13579bdf + (i + k) * 0x9E3779B9) >>> 0, nc: 130 + (i % 24), f: 100, c, ph: [37 + (i % 5), 151], l: i % 2, w: 1 + (i % 7) / 10, lw: 1 }); S.out = { 1: { atk: 'fire', v: 60, miss: true, ok: true } }; fbRun(S, 140); L.push(S); } return L; }; 1`);
   const r = JSON.parse(await E(`(async () => { const out = {}; if (!fbsOn()) return JSON.stringify({ noWorker: true });

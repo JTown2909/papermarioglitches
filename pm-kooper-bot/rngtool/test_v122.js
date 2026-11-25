@@ -34,7 +34,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     T.setStep(T.RT().findIndex(s => /^Jr\. Troopa/.test(s.t)) + 2); sel.value = 'ultra'; sel.dispatchEvent(new Event('change')); out.bootsJ = T.RT()[T.step()].t;
     return out; });
   console.log(JSON.stringify(r));
-  ok(r.v === 'v147', 'page version v122');
+  ok(r.v === 'v148', 'page version v122');
   ok(Math.abs(r.e8 - 0.23) < 1e-9, '1. backup T7 (8% blind): beeps from 23% with a perfect press (' + r.e8 + ')');
   ok(Math.abs(r.e30 - 0.4) < 1e-9, '1. main T6 (30% blind): zwedge 40% (' + r.e30 + ')');
   ok(Math.abs(r.e5 - 0.2) < 1e-9, '1. 5% blind: 20% (' + r.e5 + ')');

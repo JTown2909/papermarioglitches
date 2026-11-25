@@ -1,3 +1,16 @@
+# Time Out Timer v148: after a hit, the full read at once (no 15-20 s wait) (Nov 25)
+
+- The runner: "we can't afford to wait for 15-20 seconds" (v147's hold: the narrowed read, then the whole fit list, ~14-20 s in the
+  e2e). After a hit with no fresh lock since, a T2 / T4 Charge is no longer narrowed on the carry (`fb14NarrowSkipped`): the full
+  search starts at the burst, and the plan waits for it (the v147 hold, set there). Console (11-24 logs): a full read locks 4.4-6.3 s
+  after the Charge and the plan follows 0.5-1.5 s later; the runner's T2 Do Nothing came 6.8-9.3 s after the Charge: about no wait.
+  (The e2e's emulator shares the CPU with the page: its reads take about twice as long.)
+- e2e (FORCE_HIT=1.1, before the hold was set on the skip): T2's full read locked with fb14HitFresh / fresh; the carry's plans came
+  first (3.3 s), as in v146; now held. With the hold (RUNNER=patient): c3000004 T2 skipped the narrowing, held, planned 1 s after the
+  full read's lock (12.9 s in the e2e) and Bowser missed; b2000002 T2's full read (the stream from T1's seed) locked at doubt 0.57:
+  "No edge", no confident beep (the runner pressed blind).
+- `test_v148.js`.
+
 # Time Out Timer v147: after a hit, no beep until the Charge's full read (Nov 25)
 
 - **e2e FORCE_HIT=1.1 (v146, 4 seeds):** after T1's forced hit, T2's narrowed read matched the carry and went for the whole fit list

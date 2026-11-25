@@ -16,7 +16,7 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v147', 'page version v134');
+  ok(await E(`VERSION`) === 'v148', 'page version v134');
   // (1) the catch-up
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, X = window.__fb14, V = X.v134; X.reset();
     T.setStep(T.RT().findIndex(s => s.fb14 === 3 && s.fb14role === 'lever'));
