@@ -1,3 +1,23 @@
+# Time Out Timer v149: three Life Shrooms; T4 looks 10 s on (Nov 25)
+
+- **Turn 4 is the route's must (the runner).** Of the runner's 78 logs that reach T4 (a log that goes on past T4 = the wave avoided):
+  17 / 17 with T1-T3 clean, 44 / 61 after an earlier hit. Every T4 failure came after a hit: a fresh lock, 1-3 frame windows,
+  presses 1-2.6 frames off.
+- **T4 looks up to FB14_KEY_S4 = 10 s on** (was 3) for a 90% frame with the press spread (zwChoose's key look-ahead), only when the
+  first second has none: a wider window for a longer wait on Lakilester's menu.
+- **Three Life Shrooms.** The route carries three (console 11-24 20:56: revives on T1, T2 and T6; 21:00 on T2 and T3). v129-v148
+  modelled one: a second T1-T3 hit was read as Mario down for good (FB14.hit: "No edge" on every lever until a fresh lock, and the
+  HP watch stopped, so T4's wave hit went unread: 21:00), and the states drew no revive for it. Now FB14_SHROOMS = 3: each state counts
+  its Life Shrooms (S.shroom, fbShroomLeft / fbShroomUse) and the HP watch reads up to three T1-T3 hits as revives.
+- e2e limits: the b10 build carries one Life Shroom and one Jelly; after a forced KO its menu path selects something unusable on T3
+  (今はつかえないぞ), so forced-hit runs say nothing of T3 / T4. With RUNNER=patient the page sometimes takes T2's Do Nothing before its
+  own T2 lock lands (a slow replay session) and that late carried lock dropped the true state; console T2 locks landed 2.7-7.7 s after
+  the Charge, the runner's Do Nothing 6.8-9.3 s: open.
+- e2e (T4 look-ahead, RUNNER=patient, no forced hit; each of these four seeds took a T3 hit and the revive): T4's plans 85-92% with
+  4-11 frame windows (v145's: 55-80%, 1-3 frames); the wave missed on c3000004, d4000001 and f6000002 (c3000004's T4 hit in v145);
+  a1000002's hit followed a T2 lock that landed after the Do Nothing and dropped the true state (above).
+- `test_v149.js`.
+
 # Time Out Timer v148: after a hit, the full read at once (no 15-20 s wait) (Nov 25)
 
 - The runner: "we can't afford to wait for 15-20 seconds" (v147's hold: the narrowed read, then the whole fit list, ~14-20 s in the

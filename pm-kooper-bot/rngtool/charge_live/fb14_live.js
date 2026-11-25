@@ -116,6 +116,12 @@ function fb14FadeW(pa, l, p1) {
  * 0 <= ph), l (console lag: logic frame = clock frame - l), w, resp (ray respawns, a 64-frame ring), ev (script events,
  * sorted by frame), wv (the frame of Bowser's AI when it chose the wave), prev (Bowser's last attack), out (per turn:
  * attack, test value, miss, ok), sh (logic frames of the predicted shines), from (the state's first frame) } ---- */
+// v149 (console 11-24 20:56: Life Shrooms revived Mario on T1, T2 and T6; 21:00 on T2 and T3): the route carries FB14_SHROOMS Life
+// Shrooms. v129-v148 modelled one: a second hit on T1-T3 was read as Mario down for good (no plans until a fresh lock; T4's wave hit
+// went unread) and the states drew no revive for it. S.shroom: the Life Shrooms left (null: all FB14_SHROOMS)
+const FB14_SHROOMS = 3;
+const fbShroomLeft = S => S.shroom == null || S.shroom > 0;
+const fbShroomUse = S => { S.shroom = (S.shroom == null ? FB14_SHROOMS : S.shroom) - 1; };
 function fbClone(S) { return { rv: S.rv, shroom: S.shroom, b0: S.b0 || 0, b1: S.b1 || 0, b2: S.b2 || 0, b3: S.b3 || 0, mk: S.mk, s: S.s, nc: S.nc, f: S.f, c: S.c, ph: S.ph, l: S.l, w: S.w, resp: S.resp.slice(), ev: S.ev.slice(), wv: S.wv, prev: S.prev, lv: S.lv, rg: S.rg, out: Object.assign({}, S.out), sh: S.sh.slice(), from: S.from, key: S.key, lw: S.lw, err: S.err, tag: S.tag, ca: S.ca && Object.assign({}, S.ca), wb: S.wb, p1: S.p1, p1m: S.p1m, gd: S.gd, pbn: S.pbn, dm0: S.dm0, pbgo: S.pbgo, pbk: S.pbk, aiF: S.aiF, gd2: S.gd2 }; }
 function fbNew(o) { return Object.assign({ resp: new Uint8Array(64), ev: [], wv: -1e9, lv: -1e9, rg: 0, prev: null, out: {}, sh: [], lw: 1, err: 0, b0: 0, b1: 0, b2: 0, b3: 0 }, o); }
 function fbEv(S, e) { let i = S.ev.length; while (i > 0 && S.ev[i - 1].f > e.f) i--; S.ev.splice(i, 0, e); }
@@ -159,7 +165,7 @@ function fbStep(S) {
     else if (e.k === 'p1hit') { const o = S.out[e.turn]; o.v = null; o.miss = false; o.ok = false; const ai = o.ai, X = FB14_P1X[o.atk + (S.gd ? '_g' : '_u')] || {};
       S.dm0 = o.atk === 'fire' && !S.gd ? 4 : 6;
       for (const k in X) fbEv(S, { k: 'p1d', f: ai + +k, m: X[k] });
-      if (o.atk === 'fire' && !S.gd && S.shroom !== 0) { const r0 = f; S.rv = r0; S.shroom = 0; fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }
+      if (o.atk === 'fire' && !S.gd && fbShroomLeft(S)) { const r0 = f; S.rv = r0; fbShroomUse(S); fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }
     else if (e.k === 'p1d') { for (const m of e.m) s = fbRi(s, m); }
     // v133: the Phase 1 T2 Power Bounce (D = the target-screen A): hit n lands on D + 45 + 27n and draws its damage stars (as phase 2's
     // fb2PB); roll n on D + 71 + 27n (only while every roll so far passed); a failed roll still lets the bounce in the air land
@@ -192,7 +198,7 @@ function fbStep(S) {
       // v129: on T1-T4 a hit kills Mario (10 HP) and the Life Shroom revives him (fb2_route/revive_log.py: the draws at fixed
       // offsets from the test whatever A cadence advances the text; 3 seeds replayed exactly through fbStep, test_v129)
       if (!o.miss && o.atk !== 'lightning' && FB14_DELTA[o.atk] != null) { if (o.atk === 'claw') fbEv(S, { k: 'rvclaw', f: f + 2 }); else if (o.atk === 'slam') { fbEv(S, { k: 'rvclaw', f: f + 17 }); if (S.gd2 !== 1) { fbEv(S, { k: 'rvslam2', f: f + 22 }); for (const d of [75, 81, 87]) fbEv(S, { k: 'rvslam6', f: f + d }); if (S.gd2 == null && e.turn <= 3) S.spawnG = true; } }
-        if (S.shroom !== 0) { const r0 = f + (o.atk === 'slam' ? 15 : 0); S.rv = r0; S.shroom = 0; fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }     // (the slam's death plays 15 frames later)
+        if (fbShroomLeft(S)) { const r0 = f + (o.atk === 'slam' ? 15 : 0); S.rv = r0; fbShroomUse(S); fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }     // (the slam's death plays 15 frames later)
       if (o.atk === 'lightning') for (let i = 0; i < 3; i++) s = fbRi(s, 359); }   // v86: the blast's bolt, 3 x rand_int(359) right after the test
   }
   // v86: the Lightning Blast (fb2_route/lb_log.py, lb_model.py: 12 + 20 emulator runs exact): its energy effect on AI + 19
@@ -844,7 +850,7 @@ function fb14EarlyT2(t) {
   slog('fb14StepByOutcome', { from: routeStep, to: j, why: hit ? 'T1 hit read' : 'T1 over (10 HP held through Bowser\'s turn)', afterMs: Math.round(t - FB14.pT[1]) });
   FB14.earlyT2 = { t, lb: FB14.lastBurst ? Object.assign({}, FB14.lastBurst) : null }; setStep(j);
 }
-const FB14_KEY_S = 3;
+const FB14_KEY_S = 3, FB14_KEY_S4 = 10;     // v149 (the runner: "Turn 4 is non-negotiable"): T4 looks up to 10 s on for a 90% frame
 function fb14HpWatch(t, present) {
   /* v86: the watch follows the last lever confirmed (T1-T3), not the route's step: the step moves on at the confirm, so v82-v85
    * watched the next turn instead and never saw a hit on the turn just played (the hit is read 2-25 s after the confirm). It
@@ -867,7 +873,7 @@ function fb14HpWatch(t, present) {
   if (one) W.ok[open] = (W.ok[open] || 0) + 1;
   // v129: a hit on T1-T3 is modelled (the Life Shroom revive, fbStep): the states that hit Mario that turn carry on, the
   // others are weighed down (fb14Weigh, FB14.hits); only T4's hit (the route needs the wave blocked) stops the plans
-  if (W.blankRun >= FB14_HIT_N && open <= 3 && !(FB14.hits && Object.keys(FB14.hits).length)) { W.done[open] = 'hit'; (FB14.hits = FB14.hits || {})[open] = true; FB14.hitT = t - FB14_HIT_N * FRAME; slog('fb14Hit', { turn: open, afterMs: Math.round(t - pT), tens: +v.toFixed(2), revive: true }); cancelBeeps(); if (st.plan && st.plan.fb14) st.plan = null; fb14Show(); render(); return; }     // v134: hitT too (a fresh lock's menu coin skips the revive: v108)
+  if (W.blankRun >= FB14_HIT_N && open <= 3 && Object.keys(FB14.hits || {}).length < FB14_SHROOMS) { W.done[open] = 'hit'; (FB14.hits = FB14.hits || {})[open] = true; FB14.hitT = t - FB14_HIT_N * FRAME; slog('fb14Hit', { turn: open, afterMs: Math.round(t - pT), tens: +v.toFixed(2), revive: true }); cancelBeeps(); if (st.plan && st.plan.fb14) st.plan = null; fb14Show(); render(); return; }     // v134: hitT too (a fresh lock's menu coin skips the revive: v108)
   if (W.blankRun >= FB14_HIT_N) { W.done[open] = 'hit'; FB14.hit = open; FB14.hitT = t - FB14_HIT_N * FRAME; if (open === 4) FB14.routeOff = 'T4\'s wave hit Mario (the route needs it blocked)'; slog('fb14Hit', { turn: open, afterMs: Math.round(t - pT), tens: +v.toFixed(2) }); cancelBeeps(); if (st.plan && st.plan.fb14) st.plan = null; fb14CarryGone(); fb14Show(); render(); }
 }
 /* v86: the turn before `turn` is over (this turn's Charge burst, or the Jelly): Bowser missed it if the bar showed Mario's
@@ -1264,14 +1270,14 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (skp) { const [w0, w1] = fb14SkipWin(); from = Math.max(from, w0); W = w1 - from;
     if (W < 0) { const pl = { none: 'the message window is over', turn, sk: true }; FB14.plan = pl; if (cAt != null) return pl; st.msg = 'No edge: Cloud Nine\'s message window is over. ' + fb14BlindText(1)[0].toUpperCase() + fb14BlindText(1).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'skip window over' }); cancelBeeps(); fb14Show(); render(); return true; } }
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
-  const keyT = turn >= 2 && turn <= 4 && !skp && cAt == null && !window.__noKeyLater, KF = keyT ? Math.round(FB14_KEY_S * 1000 / fbRate()) : 0;     // v124: T4 (the wave must miss Mario) may wait FB14_KEY_S more for a 90% frame (zwChoose's key look-ahead); v126: T2 and T3 too (the runner: T2-T7 menus can wait; T1's Lakilester menu closes by itself, so not T1)
+  const keyT = turn >= 2 && turn <= 4 && !skp && cAt == null && !window.__noKeyLater, keyS = turn === 4 ? FB14_KEY_S4 : FB14_KEY_S, KF = keyT ? Math.round(keyS * 1000 / fbRate()) : 0;     // v124: T4 (the wave must miss Mario) may wait FB14_KEY_S more for a 90% frame (zwChoose's key look-ahead); v126: T2 and T3 too (the runner: T2-T7 menus can wait; T1's Lakilester menu closes by itself, so not T1)
   const live = cAt == null && typeof fbsOn === 'function' && fbsOn(); if (live) fbsBegin();
   const t1 = performance.now(), share = fb14ShareU(L, from - D, from + W + KF + X + D, turn), ms = Math.round(performance.now() - t1);
   if (live) {     // v129: the anchor's / broad check's states and the plan-without-the-picture's, over the same frames, in the same round
     const B = FB14.states.filter(S => S.err == null || S.err <= FB_MAXERR); if (B.length > Wg.list.length && !window.__fb14NoBroad) fb14ShareU(fb14Sample(B.map(S => { const Xs = Object.create(S); Xs.lw = 1; return Xs; }), FB14_NSAMPLE), from - D, from + W + KF + X + D, turn);
     if (L0) fb14ShareU(L0, from - D, from + W + KF + X + D, turn);
     if (fbsEnd(turn)) { st.msg = 'Planning T' + turn + ' (in the background)…'; fb14Show(); render(); return true; } }
-  const prof = { id: 'fb14', key: keyT ? FB14_KEY_S : 0, share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
+  const prof = { id: 'fb14', key: keyT ? keyS : 0, share: (a, b) => (a === from - D ? share : share.slice(a - (from - D), b - (from - D) + 1)) };
   // v101 (e2e 2b7e1516 T1: zwChoose's "later" reach picked + 315, past the message: a skip that does nothing): a skip plan's frames
   // are held inside the message's window (zwChoose lim)
   const dEff = fb14DoubtFloor(turn, Wg.doubt), C = zwChoose(L, from, W, PD, prof, { d: dEff, b3: fb14Blind(turn), b4: 0 }, undefined, skp ? { lo: from, hi: from + W } : undefined);
