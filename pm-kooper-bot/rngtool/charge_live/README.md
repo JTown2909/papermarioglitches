@@ -5453,3 +5453,8 @@ new. What that means here:
   (fbStreamNote 'p1'): Phase 2 T1 searches it (first under FBS_HI, else after a full search with no near-lock). Needs the route on
   Phase 1 when it starts (the logs begin at Phase 2). test_v168.js.
 - T2 / T4 fresh locks after T1's hit had the true seeds (2177 steps apart) but states the coin ruled out (doubt 1 by T3; T4 0.98): open.
+
+## v169 (console 11-26 12:28, on v167)
+- T1 (81%) and T3 (79%, a 4-frame window) hit on presses 0.3 / 0.1 frames off. Today's 44 T1-T3 beeps: the stated chance held (75-85%
+  plans: Bowser missed 73%; presses within a frame: 75% for a stated 73%). The plans are honest; they are only 80%. T4, with its 10 s
+  look-ahead, gave 92-100%. T2 / T3 now look 6 s on (FB14_KEY_S, was 3) for a 90% frame (or 10 points more).

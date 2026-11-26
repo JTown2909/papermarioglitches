@@ -15,7 +15,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   ok(r.n === 3 && r.seq.join() === 'true,true,true,false' && r.left === 0 && r.cloned === 0, '(1) a state revives on three hits, not a fourth (and the count survives fbClone)');
   const src = await E('fb14HpWatch.toString()');
   ok(/open <= 3 && Object\.keys\(FB14\.hits \|\| \{\}\)\.length < FB14_SHROOMS/.test(src), '(1) the HP watch reads up to FB14_SHROOMS T1-T3 hits as revives');
-  ok(r.k4 === 10 && r.k === 3, '(2) T4 looks 10 s on for a 90% frame, T2 / T3 3 s');
+  ok(r.k4 === 10 && r.k === 6, '(2) T4 looks 10 s on for a 90% frame, T2 / T3 6 s (v169)');
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? 'FAIL ' + fails : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

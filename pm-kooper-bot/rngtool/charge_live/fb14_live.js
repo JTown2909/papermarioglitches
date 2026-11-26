@@ -856,7 +856,7 @@ function fb14EarlyT2(t) {
   slog('fb14StepByOutcome', { from: routeStep, to: j, why: hit ? 'T1 hit read' : 'T1 over (10 HP held through Bowser\'s turn)', afterMs: Math.round(t - FB14.pT[1]) });
   FB14.earlyT2 = { t, lb: FB14.lastBurst ? Object.assign({}, FB14.lastBurst) : null }; setStep(j);
 }
-const FB14_KEY_S = 3, FB14_KEY_S4 = 10;     // v149 (the runner: "Turn 4 is non-negotiable"): T4 looks up to 10 s on for a 90% frame
+const FB14_KEY_S = 6, FB14_KEY_S4 = 10;     // v169 (today's 44 T1-T3 beeps: the stated chance held - 75-85% plans missed 73% - so a 0.8 beep is a 1-in-5 hit; T4's 10 s look-ahead gave its 92-100% beeps): T2 / T3 look up to 6 s on (was 3) for a 90% frame (or 10 points more)     // v149 (the runner: "Turn 4 is non-negotiable"): T4 looks up to 10 s on for a 90% frame
 function fb14HpWatch(t, present) {
   /* v86: the watch follows the last lever confirmed (T1-T3), not the route's step: the step moves on at the confirm, so v82-v85
    * watched the next turn instead and never saw a hit on the turn just played (the hit is read 2-25 s after the confirm). It
