@@ -1,3 +1,30 @@
+# Time Out Timer v156: T5's attack read from Mario's HP for T6; the e2e plays the whole fight (Nov 26)
+
+- **T6 from T5's attack.** e2e d4000001 (FULL): the T6 lock was the true seed (44fe7a0e at M + 13), the runner pressed on the plan's
+  frame (497, 76%), and Bowser hit there and on both neighbours: his T5 Claw had left Mario at 1 HP, so T6 could not be a Claw, but the
+  setting "Bowser's turn-5 attack: not set" weighs the three T5 cases equally. Now Mario's HP number on T6's step before its Charge
+  (fb2T5Watch, the backup T7's digit reader, held 15 pictures) sets the T6 flags when the setting is not set: 3 = Body Slam guarded
+  (no T6 Body Slam), 2 = Body Slam or Claw guarded (half / half), 1 = Claw (no T6 Claw) or Fire / Lightning guarded (half / half),
+  10 = no restriction. The route is on T6's step from the Peach Beam's end (before Lakilester's and Bowser's T5 turns), so the last
+  steady number before T6's Charge counts. Logged `fb2T5Hp`.
+- **A T5 KO.** e2e b2000002: Bowser KO'd Mario on T5 and the Life Shroom revived him; the carry knows no T5 revive, so T6's narrowed
+  candidates (fb14T6Cands) were all off the game and the narrowed read locked one at 3.2x (its seed is nowhere in the true stream): a
+  94% plan, a hit. A steady 0 on T6's step before its Charge (`fb2T5Ko`) now skips the narrowed candidates: the full search. `test_v156.js`.
+- **The e2e (fb2_route/fb14_e2e.py) plays to Bowser down.** FULL=1: T5 the Peach Beam, T6 Charge + Do Nothing on the page's beep
+  (fb2PlanP), then the T7 Power Bounce on its beep (fb2PlanT7, an A before each landing) - or after a T6 hit the backup T7 (Charge +
+  Do Nothing) and the T8 Power Bounce; the report's `won` is the turn Bowser went down. A beep before the Strategies screen is up is
+  not pressed (the runner waits for the next). SHROOMS=n: the route's Life Shrooms (DIAGNOSTIC inventory write at the T1 menu: the
+  Jelly, then n Life Shrooms). LIVE=1 (test_fb14_live.js): one page for the whole fight, fed each turn's pictures as played up to the
+  runner's press, then Bowser's turn (the old runner replays the fight from T1 for every turn: ~4x the page time); the first LIVE run
+  (c3000004) planned 2-7 s after each Charge, as on console. The old T6 stage (the popup lever, pre-v97) is off with FULL.
+
+# Time Out Timer v155: the backup T7's Fire Breath and Lightning are successes (Nov 26)
+
+- The runner: "fire or lightning are possible turn 7 ... both work, you survive one HP". The backup T7's success (ok7) is now anything
+  but the wave and the shield; the carry to T8 still follows Body Slam / Claw only (their draws to the T8 menu are measured, fire's
+  and lightning's are not: after them T8 has no modelled states). The step reads "→ Body Slam / Claw / Fire Breath / Lightning (Mario
+  survives in Danger); a wave or Bowser's shield fails it". test_v133 / test_v114 updated.
+
 # Time Out Timer v154: the backup T7's shield is a failure (Nov 26)
 
 - The runner: "turn 7 shield is a failure" ("No Wave or Shield" = neither). v133 had counted Bowser's Star Rod recast as a backup T7

@@ -11,7 +11,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v154', 'page version v133');
+  ok(await E(`VERSION`) === 'v156', 'page version v133');
   // (1) the burst moves the route; the Strategies close rule
   const r1 = JSON.parse(await E(`(() => { const T = window.__tot, r = T.RT(), p1 = r.findIndex(s => s.fbp1), dn = r.findIndex(s => s.fbp1dn);
     T.setStep(p1); const before = routeStep; fbp1Trigger(); const after = routeStep; const min = closeMinMs();
@@ -32,7 +32,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const r4 = JSON.parse(await E(`(() => { const rows = [...document.querySelectorAll('#route-list li')].map(l => l.textContent);
     let rec = null, slam = null; for (let s = 1; s < 4000 && (!rec || !slam); s++) { const S0 = { s: (s * 2654435761) >>> 0, nc: 9999 }; const a = fb2AI7(S0, 100, [44, 194], true, true); if (a.atk === 'recast' && !rec) rec = a; if (a.atk === 'slam' && !slam) slam = a; }
     const J = JSON.stringify(ENDGAME);
-    return JSON.stringify({ label: /Do Nothing on the beep → Body Slam \\/ Claw \\(Mario in Danger\\); a wave or Bowser's shield fails it/.test(J), text: J.includes('T7: Charge; Do Nothing - No Wave or Shield'), rec: rec && { ok7: rec.ok7, lucky: rec.lucky }, slam: slam && { ok7: slam.ok7, lucky: slam.lucky } }); })()`));
+    return JSON.stringify({ label: /Do Nothing on the beep → Body Slam \\/ Claw \\/ Fire Breath \\/ Lightning \\(Mario survives in Danger\\); a wave or Bowser's shield fails it/.test(J), text: J.includes('T7: Charge; Do Nothing - No Wave or Shield'), rec: rec && { ok7: rec.ok7, lucky: rec.lucky }, slam: slam && { ok7: slam.ok7, lucky: slam.lucky } }); })()`));
   ok(r4.text && r4.label, '4. the backup T7 reads "No Wave or Shield"');
   ok(r4.rec && r4.rec.ok7 === false && r4.rec.lucky === false && r4.slam && r4.slam.ok7 && r4.slam.lucky, '4. (v154: the runner, the shield is a failure) the shield is no T7 success; a Body Slam is');
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));

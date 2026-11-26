@@ -107,7 +107,7 @@ function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   if (good) { const H = (gd ? FB2B_HIT_G : FB2B_HIT)[atk]; T = E + (gd ? FB2B_MENU_G : FB2B_MENU)[atk];
     for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0]; for (const m of H[f - E] || []) ri(m);
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
-  return { lucky: good, ok7: good,     /* v154 (the runner: "turn 7 shield is a failure": "No Wave or Shield" is neither): only Body Slam / Claw */ cc: null, atk, T, menu: T, S, gd: good ? !!gd : undefined };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
+  return { lucky: good, ok7: atk !== 'wave' && atk !== 'recast',     /* v154 (the runner: "turn 7 shield is a failure"); v155 ("fire or lightning ... both work, you survive one HP"): only the wave and the shield fail; the carry to T8 (lucky) follows Body Slam / Claw only (their draws are measured) */ cc: null, atk, T, menu: T, S, gd: good ? !!gd : undefined };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
 }
 const fb2Edge = b => (b < 0.15 ? Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b)) : num('zwedge'));     // v122: the edge against low blind odds (the backup T7); else Best chance
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
@@ -140,8 +140,37 @@ function fb2PBWin(S0, f0, D0, W, ph) {
   return out;
 }
 /* Bowser's attack flags at T6: a Body Slam or a Claw on T5 forbids that attack on T6 (fb2_route README section 4) */
+/* v156 (e2e d4000001: the T6 lock was the true seed, pressed on its frame, Bowser hit on it and both neighbours: Bowser's T5 Claw had
+ * left Mario at 1 HP, so T6 could not be a Claw, but the setting "not set" weighed the three T5 cases equally): Mario's HP number on
+ * T6's step before its Charge (after the Peach Beam's turn) tells T5's attack when the setting is "not set": 3 = Body Slam guarded,
+ * 2 = Body Slam or Claw guarded, 1 = Claw (or Fire Breath / Lightning guarded), 10 = no damage (or a revive). Read like the backup
+ * T7's number (fb2OnesDigit), held FB2_T5HP_N pictures. */
+const FB2_T5HP_N = 15; var FB2HP5 = { v: null, d: null, run: 0 };
+function fb2T5Watch(t, present) {
+  const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; if (!s) return;
+  if (s.fb5 || (s.fb14 && s.fb14 <= 4)) { if (FB2HP5.v != null || FB2HP5.run || FB2HP5.t5ko) FB2HP5 = { v: null, d: null, run: 0 }; return; }     // T5's start / a new attempt: read again
+  if (s.turn !== 'fb2_k' || s.b7 || (CHG.trig && chgP().id === 'fb2')) return;     // (T6's Charge: the last steady number stands)
+  // the route is on T6's step from the Peach Beam's end, before Lakilester's T5 turn and Bowser's T5 attack: the last steady number
+  // before T6's Charge is the one after the attack; a steady 0 on the way is a KO (the Life Shroom revived Mario)
+  const B = window.__fb2OnesTest ? { since: -1e9 } : (typeof JRT !== 'undefined' ? JRT.bar : null); if (!present || !B || !B.since || t - B.since < 6 * FRAME) return;
+  const tens = window.__fb2OnesTest ? (window.__fb2TensVal != null ? window.__fb2TensVal : 0) : (typeof jrTens === 'function' ? jrTens() : 1);
+  const d = tens >= JR_TENS_MIN ? 10 : fb2OnesDigit(fb2OnesMask()); if (d == null) { FB2HP5.run = 0; return; }
+  if (d === FB2HP5.d) FB2HP5.run++; else { FB2HP5.d = d; FB2HP5.run = 1; }
+  if (FB2HP5.run === FB2_T5HP_N) {
+    if (d === 0 && !FB2HP5.t5ko) { FB2HP5.t5ko = true; slog('fb2T5Ko', { why: 'HP 0 after T5: the Life Shroom' }); }
+    if (d !== 0 && d !== FB2HP5.v) { FB2HP5.v = d; slog('fb2T5Hp', { hp: d, ko: !!FB2HP5.t5ko, flags: JSON.stringify(fb2T5Flags(d)) }); } }
+}
+/* T6's (slamOk, clawOk, weight) from the HP after T5 (null: not read) */
+function fb2T5Flags(hp) {
+  if (hp === 3) return [[false, true, 1]];
+  if (hp === 2) return [[false, true, 0.5], [true, false, 0.5]];
+  if (hp === 1) return [[true, false, 0.5], [true, true, 0.5]];
+  if (hp === 10) return [[true, true, 1]];
+  return null;
+}
 function fb2Flags() { if (fb2BackupOn() && FB2B.atk6) { const A = FB2B.atk6, out = []; for (const [a, w] of Object.entries(A)) if (w > 0) out.push([a !== 'slam', a !== 'claw', w]); if (out.length) return out; }     // v114: the backup T7: Bowser's T6 attack (the hit's) forbids that one
-  const v = ($('s-fb2t5') || {}).value || 'any'; return v === 'slam' ? [[false, true, 1]] : v === 'claw' ? [[true, false, 1]] : v === 'fire' ? [[true, true, 1]] : [[true, true, 1 / 3], [false, true, 1 / 3], [true, false, 1 / 3]]; }
+  const v = ($('s-fb2t5') || {}).value || 'any'; if (v === 'any' && FB2HP5.v != null) { const f5 = fb2T5Flags(FB2HP5.v); if (f5) return f5; }     // v156
+  return v === 'slam' ? [[false, true, 1]] : v === 'claw' ? [[true, false, 1]] : v === 'fire' ? [[true, true, 1]] : [[true, true, 1 / 3], [false, true, 1 / 3], [true, false, 1 / 3]]; }
 /* ---- clock: confirm-relative logic frames from the Charge trigger (the picture of rays frame 3 = confirm + 16) ---- */
 /* v72: on the console's frame time (consoleRate, as the Hallway tracker since v70; 33.427 ms until the shines measure it),
  * fixed for the fight at the trigger (FB2.rate, fb2Reset). v71 ran this clock on 33.367 ms (59.94 Hz): ~0.25 frame late at
@@ -197,6 +226,11 @@ const fb2DnPressT = k => fb2PressT(k) + fb2Bias() * fb2Rate();
 function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable frame were kAt, no beeps
   if (kAt == null && typeof seriesHold === 'function' && seriesHold('fb2')) return st.plan;      // v106: a begun series plays out
   const t0 = performance.now(), H = fb2TopHyps(), b7 = fb2BackupOn(), F = fb2Flags(), now = performance.now(), bias = fb2Bias();
+  // v156: Close Call only works with Mario in Danger: at 10 HP after T5 (Bowser's T5 attack missed, or a KO the Life Shroom revived)
+  // no T6 Do Nothing frame can dodge: no beep, the backup ending to come
+  if (!b7 && FB2HP5.v === 10) { const nl = { none: 'no Danger', lever: 'nothing' }; if (kAt != null) return nl; if (FB2.plan && FB2.plan.none === 'no Danger') return true;
+    FB2.plan = nl; cancelBeeps(); if (st.plan && st.plan.prof === 'fb2') st.plan = null; slog('fb2NoEdge', { why: 'Mario at 10 HP after T5: no Danger, no Close Call' });
+    st.msg = 'T6: Mario is at 10 HP (no Danger), so Close Call cannot make Bowser miss on any frame. Do Nothing whenever you like; the backup ending (T7 Charge, Do Nothing on its beep) follows.'; fb2Show(); if (typeof render === 'function') render(); return true; }
   // v102 (console log fb0449 T6: planned 1.6 s ahead, its 3 beeps 300 ms apart: "the beeps seemed to glitch by speeding up"): the
   // T6 countdown is the runner's own (Settings: Beeps, Beep spacing, Lead time; playBeeps, earliestPress), never squeezed: the
   // first frame is the first whose press time leaves the whole countdown ahead, as T1-T4 and T7
@@ -485,7 +519,7 @@ function fb2B7Watch(t, present) {
   if (d === W.d) W.run++; else { W.d = d; W.run = 1; } if (W.run < FB2_B7HP_N || t < FB2.pT + 1500) return;
   T7.hpRead = d; let keep = 0, tot = 0;
   for (const o of T7.states) { const e = FB2_B7HP_EXP[o.a.atk], want = e ? e[o.a.gd ? 1 : 0] : null; tot += o.w; if (want === d) keep += o.w; else if (FB2_B7HP_ON) o.w *= FB2_B7HP_W; }
-  slog('fb2B7Hp', { hp: d, kept: tot ? +(keep / tot).toFixed(3) : 0, states: T7.states.length, afterMs: Math.round(t - FB2.pT), means: d === 3 ? 'Body Slam guarded' : d === 2 ? 'Body Slam, or Claw guarded' : d === 1 ? 'Claw' : d === 4 ? 'the wave' : 'off the model' });
+  slog('fb2B7Hp', { hp: d, kept: tot ? +(keep / tot).toFixed(3) : 0, states: T7.states.length, afterMs: Math.round(t - FB2.pT), means: d === 3 ? 'Body Slam guarded' : d === 2 ? 'Body Slam, or Claw guarded' : d === 1 ? 'Claw, Fire Breath or Lightning (v155: all a success; only the Claw\'s draws to T8 are modelled)' : d === 4 ? 'the wave' : 'off the model' });
   if (FB2_B7HP_ON && (d === 4 || !(d >= 1 && d <= 3))) { st.msg = 'T7: HP ' + d + ' after Bowser\'s attack (' + (d === 4 ? 'the wave: the route is off' : 'not a Body Slam / Claw') + '). T8\'s beep, if any, is off the model.'; }
   fb2Show(); if (typeof render === 'function') render();
 }

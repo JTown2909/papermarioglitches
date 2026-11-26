@@ -10,7 +10,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v154', 'page version v140');
+  ok(await E(`VERSION`) === 'v156', 'page version v140');
   const r = JSON.parse(await E(`(() => { let same = 0, n = 0, pre = 0, sum1 = 0, cap = 0, br = 0, hist = 0; let x = 12345;
     const rnd = m => { x = (Math.imul(x, 1103515245) + 12345) >>> 0; return x % m; };
     for (let t = 0; t < 1500; t++) { const c = new Uint8Array(20); for (let j = 0; j < 20; j++) c[j] = rnd(4); const ph = [rnd(130), rnd(220)];

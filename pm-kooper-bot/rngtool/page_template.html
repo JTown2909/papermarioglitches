@@ -604,7 +604,7 @@ const ENDGAME = [
     // Close Call fail (fb2_live.js fb2Backup: Mario's HP number changed after the Do Nothing). T7 is a T6-like step (its Super
     // Charge locks the seed again, the Do Nothing beep aims at No Wave with Mario left in Danger), T8 the Power Bounce for 5+
     { text: 'T6: Charge; Do Nothing - Close Call failed, Life Shroom', steps: [], backup: true, phase: 'Backup:' },
-    { text: 'T7: Charge; Do Nothing - No Wave or Shield', backup: true, steps: [{ label: 'Super Charge (its rays lock the seed again), then Lakilester: Do Nothing on the beep → Body Slam / Claw (Mario in Danger); a wave or Bowser\'s shield fails it', cat: 'S', turn: 'fb2_k', b7: true, pre: [{ cat: 'M', id: 'fb2_charge' }] }] },     // v133 (the runner: "it should say no wave or shield")
+    { text: 'T7: Charge; Do Nothing - No Wave or Shield', backup: true, steps: [{ label: 'Super Charge (its rays lock the seed again), then Lakilester: Do Nothing on the beep → Body Slam / Claw / Fire Breath / Lightning (Mario survives in Danger); a wave or Bowser\'s shield fails it', cat: 'S', turn: 'fb2_k', b7: true, pre: [{ cat: 'M', id: 'fb2_charge' }] }] },     // v133 (the runner: "it should say no wave or shield")
     { text: 'T8: Bounce x5', backup: true, steps: [{ label: 'Power Bounce → 5 on the beep', cat: 'B', turn: 'fb2_pb', b8: true }] } ] } ];
 /* Jr. Troopa on the Charge-lock route (jr_charge/README.md, charge_live/jr_live.js; the route panel's default, Settings key
  * jrroute): Mario's T1 Super Charge locks the seed from its rays (profile jr) and the tracker carries it through every
@@ -1989,7 +1989,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v154';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v156';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
@@ -2111,7 +2111,7 @@ function stripData() {
  * (Final Bowser T1-T4: FB14; T6/T7: FB2), else the Charge-lock tracker (zw), else the walk (shine) lock. */
 function lockBadgeState() {
   const stp = isRoute() ? RT()[routeStep] : null, pc = x => Math.round(100 * x) + '%';
-  if (stp && stp.fb14 && typeof FB14 !== 'undefined') {
+  if (stp && (stp.fb14 || stp.fb5) && typeof FB14 !== 'undefined') {     // v156 (console 11-26 09:50: "NOT LOCKED - no Charge lock" right after T4's press, its lock up: the route on T5's step read the Charge reader's last no-read)
     if (FB14.hit) return { state: 'no', why: 'Mario hit on T' + FB14.hit };
     if (!FB14.on || !FB14.states || !FB14.states.length) return { state: 'no', why: FB14.why && /gone/.test(FB14.why) ? 'carried seed gone' : 'no Charge lock' };
     // v82 (log 1794170840652: green "8000 states" on T1): FB14.doubt is the lock's prior until the coin has weighed it
@@ -2162,7 +2162,9 @@ function pctBoxShow() {
   const box = $('pct-box'); if (!box) return; const pc = x => Math.round(100 * Math.max(0, Math.min(1, x))) + '%', now = performance.now(), P = st.plan, ps = st.pressShow;
   let big = '–', small = 'no plan', cls = 'pctb';
   if (ps && ps.src === 'press' && (!P || P.tMade < ps.t) && now - ps.t < 120000) {
-    const at = c => (ps.chance && ps.chance[Math.round(c) - ps.first] != null ? +ps.chance[Math.round(c) - ps.first] : null), qA = at(ps.target), qH = ps.p != null ? ps.p : at(ps.hit);
+    // v156 (console 11-26 09:50 T4: "84% you hit" on a press 1.4 frames past the window): after a press the frames' own chances (no press
+    // spread: the spread is in the plan's number before the press, not in a press already made)
+    const arr = ps.frameP || ps.chance, at = c => (arr && arr[Math.round(c) - ps.first] != null ? +arr[Math.round(c) - ps.first] : null), qA = at(ps.target), qH = ps.pFrame != null ? ps.pFrame : ps.p != null ? ps.p : at(ps.hit);
     big = qH != null ? pc(qH) : ps.works ? '✓' : '✗'; small = 'you hit' + (qA != null ? ' · aimed ' + pc(qA) : ''); cls += ps.works ? ' good' : ' bad';
   } else if (P && P.mix && P.mix.p != null && !P.stopped && P.tPress > now - 1500) { big = pc(P.mix.p); small = 'plan · aim frame ' + Math.round(P.target); }
   if (box.className !== cls) box.className = cls; if ($('pct-big').textContent !== big) $('pct-big').textContent = big; if ($('pct-small').textContent !== small) $('pct-small').textContent = small;
@@ -2907,7 +2909,8 @@ function pressShow(P, c, label) {
   const ch0 = at(P.chance, f0), ch1 = at(P.chance, f0 + 1), t0 = P.tab[f0 - P.first] ? 1 : 0, t1 = P.tab[f0 + 1 - P.first] ? 1 : 0;
   const f = Math.round(c), works = (1 - w1) * t0 + w1 * t1 >= 0.5;
   const pBlend = ch0 != null && ch1 != null ? (ch0 === ch1 ? ch0 : Math.round(((1 - w1) * ch0 + w1 * ch1) * 1e6) / 1e6) : null;
-  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: P.tab4 ? P.tab4.slice() : null, chance: P.chance ? P.chance.slice() : null, first: P.first,     /* v115 (runner 11-17): the white tips (the 6 cap / all 4) and the dimming stay after the press */ tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), p: pBlend != null ? pBlend : P.chance && P.chance[f - P.first] != null ? P.chance[f - P.first] : P.mix && P.mix.p != null ? P.mix.p : null };     // v115: the chance of the frame hit (the press table's), else the plan's     // v111 (oo): the plan's chance, for the ✓
+  const fp0 = at(P.frameP, f0), fp1 = at(P.frameP, f0 + 1), pFrame = fp0 != null && fp1 != null ? (1 - w1) * fp0 + w1 * fp1 : null;     // v156: the chance of the frame itself (no press spread)
+  st.pressShow = { src: 'press', tab: P.tab.slice(), tab4: P.tab4 ? P.tab4.slice() : null, chance: P.chance ? P.chance.slice() : null, first: P.first,     /* v115 (runner 11-17): the white tips (the 6 cap / all 4) and the dimming stay after the press */ tLast: null, rate: P.rate, w: P.w ? Object.assign({}, P.w) : null, target: P.target, hit: c, works, label, t: performance.now(), pFrame, frameP: P.frameP ? P.frameP.slice() : null, p: pBlend != null ? pBlend : P.chance && P.chance[f - P.first] != null ? P.chance[f - P.first] : P.mix && P.mix.p != null ? P.mix.p : null };     // v115: the chance of the frame hit (the press table's), else the plan's     // v111 (oo): the plan's chance, for the ✓
   slog('pressShow', { label, target: P.target, c: +c.toFixed(2), works });
   return works;
 }

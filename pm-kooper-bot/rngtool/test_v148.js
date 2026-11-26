@@ -7,7 +7,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E('VERSION') === 'v154', 'page version v148');
+  ok(await E('VERSION') === 'v156', 'page version v148');
   const r = JSON.parse(await E(`(() => { const T = window.__tot, out = {};
     const S = fbNew({ s: 0x12345678, nc: 400, f: 900, c: new Uint8Array(20), ph: [10, 20], l: 0, w: 1 }); FB14.on = true; FB14.states = [S]; FB14.pre = null;
     const run = (hitT, freshT) => { FB14.pendChg = { M: 1000, turn: 2 }; FB14.hitT = hitT; FB14.freshT = freshT; const n0 = T.SLOG.length; const c = fb14ChgCands();

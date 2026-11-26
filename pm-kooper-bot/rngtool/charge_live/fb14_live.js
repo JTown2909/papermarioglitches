@@ -627,12 +627,14 @@ function fb14WaveSplit(L) {
  * state at each Charge frame FB14_CHGD gives the seed before A's base-angle draw (14-22 distinct seeds in the runs). The
  * Charge's input is held meanwhile (fb14Held), so the states have not run past it when the narrowed lock lands. */
 // v153: a hit since the last fresh lock (the carry is not narrowed on, nor its stream searched: the full search, ~3 s, is sooner)
-const fb14AfterHitFull = () => typeof FB14 !== 'undefined' && FB14.hitT != null && FB14.hitT > (FB14.freshT || 0);
+// v156 (console 11-26 09:50: T2's stream lock off T1's doubtful one, ruled out by the coin within a second: "No edge" to the end of T2; T4 then
+// streamed again off a history seed at 1.62x and planned 84% on it): a carry the coin has ruled out (fb14CarryGone / all out) counts as a hit
+const fb14AfterHitFull = () => typeof FB14 !== 'undefined' && ((FB14.hitT != null && FB14.hitT > (FB14.freshT || 0)) || (FB14.lostT != null && FB14.lostT > (FB14.freshT || 0)));
 function fb14ChgCands() {
   const pc = FB14.pendChg; if (!pc || !FB14.on || !FB14.states.length || typeof CHG === 'undefined') return null;
   // v148 (the runner: "we can't afford to wait 15-20 seconds"): after a hit with no fresh lock since, the carry is not narrowed on (the
   // narrowed read only matches the carry, which v147 then holds for the whole fit list anyway): the full search starts at once
-  if (FB14.hitT != null && FB14.hitT > (FB14.freshT || 0)) { slog('fb14NarrowSkipped', { turn: pc.turn, why: 'hit since the last fresh lock' }); FB14.holdRefine = { turn: pc.turn, t: performance.now() }; return null; }
+  if (fb14AfterHitFull()) { slog('fb14NarrowSkipped', { turn: pc.turn, why: FB14.hitT != null && FB14.hitT > (FB14.freshT || 0) ? 'hit since the last fresh lock' : 'the carry was ruled out since the last fresh lock' }); FB14.holdRefine = { turn: pc.turn, t: performance.now() }; return null; }
   const dmap = new Map(), ds = FB14_CHGD.map(x => x[0]).sort((a, b) => a - b), P = FB14.pre, tc = performance.now();
   if (P && P.M === pc.M && P.ref === FB14.states && P.n === FB14.states.length) {      // v92: built during the burst
     while (P.i < P.n) { const S = P.ref[P.i], B = fbClone(S), nd = P.ds.length;       // (the rest of it, if the burst was short)
@@ -1085,7 +1087,7 @@ function fb14Weigh(h, noV) {     // noV (v100): without the picture's evidence (
   }
   const keep = out.filter(S => S.w * S.lw >= mx * ZW_CUT), sum = keep.reduce((a, S) => a + S.w * S.lw, 0);
   if (window.__fb14seeds) FB14.wctx = { vis, tapF, nlo, nhi, mx, h };     // (diagnostic: the truth trace, fb14TruthWhy)
-  if (!keep.length && FB14.states.length && !FB14.allOutLogged) { FB14.allOutLogged = true; FB14.gone = true; slog('fb14AllOut', { h, taps: tapF.filter(x => x < h).map(x => +x.toFixed(1)).slice(-20), vis: vis.map(v => v.map(x => +x.toFixed(1))).slice(-8), sample: FB14.states.slice(0, 4).map(S => ({ f: S.f, l: S.l, from: S.from, sh: S.sh.slice(-12), err: S.err })) }); }
+  if (!keep.length && FB14.states.length && !FB14.allOutLogged) { FB14.allOutLogged = true; FB14.gone = true; FB14.lostT = performance.now(); slog('fb14AllOut', { h, taps: tapF.filter(x => x < h).map(x => +x.toFixed(1)).slice(-20), vis: vis.map(v => v.map(x => +x.toFixed(1))).slice(-8), sample: FB14.states.slice(0, 4).map(S => ({ f: S.f, l: S.l, from: S.from, sh: S.sh.slice(-12), err: S.err })) }); }
   let nVis = 0; for (const [a, b] of vis) nVis += Math.max(0, b - Math.max(a, FB14.bgFrom || 0));
   let bg = tot0 * FB14.bg * Math.exp(-ZW_RHO * nVis);
   if (FB14.missed) for (const k in FB14.missed) bg *= fb14Blind(+k);
@@ -1233,7 +1235,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   // page beeped meanwhile on the carry: the true seed was in none of the 4 carries, doubt 0, 8-9 s before the full read's lock): after a
   // hit the carry is not planned on until this Charge's full read has locked (FB14_HOLD_MS at most)
   if (cAt == null && FB14.holdRefine && FB14.holdRefine.turn === turn && performance.now() - FB14.holdRefine.t < FB14_HOLD_MS) { if (FB14.holdLogged !== FB14.holdRefine.t) { FB14.holdLogged = FB14.holdRefine.t; slog('fb14HoldForFull', { turn }); }
-    st.msg = 'WAIT on Lakilester\'s Do Nothing: Bowser hit last turn, so the page waits for this Charge\'s full read (about 5-10 s) before the beep.'; FB14.plan = { none: 'full read', turn }; if (st.plan && st.plan.fb14) { st.plan = null; cancelBeeps(); } fb14Show(); render(); return true; }
+    st.msg = 'WAIT on Lakilester\'s Do Nothing: ' + (FB14.hitT != null && FB14.hitT > (FB14.freshT || 0) ? 'Bowser hit last turn' : 'the last lock was ruled out by the coin') + ', so the page waits for this Charge\'s full read (about 5-10 s) before the beep.'; FB14.plan = { none: 'full read', turn }; if (st.plan && st.plan.fb14) { st.plan = null; cancelBeeps(); } fb14Show(); render(); return true; }
   if (!FB14.on) { st.msg = 'No Final Bowser lock: ' + fb14BlindText(turn) + '.'; FB14.plan = { none: 'no lock', turn }; fb14Show(); if (cAt == null) render(); return true; }
   // v92 (e2e 5eed0fb2: T2's Do Nothing beeped during Bowser's T1 attack, 25 s before T2's Charge, at 95%; e2e 9e3779b9 /
   // 1234abcd: fb14NoDecision on T3 before its Jelly): a lever turn (T3: its Jelly)
@@ -1311,8 +1313,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (!same) { cancelBeeps(); if (playBeeps(pl.tPress) === false) { slog('fb14PlanNoBeeps', { turn, target: C.target }); FB14.plan = { none: 'countdown', turn }; st.plan = null; return true; } } else slog('fb14SameTarget', { target: C.target });
   const tLast = FB14.t0 + (fb14Bias() - 1.2) * rate - num('vlag');      // pressTime(tLast, rate, F) = fbPressT(F)
   const a = C.a, tab = []; for (let F = from - 30; F <= from + W + 30; F++) tab.push(F >= a && F <= C.b ? C.share[F - a] >= 0.5 : false);
-  const chance = []; for (let F = from - 30; F <= from + W + 30; F++) { let v = 0; if (F >= a && F <= C.b) for (const [dd, q] of PD) v += q * (C.share[F + dd - a] || 0); chance.push((1 - dEff) * v + dEff * (pl.blind || 0.3)); }     // v130 (11:21 run, T3: the % box said 100% for the frame hit; the plan's 82%): the floored doubt, as the plan's own odds     // v112 (4): the strip's shading
-  st.plan = { tMade: now, w: C.w, target: C.target, tPress: pl.tPress, tLast, rate, carried: true, from, to: from + W, first: from - 30, prof: 'fb14', tab, tab4: null, chance, type: C.type, beeps: nBeeps(),
+  const chance = []; for (let F = from - 30; F <= from + W + 30; F++) { let v = 0; if (F >= a && F <= C.b) for (const [dd, q] of PD) v += q * (C.share[F + dd - a] || 0); chance.push((1 - dEff) * v + dEff * (pl.blind || 0.3)); }
+  const frameP = []; for (let F = from - 30; F <= from + W + 30; F++) frameP.push((1 - dEff) * (F >= a && F <= C.b ? C.share[F - a] || 0 : 0) + dEff * (pl.blind || 0.3));     // v156: each frame's own chance (the % box after a press)     // v130 (11:21 run, T3: the % box said 100% for the frame hit; the plan's 82%): the floored doubt, as the plan's own odds     // v112 (4): the strip's shading
+  st.plan = { tMade: now, w: C.w, target: C.target, tPress: pl.tPress, tLast, rate, carried: true, from, to: from + W, first: from - 30, prof: 'fb14', tab, tab4: null, chance, frameP, type: C.type, beeps: nBeeps(),
     mix: { p: C.p, pStates: C.pStates, pp: C.pp, ppStates: C.ppStates, win: C.w.length, doubt: pl.doubt, floor: pl.floor, groups: Wg.list.length, zw: true, fb14: turn, warn: coinWarn ? 'the coin disagrees with the carried seed (' + Math.round(100 * Wg.doubt) + '% off): a lower chance, about blind plus the states\' edge.' : undefined }, PD, zwAbs: C.target, fb14: turn, bias: fb14Bias(), sk: skp, lever: skp ? 'fb14sk' : 'fb14', freshCap: !!pl.fresh, coinWarn };
   Object.defineProperty(st.plan, 'L', { value: L, enumerable: false });      // v98: the tick re-scores this sample
   FB14.plans = (FB14.plans || []).concat([{ turn, target: C.target, tMade: now, tPress: pl.tPress, bias: fb14Bias(), sk: skp || undefined }]).slice(-20);
@@ -1644,6 +1647,9 @@ function fb14Peach() {
  * the seeds before A's base-angle draw, or null (no carry). */
 function fb14T6Cands() {
   const T6 = FB14.t6; if (!T6 || !CHG.trig || T6.doubt >= 0.5) return null;
+  // v156 (e2e b2000002: Bowser KO'd Mario on T5, the Life Shroom revived him; the carry knows no T5 revive, so its T6 candidates were
+  // all off the game and the narrowed read locked one of them at 3.2x - a wrong T6 lock, a 94% plan, a hit): after a T5 KO the full search
+  if (typeof FB2HP5 !== 'undefined' && FB2HP5.t5ko) { slog('fb14T6CandsSkipped', { why: 'Mario KO on T5 (the revive is not in the carry)' }); return null; }
   const M6 = Math.round(fbPic(CHG.trig.t) - 16), out = new Set();
   const groups = [];
   for (const b of T6.bases) {
@@ -1736,6 +1742,7 @@ function fb14ArmOk(P, t) {
 function fb14CarryGone() {
   if (!FB14.on && FB14.t0 == null) return;
   slog('fb14CarryGone', { turn: (fb14Step() || {}).fb14 || null });
+  FB14.lostT = performance.now();     // v156: the next Charge searches in full (fb14AfterHitFull)
   Object.assign(FB14, { on: false, t0: null, states: [], M: {}, P: {}, fresh: null, charges: [], gone: false, allOutLogged: false, why: 'the carried seed is gone (an off-route turn); the next Super Charge locks again' });
   if (typeof CHG !== 'undefined' && ['locked', 'nolock', 'failed'].includes(CHG.state)) chgReset();
 }

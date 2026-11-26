@@ -9,7 +9,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E('VERSION') === 'v154', 'page version v153');
+  ok(await E('VERSION') === 'v156', 'page version v153');
   const r = JSON.parse(await E(`(() => { const out = {};
     const st = (h, f) => { FB14.hitT = h; FB14.freshT = f; return fb14AfterHitFull(); }; out.af = [st(null, 0), st(5000, 1000), st(5000, 6000)]; FB14.hitT = null; FB14.freshT = 0;
     const src = chgSolve.toString(); out.noStream = /if \\(SW && noStream\\)/.test(src) && /!SW && !cands && !E && !noStream/.test(src);

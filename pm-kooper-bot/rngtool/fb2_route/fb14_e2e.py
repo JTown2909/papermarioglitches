@@ -78,11 +78,96 @@ def capsim(d, n, out, seed):
     return sorted(os.listdir(jd))
 
 
-def mario_items(t):
-    ma, mv, pa = TURNS[t - 1]
+def mario_items(t, spec=None):
+    ma, mv, pa = spec or TURNS[t - 1]
     r = Run.__new__(Run)
     items = (r.moves(mv['wheel']) + [(A, 0, 20)] + r.moves(mv['sub']) + [(A, 0, 15)])
     return items, pa
+
+
+# v155 FULL=1: the whole fight to Bowser down. T5 the Peach Beam (+ Do Nothing, no lever), T6 Charge + Do Nothing on the page's beep
+# (Close Call), then T7 the Power Bounce on its beep; after a T6 hit (the Life Shroom) the backup: T7 Charge + Do Nothing on its beep
+# (anything but the wave / the shield), T8 the Power Bounce. The menus remember the last choice (route_build.TURNS' moves).
+FULL = os.environ.get('FULL') == '1'
+def turn_spec(t, backup):
+    if t <= 4: return TURNS[t - 1]
+    if t == 5: return ('peach_beam', dict(wheel=2, sub=-1), 'do_nothing')
+    if t == 6: return ('charge', dict(wheel=-2, sub=2), 'do_nothing')
+    if t == 7 and backup: return ('charge', dict(wheel=0, sub=0), 'do_nothing')
+    return ('power_bounce', dict(wheel=0, sub=1), None)
+
+
+def play_pb(seg, shot, cap=1500):
+    """the Power Bounce's target A, an A one frame before each landing (D + 44 + 27 k), on to the next menu or the battle's end"""
+    seg.step(A, 0, shot); k0 = seg.n; n = 0
+    while n < cap:
+        kk = seg.n - k0
+        if kk > 60 and bstate(seg.r.e) == 13: break
+        if kk > 60 and seg.r.e.s16(GAME_MODE) != 8: break
+        seg.step(A if kk >= 43 and (kk - 43) % 27 == 0 and kk < 43 + 27 * 14 else 0, 0, shot); n += 1
+
+
+def bot_items(r, X, spec, pre):
+    """v156: the menu moves that really do the turn's action from state X (after a Life Shroom revive the menus' remembered choices
+    reset and the route's relative moves went to another action: no Charge on T2 / T4 / T6, no Jelly on T3). Tried on a copy, no
+    shots: the route's moves first, then the wheel / submenu one or two either way; a Charge must add charges, the Jelly use one."""
+    ma, mv, pa = spec
+    if ma not in ('charge', 'jelly'): return mario_items(0, spec)[0], None
+    cnt = lambda: [r.e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10)].count(162)
+    tries = [(0, 0)] + [(dw, ds) for dw in (0, -1, 1, -2, 2) for ds in (0, -1, 1, -2, 2) if (dw, ds) != (0, 0)]
+    for dw, ds in tries:
+        sp = (ma, dict(wheel=mv['wheel'] + dw, sub=mv['sub'] + ds), pa)
+        tmp = Seg(r, '/dev/shm/fb2r/fh'); tmp.load(X, False); c0 = r.e.s8(BSTATUS + 0x97); j0 = cnt()
+        tmp.idle(pre, False); tmp.seq(mario_items(0, sp)[0], False); tmp.step(A, 0, False); n = 0
+        while bstate(r.e) != 14 and n < 600: tmp.step(0, 0, False); n += 1
+        okk = (r.e.s8(BSTATUS + 0x97) > c0) if ma == 'charge' else (cnt() < j0)
+        if okk: return mario_items(0, sp)[0], (None if (dw, ds) == (0, 0) else dict(dw=dw, ds=ds))
+    return mario_items(0, spec)[0], dict(failed=True)
+
+
+def bowser_down(r):
+    """Bowser's HP at 0, or the battle over with Mario standing (a game over is not a win)"""
+    bh = r.bowser_hp()
+    return bh is not None and bh[0] <= 0     # (v156: a battle left otherwise - a game over - is not a win)
+
+
+LIVE = os.environ.get('LIVE') == '1'; LIVE_CH = int(os.environ.get('LIVE_CH', '2'))
+class LivePage:
+    """v155 LIVE=1: one page (test_fb14_live.js) for the whole fight; res = everything it has said so far (t0, events, plans)"""
+    def __init__(self, urlbase, M, logf):
+        self.p = subprocess.Popen(['node', os.path.join(RNG, 'test_fb14_live.js'), urlbase], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=logf, text=True, env=dict(os.environ))
+        self.res = dict(t0=None, events=[], plans=[], pageErrors=[]); self.sent = {}; self.cmd(dict(cmd='init', M=M))
+    def cmd(self, c):
+        self.p.stdin.write(json.dumps(c) + '\n'); self.p.stdin.flush(); a = json.loads(self.p.stdout.readline())
+        R = self.res; R['t0'] = a.get('t0') or R['t0']; R['events'] += a.get('events', []); R['plans'] += a.get('plans', []); R['pageErrors'] += a.get('pageErrors', [])
+        for k in ('i', 'step', 'fb14', 'fb2'): R[k] = a.get(k)
+        return a
+    def feed(self, fr):
+        return self.cmd(dict(cmd='feed', frames=fr)) if fr else None
+    def close(self):
+        try: self.p.stdin.write(json.dumps(dict(cmd='quit')) + '\n'); self.p.stdin.flush(); self.p.wait(30)
+        except Exception: self.p.kill()
+
+
+def fb2_press(res, nbefore, M, R0, G, t, GMS, kind):
+    """v155: the runner on the T6 / backup T7 Do Nothing (fb2PlanP k: clock frame k of this turn's Charge, Mario's confirm M) or the
+    T7 / T8 Power Bounce target A (fb2PlanT7 d: on the clock of the Charge turn before): follows the beeps as runner_press does"""
+    t0 = res.get('t0') or 0
+    step_of = lambda tt: ((tt - t0) * 60 / 1000 - nbefore + 2) * 29.97 / 60
+    H = M + 1; Dl = H + int(round(DL * 29.97)); evs = res.get('events', [])
+    org = (GMS.get(t) if kind == 'dn' else GMS.get(t - 1)) - G
+    key = 'k' if kind == 'dn' else 'd'; nm = 'fb2PlanP' if kind == 'dn' else 'fb2PlanT7'
+    plans = sorted([dict(E=step_of(e['t']), T=org + e[key], p=e) for e in evs if e.get('ev') == nm and e.get(key) is not None and not e.get('none')], key=lambda x: x['E'])
+    info = dict(hide=H, nplans=len(plans), plan_s=round((plans[0]['E'] - H) / 29.97, 2) if plans else None)
+    plans = [x for x in plans if x['E'] >= H - (0 if kind == 'dn' else 9999) and x['T'] >= R0 + 1]      # (a beep before the screen is up cannot be pressed: the runner waits for the next)
+    first = next((x for x in plans if x['E'] <= max(Dl, R0 + 1) and x['E'] < x['T']), None)
+    if first:
+        cur = first
+        for x in plans:
+            if x['E'] > cur['E'] and x['E'] < cur['T'] and x['E'] < x['T']: cur = x
+        info.update(planned=True, p=cur['p'].get('p') if kind == 'dn' else cur['p'].get('p7', cur['p'].get('p6')), press_s=round((cur['T'] - H) / 29.97, 2))
+        return int(cur['T']), info
+    P = max(Dl if kind == 'dn' else R0 + 1 + WAIT // 2, R0 + 1); info.update(planned=False, press_s=round((P - H) / 29.97, 2)); return int(P), info
 
 
 FAST = os.environ.get('FAST') == '1'      # v92: the "+3" popup closed at 78-86 (the earliest is 77): the partner's screen ~5.5 s after the hide
@@ -267,6 +352,11 @@ if __name__ == '__main__':
     rng = random.Random(seed); os.makedirs(out, exist_ok=True)
     r = Run('e2e', log=False)
     r.load(build + '/t%d_menu.st' % start); r.seed(seed)            # DIAGNOSTIC: gRandSeed at that menu (setup only)
+    # v155: SHROOMS=n: the route's Life Shrooms (the runner carries 3; the build has 1) - DIAGNOSTIC inventory write at the menu (no draw):
+    # the Jelly (162) first, then n Life Shrooms (149)
+    if os.environ.get('SHROOMS'):
+        inv = [162] + [149] * int(os.environ['SHROOMS'])
+        for i in range(10): r.e.w16(PLAYER_DATA + 0x1B4 + 2 * i, inv[i] if i < len(inv) else 0)
     X = os.path.join(out, 'x1.st'); r.e.save(X)
     report = dict(seed='%08x' % seed, runner=RUNNER or 'first-plan', dl=DL if RUNNER else None, turns=[]); frames = []; G = 0; GM1 = None; refM = refS = None; truth = []   # truth: the seed before every global step
     # v92 retries: ATTEMPTS=n attempts; attempt a plays T1..ATT_TURNS[a] (default all), then a gap of GAP seconds (default
@@ -290,18 +380,35 @@ if __name__ == '__main__':
         G += gN + 1; GM1 = None; dead = False
         report.setdefault('gaps', []).append(dict(after_attempt=att - 1, s=round(gap, 1), steps=gN, seed='%08x' % sc))
       last = ATT_TURNS[att - 1] if att - 1 < len(ATT_TURNS) else turns
+      if LIVE:
+          LM = dict(step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
+          LP = LivePage(urlbase, LM, open(os.path.join(out, 'live_page.log'), 'a'))
+      backup = False; won = None
+      if FULL: last = 8
       for t in range(start, last + 1):
-        items, pa = mario_items(t)
+        if FULL and t == 8 and not backup: break
+        spec = turn_spec(t, backup); ma = spec[0]
+        items, pa = mario_items(t, spec)
         tg = 'a%dt%d' % (att, t)       # v92: per attempt (a retry's renders must not overwrite the earlier attempt's pictures)
         sa = Seg(r, os.path.join(out, tg + 'a')); sa.load(X)
         hp0 = r.e.s8(PLAYER_DATA + 2); sh0 = [r.e.s16(PLAYER_DATA + 0x1B4 + 2 * i) for i in range(10)].count(149)
-        pre = rng.randint(40, 80); sa.idle(pre)
-        sa.seq(items); M = sa.n; sa.step(A)                         # Mario's confirm on step M of the stretch
+        pre = rng.randint(40, 80)
+        if os.environ.get('BOTCHECK', '1') == '1':
+            items, botfix = bot_items(r, X, spec, pre)
+            if botfix: print('T%d: the menu moves corrected %s' % (t, botfix), flush=True)
+            sa = Seg(r, os.path.join(out, tg + 'a')); sa.load(X)
+        else: botfix = None
+        sa.idle(pre)
+        sa.seq(items); M = sa.n
+        if ma != 'power_bounce': sa.step(A)                         # Mario's confirm on step M of the stretch (the Power Bounce: the target A is the lever)
         if t == start: GM1 = G + M; GMS = {}
         GMS[t] = G + M                                          # (each turn's Mario confirm: a fresh lock's clock frame 0)
-        K = (rng.randint(78, 86) if FAST else rng.randint(78, 100)) if t != 3 else -1
-        while bstate(r.e) != 14 and sa.n - M < 600: sa.step(A if (K >= 0 and sa.n - M == K) else 0)
-        sa.idle(20); sa.seq(partner_items(pa)); R0 = sa.n
+        K = (rng.randint(78, 86) if FAST else rng.randint(78, 100)) if ma == 'charge' else -1
+        if ma == 'power_bounce': R0 = sa.n                         # (Y below holds step R0 - 1's end: the target screen up)
+        else:
+            cap0 = 3000 if ma == 'peach_beam' else 600
+            while bstate(r.e) != 14 and sa.n - M < cap0: sa.step(A if (K >= 0 and sa.n - M == K) or (ma == 'peach_beam' and (sa.n - M) % 20 == 19 and bstate(r.e) not in (13, 14, 17)) else 0)
+            sa.idle(20); sa.seq(partner_items(pa)); R0 = sa.n
         Y = os.path.join(out, 'y%d.st' % t); r.e.save(Y)
         skm = SKIP and pa == 'cloud_nine'
         if skm:       # v101: Cloud Nine at once (no beep for it), its message left up to its own close (+ 315) in this render
@@ -327,23 +434,53 @@ if __name__ == '__main__':
             elif ref: man[nm] = report['ref_' + nm]
         for nm in ('refM', 'refS'):
             if nm in man: report['ref_' + nm] = man[nm]
-        res = run_page(urlbase, out, man, 'a%dt%d' % (att, t))
-        plans = [p for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None]
         ok = lambda o, tt: o['hp'] == hp0 and o['shroom'] == sh0 and o['menu'] and (tt != 4 or o['wave'])
-        rinfo = None; skinfo = None; kS = None
-        if skm:
-            kS, skinfo = skip_press(res, len(frames), R0 + dC, GM1, G); d = dC - 1; blind = not skinfo['planned']; tgt = skinfo.get('target')
-        elif RUNNER:
-            P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t, GMS); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
-            blind = not rinfo['planned']
-            d = max(0, min(d, WAIT - 1))
+        if FULL and t >= 5:      # v155: T5 any (alive); T6 the Close Call (no hit); backup T7 neither the wave (4 HP) nor the shield (no change); T7 / T8 Power Bounce: Bowser down
+            ok = (lambda o, tt: o['menu']) if t == 5 else (lambda o, tt: o['hp'] == hp0 and o['shroom'] == sh0 and o['menu']) if (t == 6) else \
+                 (lambda o, tt: o['menu'] and o['hp'] < hp0 and o['hp'] != 4 and o['shroom'] == sh0) if ma == 'charge' else (lambda o, tt: o.get('down', False))
+        def decide(res):
+            plans = [p for p in res.get('plans', []) if p.get('turn') == t and p.get('target') is not None]
+            rinfo = None; skinfo = None; kS = None
+            if FULL and t >= 5:
+                if ma == 'peach_beam': d = WAIT // 2; blind = True; tgt = None
+                else:
+                    P, rinfo = fb2_press(res, len(frames), M, R0, G, t, GMS, 'dn' if ma == 'charge' else 'pb'); d = max(0, min(P - R0 - 1, WAIT - 1)); blind = not rinfo['planned']; tgt = G + P
+            elif skm:
+                kS, skinfo = skip_press(res, len(frames), R0 + dC, GM1, G); d = dC - 1; blind = not skinfo['planned']; tgt = skinfo.get('target')
+            elif RUNNER:
+                P, rinfo = runner_press(res, len(frames), M, R0, GM1, G, t, GMS); d = P - R0 - 1; tgt = (G + P) - GM1 if rinfo['planned'] else None
+                blind = not rinfo['planned']
+                d = max(0, min(d, WAIT - 1))
+            else:
+                tgt = plans[0]['target'] if plans else None      # the first beeps are the ones pressed
+                zs = [e.get('turn') for e in res.get('events', []) if e.get('ev') == 'fb14Lock' and e.get('M') == 0 and plans and e['t'] <= plans[0]['t']]
+                o1 = GMS.get(zs[-1], GM1) if zs else GM1         # v140: a fresh relock restarts the page's clock at that turn's Mario confirm
+                d = (o1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm
+                blind = d is None or d < 0 or d >= WAIT
+                if blind: d = WAIT // 2
+            pstep = (R0 + dC + kS) if skm else (R0 + 1 + d)
+            return plans, rinfo, skinfo, kS, d, blind, tgt, pstep
+        if LIVE:      # v155: the live page: this turn's pictures fed as played, up to the runner's press (decided on what the page has shown so far)
+            if t == start and os.environ.get('FADEB0') and start == 1: LP.cmd(dict(cmd='set', fadeF=13.5 - (int(os.environ['FADEB0']) + GM1)))
+            for nm, ref in (('refM', refM), ('refS', refS)):
+                if ref and ref[1] == t and ('ref_' + nm) in report and not LP.sent.get(nm): LP.cmd(dict(cmd='refs', **{nm: segA[ncap(ref[2])]})); LP.sent[nm] = True
+            idx = 0; pst = None
+            while True:
+                lim = ncap(pst) if pst is not None else len(segA)
+                n = min(len(segA), idx + LIVE_CH, max(lim, idx))
+                if n > idx: LP.feed(segA[idx:n]); idx = n
+                plans, rinfo, skinfo, kS, d, blind, tgt, pstep = decide(LP.res); pst = pstep
+                if idx >= len(segA) or idx >= ncap(pstep): break
+            if ncap(pstep) != idx:      # the press on the first step whose picture is not shown yet (a replan to a frame already shown: pressed now)
+                st_ = R0 + 1
+                while ncap(st_) < idx: st_ += 1
+                if ncap(st_) > idx: LP.feed(segA[idx:ncap(st_)]); idx = ncap(st_)
+                if skm: kS = st_ - R0 - dC
+                else: d = st_ - R0 - 1
+            res = LP.res; fedA = idx
         else:
-            tgt = plans[0]['target'] if plans else None      # the first beeps are the ones pressed
-            zs = [e.get('turn') for e in res.get('events', []) if e.get('ev') == 'fb14Lock' and e.get('M') == 0 and plans and e['t'] <= plans[0]['t']]
-            o1 = GMS.get(zs[-1], GM1) if zs else GM1         # v140: a fresh relock restarts the page's clock at that turn's Mario confirm
-            d = (o1 + tgt) - (G + R0) - 1 if tgt is not None else None    # Y holds step R0 - 1's end: loading it runs step R0, then d idle steps, then the confirm
-            blind = d is None or d < 0 or d >= WAIT
-            if blind: d = WAIT // 2
+            res = run_page(urlbase, out, man, 'a%dt%d' % (att, t))
+            plans, rinfo, skinfo, kS, d, blind, tgt, pstep = decide(res)
         forced = None
         if '%d.%d' % (att, t) in FORCE and not skm:
             dh = find_hit(r, Y, d, pa, lambda o: ok(o, t))
@@ -351,21 +488,31 @@ if __name__ == '__main__':
         elif '%d.%d' % (att, t) in FORCE:        # v102: T1's skip moved to the nearest skip frame where Bowser hits
             kh = find_hit_skip(r, Y, d, kS, lambda o: ok(o, t))
             if kh is not None: forced = dict(k_was=kS, k=kh); kS = kh
-        row = dict(attempt=att, turn=t, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
+        row = dict(attempt=att, turn=t, botfix=botfix, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
                    skip=dict(k=kS, global_=G + R0 + 1 + d + kS, info=skinfo) if skm else None,
-                   page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
+                   page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('fb2') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
         if PLANCHECK: row['plancheck'] = plan_check(r, Y, res, len(frames), R0, GM1, G, GMS, t, pa, lambda o: ok(o, t), dC if skm else None)
+        if FULL and ma == 'charge' and t >= 6 and os.environ.get('SCAN6', '1') == '1':     # v156: which Do Nothing frames around the press work (the truth for the page's T6 / backup T7 window)
+            sc = {}
+            for dd in range(max(0, d - 12), min(WAIT - 1, d + 12) + 1):
+                tmp = Seg(r, os.path.join(out, 'tmp')); tmp.load(Y, False); tmp.idle(dd, False); play_after_confirm(tmp, pa, False); sc[dd - d] = 1 if ok(outcome(r), t) else 0
+            row_scan = ''.join(str(sc[k]) for k in sorted(sc)); print('T%d scan d-12..d+12 (the press at d): %s' % (t, row_scan), flush=True)
+        else: row_scan = None
         # the neighbours: from Y, confirm at d - 1 and d + 1 (no shots)
         nb = {}
         for dd in (-1, 1):
             tmp = Seg(r, os.path.join(out, 'tmp')); tmp.load(Y, False)
             if skm: tmp.idle(d, False); play_after_confirm(tmp, pa, False, skip=kS + dd)     # v101: the skip one frame early / late
+            elif ma == 'power_bounce': tmp.idle(d + dd, False); play_pb(tmp, False)
             else: tmp.idle(d + dd, False); play_after_confirm(tmp, pa, False)
-            nb[dd] = outcome(r)
+            nb[dd] = outcome(r); nb[dd]['down'] = bowser_down(r)
         sb = Seg(r, os.path.join(out, tg + 'b')); sb.load(Y, False); sb.idle(d, False); sb.n = 0
-        play_after_confirm(sb, pa, True, skip=kS if skm else None); oc = outcome(r)
+        if ma == 'power_bounce': play_pb(sb, True)
+        else: play_after_confirm(sb, pa, True, skip=kS if skm else None)
+        oc = outcome(r); oc['down'] = bowser_down(r); oc['bowser_hp'] = r.bowser_hp()
         nxt = os.path.join(out, 'x%d.st' % (t + 1)); r.e.save(nxt); X = nxt
         row.update(outcome=oc, minus1=nb[-1], plus1=nb[1], s0_rays0_true='%08x' % sa.s0[M + 13] if t != 3 else None)
+        if row_scan is not None: row['scan'] = row_scan
         # v87: at 10 HP a hit kills Mario and the Life Shroom revives him to 10; v92: a miss keeps the HP and the Shrooms of
         # the turn's start (a revived Mario has none left); T4: the wave came
         row.update(miss=ok(oc, t), miss_m1=ok(nb[-1], t), miss_p1=ok(nb[1], t))
@@ -379,19 +526,25 @@ if __name__ == '__main__':
         if endA and not os.environ.get('KEEP'): shutil.rmtree(sb.d, ignore_errors=True)
         jb = [] if endA else capsim(sb.d, sb.n, os.path.join(out, tg + 'b_cap'), seed + 10 + t + 100 * att)
         na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
+        if LIVE: na = fedA; LP.feed(['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb])     # (the page saw a up to the press; then Bowser's turn)
         frames = frames + segA[:na] + ['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
         json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
         json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
-        if not oc['menu']: print('Mario is down (no Life Shroom left): the attempt ends', flush=True); dead = True; break
+        if FULL and t == 6 and not row['miss']: backup = True; print('T6: Close Call failed, the backup ending', flush=True)
+        if FULL and oc.get('down'): won = t; report['won'] = t; print('Bowser down on T%d' % t, flush=True); json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1); break
+        if FULL and ma == 'power_bounce': report['won'] = None; print('T%d: Bowser not down (Power Bounce short)' % t, flush=True); break
+        if not oc['menu']: print(('T%d: no Mario menu after Bowser\'s turn (Mario down, or the shield\'s cutscene): the attempt ends' % t) if FULL and t >= 5 else 'Mario is down (no Life Shroom left): the attempt ends', flush=True); dead = True; break
         if not row['miss'] and os.environ.get('STOP_ON_HIT'): print('Bowser hit: the route is off (Peach heals Mario); stopping', flush=True); do_t6 = False; break
+    if LIVE:
+        LP.close(); json.dump(dict(t0=LP.res['t0'], events=LP.res['events'], plans=LP.res['plans'], errors=LP.res['pageErrors']), open(os.path.join(out, 'live_res.json'), 'w'))
     if os.environ.get('FINAL') == '1':
         res = run_page(urlbase, out, dict(frames=frames, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), refM=report.get('ref_refM'), refS=report.get('ref_refS'), waitMs=3000), 'final')
         report['final'] = dict(panels=res.get('panels'), errors=res.get('pageErrors'), step=res.get('step'),
                                events=[e for e in res.get('events', []) if e.get('ev') in ('fb14NewAttempt', 'fb14StepToT1', 'fb14StepByBurst', 'fb14StepByLock', 'fb14Hit', 'fb14HitCleared', 'fb14NoDecision', 'fb14NoEdge', 'fb14Plan', 'chargeLock', 'chargeNoLock', 'fb14Confirm', 'fb14Jelly', 'step', 'fbStreamNote', 'chargeStream')])
         print(json.dumps(dict(final_panels=res.get('panels'), errors=res.get('pageErrors'))), flush=True)
         json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
-    if do_t6:
+    if do_t6 and not FULL:
         # T5 and the T6 Charge up to just before the earliest popup A (+77): the frames are the same whatever K is
         s5 = Seg(r, os.path.join(out, 't56')); s5.load(X)
         s5.idle(rng.randint(40, 80)); s5.seq([(0, DOWN, 10)] * 2 + [(A, 0, 20)] + [(0, UP, 10)] + [(A, 0, 20)]); PB = s5.n; s5.step(A)

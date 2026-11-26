@@ -48,7 +48,7 @@ const fs = require('fs');
       refs[cat] = ref; }
     const tg = JSON.parse(localStorage.getItem('tot-targets') || '{}'); for (const c in refs) tg['jr_' + c] = { box: BOX[c], ref: refs[c] }; localStorage.setItem('tot-targets', JSON.stringify(tg));
     F.reloadTargets();
-    T.setStep(T.RT().findIndex(s => s.fb14 === (M.turn || 1) && s.fb14role === (M.step || 'charge')));
+    T.setStep((M.turn || 1) >= 5 ? T.RT().findIndex(s => s.fb5) : T.RT().findIndex(s => s.fb14 === (M.turn || 1) && s.fb14role === (M.step || 'charge')));     // v155: START=5 (FULL tests): from T5's step
     want(0); await bmp.get(0); for (let i = 1; i < Math.min(nf, 60); i++) await bmp.get(i);
     const lateMs = M.lateMs || 25, t0 = realNow() + 300, late = [], beeps = [], trace = [], slow = [];
     // v102 (diagnostic): each turn's Mario confirm on the page's time, so a fresh lock's clock (frame 0 = its own turn's confirm) keeps the truth offset

@@ -265,6 +265,7 @@ function chgFrame(t, present) {
   if (V.frames % 15 === 0) chgShow();
   if (!chgEnabled() || !CHG_WASM || CHG_WASM.length < 100) return;
   if (CHG.trig && chgP().id === 'fb2' && typeof fb2Frame === 'function') fb2Frame(t, present);   // FB2: the popup and the coin from the trigger on
+  if (typeof fb2T5Watch === 'function') fb2T5Watch(t, present);     // v156: Mario's HP after Bowser's T5 attack, on T6's step before its Charge
   if (CHG.state !== 'idle' && CHG.state !== 'notseen' && CHG.state !== 'armed' && CHG.state !== 'capture') { chgCoin(t, present); return; }
   if (!chgStepActive()) { if (CHG.state !== 'idle') chgReset(); return; }
   if (present && V.presentSince) CHG.menuSince = V.presentSince;            // the turn-1 menu's coin (for the q check)

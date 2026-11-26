@@ -22,7 +22,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     out.moved = T.SLOG.filter(e => e.ev === 'keyLater'); window.__noKeyLater = false; return out; });
   const both = r.rows.filter(x => x.a && x.k), moved = both.filter(x => x.k.target !== x.a.target);
   console.log('  plans ' + both.length + ', moved by the look-ahead ' + moved.length + ': ' + moved.slice(0, 6).map(x => Math.round(100 * x.a.p) + '% -> ' + Math.round(100 * x.k.p) + '% (+' + ((x.k.tPress - x.a.tPress) / 1000).toFixed(1) + ' s)').join(', '));
-  ok(r.v === 'v154', 'page version v124');
+  ok(r.v === 'v156', 'page version v124');
   ok(both.length >= 20 && both.every(x => x.k.p >= x.a.p - 1e-9), 'the look-ahead never makes a Time Out plan less likely');
   ok(moved.length > 0 && moved.every(x => x.k.p >= 0.9 - 1e-9 || x.k.p >= x.a.p + 0.1 - 1e-9) && r.moved.length >= moved.length, 'where it moved the plan: 90% or 10 points more, logged (keyLater)');
   // T4: Lakilester's block beeps after the Do Nothing confirm (P + 87)
