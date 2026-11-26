@@ -1267,6 +1267,9 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const rate = fbRate(); let W = Math.max(0, Math.round(num('zwwin') * 1000 / rate));
   let from = cAt != null ? Math.ceil(cAt + num('lead') * 1000 / rate + 1) : Math.max(h + 1, Math.ceil(fbPic(now) + 1));
   if (cAt == null) for (let i = 0; i < 600 && fbPressT(from) < earliestPress(now + FB14_PLAN_MS); i++) from++;     // v106: + the plan's own time (fb1006 T3: the first beep was past when scheduled)
+  // v163 (console 11-26 11:13 T4: a 95% plan on 2199, 1.8 s ahead; a replan's window began past it - a new plan's lead - and moved the beep
+  // a second later to 2229): the anchor's frame stays in reach while its beeps can still all play (first beep after the plan's own time)
+  { const A0 = FB14.anchor && FB14.anchor[turn]; if (cAt == null && !skp && A0 != null && A0 < from && fbPressT(A0) - (nBeeps() - 1) * Math.min(num('gapms') || 500, 500) > now + FB14_PLAN_MS + 60) { if (FB14.anchorReachLog !== turn + ':' + A0) { FB14.anchorReachLog = turn + ':' + A0; slog('fb14AnchorInReach', { turn, anchor: A0, from }); } from = A0; } }
   // v101 (e2e 9e3779b9 T2: the carried lock in 3.5 s planned M + 166, 3 frames before the runner could be on Do Nothing; Bowser
   // hit on M + 169): a Charge turn's Do Nothing is not planned before FB14_DNMIN after its Charge (the e2e's partner menus with
   // the popup closed on + 78 .. + 100: the earliest confirm M + 157 .. + 174; console confirms with no beep 5.2-5.9 s after the hide)

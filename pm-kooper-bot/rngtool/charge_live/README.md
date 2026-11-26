@@ -5415,3 +5415,8 @@ new. What that means here:
   "no Danger" rule then gave no T6 beep (the runner's unbeeped Close Call worked). A 10 is no longer trusted (FB2_T5_TRUST10 false):
   no veto and the three T5 cases; 3 / 2 / 1 as before.
 - T4: no block beeps after the Do Nothing confirm (FB14_BLOCK_BEEPS false; the runner twice).
+
+## v163 (console 11-26 11:13, on v159)
+- T4: a 95% plan on 2199; 1.8 s before its press a replan's window began past it (a new plan's lead) and the beep moved a second later to
+  2229. A replan keeps the anchor's frame in reach while its beeps can all still play (fb14AnchorInReach).
+- T7's step says "6 or more" (a 6 cap or higher).

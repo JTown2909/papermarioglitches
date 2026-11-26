@@ -599,7 +599,7 @@ const ENDGAME = [
     // T4's Do Nothing straight to the T7 Power Bounce step (its pre held the T6 Charge); nothing told the runner to hold the
     // "+3" popup, which he closed on k 75 at once, 0.14 s before the T6 lock: no popup beep could be made
     { text: 'T6: Charge; Do Nothing - Close Call', steps: [{ label: 'Super Charge (its rays lock the seed; close its +3 popup whenever you like), then Lakilester: Do Nothing on the beep → Close Call', cat: 'S', turn: 'fb2_k', pre: [{ cat: 'M', id: 'fb2_charge' }] }] },
-    { text: 'T7: Bounce x6; Spiny Flip', steps: [{ label: 'Power Bounce → 6+ on the beep, then Lakilester: Spiny Flip (a 4 / 5 cap in Phase 1; a 3 cap needs 7)', cat: 'B', turn: 'fb2_pb' }] },
+    { text: 'T7: Bounce x6; Spiny Flip', steps: [{ label: 'Power Bounce → 6 or more on the beep (a 6 cap or higher), then Lakilester: Spiny Flip (a 4 / 5 cap in Phase 1; a 3 cap needs 7 or more)', cat: 'B', turn: 'fb2_pb' }] },
     // v114 (the runner's backup ending, his wording; console fb1810): shown in place of T6 / T7 once the page has seen the T6
     // Close Call fail (fb2_live.js fb2Backup: Mario's HP number changed after the Do Nothing). T7 is a T6-like step (its Super
     // Charge locks the seed again, the Do Nothing beep aims at No Wave with Mario left in Danger), T8 the Power Bounce for 5+
@@ -1989,7 +1989,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v162';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v163';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
