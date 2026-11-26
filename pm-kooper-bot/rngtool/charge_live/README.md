@@ -5376,3 +5376,11 @@ new. What that means here:
 - So a hidden missing picture does not explain the coin mismatches of 15-17-02 (a flash 24 frames before the Charge)
   and 15-18-30 (q before vs after the Charge): the offline check (readouts/charge_qback.py) also clocked by time. Not
   resolved; both are before the Charge, which the live page does not need.
+
+## v157 (console 11-26 10:13 and 10:15)
+- 10:15 T1 and T2 no lock: the full search's best was at noise on every read, while the stream window from the last lock (10:13's T6,
+  26764 steps) held T1's seed (29b7ee50, 10217 steps on; 1335 before T2's). That window was skipped as "past the in-fight window: the
+  full search is sooner". It is now searched right after a full search that does not lock (fbStreamLate): the 10:15 T1 replay locks in 4.0 s.
+- 10:13 backup T7 no lock: its seed was 1451 steps after T6's at 24.92 s, 7 under the window (56.9/s + 40..180). 21 console T6 -> T7
+  pairs (Nov 20-26) fit 655 + 31.9 s within +-9.4: the window is that fit +-80 with the old one (229 seeds at 24.92 s); the replay locks.
+- test_v157.js (fixtures/console_v157.json: the two captures).

@@ -11,7 +11,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE);
   const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E(`VERSION`) === 'v156', 'page version v129');
+  ok(await E(`VERSION`) >= 'v156', 'page version v129');
   // states: the menu aura pattern, one lightning phase pair, different seeds; the turn's AI ahead
   await E(`window.__mk = (turn) => { const c = new Uint8Array(20); [2,0,1,1,1,0,1,1,2,1,1,0,0,0,2,0,1,1,0,1].forEach((v, i) => c[i] = v); const L = [];
     for (let i = 0; i < 40; i++) { const S = fbNew({ s: (0x13579bdf + i * 0x9E3779B9) >>> 0, nc: 130 + (i % 24), f: 100, c, ph: [37 + (i % 5), 151], l: i % 2, w: 1 + (i % 7) / 10, lw: 1 }); S.out = turn > 1 ? { 1: { atk: 'fire', v: 60, miss: true, ok: true } } : {}; fbRun(S, 140); L.push(S); } return L; }; 1`);

@@ -626,11 +626,13 @@ if (window.__chgDebug) {
     let SW = !E && chgP().id === 'fb1' && typeof fbStreamCands === 'function' ? (CHG.replay ? CHG.replay.stream : typeof fbStreamWin === 'function' ? fbStreamWin() : fbStreamOk() ? FB14.stream : null) : null;   // v91: the window scaled with the time since the kept lock
     // v131 (log 15:31: T1's window ran 117 s back to the last attempt's T4 lock, 17177 steps; the stream search took 9.2 s and the lock
     // came after Cloud Nine's message window): past the in-fight window (FBS_HI) the full search (~4 s) goes first
-    if (SW && !CHG.replay && typeof FBS_HI === 'number' && (SW.hi || 0) > FBS_HI) { slog('fbStreamSkipped', { hi: SW.hi, why: 'past the in-fight window: the full search is sooner' }); SW = null; }
+    let SWlate = null;     // v157 (console 11-26 10:15: T1 and T2 no lock, the full search's best at noise; the stream skipped here held T1's seed, 1335
+    // steps before T2's, and locks it at 2.23 in 2.2 s over 28k steps): a skipped window is searched after a full search that does not lock
+    if (SW && (CHG.replay ? CHG.replay.lateStream : !CHG.replay) && typeof FBS_HI === 'number' && (SW.hi || 0) > FBS_HI) { slog('fbStreamSkipped', { hi: SW.hi, why: 'past the in-fight window: the full search is sooner (the window after it if it does not lock)' }); SWlate = SW; SW = null; }
     // v153 (console 11-25 17:14 T4 after T3's hit: the stream from T2's lock took 7.3 s, the full search ~3 s): after a hit with no fresh lock
     // since, the stream is not searched (nor the weak window below)
     const noStream = !CHG.replay && chgP().id === 'fb1' && typeof fb14AfterHitFull === 'function' && fb14AfterHitFull();
-    if (SW && noStream) { slog('fbStreamSkipped', { hi: SW.hi, why: 'after a hit: the full search is sooner' }); SW = null; }
+    if (SW && noStream) { slog('fbStreamSkipped', { hi: SW.hi, why: 'after a hit: the full search is sooner (the window after it if it does not lock)' }); SWlate = SW; SW = null; }
     if (CHG.rec && cands) CHG.rec.cands = cands;
     if (CHG.rec && SW) CHG.rec.stream = { seed: (SW.seed >>> 0).toString(16).padStart(8, '0'), lo: FBS_LO, hi: SW.hi || FBS_HI };
     const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };
@@ -709,6 +711,9 @@ if (window.__chgDebug) {
           slog('chargeNarrowCheck', { narrow: (lone.top[0].seed >>> 0).toString(16), full: (full.top[0].seed >>> 0).toString(16), agree, nScore: Math.round(lone.top[0].sc), fScore: Math.round(full.top[0].sc) });
           if (agree) { res = lone; ok = true; CHG.info.narrow.locked = true; CHG.info.narrow.checked = true; res.top = [res.top[0]].concat(res.top.slice(1).filter(x => !N1.has(x.seed >>> 0))); } else res = full; } else res = full; }
     } else if (E) { E.give(maps); res = await CHG.searchP; } else res = await chgSearch(maps);
+    // v157: the stream window skipped above, after a full search that did not lock (before the re-reads: ~2 s, where a re-read is 2-4 s and misses the same way)
+    if (SWlate && !chgLockOk(res, !!res.fb1)) { const fullBest = res.top && res.top[0] ? { seed: (res.top[0].seed >>> 0).toString(16).padStart(8, '0'), score: Math.round(res.top[0].sc) } : null; const r3 = await streamTry(SWlate);
+      if (!CHG.replay) slog('fbStreamLate', { hi: SWlate.hi, locked: !!r3, full: fullBest, seed: r3 && r3.top[0] ? (r3.top[0].seed >>> 0).toString(16).padStart(8, '0') : null }); if (r3) res = r3; }
     // v114 (console fb1810): on the backup T7 a no-lock is searched again on the pictures one / two frames off (chgFb2Wide)
     if (chgP().id === 'fb2' && chgFb2Wide() && !chgLockOk(res)) {
       const A = { tries: [] }, t1a = performance.now();

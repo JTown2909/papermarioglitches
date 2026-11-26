@@ -185,11 +185,14 @@ const fb2PressT = k => CHG.trig.t + (k - 13 - 4.7 + num('off')) * fb2Rate() - nu
  * candidates (the Peach Beam carry, FB14.t6), which held no T7 seed. Between the T6 and T7 Charges the RNG runs 56.9 steps a
  * second plus 99-117 (3 console pairs, Nov 17-19: 1329 / 21.29 s, 1345 / 21.90 s, 1344 / 21.67 s; the v119 gap rule, its
  * 98-138 family): the T6 lock's seed and trigger are kept, and the backup T7 searches FB2_T7_OFF steps around that first. */
-const FB2_T7_OFF = [40, 180], FB2_T7_SEC = [8, 60];
+const FB2_T7_OFF = [40, 180], FB2_T7_SEC = [8, 60], FB2_T7_FIT = [655, 31.9], FB2_T7_FITPAD = 80;
 var FB2_T6 = null;
 function fb2T7CandsFrom(seed, sec) {
   if (!(sec >= FB2_T7_SEC[0] && sec <= FB2_T7_SEC[1])) return null;
-  const lo = Math.max(1, Math.round(FBH_RATE * sec + FB2_T7_OFF[0])), hi = Math.round(FBH_RATE * sec + FB2_T7_OFF[1]), out = [];
+  // v157 (console 11-26 10:13: the backup T7 seed 1451 steps after T6's at 24.92 s, under the window's 1458): 21 console T6 -> T7 pairs
+  // (Nov 20-26) fit 655 + 31.9 s within +-9.4 (the RNG runs slower in a longer wait); the fit +-FB2_T7_FITPAD, with the old window
+  const f = FB2_T7_FIT[0] + FB2_T7_FIT[1] * sec;
+  const lo = Math.max(1, Math.min(Math.round(f - FB2_T7_FITPAD), Math.round(FBH_RATE * sec + FB2_T7_OFF[0]))), hi = Math.max(Math.round(f + FB2_T7_FITPAD), Math.round(FBH_RATE * sec + FB2_T7_OFF[1])), out = [];
   let x = seed >>> 0; for (let i = 0; i < lo; i++) x = fbAdv(x);
   for (let n = lo; n <= hi; n++) { out.push(x >>> 0); x = fbAdv(x); }
   return out;
