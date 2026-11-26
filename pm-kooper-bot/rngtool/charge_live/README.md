@@ -5465,3 +5465,8 @@ new. What that means here:
 - (v170, 12:59) The route stayed on Phase 1's T2 Power Bounce step (its screen close unread) through T3's Star Beam; Phase 2's T1 Charge is
   read only on its own step. The fade into Phase 2 (fb14FadeWatch), 15-150 s after this attempt's Phase 1 Charge and past its Charge step,
   moves the route to Phase 2's T1 Charge (fbP1ToPhase2). test_v170.js.
+
+## v171 (console 11-26 13:09)
+- The Phase 1 badge showed the lock (v170). The route still stayed on Phase 1's T2 Power Bounce step through the Power Bounce (its target
+  screen's close unread again). On that step the bar's first hide after Mario's T2 menu (13:09: 5.7 s after the Spiny Flip confirm, the bar
+  up 1.5 s) moves the route to Phase 2's T1 Charge, as the close would (fbp1BarHide). The Phase 2 fade (v170) stays as a later fallback.

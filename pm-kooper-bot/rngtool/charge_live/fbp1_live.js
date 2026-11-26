@@ -219,6 +219,16 @@ function fbp1ArmOk(P, t) {
 /* a screen close on a Phase 1 step (checkPress): the Charge's moves on to the Do Nothing step; the Do Nothing's gives P; the
  * Power Bounce's is the press (its readout), then Phase 2 T1's Charge step, held. On Phase 2 T1's Charge step during the hold
  * the route stays. Returns true when the route is not to move by the usual next step. */
+/* v171 (console 11-26 12:59 and 13:09: the route stayed on Phase 1's T2 Power Bounce step - its target screen's close not read - through the Power
+ * Bounce, Spiny Flip and Star Beam): on that step the bar's first hide after Mario's T2 menu (the action begins; the bar is up ~1.5 s on that menu,
+ * Bowser's T1 turn runs with it hidden) moves the route to Phase 2's T1 Charge, as the target screen's close would */
+function fbp1BarHide(t, upMs) {
+  const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1pb || FBP1.pT == null || FBP1.t == null) return;
+  if (t - FBP1.pT < 2000 || t - FBP1.t > 150000 || FBP1.pbT != null && FBP1.pbT > FBP1.pT) return;
+  FBP1.pbT = t; const j = fbp1T1I(); slog('fbP1PbByHide', { at: Math.round(t), upMs: Math.round(upMs), to: j, sinceConfirmMs: Math.round(t - FBP1.pT) });
+  if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; }
+  st.msg = 'Phase 1 Power Bounce started: the route waits on Phase 2\'s T1 Charge. Set "P1 bounce" (top of the route) to the cap you got: a 4 / 5 cap needs 6+ on Phase 2 T7 (then Spiny Flip), a 3 cap needs 7.'; if (typeof render === 'function') render();
+}
 function fbp1KeepStep(stp, tObs) {
   if (stp && stp.fbp1) return false;      // v132: on to the Do Nothing step
   if (stp && stp.fbp1dn) {
