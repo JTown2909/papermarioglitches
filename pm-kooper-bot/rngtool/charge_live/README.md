@@ -5446,3 +5446,10 @@ new. What that means here:
   (fb2AtkWatch: Fire Breath's orange third of the game box for ~2.5 s, or none through a watched stretch) and the T7 states whose own
   T6 attack differs keep FB2_ATKW (0.01); a replan follows. test_v167.js. (12:09's T6 mix: fire 0.66 / slam 0.25 / claw 0.09.)
 - test_v110 5. / 3. and test_v108 4. fail on v166 too (not this change).
+
+## v168 (console 11-26 12:25)
+- Phase 2 T1 no lock: the full search's best at noise on all three reads (a 4x wider stage 1 misses it too, on this and 10:16's capture),
+  and no kept seed within reach (the last attempt 13 min back). Phase 1's T1 lock (fbp1Done) is now kept as the stream window
+  (fbStreamNote 'p1'): Phase 2 T1 searches it (first under FBS_HI, else after a full search with no near-lock). Needs the route on
+  Phase 1 when it starts (the logs begin at Phase 2). test_v168.js.
+- T2 / T4 fresh locks after T1's hit had the true seeds (2177 steps apart) but states the coin ruled out (doubt 1 by T3; T4 0.98): open.

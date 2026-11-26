@@ -43,6 +43,9 @@ function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its
   Object.assign(FBP1, { ended: false, allOut: false, P: null, plan: null, pbT: null, kept: null, edgeLogged: null, whyLogged: null, lastW: null, nPlans: 0, seed: outcome === 'lock' ? b.seed || null : null, outcome, score: b.score != null ? b.score : null, ratio: b.ratio != null ? b.ratio : null, lockT: performance.now() });
   let n = 0; if (outcome === 'lock') { try { n = fbp1Build(R || CHG.res, trigT); } catch (e) { slog('fbP1BuildError', { msg: String(e && e.message || e).slice(0, 160) }); n = 0; } }
   slog('fbP1Read', { outcome, seed: FBP1.seed, score: FBP1.score, ratio: FBP1.ratio, alt: CHG.alt || 0, mario: I.mario, states: n, holdMs: FBP1_HOLD });
+  // v168 (console 11-26 12:25: Phase 2 T1's full search missed on all three reads, no kept seed within reach - the last attempt 13 min back;
+  // 10:16 / 10:39 likewise): Phase 1's T1 lock is the next Charge's window (fbStreamNote; Phase 2 T1 about a minute on, under FBS_HIMAX)
+  if (outcome === 'lock' && FBP1.seed && typeof fbStreamNote === 'function') { const sd = parseInt(FBP1.seed, 16); if (sd >= 0) fbStreamNote(sd >>> 0, 'p1'); }
   if (CHG.rec && typeof chgRecEnd === 'function') chgRecEnd(outcome === 'lock' ? 'lock' : 'nolock');
   chgReset();
   if (!n) {      // no lock (or no states): as v116, on to Phase 2 T1's Charge step, held
