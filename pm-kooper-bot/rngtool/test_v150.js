@@ -18,7 +18,7 @@ const LG = '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10167305f887/3d751e7c-
     for (const d of [0.70, 0.97]) { fbp1Weigh = () => ({ list: [S], doubt: d, n: 1 }); FBP1.whyLogged = null; const n0 = T.SLOG.length; fbp1Plan(500); const e = T.SLOG.slice(n0).filter(x => x.ev === 'fbP1NoPlan').pop(); out['d' + d] = { why: e && e.why, msg: st.msg }; }
     fbp1Weigh = w0; fbp1Advance = a0; FBP1.states = null; return JSON.stringify(out); })()`)));
   console.log('     ' + JSON.stringify(r).slice(0, 600));
-  ok(r['d0.7'].why === 'coin-wait' && /^WAIT on the target screen/.test(r['d0.7'].msg || ''), 'doubt 70% with states kept: WAIT on the target screen (not "Power Bounce normally")');
+  ok(r['d0.7'].why === 'coin' && !/^WAIT/.test(r['d0.7'].msg || ''), 'v175 (the runner: no long waits): doubt 70% says Power Bounce normally at once (no coin wait)');
   ok(r['d0.97'].why === 'coin' && /Power Bounce normally/.test(r['d0.97'].msg || ''), 'doubt 97%: "Power Bounce normally"');
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? 'FAIL ' + fails : 'ALL OK'); process.exit(fails ? 1 : 0);

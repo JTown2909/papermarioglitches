@@ -45,7 +45,7 @@ const FX = JSON.parse(fs.readFileSync(__dirname + '/fixtures/fbp1_logs.json', 'u
     ok(fl.nDN > rr.n && fl.msInput < 300, 'flow: the confirm splits ' + rr.n + ' states over the read shifts: ' + fl.nDN + ' (' + fl.msInput + ' ms)');
     ok(fl.revived > 0 && fl.revived < fl.n && Object.keys(fl.atk).length >= 3, 'flow: v133, only the unguarded Fire Breath states died (' + fl.revived + ' of ' + fl.n + '); attacks ' + JSON.stringify(fl.atk) + ' (' + fl.msAdv + ' ms)');
     ok(fl.plan && fl.plan.d > fl.P + 480 && fl.plan.pp5 > 0 && fl.msPlan < 8000, 'flow: the T2 plan: ' + JSON.stringify(fl.plan) + ' (' + fl.msPlan + ' ms)');
-    ok(fl.topRow === Math.min(fl.topDirect, 5), 'flow: the plan\'s bounce count for the top state (' + fl.topRow + ') is the model\'s own run (' + fl.topDirect + ')');
+    ok(fl.topRow === Math.min(fl.topDirect, 4),     /* v175: the goal is 4+ */ 'flow: the plan\'s bounce count for the top state (' + fl.topRow + ') is the model\'s own run (' + fl.topDirect + ')');
   }
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);

@@ -171,6 +171,12 @@ function fbStep(S) {
       for (const k in X) fbEv(S, { k: 'p1d', f: ai + +k, m: X[k] });
       if (o.atk === 'fire' && !S.gd && fbShroomLeft(S)) { const r0 = f; S.rv = r0; fbShroomUse(S); fbEv(S, { k: 'rv205', f: r0 + 205 }); fbEv(S, { k: 'rvburst', f: r0 + 265 }); fbEv(S, { k: 'rvburst', f: r0 + 305 }); } }
     else if (e.k === 'p1d') { for (const m of e.m) s = fbRi(s, m); }
+    // v175: Lakilester's Spiny Flip (Phase 1 T1; fb2_route/p1spiny_log.py, 13 emulator runs; as Hallway's pmrng_core.js hw_spiny): its energy
+    // effect on the confirm + 39 (1 x 360, 10 x (10, 20)), each part respawning on + 19 + p and every 20 frames while under the confirm + 119
+    // (e.end); the respawns past + 60 are booked on + 60 (the 64-frame ring); the impact's 6 x rand(359) and Bowser's AI 43 frames on are
+    // separate events (fbp1SpinyInput)
+    else if (e.k === 'spin') { s = fbRi(s, 360); const qs = []; for (let i = 0; i < 10; i++) { s = fbRi(s, 10); s = fbRi(s, 20); qs.push(FBV); for (let n = f + 19 + FBV; n < e.end && n < f + 60; n += 20) S.resp[n & 63]++; } fbEv(S, { k: 'spinb', f: f + 60, qs, f0: f, end: e.end }); }
+    else if (e.k === 'spinb') { for (const q of e.qs) for (let n = e.f0 + 19 + q; n < e.end; n += 20) if (n >= e.f0 + 60) S.resp[n & 63]++; }
     // v133: the Phase 1 T2 Power Bounce (D = the target-screen A): hit n lands on D + 45 + 27n and draws its damage stars (as phase 2's
     // fb2PB); roll n on D + 71 + 27n (only while every roll so far passed); a failed roll still lets the bounce in the air land
     else if (e.k === 'pbh') { const dm = Math.max(1, (S.dm0 || 6) - e.n); for (let i = dm >= 9 ? 11 : dm >= 5 ? 10 : dm >= 3 ? 8 : 6; i; i--) s = fbRi(s, 359);

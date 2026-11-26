@@ -5485,3 +5485,13 @@ new. What that means here:
 ## v174 (console 11-26 13:33)
 - The Phase 1 steps followed (Spiny Flip 3.3 s on -> T2; T2's Power Bounce -> Phase 2 T1), then the Power Bounce screen's close moved Phase 2
   T1's Charge step on to Cloud Nine's: fbp1Hold timed from FBP1.t (the last attempt's). It holds from this attempt's burst / Power Bounce now.
+
+## v175 (the Phase 1 T2 beep, the runner's route)
+- Lakilester's Spiny Flip in Phase 1 (the runner: recycle Hallway Bowser's T1): fb2_route/p1spiny_log.py, 13 emulator runs on battle 2303:
+  the energy effect on the confirm + 39 (1 x 360, 10 x (10, 20), respawns every 20 frames to + 119) as Hallway's; the impact's 6 x rand(359)
+  (2 damage; A throws: impact = the A + 25; the runner's ~ + 60..72 in the 13:33 clip); Bowser's AI on the impact + 43 in all 8 hits. fbStep
+  'spin' / 'spinb'; every emulator run replayed through fbStep to Mario's T2 menu exactly (up to 648 frames; unguarded Fire Breath + revive too).
+- fbp1SpinyInput on the Spiny Flip's bar hide (or the lock after it): the 150 heaviest states x 4 confirm shifts x impacts + 58..86.
+  FBP1_MANIP on, FBP1_GOAL 4, no coin wait (FBP1_GIVEUP 0.5). On the 13:33 console Phase 1: the lock (4492 states) -> 17400, the coin to the
+  T2 target screen fits (doubt 0, 8439 kept), the clip's guarded Body Slam leads (0.62), a 4+ plan (pp 0.93, 0.57 with the press spread,
+  1 frame). The bar's hide at the Power Bounce reads the press as the target screen's close. test_v175.js (fixtures/console_v175.json).

@@ -14,14 +14,14 @@
  * The status-bar coin weighs the states all the way (the menu before the Charge, Mario's T2 menu). Phase 2 T1's Charge still
  * locks afresh (the Star Beam, a whole Peach battle and the Star Spirits come between): after the Power Bounce the route
  * moves to it and holds for FBP1_HOLD. */
-var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.95, FBP1_MANIP = false, FBP1_OFF_MSG = 'Phase 1: no beep yet - Power Bounce for 4+ (then Spiny Flip; T3 Star Beam), and set P1 bounce to the cap you got (a 3 cap needs 7 on Phase 2 T7). The T2 beep needs T1\'s Spiny Flip modelled first.';     // v151: no Phase 1 manipulation     // (var: chgShow runs before this file is evaluated)
+var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.5, FBP1_MANIP = true,     /* v175: the T2 beep for 4+ (the runner's route), no coin wait (the runner: no long waits) */ FBP1_OFF_MSG = 'Phase 1: no beep yet - Power Bounce for 4+ (then Spiny Flip; T3 Star Beam), and set P1 bounce to the cap you got (a 3 cap needs 7 on Phase 2 T7). The T2 beep needs T1\'s Spiny Flip modelled first.';     // v151: no Phase 1 manipulation     // (var: chgShow runs before this file is evaluated)
 var FBP1 = { t: null, seed: null, outcome: null, score: null, ratio: null };
 var FBP1V = { taps: [], vis: [], visFrom: null };      // the coin's shines and the bar's stretches, kept from before the lock
 CHG_PROF.fbp1 = Object.assign({}, CHG_PROF.fb1, { id: 'fbp1' });
 CHG_PRESS.fbp1 = () => 20000;      // nothing waits on the lock: re-reads for 20 s
 const FBP1_AI = 12;     // v133: Bowser's AI on Lakilester's Do Nothing confirm + 12 (battle 2303; v132's + 13 was phase 2's battle)
-const FBP1_GOAL = 5, FBP1_MAXS = 6000, FBP1_PLANS = 1500, FBP1_BUDGET = 60, FBP1_GUARD = 0.7, FBP1_PF_MS = 4, FBP1_TICK = 250;
-function fbp1Reset() { Object.assign(FBP1, { t: null, seed: null, outcome: null, score: null, ratio: null, states: null, t0: null, rate: null, lockT: null, pT: null, P: null, plan: null, pbT: null, doubt: 0, n0: 0, why: null, tickT: 0, pfI: 0, nPlans: 0, ended: false, allOut: false, kept: null, edgeLogged: null, whyLogged: null, lastW: null }); }
+const FBP1_GOAL = 4,     /* v175: 4+ (99 - 2 - 6 - 5 - 4 - 3 - 2 = 77) */ FBP1_MAXS = 6000, FBP1_PLANS = 1500, FBP1_BUDGET = 60, FBP1_GUARD = 0.7, FBP1_PF_MS = 4, FBP1_TICK = 250;
+function fbp1Reset() { Object.assign(FBP1, { t: null, seed: null, outcome: null, score: null, ratio: null, states: null, t0: null, rate: null, lockT: null, pT: null, P: null, plan: null, pbT: null, doubt: 0, n0: 0, why: null, tickT: 0, pfI: 0, nPlans: 0, ended: false, allOut: false, kept: null, edgeLogged: null, whyLogged: null, lastW: null, spiny: false }); }
 fbp1Reset();
 function fbp1T1I() { return RT().findIndex(x => x.fb14 === 1 && x.fb14role === 'charge'); }
 const fbp1StepI = k => RT().findIndex(x => x[k]);
@@ -40,7 +40,7 @@ function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its
   if (CHG.replay || chgP().id !== 'fbp1') return false;
   const I = CHG.info || {}, b = I.best || {}, trigT = R && R.trigT != null ? R.trigT : CHG.trig ? CHG.trig.t : performance.now();
   if (FBP1.pT != null && FBP1.pT < trigT) FBP1.pT = null;      // a confirm from an earlier attempt
-  Object.assign(FBP1, { ended: false, allOut: false, P: null, plan: null, pbT: null, kept: null, edgeLogged: null, whyLogged: null, lastW: null, nPlans: 0, seed: outcome === 'lock' ? b.seed || null : null, outcome, score: b.score != null ? b.score : null, ratio: b.ratio != null ? b.ratio : null, lockT: performance.now() });
+  Object.assign(FBP1, { spiny: false, ended: false, allOut: false, P: null, plan: null, pbT: null, kept: null, edgeLogged: null, whyLogged: null, lastW: null, nPlans: 0, seed: outcome === 'lock' ? b.seed || null : null, outcome, score: b.score != null ? b.score : null, ratio: b.ratio != null ? b.ratio : null, lockT: performance.now() });
   let n = 0; if (outcome === 'lock') { try { n = fbp1Build(R || CHG.res, trigT); } catch (e) { slog('fbP1BuildError', { msg: String(e && e.message || e).slice(0, 160) }); n = 0; } }
   slog('fbP1Read', { outcome, seed: FBP1.seed, score: FBP1.score, ratio: FBP1.ratio, alt: CHG.alt || 0, mario: I.mario, states: n, holdMs: FBP1_HOLD });
   // v168 (console 11-26 12:25: Phase 2 T1's full search missed on all three reads, no kept seed within reach - the last attempt 13 min back;
@@ -52,7 +52,7 @@ function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its
     FBP1.t = trigT; FBP1.states = null; const j = fbp1T1I(); if (j >= 0 && isRoute() && RT()[routeStep] && (RT()[routeStep].fbp1 || RT()[routeStep].fbp1dn)) setStep(j);
   } else {
     { const s = isRoute() && RT()[routeStep]; if (s && s.fbp1) { const j = fbp1StepI('fbp1dn'); if (j >= 0) setStep(j); } }
-    if (FBP1.pT != null) fbp1Input(FBP1.pT);      // Lakilester's confirm was read before the lock
+    if (FBP1.pT != null) { if (FBP1_SPINY) { if (!FBP1.spiny) fbp1SpinyInput(FBP1.pT); } else fbp1Input(FBP1.pT); }      // Lakilester's confirm was read before the lock (v175: the Spiny Flip's)
   }
   chgShow(); return true;
 }
@@ -105,6 +105,22 @@ function fbp1Input(tObs) {
   }
   out.sort((x, y) => y.w * (y.lw || 1) - x.w * (x.lw || 1)); FBP1.states = out.slice(0, FBP1_MAXS); FBP1.P = F;
   slog('fbP1DoNothing', { F, c: +c.toFixed(2), states: FBP1.states.length, of: out.length });
+}
+/* v175 (the runner's route: T1 Charge; Lakilester Spiny Flip; the runner, 11-26: "it might be possible to recycle the hallway bowser turn 1 for
+ * phase 1 since it uses the same moves"): Lakilester's Spiny Flip, confirmed on the bar's hide (tObs; as Hallway's, VAN.B), thrown with A on the
+ * aim: its energy effect on the confirm + 39 (fbStep 'spin'), the impact's 6 x rand(359) on + imp (the runner's A throws, "ナイス": impact
+ * ~ + 60..72 in the 13:33 clip; FBP1_IMPS), Bowser's AI on the impact + 43 (fb2_route/p1spiny_log.py: 13 emulator runs, every draw replayed
+ * through fbStep to Mario's T2 menu, 648 frames exact). The FBP1_SPIN_IN heaviest states split by the confirm's shift and the impact. */
+const FBP1_SPINY = true, FBP1_IMPS = Array.from({ length: 29 }, (_, i) => 58 + i), FBP1_SPIN_SH = [[-2, 0.15], [-1, 0.25], [0, 0.4], [1, 0.2]], FBP1_SPIN_IN = 150, FBP1_SPIN_MAX = 18000;
+function fbp1SpinyInput(tObs) {
+  if (!fbp1On()) return; const c = fbp1Pic(tObs) - VAN.B(), F = Math.round(c), out = [];
+  fbp1Advance(F - 3);
+  const L = FBP1.states.slice().sort((x, y) => y.w * (y.lw || 1) - x.w * (x.lw || 1)).slice(0, FBP1_SPIN_IN), wi = 1 / FBP1_IMPS.length, X6 = [359, 359, 359, 359, 359, 359];
+  for (const S of L) for (const [d, wd] of FBP1_SPIN_SH) { const Fd = F + d - S.l; if (S.f > Fd + 39) continue;
+    for (const imp of FBP1_IMPS) { const T = fbClone(S); T.w = S.w * wd * wi; T.p1m = 1; T.gd = null; T.aiF = Fd + imp + 43;
+      fbEv(T, { k: 'spin', f: Fd + 39, end: Fd + 119 }); fbEv(T, { k: 'p1d', f: Fd + imp, m: X6 }); fbEv(T, { k: 'ai', f: Fd + imp + 43, turn: 1 }); out.push(T); } }
+  FBP1.states = out.slice(0, FBP1_SPIN_MAX); FBP1.P = F; FBP1.spiny = true;
+  slog('fbP1Spiny', { F, c: +c.toFixed(2), from: L.length, states: FBP1.states.length, imps: [FBP1_IMPS[0], FBP1_IMPS[FBP1_IMPS.length - 1]] });
 }
 /* a state past Bowser's AI splits into guarded (FBP1_GUARD) and not: v133, every attack draws differently with the guard (battle 2303) */
 function fbp1Split(S, out) {
@@ -175,15 +191,15 @@ function fbp1Plan(cScr) {
   if (!FBP1_MANIP) { FBP1.plan = { none: 'off' }; if (cScr != null) return FBP1.plan; if (st.msg !== FBP1_OFF_MSG) { st.msg = FBP1_OFF_MSG; render(); } return true; }     // v151: no Phase 1 manipulation
   if (cScr == null && typeof seriesHold === 'function' && seriesHold('fbp1')) return true;
   const why1 = w => { if (FBP1.whyLogged !== w) { FBP1.whyLogged = w; slog('fbP1NoPlan', Object.assign({ why: w, states: FBP1.states ? FBP1.states.length : null, ended: FBP1.ended, fresh: fbp1Fresh(), P: FBP1.P }, FBP1.lastW || {})); } };     // v146 (console 11-24 20:54: a lock, Lakilester read, no plan and no word why): each silent no-plan is logged once
-  if (!fbp1On()) { why1(FBP1.outcome === 'lock' ? 'states gone' : 'no lock'); st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (5 cap about 13%).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
-  if (FBP1.P == null) { why1('no Do Nothing confirm'); st.msg = 'No edge: Lakilester\'s Do Nothing confirm was not read (its Strategies screen closing). Power Bounce normally (5 cap about 13%).'; if (cScr == null) render(); return true; }
+  if (!fbp1On()) { why1(FBP1.outcome === 'lock' ? 'states gone' : 'no lock'); st.msg = FBP1.outcome === 'lock' ? 'No edge: the Phase 1 states are gone. Power Bounce normally (aim for 4+).' : 'No beeps: Phase 1\'s Charge did not lock. Power Bounce normally (aim for 4+).'; if (cScr == null) render(); return true; }
+  if (FBP1.P == null) { why1('no Do Nothing confirm'); st.msg = 'No edge: Lakilester\'s Spiny Flip was not read (the bar hiding as it starts). Power Bounce normally (aim for 4+).'; if (cScr == null) render(); return true; }
   const now = performance.now(), rate = FBP1.rate, cNow = cScr != null ? cScr : fbp1Pic(now + num('vlag')), h = Math.floor(cNow) - 10;
   fbp1Advance(h); const Wt = fbp1Weigh(h), L = Wt.list, dz = Wt.doubt; FBP1.lastW = { h, kept: L.length, doubt: +dz.toFixed(3), taps: FBP1V.taps.map(x => +fbp1Pic(x).toFixed(1)).filter(x => x > 0 && x < h).slice(-8) };
   // v150 (console 11-25 16:43: "it said no lock and then suddenly tried to lock": doubt 0.68 at the target screen read "Power Bounce
   // normally", the coin settled it to 0.22 4 s later and the plan beeped after the runner had pressed): while states are left and the
   // doubt is under FBP1_GIVEUP the page says to wait on the target screen; "Power Bounce normally" only past it or with no state left
   if (L.length && dz >= 0.5 && dz < FBP1_GIVEUP) { why1('coin-wait'); FBP1.plan = { none: 'coin wait' }; st.msg = 'WAIT on the target screen: the coin is still deciding between the Phase 1 seeds (' + Math.round(100 * dz) + '% doubt). The beeps come if it settles; it says "Power Bounce normally" if it does not.'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
-  if (!L.length || dz >= 0.5) { why1('coin'); FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (5 cap about 13%).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
+  if (!L.length || dz >= 0.5) { why1('coin'); FBP1.plan = { none: 'no state fits' }; st.msg = 'No edge: the coin does not fit the Phase 1 states the page kept. Power Bounce normally (aim for 4+).'; if (cScr == null) { if (st.plan && st.plan.prof === 'fbp1') st.plan = null; cancelBeeps(); render(); } return true; }
   const G = FBP1_GOAL, W = Math.max(0, Math.round(Math.max(1, num('zwwin')) * 1000 / rate));
   let from = Math.ceil(cNow + num('lead') * 1000 / rate + 1);
   if (cScr == null) for (let i = 0; i < 300 && fbp1PressT(from) < earliestPress(now); i++) from++;
@@ -230,12 +246,12 @@ function fbp1BarHide(t, upMs) {
   // route stayed a step behind and took T2's Power Bounce for it): on the Spiny Flip step the bar's first hide 1.5 s past the Charge's burst
   // (Lakilester's T1 action) is that confirm and moves the route to T2's Power Bounce step
   if (s.fbp1dn) { if (t - t0 < 1500 || (FBP1.pT != null && FBP1.pT > t0)) return;
-    FBP1.pT = t; slog('fbP1PartnerByHide', { at: Math.round(t), upMs: Math.round(upMs), sinceChargeMs: Math.round(t - t0) });
+    FBP1.pT = t; slog('fbP1PartnerByHide', { at: Math.round(t), upMs: Math.round(upMs), sinceChargeMs: Math.round(t - t0) }); if (FBP1_SPINY && fbp1On() && !FBP1.spiny) { try { fbp1SpinyInput(t); } catch (e) { slog('fbP1SpinyError', { msg: String(e && e.message || e).slice(0, 160) }); } }
     const j = RT().findIndex(x => x.fbp1pb); if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; } if (typeof render === 'function') render(); return; }
   if (!s.fbp1pb || FBP1.pT == null) return;
   if (t - FBP1.pT < 2000 || FBP1.pbT != null && FBP1.pbT > FBP1.pT) return;
-  FBP1.pbT = t; const j = fbp1T1I(); slog('fbP1PbByHide', { at: Math.round(t), upMs: Math.round(upMs), to: j, sinceConfirmMs: Math.round(t - FBP1.pT) });
-  if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; }
+  slog('fbP1PbByHide', { at: Math.round(t), upMs: Math.round(upMs), to: fbp1T1I(), sinceConfirmMs: Math.round(t - FBP1.pT) });
+  fbp1KeepStep(s, t); return;     // v175: as the target screen's close (the press read against the beep, the route on to Phase 2 T1)
   st.msg = 'Phase 1 Power Bounce started: the route waits on Phase 2\'s T1 Charge. Set "P1 bounce" (top of the route) to the cap you got: a 4 / 5 cap needs 6+ on Phase 2 T7 (then Spiny Flip), a 3 cap needs 7.'; if (typeof render === 'function') render();
 }
 function fbp1KeepStep(stp, tObs) {
@@ -243,7 +259,7 @@ function fbp1KeepStep(stp, tObs) {
   if (stp && stp.fbp1dn) {
     if (FBP1.pT != null && FBP1.pT > (FBP1.burstT || FBP1.t || 0) && tObs - FBP1.pT < 1500) return true;     // v172: the bar's hide already took this confirm
     FBP1.pT = tObs; slog('fbP1Confirm', { at: Math.round(tObs), locked: fbp1On() });
-    if (fbp1On()) fbp1Input(tObs); return false;
+    if (fbp1On() && !FBP1_SPINY) fbp1Input(tObs); else if (fbp1On() && !FBP1.spiny) fbp1SpinyInput(tObs); return false;     // v175: the Spiny Flip input (once)
   }
   if (stp && stp.fbp1pb) {
     FBP1.pbT = tObs; FBP1.t = tObs; const P = st.plan && st.plan.prof === 'fbp1' ? st.plan : null;
