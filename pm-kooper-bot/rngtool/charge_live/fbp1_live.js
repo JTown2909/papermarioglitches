@@ -14,7 +14,7 @@
  * The status-bar coin weighs the states all the way (the menu before the Charge, Mario's T2 menu). Phase 2 T1's Charge still
  * locks afresh (the Star Beam, a whole Peach battle and the Star Spirits come between): after the Power Bounce the route
  * moves to it and holds for FBP1_HOLD. */
-var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.95, FBP1_MANIP = false, FBP1_OFF_MSG = 'Phase 1: no beeps (the route plays it straight: Bounce, then Spiny Flip; T3 Star Beam).';     // v151: no Phase 1 manipulation     // (var: chgShow runs before this file is evaluated)
+var FBP1_HOLD = 90000, FBP1_GIVEUP = 0.95, FBP1_MANIP = false, FBP1_OFF_MSG = 'Phase 1: no beep yet - Power Bounce for 4+ (then Spiny Flip; T3 Star Beam), and set P1 bounce to the cap you got (a 3 cap needs 7 on Phase 2 T7). The T2 beep needs T1\'s Spiny Flip modelled first.';     // v151: no Phase 1 manipulation     // (var: chgShow runs before this file is evaluated)
 var FBP1 = { t: null, seed: null, outcome: null, score: null, ratio: null };
 var FBP1V = { taps: [], vis: [], visFrom: null };      // the coin's shines and the bar's stretches, kept from before the lock
 CHG_PROF.fbp1 = Object.assign({}, CHG_PROF.fb1, { id: 'fbp1' });
@@ -227,7 +227,7 @@ function fbp1KeepStep(stp, tObs) {
     if (P && fbp1On()) { const c = (tObs - P.tLast - num('vlag')) / P.rate - VAN.B() - num('pfix');     // (as fb2PbPress reads T7's)
       slog('fbP1Press', { target: P.target, c: +c.toFixed(2), err: +(c - P.target).toFixed(2) }); try { const wk = pressShow(P, c, 'Final Bowser Phase 1, Power Bounce'); if (typeof leverPressNote === 'function') leverPressNote('Final Bowser Phase 1, Power Bounce', c - P.target, 'fbp1', wk); } catch (e) {} }
     const j = fbp1T1I(); if (j >= 0) { setStep(j); st.lastStepClose = { t: tObs, to: j }; }
-    st.msg = 'Phase 1 Power Bounce pressed. Set "P1 bounce" (top of the route) to the cap you got: a 5 cap needs 6+ on Phase 2 T7, a 3 / 4 cap needs 7.'; if (typeof render === 'function') render(); return true;
+    st.msg = 'Phase 1 Power Bounce pressed. Set "P1 bounce" (top of the route) to the cap you got: a 4 / 5 cap needs 6+ on Phase 2 T7 (then Spiny Flip), a 3 cap needs 7.'; if (typeof render === 'function') render(); return true;
   }
   if (stp && stp.fb14 === 1 && stp.fb14role === 'charge' && fbp1Hold(tObs)) { slog('fbP1StepKept', { at: Math.round(tObs), why: 'Phase 1 T2 / T3 or the cutscenes', sinceMs: Math.round(tObs - FBP1.t) }); return true; }
   return false;

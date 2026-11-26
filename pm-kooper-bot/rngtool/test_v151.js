@@ -12,11 +12,11 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
     const S = fbNew({ s: 1, nc: 0, f: 400, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1 }); Object.assign(FBP1, { states: [S], t0: 0, rate: 33.4, lockT: null, ended: false, P: 120, outcome: 'lock' });
     T.setStep(pb); cancelBeeps(); const pl = fbp1Plan(); const beeping = !!(st.plan && st.plan.prof === 'fbp1'); const msg = st.msg; FBP1.states = null;
     const rl = document.getElementById('route-list').textContent;
-    return JSON.stringify({ manip: FBP1_MANIP, pl, beeping, msg, order: [p1, dn, pb], t1: /T1: Charge; Spiny Flip/.test(rl), t2: /T2: Bounce; Spiny Flip/.test(rl), t3: /T3: Star Beam/.test(rl), old: /Bounce x5; Do Nothing/.test(rl) }); })()`));
+    return JSON.stringify({ manip: FBP1_MANIP, pl, beeping, msg, order: [p1, dn, pb], t1: /T1: Charge; Spiny Flip/.test(rl), t2: /T2: Bounce x4; Spiny Flip/.test(rl), t3: /T3: Star Beam/.test(rl), old: /Bounce x5; Do Nothing/.test(rl) }); })()`));
   console.log('     ' + JSON.stringify(r));
-  ok(r.manip === false && r.pl === true && !r.beeping && /^Phase 1: no beeps/.test(r.msg || ''), "Phase 1's Power Bounce step: no plan, no beeps, the message says so");
+  ok(r.manip === false && r.pl === true && !r.beeping && /^Phase 1: no beep/.test(r.msg || ''), "Phase 1's Power Bounce step: no plan, no beeps, the message says so");
   ok(r.order[0] >= 0 && r.order[1] === r.order[0] + 1 && r.order[2] === r.order[0] + 2, 'the Phase 1 steps stay (Charge, Spiny Flip, Power Bounce) so the route follows the fight to Phase 2');
-  ok(r.t1 && r.t2 && r.t3 && !r.old, 'the route reads T1: Charge; Spiny Flip / T2: Bounce; Spiny Flip / T3: Star Beam');
+  ok(r.t1 && r.t2 && r.t3 && !r.old, 'the route reads T1: Charge; Spiny Flip / T2: Bounce x4; Spiny Flip / T3: Star Beam');
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? 'FAIL ' + fails : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();

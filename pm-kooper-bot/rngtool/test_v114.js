@@ -24,7 +24,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   { const p = await open();
     const r = await p.evaluate(FX => {
       const T = window.__tot, X = window.__fb2, FB2 = X.FB2, out = {}, i6 = T.RT().findIndex(s => s.turn === 'fb2_k' && !s.backup);
-      T.setStep(i6); out.mainShown = /T7: Bounce x7/.test(document.getElementById('route-list').textContent); out.backupHidden = !/Life Shroom/.test(document.getElementById('route-list').textContent);
+      T.setStep(i6); out.mainShown = /T7: Bounce x6; Spiny Flip/.test(document.getElementById('route-list').textContent); out.backupHidden = !/Life Shroom/.test(document.getElementById('route-list').textContent);
       const tc = 200000; window.__now = tc - 3000;
       Object.assign(FB2, { on: true, hyps: FX.lock6.map(h => ({ s: h[0] >>> 0, nc: h[1], ph: [h[2], h[3]], w: 1 / FX.lock6.length })), plan: { k: 169, p: 0.85, pp: 0.87, win: 2 }, plans: [], t7: null, taps: [], vis: [], visFrom: null, pObs: null, pT: null, hpw: null });
       const H = FX.hp; window.__fb2HpTest = t => { let i = 0; while (i < H.length - 1 && tc + H[i + 1][0] <= t) i++; return H[i].slice(1); };
@@ -35,7 +35,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       for (const row of H) { const t = tc + row[0]; if (row[0] < 0) continue; window.__now = t; X.v108.hpWatch(t, true); }
       const L = T.SLOG.filter(e => /^fb2(Dodged|HitSeen|Backup|HitLate)$/.test(e.ev));
       out.evs = L.map(e => e.ev); out.hit = L.find(e => e.ev === 'fb2HitSeen'); out.step = T.RT()[T.step()]; out.backup = X.v114.backupOn(); out.atk6 = X.v114.FB2B.atk6;
-      const rl = document.getElementById('route-list').textContent; out.rl = { b6: /Close Call failed, Life Shroom/.test(rl), b7: /No Wave or Shield/.test(rl), b8: /T8: Bounce x5/.test(rl), main7: /T7: Bounce x7/.test(rl), main6: /T6: Charge; Do Nothing - Close Call(?!\s*failed)/.test(rl) };
+      const rl = document.getElementById('route-list').textContent; out.rl = { b6: /Close Call failed, Life Shroom/.test(rl), b7: /No Wave or Shield/.test(rl), b8: /T8: Bounce x5/.test(rl), main7: /T7: Bounce x6; Spiny Flip/.test(rl), main6: /T6: Charge; Do Nothing - Close Call(?!\s*failed)/.test(rl) };
       out.msg = T.st ? T.st.msg : null; window.__fb2HpTest = null; return out; }, FX);
     console.log('1.', JSON.stringify(r).slice(0, 700));
     ok(r.mainShown && r.backupHidden, '1. before a failure the route shows the main T6 / T7 and hides the backup lines');

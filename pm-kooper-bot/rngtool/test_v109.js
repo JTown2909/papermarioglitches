@@ -158,7 +158,7 @@ const readLog = n => { const f = path.join(LOGS, n, 'log.json'); return fs.exist
     ok(r.fail === false && /last press is in the boxes/.test(r.state2.text), '6. a press off the window (fb0709 T2 794 on 791-792): fails (v128: the result in the press boxes, the strip line points there)');
     ok(r.after === 'plan', '6. the next plan replaces it');
     const want = ['T1: Charge; Do Nothing', 'T3: Charge; Bomb',     // (v110: the Duplighosts Charge route is the default)
-       'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T2: Time Out; Spiny Flip', 'T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', 'T3: Jammin\' Jelly; Do Nothing', 'T4: Charge; Do Nothing - Block Wave', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x7'];
+       'T4: Bomb; Maple Syrup [Down 1]', 'T5: Charge; Do Nothing', 'T6: Bounce x6; Bomb if 5 capped', 'T2: Time Out; Spiny Flip', 'T1: Charge; Cloud Nine', 'T2: Charge; Do Nothing', 'T3: Jammin\' Jelly; Do Nothing', 'T4: Charge; Do Nothing - Block Wave', 'T6: Charge; Do Nothing - Close Call', 'T7: Bounce x6; Spiny Flip'];
     ok(want.every(w => r.stars.includes(w)) && !r.stars.some(s => /Whacka|T1: Charge; Bomb|Spiny Flip - Danger/.test(s)) && r.starOutside, '6. a star left of every timed turn, outside the chip (' + r.stars.length + ': ' + r.stars.join(' | ').slice(0, 200) + ')');
     ok(r.erased === 'logErased' && r.asked === 0 && r.eraseLabel === 'Log erased ✓' && r.eraseCls && r.resetLabel === 'Seed reset ✓', '6. Erase log at once (no confirm), "Log erased ✓" / "Seed reset ✓" for 1.5 s');
     await q.close();

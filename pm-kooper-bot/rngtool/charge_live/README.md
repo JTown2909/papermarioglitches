@@ -5403,3 +5403,9 @@ new. What that means here:
 - T3: 2.2 s before the press a replan left the runner's 3-frame 1486 for a 1-frame 1464 (0.67 against ~0.62 for the best 2+ run);
   pressed 1 late, hit (the Life Shroom). fb14Anchor keeps the anchor's wider window over a narrower pick unless the pick gains
   FB14_NARROW_GAIN (0.1) in the realistic chance (fb14ReplanKeptWide). test_v160.js.
+
+## v161 (the runner's new route, 11-26)
+- Phase 1: T1 Charge; Spiny Flip. T2 Power Bounce x4 (4+); Spiny Flip. T3 Star Beam: 99 - 2 - 6 - 5 - 4 - 3 - 2 = 77. Phase 2 T7:
+  Power Bounce x6 (15..10 = 75), then Spiny Flip (2) = 0. Route texts and the P1 bounce select (4 / 5 cap: need 6+, 3 cap: need 7;
+  FB2_GOAL7 as before) follow it. The Phase 1 T2 beep stays off: fbp1_live.js models T1 with Do Nothing (Bowser's AI on the
+  Strategies screen's close + 12); T1's Spiny Flip has to be measured in the emulator first.
