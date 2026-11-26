@@ -5470,3 +5470,9 @@ new. What that means here:
 - The Phase 1 badge showed the lock (v170). The route still stayed on Phase 1's T2 Power Bounce step through the Power Bounce (its target
   screen's close unread again). On that step the bar's first hide after Mario's T2 menu (13:09: 5.7 s after the Spiny Flip confirm, the bar
   up 1.5 s) moves the route to Phase 2's T1 Charge, as the close would (fbp1BarHide). The Phase 2 fade (v170) stays as a later fallback.
+
+## v172 (console 11-26 13:14)
+- Phase 1 T1's Spiny Flip is picked from the abilities menu, not the Strategies box: the "Do Nothing" close was never read, the route stayed
+  a step behind and took T2's Power Bounce close for T1's. On the Spiny Flip step the bar's first hide 1.5 s past the Charge's burst
+  (Lakilester's action: 3.25-3.35 s on in all four Phase 1 logs) moves the route to T2; on T2 the next hide (the Power Bounce, 14-18 s on)
+  to Phase 2's T1 Charge (v171). test_v170.js with 13:14's times.

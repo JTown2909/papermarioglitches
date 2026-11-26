@@ -223,7 +223,14 @@ function fbp1ArmOk(P, t) {
  * Bounce, Spiny Flip and Star Beam): on that step the bar's first hide after Mario's T2 menu (the action begins; the bar is up ~1.5 s on that menu,
  * Bowser's T1 turn runs with it hidden) moves the route to Phase 2's T1 Charge, as the target screen's close would */
 function fbp1BarHide(t, upMs) {
-  const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1pb || FBP1.pT == null || FBP1.t == null) return;
+  const s = isRoute() && RT()[routeStep]; if (!s || FBP1.t == null || t - FBP1.t > 150000) return;
+  // v172 (console 11-26 13:14: Spiny Flip is picked from the abilities menu, not the Strategies box, so T1's partner confirm was never read; the
+  // route stayed a step behind and took T2's Power Bounce for it): on the Spiny Flip step the bar's first hide 1.5 s past the Charge's burst
+  // (Lakilester's T1 action) is that confirm and moves the route to T2's Power Bounce step
+  if (s.fbp1dn) { if (t - FBP1.t < 1500 || (FBP1.pT != null && FBP1.pT > FBP1.t)) return;
+    FBP1.pT = t; slog('fbP1PartnerByHide', { at: Math.round(t), upMs: Math.round(upMs), sinceChargeMs: Math.round(t - FBP1.t) });
+    const j = RT().findIndex(x => x.fbp1pb); if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; } if (typeof render === 'function') render(); return; }
+  if (!s.fbp1pb || FBP1.pT == null) return;
   if (t - FBP1.pT < 2000 || t - FBP1.t > 150000 || FBP1.pbT != null && FBP1.pbT > FBP1.pT) return;
   FBP1.pbT = t; const j = fbp1T1I(); slog('fbP1PbByHide', { at: Math.round(t), upMs: Math.round(upMs), to: j, sinceConfirmMs: Math.round(t - FBP1.pT) });
   if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; }
@@ -232,6 +239,7 @@ function fbp1BarHide(t, upMs) {
 function fbp1KeepStep(stp, tObs) {
   if (stp && stp.fbp1) return false;      // v132: on to the Do Nothing step
   if (stp && stp.fbp1dn) {
+    if (FBP1.pT != null && FBP1.pT > (FBP1.t || 0) && tObs - FBP1.pT < 1500) return true;     // v172: the bar's hide already took this confirm
     FBP1.pT = tObs; slog('fbP1Confirm', { at: Math.round(tObs), locked: fbp1On() });
     if (fbp1On()) fbp1Input(tObs); return false;
   }

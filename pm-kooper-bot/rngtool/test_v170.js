@@ -30,6 +30,12 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     FBP1.t = null; FBP1.pT = null; FBP1.pbT = null; return JSON.stringify({ p: i, a, b: b2, want: fbp1T1I() }); })()`));
   console.log('     ' + JSON.stringify(h));
   ok(h.a === h.p && h.b === h.want, "v171: on Phase 1's Power Bounce step the bar's hide at the T2 action (not the confirm's own) moves the route to Phase 2's T1 Charge");
+  const k = JSON.parse(await E(`(() => { const T = window.__tot, i = T.RT().findIndex(s => s.fbp1dn); T.setStep(i); const now = performance.now();
+    /* console 13:14: Charge burst 112136, bar hides 115564 (up 1282: Lakilester's Spiny Flip) and 127447 (up 8900: T2's Power Bounce) */
+    FBP1.t = now - 15311; FBP1.pT = null; FBP1.pbT = null; fbp1BarHide(now - 11883, 1282); const a = routeStep; fbp1BarHide(now, 8900); const b2 = routeStep;
+    FBP1.t = null; FBP1.pT = null; FBP1.pbT = null; return JSON.stringify({ dn: i, a, b: b2, pb: T.RT().findIndex(s => s.fbp1pb), want: fbp1T1I() }); })()`));
+  console.log('     ' + JSON.stringify(k));
+  ok(k.a === k.pb && k.b === k.want, "v172 (13:14's times): Lakilester's T1 Spiny Flip (the bar's hide) moves the route to T2, T2's Power Bounce on to Phase 2's T1 Charge");
   ok(!errs.length, 'no page errors ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fails ? 'FAIL ' + fails : 'ALL OK'); process.exit(fails ? 1 : 0);
 })();
