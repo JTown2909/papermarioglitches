@@ -1396,7 +1396,7 @@ function fb14Broad(C, Wg, turn, d, PD) {
  * pp - tol, a 1-frame window at 0.41, broad 0.49): a replan picks by the realistic chance (the press spread over the kept
  * states' share, no higher than the same over every state the coin has not ruled out, fb14Broad's states) among frames that
  * clear the perfect-press bar; nearness to the turn's first frame only breaks ties within FB14_ANCHOR_RTOL. */
-const FB14_ANCHOR_RTOL = 0.03;
+const FB14_ANCHOR_RTOL = 0.03, FB14_NARROW_GAIN = 0.1;
 function fb14Anchor(C, from, W, turn, PD, nKept) {
   FB14.anchor = FB14.anchor || {}; const A = FB14.anchor[turn];
   if (C.none || C.target == null) return C;
@@ -1419,6 +1419,9 @@ function fb14Anchor(C, from, W, turn, PD, nKept) {
   const near = (c, p) => p == null || Math.abs(c - A) < Math.abs(p - A) || (Math.abs(c - A) === Math.abs(p - A) && c < p);
   for (const [c, r] of cands) { if (r < rmax - FB14_ANCHOR_RTOL - 1e-12) continue; if (near(c, pick)) pick = c; }
   if (pick != null && runL(pick) === 1) { let p2 = null; for (const [c, r] of cands) if (r >= rmax - FB14_ANCHOR_RTOL - 1e-12 && runL(c) >= 2 && near(c, p2)) p2 = c; if (p2 != null) pick = p2; }     // a 1-frame pick only when no 2+ run is as likely
+  // v160 (console 11-26 10:52 T3: 2.2 s before the press a replan left the runner's 3-frame 1486 for a 1-frame 1464, 0.67 against 0.62 for
+  // the best 2+ run; pressed 1 late, hit): a replan keeps the anchor's frame over a narrower pick unless it gains FB14_NARROW_GAIN
+  if (pick != null && A !== pick && A >= from && A <= from + W && okA(A) && runL(pick) < runL(A) && real(pick) < real(A) + FB14_NARROW_GAIN) { slog('fb14ReplanKeptWide', { turn, anchor: A, runA: runL(A), realA: +real(A).toFixed(3), pick, runP: runL(pick), realP: +real(pick).toFixed(3) }); pick = A; }
   if (pick === C.target) { if (C.target !== A) slog('fb14ReplanMoved', { turn, anchor: A, target: C.target, pp: +C.pp.toFixed(3), real: +real(pick).toFixed(3) }); return C; }
   const okR = c => honest(c) >= thr - 1e-12; let s0 = pick, e0 = pick; while (s0 - 1 >= from && okR(s0 - 1)) s0--; while (e0 + 1 <= from + W && okR(e0 + 1)) e0++;
   slog('fb14ReplanNear', { turn, anchor: A, best: C.target, bestPP: +C.pp.toFixed(3), bestReal: +real(C.target).toFixed(3), target: pick, pp: +honest(pick).toFixed(3), real: +real(pick).toFixed(3), win: e0 - s0 + 1 });

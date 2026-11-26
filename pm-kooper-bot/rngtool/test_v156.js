@@ -10,7 +10,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(/^v15[6-9]$/.test(await E('VERSION')), 'page version v156+');
+  ok(await E('VERSION') >= 'v156', 'page version v156+');
   const r = JSON.parse(await E(`(() => { const T = window.__tot, R = T.RT(), i6 = R.findIndex(s => s.turn === 'fb2_k' && !s.b7), i5 = R.findIndex(s => s.fb5), out = {};
     CHG.trig = null; const T1 = window.__fb2OnesTest; const ones = FB2_ONES_T;
     const read = (digit, tens) => { T.setStep(i5); fb2T5Watch(0, true); T.setStep(i6); window.__fb2TensVal = 1; window.__fb2OnesTest = () => '0'.repeat(72); for (let k = 0; k < 20; k++) fb2T5Watch(500 + k * 33, true);     /* 10 first (before Bowser's T5 attack), then the number after it */

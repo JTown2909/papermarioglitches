@@ -5398,3 +5398,8 @@ new. What that means here:
 - keyLater moved T2's beep to 1324 (window 1316..1341), past the plan's from + W + 30 (1309): the strip went blank before the beep
   and the press at 1321.8, inside the window, was read "2.2 frames early" with a chance of 0. The plan's tables (tab, chance, frameP)
   and its strip range now reach the target and its window.
+
+## v160 (console 11-26 10:52, the first win on the page)
+- T3: 2.2 s before the press a replan left the runner's 3-frame 1486 for a 1-frame 1464 (0.67 against ~0.62 for the best 2+ run);
+  pressed 1 late, hit (the Life Shroom). fb14Anchor keeps the anchor's wider window over a narrower pick unless the pick gains
+  FB14_NARROW_GAIN (0.1) in the realistic chance (fb14ReplanKeptWide). test_v160.js.
