@@ -142,7 +142,10 @@ function fbbRead(C) {
     FBB.reads.push(R); if (FBB.reads.length > 40) FBB.reads.shift();
     const res = fbbApply(R);
     slog('boltRead', { kind: R.kind, clk: R.k, F1: R.F1, frames: n, bt: R.bt || undefined, type: R.best.type, u: R.best.u % 120, L0: R.best.L0, cost: +R.best.c.toFixed(2), ms: R.ms, ...res });
-    if (res.states && typeof makePlan === 'function' && (!st.plan || !st.plan.tPress || st.plan.tPress - performance.now() > 1500)) { st.plan = null; makePlan(); }
+    // v165 (console 11-26 11:22, the backup T7: a bolt read 2.3 s after its Do Nothing plan nulled it; makePlan does not remake a T6 / T7 Do
+    // Nothing plan, so its beeps played with no strip, no % box and no press read): the Do Nothing step's plan is left alone
+    const dnStep = (() => { const z = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; return !!(z && z.turn === 'fb2_k'); })();
+    if (res.states && !dnStep && typeof makePlan === 'function' && (!st.plan || !st.plan.tPress || st.plan.tPress - performance.now() > 1500)) { st.plan = null; makePlan(); }
   }, FBB_MS);
 }
 const fbbM1 = (g, ph) => ((g + ph[0]) % 130 + 130) % 130, fbbM2 = (g, ph) => ((g + ph[1]) % 220 + 220) % 220;

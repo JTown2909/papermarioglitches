@@ -5426,3 +5426,11 @@ new. What that means here:
   fell off and T8 had no beep (4 cap). A guarded Fire Breath now carries too: Phase 1's guarded table (p1_extra.json fire_g: no draw of its
   own, the next menu on the AI + 160), split by FB2B_GUARD like the others; unguarded it KOs Mario (no Life Shroom left). The HP read
   expects 1 (FB2_B7HP_EXP.fire). Phase 1's timing, not yet re-measured in phase 2's battle.
+
+## v165 (console 11-26 11:22, on v163: a win through the backup ending)
+- Backup T7 "did not lock but beeped" (the clip: LOCKED, "Nothing to time on this step", no % box): a bolt read 2.3 s after the Do Nothing
+  plan set st.plan to null and called makePlan, which never remakes a T6 / T7 Do Nothing plan; the beeps played on with no strip, % box or
+  press read. fbbolt_live.js leaves the plan alone on the Do Nothing step.
+- T4 "jumped in and out": a 92% plan on 2061 (keyLater, 4.4 s on) moved to 2082 2 s before its press by a replan with its first beep ~0.3 s
+  off (past v163's reach). Within FB14_FREEZE_MS (1.2 s) of a plan's first beep no plan call moves it (fb14PlanFrozen); the refine / replan
+  on a worse frame still can.

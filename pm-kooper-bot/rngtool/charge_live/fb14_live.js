@@ -1217,7 +1217,11 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   const skp = fb14SkipPhase(), stp0 = fb14Step(), stp = skp ? (RT().find(x => x.fb14 === 1 && x.fb14role === 'lever') || stp0) : stp0, turn = stp && stp.fb14;
   if (!turn || stp.fb14role !== 'lever') return false;
   if (cAt == null) FB14.decide = null;
-  if (cAt == null && typeof seriesHold === 'function' && seriesHold('fb14')) return true;      // (v108: also with st.plan dropped: the series' plan comes back)      // v106: a begun series plays out (fb14Tick's STOP alone cuts it)
+  if (cAt == null && typeof seriesHold === 'function' && seriesHold('fb14')) return true;
+  // v165 (console 11-26 11:22 T4: a 92% plan on 2061; 0.5 s after v163 kept it in reach, a replan with its first beep ~0.3 s off moved it to
+  // 2082, 2 s before the press: "jumped in and out"): within FB14_FREEZE_MS of a plan's first beep no replan moves it (fb14Tick's STOP still can)
+  { const SP = st.plan, tf = SP && SP.prof === 'fb14' && !SP.stopped && SP.tPress ? SP.tPress - (nBeeps() - 1) * Math.min(num('gapms') || 500, 500) : null;
+    if (cAt == null && tf != null && SP.fb14 === (fb14Step() || {}).fb14 && tf > performance.now() - 50 && tf - performance.now() < FB14_FREEZE_MS) { if (FB14.freezeLog !== SP.tPress) { FB14.freezeLog = SP.tPress; slog('fb14PlanFrozen', { turn: SP.fb14, target: SP.target, msToFirst: Math.round(tf - performance.now()) }); } return true; } }      // (v108: also with st.plan dropped: the series' plan comes back)      // v106: a begun series plays out (fb14Tick's STOP alone cuts it)
   if (FB14.hit && FB14.hitLogged !== turn) { FB14.hitLogged = turn; slog('fb14NoEdge', { turn, why: 'hit', hit: FB14.hit }); }
   if (FB14.hit === 4 || FB14.routeOff) { st.msg = 'Route off: ' + (FB14.routeOff || 'Mario was hit on T4') + '. The page plans no Final Bowser lever from this attempt (the next attempt\'s T1 Charge locks again).'; FB14.plan = { none: 'route off', turn }; fb14Show(); if (cAt == null) { cancelBeeps(); render(); } return true; }
   if (FB14.hit) { st.msg = 'No edge: Mario was hit on T' + FB14.hit + '. ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; FB14.plan = { none: 'hit', turn }; fb14Show(); if (cAt == null) { cancelBeeps(); render(); } return true; }
@@ -1399,7 +1403,7 @@ function fb14Broad(C, Wg, turn, d, PD) {
  * pp - tol, a 1-frame window at 0.41, broad 0.49): a replan picks by the realistic chance (the press spread over the kept
  * states' share, no higher than the same over every state the coin has not ruled out, fb14Broad's states) among frames that
  * clear the perfect-press bar; nearness to the turn's first frame only breaks ties within FB14_ANCHOR_RTOL. */
-const FB14_ANCHOR_RTOL = 0.03, FB14_NARROW_GAIN = 0.1;
+const FB14_ANCHOR_RTOL = 0.03, FB14_NARROW_GAIN = 0.1, FB14_FREEZE_MS = 1200;
 function fb14Anchor(C, from, W, turn, PD, nKept) {
   FB14.anchor = FB14.anchor || {}; const A = FB14.anchor[turn];
   if (C.none || C.target == null) return C;
