@@ -1557,8 +1557,11 @@ function fb14OwnClose(tObs, stp) {
  * Do Nothing confirm P makes Lakilester block the wave, so he is not KO'd and does T6's Do Nothing; the model from P + 89 on is
  * the blocked one): after T4's confirm three beeps, the last on P + FB14_BLOCK (the window's middle), timed from the confirm
  * itself as the lever beeps are (the reading's vanish, the console's 1.7, the runner's offset and Do Nothing correction) */
-const FB14_BLOCK = 87;
+const FB14_BLOCK = 87, FB14_BLOCK_BEEPS = false;
 function fb14BlockBeeps(tObs, stp, src) {
+  // v162 (the runner, 11-26 10:39 and 11:07: "after i select do nothing on turn 4 it still beeps"; the T4 wave misses Mario on the Do
+  // Nothing beep): no block beeps (FB14_BLOCK_BEEPS)
+  if (!FB14_BLOCK_BEEPS) { slog('fb14BlockOff', {}); return; }
   if (typeof beepAt !== 'function') return; const r = fbRate(), van = fb14Van(stp.cat, src), g = Math.min(num('gapms') || 500, 500), n = 3;
   const tPress = tObs + (FB14_BLOCK - van - 1.7 + num('off') + fb14Bias('fb14')) * r - num('vlag');
   setTimeout(() => {     // after the confirm's own step change (its cancel) has run

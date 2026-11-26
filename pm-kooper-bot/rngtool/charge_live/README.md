@@ -5409,3 +5409,9 @@ new. What that means here:
   Power Bounce x6 (15..10 = 75), then Spiny Flip (2) = 0. Route texts and the P1 bounce select (4 / 5 cap: need 6+, 3 cap: need 7;
   FB2_GOAL7 as before) follow it. The Phase 1 T2 beep stays off: fbp1_live.js models T1 with Do Nothing (Bowser's AI on the
   Strategies screen's close + 12); T1's Spiny Flip has to be measured in the emulator first.
+
+## v162 (console 11-26 11:07)
+- T6: Mario was at 3 after T5's guarded Body Slam (the video), but the HP read logged 10 at the step's start and never the change; v156's
+  "no Danger" rule then gave no T6 beep (the runner's unbeeped Close Call worked). A 10 is no longer trusted (FB2_T5_TRUST10 false):
+  no veto and the three T5 cases; 3 / 2 / 1 as before.
+- T4: no block beeps after the Do Nothing confirm (FB14_BLOCK_BEEPS false; the runner twice).

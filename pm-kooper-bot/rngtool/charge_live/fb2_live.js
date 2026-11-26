@@ -145,7 +145,7 @@ function fb2PBWin(S0, f0, D0, W, ph) {
  * T6's step before its Charge (after the Peach Beam's turn) tells T5's attack when the setting is "not set": 3 = Body Slam guarded,
  * 2 = Body Slam or Claw guarded, 1 = Claw (or Fire Breath / Lightning guarded), 10 = no damage (or a revive). Read like the backup
  * T7's number (fb2OnesDigit), held FB2_T5HP_N pictures. */
-const FB2_T5HP_N = 15; var FB2HP5 = { v: null, d: null, run: 0 };
+const FB2_T5HP_N = 15, FB2_T5_TRUST10 = false; var FB2HP5 = { v: null, d: null, run: 0 };
 function fb2T5Watch(t, present) {
   const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; if (!s) return;
   if (s.fb5 || (s.fb14 && s.fb14 <= 4)) { if (FB2HP5.v != null || FB2HP5.run || FB2HP5.t5ko) FB2HP5 = { v: null, d: null, run: 0 }; return; }     // T5's start / a new attempt: read again
@@ -169,7 +169,7 @@ function fb2T5Flags(hp) {
   return null;
 }
 function fb2Flags() { if (fb2BackupOn() && FB2B.atk6) { const A = FB2B.atk6, out = []; for (const [a, w] of Object.entries(A)) if (w > 0) out.push([a !== 'slam', a !== 'claw', w]); if (out.length) return out; }     // v114: the backup T7: Bowser's T6 attack (the hit's) forbids that one
-  const v = ($('s-fb2t5') || {}).value || 'any'; if (v === 'any' && FB2HP5.v != null) { const f5 = fb2T5Flags(FB2HP5.v); if (f5) return f5; }     // v156
+  const v = ($('s-fb2t5') || {}).value || 'any'; if (v === 'any' && FB2HP5.v != null && (FB2HP5.v !== 10 || FB2_T5_TRUST10)) { const f5 = fb2T5Flags(FB2HP5.v); if (f5) return f5; }     // v162: a 10 is not trusted     // v156
   return v === 'slam' ? [[false, true, 1]] : v === 'claw' ? [[true, false, 1]] : v === 'fire' ? [[true, true, 1]] : [[true, true, 1 / 3], [false, true, 1 / 3], [true, false, 1 / 3]]; }
 /* ---- clock: confirm-relative logic frames from the Charge trigger (the picture of rays frame 3 = confirm + 16) ---- */
 /* v72: on the console's frame time (consoleRate, as the Hallway tracker since v70; 33.427 ms until the shines measure it),
@@ -231,7 +231,9 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
   const t0 = performance.now(), H = fb2TopHyps(), b7 = fb2BackupOn(), F = fb2Flags(), now = performance.now(), bias = fb2Bias();
   // v156: Close Call only works with Mario in Danger: at 10 HP after T5 (Bowser's T5 attack missed, or a KO the Life Shroom revived)
   // no T6 Do Nothing frame can dodge: no beep, the backup ending to come
-  if (!b7 && FB2HP5.v === 10) { const nl = { none: 'no Danger', lever: 'nothing' }; if (kAt != null) return nl; if (FB2.plan && FB2.plan.none === 'no Danger') return true;
+  // v162 (console 11-26 11:07: the read stayed on 10 - Mario was at 3 after a guarded Body Slam - and this said "no Danger"; the runner's
+  // Close Call worked unbeeped): a 10 is not trusted (a missed change reads the same); off unless FB2_T5_TRUST10
+  if (!b7 && FB2HP5.v === 10 && FB2_T5_TRUST10) { const nl = { none: 'no Danger', lever: 'nothing' }; if (kAt != null) return nl; if (FB2.plan && FB2.plan.none === 'no Danger') return true;
     FB2.plan = nl; cancelBeeps(); if (st.plan && st.plan.prof === 'fb2') st.plan = null; slog('fb2NoEdge', { why: 'Mario at 10 HP after T5: no Danger, no Close Call' });
     st.msg = 'T6: Mario is at 10 HP (no Danger), so Close Call cannot make Bowser miss on any frame. Do Nothing whenever you like; the backup ending (T7 Charge, Do Nothing on its beep) follows.'; fb2Show(); if (typeof render === 'function') render(); return true; }
   // v102 (console log fb0449 T6: planned 1.6 s ahead, its 3 beeps 300 ms apart: "the beeps seemed to glitch by speeding up"): the
