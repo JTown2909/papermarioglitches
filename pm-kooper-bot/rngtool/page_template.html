@@ -1989,7 +1989,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v169';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v170';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the
@@ -2111,6 +2111,12 @@ function stripData() {
  * (Final Bowser T1-T4: FB14; T6/T7: FB2), else the Charge-lock tracker (zw), else the walk (shine) lock. */
 function lockBadgeState() {
   const stp = isRoute() ? RT()[routeStep] : null, pc = x => Math.round(100 * x) + '%';
+  // v170 (console 11-26 12:57: Phase 1's Charge locked - c5aa1ab4, 2.33 - and the badge said NOT LOCKED "no seed"): the Phase 1 steps show its read
+  if (stp && (stp.fbp1 || stp.fbp1dn || stp.fbp1pb) && typeof FBP1 !== 'undefined') {
+    if (FBP1.outcome === 'lock' && FBP1.seed) return { state: 'ok', why: 'Phase 1 lock · seed ' + FBP1.seed + (FBP1.ratio != null ? ' · ' + (+FBP1.ratio).toFixed(1) + 'x' : '') };
+    if (FBP1.outcome && FBP1.outcome !== 'lock') return { state: 'no', why: 'Phase 1 Charge: no lock' };
+    return { state: 'no', why: typeof CHG !== 'undefined' && (CHG.state === 'capture' || CHG.state === 'maps' || CHG.state === 'search') ? 'reading the Charge' : 'Phase 1: waiting for the Charge' };
+  }
   if (stp && (stp.fb14 || stp.fb5) && typeof FB14 !== 'undefined') {     // v156 (console 11-26 09:50: "NOT LOCKED - no Charge lock" right after T4's press, its lock up: the route on T5's step read the Charge reader's last no-read)
     if (FB14.hit) return { state: 'no', why: 'Mario hit on T' + FB14.hit };
     if (!FB14.on || !FB14.states || !FB14.states.length) return { state: 'no', why: FB14.why && /gone/.test(FB14.why) ? 'carried seed gone' : 'no Charge lock' };

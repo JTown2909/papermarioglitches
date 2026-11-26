@@ -5458,3 +5458,7 @@ new. What that means here:
 - T1 (81%) and T3 (79%, a 4-frame window) hit on presses 0.3 / 0.1 frames off. Today's 44 T1-T3 beeps: the stated chance held (75-85%
   plans: Bowser missed 73%; presses within a frame: 75% for a stated 73%). The plans are honest; they are only 80%. T4, with its 10 s
   look-ahead, gave 92-100%. T2 / T3 now look 6 s on (FB14_KEY_S, was 3) for a 90% frame (or 10 points more).
+
+## v170 (console 11-26 12:57)
+- Phase 1's Charge locked (c5aa1ab4, 2.33, kept as Phase 2 T1's window since v168) but the badge said NOT LOCKED "no seed": lockBadgeState
+  had no Phase 1 branch. The Phase 1 steps now show "Phase 1 lock · seed …", or why not. test_v170.js.
