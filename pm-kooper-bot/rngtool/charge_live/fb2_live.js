@@ -513,9 +513,15 @@ function fb2OnesMask() {
   const [SX, OX, SY, OY] = chgMap(), [x0, y0, x1, y1] = FB2_ONES, g = sample({ x: (OX + x0 * SX) / 1280, y: (OY + y0 * SY) / 720, w: (x1 - x0) * SX / 1280, h: (y1 - y0) * SY / 720 }, 8, 9);
   let m = ''; for (let i = 0; i < g.length; i += 4) m += g[i] > 150 && g[i + 1] > 150 && g[i + 2] > 150 ? '1' : '0'; return m;
 }
+/* v166 (console 11-26 11:07 and 11:57: Mario at 3/10 after T5's guarded Body Slam for 3 s, the read stayed on 10): the console's 3 is 9-10
+ * pixels off the stored one (the next digit 19 off), past the cut of 8: FB2_ONES_ALT holds that 3 (11:57 clip), and the cut is 10 with a
+ * margin of 6 (each digit's best distance over its references; the runner-up is the best other digit) */
+const FB2_ONES_ALT = { 3: ['011111001111110011011100000110000001100000001100111011101111111001111100', '011111001111110011111100000110000001100000001100111011101111111001111100'] }, FB2_ONES_CUT = 10, FB2_ONES_GAP = 6;
 function fb2OnesDigit(m) {
-  let best = null, b = 99, b2 = 99; for (const d in FB2_ONES_T) { const T = FB2_ONES_T[d]; let h = 0; for (let i = 0; i < T.length; i++) if (T[i] !== m[i]) h++; if (h < b) { b2 = b; b = h; best = +d; } else if (h < b2) b2 = h; }
-  return b <= 8 && b2 - b >= 5 ? best : null;
+  const dist = T => { let h = 0; for (let i = 0; i < T.length; i++) if (T[i] !== m[i]) h++; return h; };
+  let best = null, b = 99, b2 = 99;
+  for (const d in FB2_ONES_T) { let h = dist(FB2_ONES_T[d]); for (const A of FB2_ONES_ALT[d] || []) h = Math.min(h, dist(A)); if (h < b) { b2 = b; b = h; best = +d; } else if (h < b2) b2 = h; }
+  return b <= FB2_ONES_CUT && b2 - b >= FB2_ONES_GAP ? best : null;
 }
 function fb2B7Watch(t, present) {
   if (!fb2BackupOn() || fb2Leg() === 'main' || FB2.pT == null) return; const T7 = FB2.t7; if (!T7 || T7.hpRead != null || T7.shield) return;     // (the T7 confirm moves the route to T8's step)

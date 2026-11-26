@@ -5434,3 +5434,9 @@ new. What that means here:
 - T4 "jumped in and out": a 92% plan on 2061 (keyLater, 4.4 s on) moved to 2082 2 s before its press by a replan with its first beep ~0.3 s
   off (past v163's reach). Within FB14_FREEZE_MS (1.2 s) of a plan's first beep no plan call moves it (fb14PlanFrozen); the refine / replan
   on a worse frame still can.
+
+## v166 (console 11-26 11:57, on v164)
+- T6's step HP read: Mario at 3/10 for 3 s after T5's guarded Body Slam (the clip), the read logged only 10 (also 11:07). The page's own
+  reader on the clip's frames: the 3 is 9-10 pixels off the stored 3 (the next digit 19 off), past the cut of 8. FB2_ONES_ALT holds the
+  console's 3; the cut is 10 with a margin of 6. test_v166.js.
+- T7 after the dodge (1-state T6 lock, 28 states after): the bolt reads kept 10% each and the doubt went to 0.999: no T7 beep. Open.
