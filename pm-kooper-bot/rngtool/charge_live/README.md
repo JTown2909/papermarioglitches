@@ -5384,3 +5384,12 @@ new. What that means here:
 - 10:13 backup T7 no lock: its seed was 1451 steps after T6's at 24.92 s, 7 under the window (56.9/s + 40..180). 21 console T6 -> T7
   pairs (Nov 20-26) fit 655 + 31.9 s within +-9.4: the window is that fit +-80 with the old one (229 seeds at 24.92 s); the replay locks.
 - test_v157.js (fixtures/console_v157.json: the two captures).
+
+## v158 (console 11-26 10:39)
+- T3: keyLater moved the plan to 1761 (51 frames past the window); the replan's broad share stopped at the window's end, scored 1761 at
+  0.17 and moved the beep to a 1-frame 1710 1.9 s before the press. fb14Anchor's window now reaches the target.
+- T4: T1's hit came before T1's late fresh lock, yet every later carried lock was treated as "after a hit" and refined in full; T4's
+  3.91 narrowed lock became a doubt-0.75 relock, no beep. A hit before the last fresh lock no longer counts.
+- T1: v157's late window ran after a full search whose best (the true seed) was at 1.8, taking 8.7 s before the re-read that locked it.
+  It runs now only when the full search's best ratio is under 1.5, once (no gap-history pass, no shift, ~2 s).
+- test_v158.js. (test_v108 4. fb1516 fails on v157 too: not this change.)

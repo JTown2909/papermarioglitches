@@ -10,7 +10,7 @@ const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'console_
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E('VERSION') === 'v157', 'page version v157');
+  ok(await E('VERSION') >= 'v157', 'page version v157+');
   const r1 = await p.evaluate(async cap => window.__tot.chgReplay(cap, { maxAlts: 0, fb14: true, stream: 'a777a06b', streamHi: 26764, lateStream: true }).then(r => ({ state: r.state, best: r.best })), FX.t1_1016);
   console.log('     ' + JSON.stringify(r1));
   ok(r1.state === 'locked' && r1.best && r1.best.seed === '29b7ee50', '(1) 10:15 T1: the skipped window after the full search locks the true seed');

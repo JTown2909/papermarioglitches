@@ -638,12 +638,12 @@ if (window.__chgDebug) {
     const near = a => { const S = new Set(); let x = a >>> 0, y = a >>> 0; for (let k = 0; k <= 48; k++) { S.add(x); S.add(y); x = chgFwd(x, 1); y = chgBack(y, 1); } return S; };
     // the window's search: the pictures as placed, then one frame later / earlier (on console the whole Charge read one
     // frame off on both noise reads of 2026-11-09: README v89); null when it does not clear FBS_MIN / FBS_RATIO
-    const streamTry = async (SW, weak) => {     // v118: weak (a no-lock's best, fbWeakWin): locks only on FBS_MIN and CHG_RATIO
+    const streamTry = async (SW, weak, fast) => {     // v158 fast: the plain window once, as placed (no gap-history pass, no shift)     // v118: weak (a no-lock's best, fbWeakWin): locks only on FBS_MIN and CHG_RATIO
       const rOf = r => { const T = r.top; if (!T[0]) return 0; const N0 = near(T[0].seed), b = T.slice(1).find(x => x.sc > -1e29 && !N0.has(x.seed >>> 0)); return T[0].sc / (b ? b.sc : 1); };
       const wc = fbStreamCands(SW), t0s = performance.now(), RQ = weak ? CHG_RATIO : FBS_RATIO; let res0 = null, rat = 0, sh = 0, hist = null; const tries = [];
       // v119: the gap history's window first (fb14_live.js fbHistCands): every seed there fully scored
       const R = CHG.replay, hsec = R ? R.histSec : SW.tt != null && CHG.trig ? (CHG.trig.t - SW.tt) / 1000 : null;
-      const HW = typeof fbHistCands === 'function' && hsec != null && !(R && R.hist === false) ? fbHistCands(SW, hsec, R && Array.isArray(R.hist) ? R.hist : null) : null;
+      const HW = !fast && typeof fbHistCands === 'function' && hsec != null && !(R && R.hist === false) ? fbHistCands(SW, hsec, R && Array.isArray(R.hist) ? R.hist : null) : null;
       if (HW) { const RH = weak ? CHG_RATIO : FBH_RATIO;
         for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
           chgSearch.joint = null;
@@ -659,7 +659,7 @@ if (window.__chgDebug) {
           // (the pictures one frame early only after a strong miss: replays, the one shifted lock had 4405 / 1.47x as placed;
           // a weak or a same-stream miss goes straight to the wide window, ~2 s sooner)
           if (!(T0 && T0.sc >= FBS_MIN)) break; } }
-      if (!hist) for (const d of [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
+      if (!hist) for (const d of fast ? [0] : [0, -1]) { if (d && typeof fbShiftG !== 'function') break;
         const r2 = await chgSearch(d ? await chgMapsA(fbShiftG(G, d), cen, CHG_N) : maps, { cands: wc, stream: true }), q = rOf(r2);
         tries.push({ d, best: r2.top[0] && Math.round(r2.top[0].sc), ratio: +q.toFixed(2), seed: r2.top[0] && (r2.top[0].seed >>> 0).toString(16) });
         if (r2.top[0] && (!res0 || r2.top[0].sc > res0.top[0].sc)) { res0 = r2; rat = q; sh = d; }
@@ -712,8 +712,11 @@ if (window.__chgDebug) {
           if (agree) { res = lone; ok = true; CHG.info.narrow.locked = true; CHG.info.narrow.checked = true; res.top = [res.top[0]].concat(res.top.slice(1).filter(x => !N1.has(x.seed >>> 0))); } else res = full; } else res = full; }
     } else if (E) { E.give(maps); res = await CHG.searchP; } else res = await chgSearch(maps);
     // v157: the stream window skipped above, after a full search that did not lock (before the re-reads: ~2 s, where a re-read is 2-4 s and misses the same way)
-    if (SWlate && !chgLockOk(res, !!res.fb1)) { const fullBest = res.top && res.top[0] ? { seed: (res.top[0].seed >>> 0).toString(16).padStart(8, '0'), score: Math.round(res.top[0].sc) } : null; const r3 = await streamTry(SWlate);
-      if (!CHG.replay) slog('fbStreamLate', { hi: SWlate.hi, locked: !!r3, full: fullBest, seed: r3 && r3.top[0] ? (r3.top[0].seed >>> 0).toString(16).padStart(8, '0') : null }); if (r3) res = r3; }
+    // v158 (console 11-26 10:39 T1: the full search's best was the true seed at 1.8, the late window took 8.7 s and the re-read that locked
+    // it came after Bowser's hit): only when the full search has no near-lock (its best under FBS_LATE_Q), and the window once (~2 s)
+    const fullQ = (() => { const T = res.top; if (!T || !T[0]) return 0; const b = res.fb1 ? T[1] : chgRunnerUp(T); return b && b.sc > 0 ? T[0].sc / b.sc : 99; })();
+    if (SWlate && !chgLockOk(res, !!res.fb1) && fullQ < FBS_LATE_Q) { const fullBest = res.top && res.top[0] ? { seed: (res.top[0].seed >>> 0).toString(16).padStart(8, '0'), score: Math.round(res.top[0].sc) } : null; const r3 = await streamTry(SWlate, false, true);
+      if (!CHG.replay) slog('fbStreamLate', { hi: SWlate.hi, fullQ: +fullQ.toFixed(2), locked: !!r3, full: fullBest, seed: r3 && r3.top[0] ? (r3.top[0].seed >>> 0).toString(16).padStart(8, '0') : null }); if (r3) res = r3; }
     // v114 (console fb1810): on the backup T7 a no-lock is searched again on the pictures one / two frames off (chgFb2Wide)
     if (chgP().id === 'fb2' && chgFb2Wide() && !chgLockOk(res)) {
       const A = { tries: [] }, t1a = performance.now();

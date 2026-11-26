@@ -305,7 +305,9 @@ function fb14Lock(res) {
   // shine-like flashes every 48 frames to 13 s): a window that reaches back to within FB14_REVIVE_F of the hit is not used
   const hitF = FB14.hitT != null && FB14.hitT < trigT ? Math.ceil(fbPic(FB14.hitT) + FB14_REVIVE_F) : null;
   if (hitF != null && hitF > menuF && menuF < M) { slog('fb14MenuAfterHit', { M, menuF, hitF }); menuF = M; }
-  const afterHit = hitF != null;
+  // v158 (console 11-26 10:39: T1 hit before its late lock, then T2 / T4's carried locks - T4's at 3.91 - each replaced by a full refine,
+  // T4's at doubt 0.75, no beep): a hit before the last fresh lock is in that lock already
+  const afterHit = hitF != null && !(FB14.freshT != null && FB14.freshT > FB14.hitT);
   const back0 = (x0, F0, q, c, pa) => fbBackShinesAll(x0, F0, q, c, pa, menuF).map(r => ({ ok: r.ok, sh: r.sh.slice().sort((a, b) => a - b), from: Math.min(menuF, F0), cf: r.cf, end: r.end, w: r.w }));     // v140: every history
   // v87: the fresh fits are built only when no carried state drew these rays (about 1 s on the page's thread)
   const buildFresh = () => {
@@ -660,7 +662,7 @@ function fb14ChgCands() {
  * read). So when the carry is gone (Bowser's hit is not modelled) or there is none, that window is searched first, on its
  * own threshold (FBS_RATIO, measured on wrong windows: README v89), before the full search. Kept across fb14CarryGone, reset
  * with the attempt (fb14Reset) and after FBS_MAXMS. */
-const FBS_LO = 500, FBS_HI = 9000, FBS_RATIO = 1.5, FBS_MIN = 3000, FBS_MAXMS = 8 * 60000;
+const FBS_LATE_Q = 1.5, FBS_LO = 500, FBS_HI = 9000, FBS_RATIO = 1.5, FBS_MIN = 3000, FBS_MAXMS = 8 * 60000;
 /* v91 (logs 032af46e / a53781d5 / 28b4ae32 / 8576a774): the console streams between Charges ran 77-89 LCG steps a second
  * (2442 / 2443 steps in 31.5 s, T1 -> T2 with a death and the Life Shroom; 7409 in 83.7 s across a retry; 3745 T2 -> T4).
  * The window reaches FBS_PERS steps a second since the kept lock (x 1.3, + 2500 for a turn's draws and Bowser's hit
@@ -1396,6 +1398,9 @@ function fb14Anchor(C, from, W, turn, PD, nKept) {
   FB14.anchor = FB14.anchor || {}; const A = FB14.anchor[turn];
   if (C.none || C.target == null) return C;
   if (A == null) { FB14.anchor[turn] = C.target; return C; }
+  // v158 (console 11-26 10:39 T3: keyLater's 1761, 51 frames past the window's end, scored 0.17 here - the broad share stopped at the
+  // window's end - and the plan moved 1.9 s before the press to a 1-frame 1710): the window reaches a later target
+  W = Math.max(W, C.target - from);
   PD = PD || [[0, 1]];
   const bl = fb14Blind(turn), at = c => C.share[c - C.a] || 0, honest = c => (1 - C.doubt) * at(c) + C.doubt * bl, thr = Math.max(num('zwedge'), C.pp - FB14_ANCHOR_TOL);
   const Dm = Math.max(...PD.map(x => Math.abs(x[0])));
