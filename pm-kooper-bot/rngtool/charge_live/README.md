@@ -5462,3 +5462,6 @@ new. What that means here:
 ## v170 (console 11-26 12:57)
 - Phase 1's Charge locked (c5aa1ab4, 2.33, kept as Phase 2 T1's window since v168) but the badge said NOT LOCKED "no seed": lockBadgeState
   had no Phase 1 branch. The Phase 1 steps now show "Phase 1 lock · seed …", or why not. test_v170.js.
+- (v170, 12:59) The route stayed on Phase 1's T2 Power Bounce step (its screen close unread) through T3's Star Beam; Phase 2's T1 Charge is
+  read only on its own step. The fade into Phase 2 (fb14FadeWatch), 15-150 s after this attempt's Phase 1 Charge and past its Charge step,
+  moves the route to Phase 2's T1 Charge (fbP1ToPhase2). test_v170.js.

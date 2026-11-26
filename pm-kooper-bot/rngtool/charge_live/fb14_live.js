@@ -88,7 +88,7 @@ const fbBolts = (f, ph) => { let m1 = (f + ph[0]) % 130, m2 = (f + ph[1]) % 220;
  * within one frame. So the T1 lock weighs each fit's phases by how far their battle start lies from the fade's (FB14_FADE_TOL
  * frames; outside it FB14_FADE_OUT, not 0: a fade misread must not empty the lock). */
 const FB14_HOLD_MS = 20000, FB14_HIT_FRESH = 0.5, FB14_FADE_E = 13.5, FB14_FADE_TOL = 2.5, FB14_FADE_OUT = 0.03, FB14_FADE_DARK = 2.5, FB14_FADE_UP = 3.2, FB14_FADE_MIN = 20, FB14_FADE_AGE = 30000;
-var FBFADE = { t: null, n: 0 };
+var FBFADE = { t: null, n: 0 }; const FB14_FADE_P1MS = 15000, FB14_FADE_P1MAX = 150000;
 function fb14FadeWatch(t) {
   // watched from the Hallway (the route moves to Phase 1 only at its Charge, after the battle's fade-in) to Phase 2's T1 Charge
   if (!(typeof isRoute === 'function' && isRoute())) { FBFADE.n = 0; return; }
@@ -96,7 +96,11 @@ function fb14FadeWatch(t) {
   if (FBFADE.hi < 0 || FBFADE.lo < 0 || routeStep < FBFADE.lo || routeStep > FBFADE.hi) { FBFADE.n = 0; return; }
   const g = sample(chgGame(), 32, 24); let m = 0; for (let i = 0; i < g.length; i += 4) m += 0.299 * g[i] + 0.587 * g[i + 1] + 0.114 * g[i + 2]; m /= 768;
   if (m < FB14_FADE_DARK) { FBFADE.n++; return; }
-  if (m > FB14_FADE_UP && FBFADE.n >= FB14_FADE_MIN) { FBFADE.t = t; slog('fb14Fade', { at: Math.round(t), dark: FBFADE.n, m: +m.toFixed(1) }); }
+  if (m > FB14_FADE_UP && FBFADE.n >= FB14_FADE_MIN) { FBFADE.t = t; slog('fb14Fade', { at: Math.round(t), dark: FBFADE.n, m: +m.toFixed(1) });
+    // v170 (console 11-26 12:59: the route stayed on Phase 1's T2 Power Bounce step - its screen close not read - through T3's Star Beam; Phase 2's
+    // T1 Charge is read only on its own step): the fade into Phase 2 (well after Phase 1's Charge) moves a Phase 1 step on to Phase 2's T1 Charge
+    const z = RT()[routeStep], j = typeof fbp1T1I === 'function' ? fbp1T1I() : -1;
+    if (z && (z.fbp1dn || z.fbp1pb) && j > routeStep && typeof FBP1 !== 'undefined' && FBP1.t != null && t - FBP1.t > FB14_FADE_P1MS && t - FBP1.t < FB14_FADE_P1MAX)     /* (past Phase 1's Charge step, within this attempt: a retry's fight-start fade is not Phase 2's) */ { slog('fbP1ToPhase2', { from: routeStep, to: j, sinceP1Ms: Math.round(t - FBP1.t) }); setStep(j); } }
   FBFADE.n = 0;
 }
 // the battle start the fade gives (battle frame = logic frame + D), for a state of lag l; null when no fade fits this T1
