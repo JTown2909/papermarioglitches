@@ -5440,3 +5440,9 @@ new. What that means here:
   reader on the clip's frames: the 3 is 9-10 pixels off the stored 3 (the next digit 19 off), past the cut of 8. FB2_ONES_ALT holds the
   console's 3; the cut is 10 with a margin of 6. test_v166.js.
 - T7 after the dodge (1-state T6 lock, 28 states after): the bolt reads kept 10% each and the doubt went to 0.999: no T7 beep. Open.
+
+## v167 (console 11-26 12:09 and 11:57)
+- T7 after the dodge: 20318 states (12:09), T7 at 32% on 1 frame. Bowser's T6 attack is now read on the main T7 step as T1-T4's
+  (fb2AtkWatch: Fire Breath's orange third of the game box for ~2.5 s, or none through a watched stretch) and the T7 states whose own
+  T6 attack differs keep FB2_ATKW (0.01); a replan follows. test_v167.js. (12:09's T6 mix: fire 0.66 / slam 0.25 / claw 0.09.)
+- test_v110 5. / 3. and test_v108 4. fail on v166 too (not this change).

@@ -162,6 +162,25 @@ function fb2T5Watch(t, present) {
     if (d === 0 && !FB2HP5.t5ko) { FB2HP5.t5ko = true; slog('fb2T5Ko', { why: 'HP 0 after T5: the Life Shroom' }); }
     if (d !== 0 && d !== FB2HP5.v) { FB2HP5.v = d; slog('fb2T5Hp', { hp: d, ko: !!FB2HP5.t5ko, flags: JSON.stringify(fb2T5Flags(d)) }); } }
 }
+/* v167 (console 11-26 12:09 and 11:57: after the T6 dodge 20318 / 28 states, T7 at 32% on 1 frame or no beep): Bowser's T6 attack read
+ * as T1-T4's (fb14_live.js fbAtkFrame: Fire Breath fills a third of the game box with saturated orange for ~2.5 s; a watched stretch with
+ * none is a Body Slam / Claw): from the T6 Do Nothing confirm, on the main T7 step; the T7 states whose own T6 attack differs keep FB2_ATKW */
+const FB2_ATKW = 0.01, FB2_ATK_MS = 12000;
+function fb2AtkWatch(t, present) {
+  const s = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; if (!s || s.turn !== 'fb2_pb' || s.b8 || fb2BackupOn()) return;
+  const T7 = FB2.t7; if (!T7 || !T7.states || FB2.pT == null || T7.atkSeen != null || !present || t < FB2.pT || t - FB2.pT > FB2_ATK_MS) return;
+  if (typeof fbVisGrid !== 'function' || typeof FB14_FIRE === 'undefined') return;
+  const A = T7.atkW || (T7.atkW = { seen: 0, run: 0, best: 0, mx: 0 });
+  const g = window.__fbVisTest ? window.__fbVisTest('game') : fbVisGrid(chgGame(), 32, 24); if (!g) return;
+  let nf = 0; const n = g.length / 4; for (let i = 0; i < g.length; i += 4) { const R = g[i], G = g[i + 1], B = g[i + 2]; if (R > 190 && R - G > 90 && B < 90) nf++; }
+  const fs = nf / n; A.seen++; A.mx = Math.max(A.mx, fs); A.run = fs >= FB14_FIRE.px ? A.run + 1 : 0; A.best = Math.max(A.best, A.run);
+  let fire = null; if (A.best >= FB14_FIRE.run) fire = true; else if (A.seen >= FB14_FIRE.seen && A.mx < FB14_FIRE.none) fire = false;
+  if (fire == null) return;
+  T7.atkSeen = fire; let tot = 0, keep = 0;
+  for (const o of T7.states) { tot += o.w; if ((o.a.atk === 'fire') === fire) keep += o.w; else o.w *= FB2_ATKW; }
+  slog('fb2T6Attack', { fire, kept: tot ? +(keep / tot).toFixed(3) : 0, states: T7.states.length, afterMs: Math.round(t - FB2.pT), fireRun: A.best, fireMax: +A.mx.toFixed(3) });
+  if (!(typeof seriesHold === 'function' && seriesHold('fb2')) && typeof makePlan === 'function') { if (st.plan && st.plan.prof === 'fb2' && st.plan.tPress - performance.now() > 1500) { cancelBeeps(); st.plan = null; } makePlan(); }
+}
 /* T6's (slamOk, clawOk, weight) from the HP after T5 (null: not read) */
 function fb2T5Flags(hp) {
   if (hp === 3) return [[false, true, 1]];
