@@ -604,7 +604,7 @@ const ENDGAME = [
     // Close Call fail (fb2_live.js fb2Backup: Mario's HP number changed after the Do Nothing). T7 is a T6-like step (its Super
     // Charge locks the seed again, the Do Nothing beep aims at No Wave with Mario left in Danger), T8 the Power Bounce for 5+
     { text: 'T6: Charge; Do Nothing - Close Call failed, Life Shroom', steps: [], backup: true, phase: 'Backup:' },
-    { text: 'T7: Charge; Do Nothing - No Wave or Shield', backup: true, steps: [{ label: 'Super Charge (its rays lock the seed again), then Lakilester: Do Nothing on the beep → no wave (Body Slam / Claw, Mario in Danger) or Bowser\'s shield', cat: 'S', turn: 'fb2_k', b7: true, pre: [{ cat: 'M', id: 'fb2_charge' }] }] },     // v133 (the runner: "it should say no wave or shield")
+    { text: 'T7: Charge; Do Nothing - No Wave or Shield', backup: true, steps: [{ label: 'Super Charge (its rays lock the seed again), then Lakilester: Do Nothing on the beep → Body Slam / Claw (Mario in Danger); a wave or Bowser\'s shield fails it', cat: 'S', turn: 'fb2_k', b7: true, pre: [{ cat: 'M', id: 'fb2_charge' }] }] },     // v133 (the runner: "it should say no wave or shield")
     { text: 'T8: Bounce x5', backup: true, steps: [{ label: 'Power Bounce → 5 on the beep', cat: 'B', turn: 'fb2_pb', b8: true }] } ] } ];
 /* Jr. Troopa on the Charge-lock route (jr_charge/README.md, charge_live/jr_live.js; the route panel's default, Settings key
  * jrroute): Mario's T1 Super Charge locks the seed from its rays (profile jr) and the tracker carries it through every
@@ -1989,7 +1989,7 @@ function setText(h, d) { $('headline').textContent = h; { const dn = typeof chgD
 function chip(id, cls) { $(id).className = 'chip' + (cls ? ' ' + cls : ''); }
 /* session log: what the page saw and decided, with times, so a practice run can be analysed afterwards */
 const SLOG = []; let slogLock = null;
-const VERSION = 'v153';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
+const VERSION = 'v154';   // v76: the one version string (the header and the session log's "page" field read it; v74 / v75 logs still said v73)
 { const e = document.getElementById('ver'); if (e) e.textContent = VERSION; }
 function slog(ev, data) { SLOG.push(Object.assign({ t: Math.round(performance.now()), ev }, data || {})); if (SLOG.length > 20000) SLOG.shift(); }
 /* v123 (the runner: "the software still lags a good amount"): every main-thread task over 150 ms is logged with the step and the

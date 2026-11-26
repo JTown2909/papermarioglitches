@@ -107,7 +107,7 @@ function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   if (good) { const H = (gd ? FB2B_HIT_G : FB2B_HIT)[atk]; T = E + (gd ? FB2B_MENU_G : FB2B_MENU)[atk];
     for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0]; for (const m of H[f - E] || []) ri(m);
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
-  return { lucky: good, ok7: good || atk === 'recast', cc: null, atk, T, menu: T, S, gd: good ? !!gd : undefined };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
+  return { lucky: good, ok7: good,     /* v154 (the runner: "turn 7 shield is a failure": "No Wave or Shield" is neither): only Body Slam / Claw */ cc: null, atk, T, menu: T, S, gd: good ? !!gd : undefined };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
 }
 const fb2Edge = b => (b < 0.15 ? Math.min(num('zwedge'), Math.max(b + 0.15, 2 * b)) : num('zwedge'));     // v122: the edge against low blind odds (the backup T7); else Best chance
 /* Power Bounce from state S at the start of frame f0 (<= d), target-screen A on frame d: the number of bounces (the
@@ -500,7 +500,7 @@ function fb2Outcome(o, info) {
   if (o === 'hit') { T7.hit = true; if (st.plan && st.plan.prof === 'fb2') { cancelBeeps(); st.plan = null; } }
   // v133: on the backup T7 no HP change is Bowser's shield (the Star Rod recast: no attack); the carried states are Body Slam / Claw only,
   // so T8 has no modelled states after it (no beep: the shield's draws to the T8 menu are not measured)
-  if (o === 'dodge' && fb2BackupOn() && fb2Leg() !== 'main') { T7.shield = true; T7.states = []; slog('fb2Shield', { why: 'no HP change on the backup T7: the shield; T8 not modelled' }); st.msg = 'Bowser shielded on T7 (a success for the route): T8\'s Power Bounce is not modelled after the shield, so no beep; bounce blind.'; }
+  if (o === 'dodge' && fb2BackupOn() && fb2Leg() !== 'main') { T7.shield = true; T7.states = []; slog('fb2Shield', { why: 'no HP change on the backup T7: the shield (a failure for the route); T8 not modelled' }); st.msg = 'Bowser shielded on T7: the route needs a Body Slam or Claw there (the shield fails it). T8 is not modelled after the shield: no beep.'; }
   fb2Show();
   if (o === 'hit' && !fb2BackupOn() && fb2Leg() === 'main' && typeof isRoute === 'function' && isRoute() && RT()[routeStep] && /^fb2_(k|pb)$/.test(RT()[routeStep].turn || '')) fb2Backup(info);     // on the main T6 / T7 steps only
 }

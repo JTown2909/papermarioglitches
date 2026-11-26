@@ -1,3 +1,14 @@
+# Time Out Timer v154: the backup T7's shield is a failure (Nov 26)
+
+- The runner: "turn 7 shield is a failure" ("No Wave or Shield" = neither). v133 had counted Bowser's Star Rod recast as a backup T7
+  success (ok7); console 11-25 17:09: a 50% backup T7 plan, pressed on its frame, Bowser shielded and the page called it a success.
+  Now ok7 is Body Slam / Claw only, the shield's message says it fails the route, and the step reads "→ Body Slam / Claw (Mario in
+  Danger); a wave or Bowser's shield fails it". test_v133 / test_v114 updated (the fixture's backup T7 plan now beeps 220, a Claw; v153's
+  237 was a shield frame).
+- e2e on the published file: d4000001 4 / 4 (T1 75%, T2 95%, T3 76%, T4 wave blocked 100%); b2000002 (forced T1 hit) T2 97%, T3 64%,
+  T4 67%: all missed / the wave blocked; c3000004 (forced T1 hit) T2 99% miss, T3 / T4 the build's Jelly after a KO (no Jelly, no T4
+  Charge: down). No page or worker error.
+
 # Time Out Timer v153: T4 after a hit plans sooner (Nov 25)
 
 - Console 11-25 17:14 (v152, the runner: "no turn 4 lock. this should be solved by now. i got 17/17 previously"): T1 and T3 were hit

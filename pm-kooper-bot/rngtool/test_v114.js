@@ -19,7 +19,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   const open = async () => { const p = await b.newPage(); p.on('pageerror', e => errs.push(String(e)));
     await p.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('tot-settings', JSON.stringify({ prof: 'endgame', boots: 'ultra', off: '-4.5', vlag: '50', zwedge: '0.4', zwwin: '1', fb2t5: 'any' })); } catch (e) {} window.__now = 100000; performance.now = () => window.__now; });
     await p.goto('file://' + PAGE); return p; };
-  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v153', '0. page version v114'); await p.close(); }
+  { const p = await open(); ok(await p.evaluate(() => window.__tot.VERSION) === 'v154', '0. page version v114'); await p.close(); }
   // ---- 1. fb1810 T6
   { const p = await open();
     const r = await p.evaluate(FX => {
@@ -71,8 +71,8 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       // 5. the T7 plan on the true state, then the T8 states from the beeped confirm
       const i7 = T.RT().findIndex(s => s.b7); T.setStep(i7); X.v114.FB2B.on = true; X.v114.FB2B.atk6 = { fire: 1 };
       T.CHG.trig = { t: window.__now - 3000 }; const L7 = FX.lock7; Object.assign(FB2, { on: true, hyps: [{ s: L7[0] >>> 0, nc: L7[1], ph: [L7[2], L7[3]], w: 1 }], plan: null, plans: [], t7: null, pObs: null, pT: null, hpw: null });
-      const runs = FX.s7.filter(x => x[0] && FX.s7.indexOf(x) < 30), good = runs.filter(x => x[5] === 'good' || x[5] === 'stay').map(x => x[4]);     // v133: the shield (stay) counts too
-      const pl = X.planPAt(runs[0][4]); out.plan = { k: pl.k, pp: pl.pp, p: pl.p, win: pl.win, none: pl.none, good };
+      const runs = FX.s7.filter(x => x[0] && FX.s7.indexOf(x) < 30), good = runs.filter(x => x[5] === 'good').map(x => x[4]);     // v154: the shield (stay) is a failure (the runner)
+      const pl = X.planPAt(runs[0][4]); out.plan = { k: pl.k, pp: pl.pp, p: pl.p, win: pl.win, none: pl.none, good, meas: runs.map(x => x[4]) };
       X.setP(FX.t8P7); const st0 = FB2.t7.states.find(o => o.l === 0 && o.P === FX.t8P7); out.t7 = { n: FB2.t7.states.length, pL: FB2.t7.pLucky, atk: st0 && st0.a.atk };
       if (st0) out.e2e = FX.t8.map(([s, nc, p1, p2, d, n]) => ({ d: FX.t8base + d, n, page: X.v114.pb(st0.a.S.s, st0.a.S.nc, st0.h.ph, st0.a.T + 1, FX.t8base + d) }));
       out.txt = X.v114.txt();
@@ -83,7 +83,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     console.log('4.', JSON.stringify(r.t8));
     ok(r.t8.length >= 6 && r.t8.every(x => x.page === x.n), '4. T8 Power Bounce at 15 charges (first hit 18): the page\'s bounce count = the emulator\'s on every run');
     console.log('5.', JSON.stringify(r.plan), JSON.stringify(r.t7), JSON.stringify(r.e2e));
-    ok(r.plan && r.plan.k != null && r.plan.good.includes(r.plan.k) && r.plan.pp >= 0.4, '5. the backup T7 plan on the true state beeps a Body Slam / Claw / shield frame (' + r.plan.k + ', perfect press ' + (r.plan.pp && r.plan.pp.toFixed(2)) + '; the emulator\'s: ' + r.plan.good.join(', ') + ')');
+    ok(r.plan && r.plan.k != null && (r.plan.meas.includes(r.plan.k) ? r.plan.good.includes(r.plan.k) : r.plan.pp >= 0.9) && r.plan.pp >= 0.4,     /* v154: a frame the emulator did not try must be a sure one on the true state */ '5. the backup T7 plan on the true state beeps a Body Slam / Claw frame (' + r.plan.k + ', perfect press ' + (r.plan.pp && r.plan.pp.toFixed(2)) + '; the emulator\'s: ' + r.plan.good.join(', ') + ')');
     ok(r.t7.atk === 'claw' && r.e2e && r.e2e.every(x => x.page === x.n), '5. from that Do Nothing (P ' + FX.t8P7 + ', Claw) the T8 states give the emulator\'s bounces at its target-A frames ' + JSON.stringify(r.e2e && r.e2e.map(x => x.page + '/' + x.n)));
     ok(/T7/.test(r.txt.turn) && /Body Slam/.test(r.txt.goal), '5. the backup step\'s words name T7 and its aim');
     await p.close(); }

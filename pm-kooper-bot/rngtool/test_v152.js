@@ -7,7 +7,7 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto('file://' + PAGE); const E = src => p.evaluate(s => window.__tot.v111.ev(s), src);
-  ok(await E('VERSION') === 'v153', 'page version v152');
+  ok(await E('VERSION') === 'v154', 'page version v152');
   const r = JSON.parse(await E(`(() => { const src = fbsSrc(); const used = new Set(src.match(/\\b(?:fb[A-Z]\\w*|FB14_[A-Z0-9_]+|FB_[A-Z0-9_]+)\\b/g));
     const defd = new Set([...src.matchAll(/(?:function\\s+|const\\s+|let\\s+|var\\s+|,\\s*)(fb[A-Z]\\w*|FB14_[A-Z0-9_]+|FB_[A-Z0-9_]+)\\s*(?:=|\\()/g)].map(m => m[1]));
     const missing = [...used].filter(x => !defd.has(x));
