@@ -5393,3 +5393,8 @@ new. What that means here:
 - T1: v157's late window ran after a full search whose best (the true seed) was at 1.8, taking 8.7 s before the re-read that locked it.
   It runs now only when the full search's best ratio is under 1.5, once (no gap-history pass, no shift, ~2 s).
 - test_v158.js. (test_v108 4. fb1516 fails on v157 too: not this change.)
+
+## v159 (console 11-26 10:43 T2)
+- keyLater moved T2's beep to 1324 (window 1316..1341), past the plan's from + W + 30 (1309): the strip went blank before the beep
+  and the press at 1321.8, inside the window, was read "2.2 frames early" with a chance of 0. The plan's tables (tab, chance, frameP)
+  and its strip range now reach the target and its window.
