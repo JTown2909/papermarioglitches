@@ -5476,3 +5476,8 @@ new. What that means here:
   a step behind and took T2's Power Bounce close for T1's. On the Spiny Flip step the bar's first hide 1.5 s past the Charge's burst
   (Lakilester's action: 3.25-3.35 s on in all four Phase 1 logs) moves the route to T2; on T2 the next hide (the Power Bounce, 14-18 s on)
   to Phase 2's T1 Charge (v171). test_v170.js with 13:14's times.
+
+## v173 (console 11-26 13:24)
+- Lakilester's Spiny Flip began 3.3 s after the Phase 1 Charge, 3 s before its lock; v172 timed from FBP1.t, which a lock does not set (it
+  was the last attempt's), so the hide was ignored. The Charge burst now stamps FBP1.burstT and the bar-hide steps and the Phase 2 fade time
+  from it. test_v170.js (the burst then the hide, no lock yet).

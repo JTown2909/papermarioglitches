@@ -62,7 +62,7 @@ function fbp1Done(outcome, R) {      // R (v132): the read after fb14Refine (its
 function fbp1Trigger() {
   const s = isRoute() && RT()[routeStep]; if (!s || !s.fbp1) return;
   const j = fbp1StepI('fbp1dn'); if (j < 0) return;
-  FBP1.pT = null; slog('fbP1StepByBurst', { from: routeStep, to: j }); setStep(j); st.lastStepClose = { t: performance.now(), to: j };
+  FBP1.pT = null; FBP1.pbT = null; FBP1.burstT = performance.now(); slog('fbP1StepByBurst', { from: routeStep, to: j }); setStep(j); st.lastStepClose = { t: performance.now(), to: j };     // v173: burstT, the Charge's own time (the lock can come after Lakilester's action)
 }
 /* the lock's fits -> model states (fb14Lock's fresh path, no carry and no joint read: Phase 1's first Charge) */
 function fbp1Build(res, trigT) {
@@ -223,15 +223,17 @@ function fbp1ArmOk(P, t) {
  * Bounce, Spiny Flip and Star Beam): on that step the bar's first hide after Mario's T2 menu (the action begins; the bar is up ~1.5 s on that menu,
  * Bowser's T1 turn runs with it hidden) moves the route to Phase 2's T1 Charge, as the target screen's close would */
 function fbp1BarHide(t, upMs) {
-  const s = isRoute() && RT()[routeStep]; if (!s || FBP1.t == null || t - FBP1.t > 150000) return;
+  // v173 (console 11-26 13:24: Lakilester's Spiny Flip began 3.3 s after the Charge, 3 s before its lock; FBP1.t was still the last attempt's):
+  // timed from this attempt's Charge burst
+  const s = isRoute() && RT()[routeStep], t0 = FBP1.burstT != null ? FBP1.burstT : FBP1.t; if (!s || t0 == null || t - t0 > 150000) return;
   // v172 (console 11-26 13:14: Spiny Flip is picked from the abilities menu, not the Strategies box, so T1's partner confirm was never read; the
   // route stayed a step behind and took T2's Power Bounce for it): on the Spiny Flip step the bar's first hide 1.5 s past the Charge's burst
   // (Lakilester's T1 action) is that confirm and moves the route to T2's Power Bounce step
-  if (s.fbp1dn) { if (t - FBP1.t < 1500 || (FBP1.pT != null && FBP1.pT > FBP1.t)) return;
-    FBP1.pT = t; slog('fbP1PartnerByHide', { at: Math.round(t), upMs: Math.round(upMs), sinceChargeMs: Math.round(t - FBP1.t) });
+  if (s.fbp1dn) { if (t - t0 < 1500 || (FBP1.pT != null && FBP1.pT > t0)) return;
+    FBP1.pT = t; slog('fbP1PartnerByHide', { at: Math.round(t), upMs: Math.round(upMs), sinceChargeMs: Math.round(t - t0) });
     const j = RT().findIndex(x => x.fbp1pb); if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; } if (typeof render === 'function') render(); return; }
   if (!s.fbp1pb || FBP1.pT == null) return;
-  if (t - FBP1.pT < 2000 || t - FBP1.t > 150000 || FBP1.pbT != null && FBP1.pbT > FBP1.pT) return;
+  if (t - FBP1.pT < 2000 || FBP1.pbT != null && FBP1.pbT > FBP1.pT) return;
   FBP1.pbT = t; const j = fbp1T1I(); slog('fbP1PbByHide', { at: Math.round(t), upMs: Math.round(upMs), to: j, sinceConfirmMs: Math.round(t - FBP1.pT) });
   if (j >= 0) { setStep(j); st.lastStepClose = { t, to: j }; }
   st.msg = 'Phase 1 Power Bounce started: the route waits on Phase 2\'s T1 Charge. Set "P1 bounce" (top of the route) to the cap you got: a 4 / 5 cap needs 6+ on Phase 2 T7 (then Spiny Flip), a 3 cap needs 7.'; if (typeof render === 'function') render();
@@ -239,7 +241,7 @@ function fbp1BarHide(t, upMs) {
 function fbp1KeepStep(stp, tObs) {
   if (stp && stp.fbp1) return false;      // v132: on to the Do Nothing step
   if (stp && stp.fbp1dn) {
-    if (FBP1.pT != null && FBP1.pT > (FBP1.t || 0) && tObs - FBP1.pT < 1500) return true;     // v172: the bar's hide already took this confirm
+    if (FBP1.pT != null && FBP1.pT > (FBP1.burstT || FBP1.t || 0) && tObs - FBP1.pT < 1500) return true;     // v172: the bar's hide already took this confirm
     FBP1.pT = tObs; slog('fbP1Confirm', { at: Math.round(tObs), locked: fbp1On() });
     if (fbp1On()) fbp1Input(tObs); return false;
   }

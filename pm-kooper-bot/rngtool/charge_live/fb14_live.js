@@ -100,7 +100,7 @@ function fb14FadeWatch(t) {
     // v170 (console 11-26 12:59: the route stayed on Phase 1's T2 Power Bounce step - its screen close not read - through T3's Star Beam; Phase 2's
     // T1 Charge is read only on its own step): the fade into Phase 2 (well after Phase 1's Charge) moves a Phase 1 step on to Phase 2's T1 Charge
     const z = RT()[routeStep], j = typeof fbp1T1I === 'function' ? fbp1T1I() : -1;
-    if (z && (z.fbp1dn || z.fbp1pb) && j > routeStep && typeof FBP1 !== 'undefined' && FBP1.t != null && t - FBP1.t > FB14_FADE_P1MS && t - FBP1.t < FB14_FADE_P1MAX)     /* (past Phase 1's Charge step, within this attempt: a retry's fight-start fade is not Phase 2's) */ { slog('fbP1ToPhase2', { from: routeStep, to: j, sinceP1Ms: Math.round(t - FBP1.t) }); setStep(j); } }
+    if (z && (z.fbp1dn || z.fbp1pb) && j > routeStep && typeof FBP1 !== 'undefined' && (FBP1.burstT || FBP1.t) != null && t - (FBP1.burstT || FBP1.t) > FB14_FADE_P1MS && t - (FBP1.burstT || FBP1.t) < FB14_FADE_P1MAX)     /* v173: from this attempt's Charge burst */     /* (past Phase 1's Charge step, within this attempt: a retry's fight-start fade is not Phase 2's) */ { slog('fbP1ToPhase2', { from: routeStep, to: j, sinceP1Ms: Math.round(t - FBP1.t) }); setStep(j); } }
   FBFADE.n = 0;
 }
 // the battle start the fade gives (battle frame = logic frame + D), for a state of lag l; null when no fade fits this T1
