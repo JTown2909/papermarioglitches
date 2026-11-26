@@ -5420,3 +5420,9 @@ new. What that means here:
 - T4: a 95% plan on 2199; 1.8 s before its press a replan's window began past it (a new plan's lead) and the beep moved a second later to
   2229. A replan keeps the anchor's frame in reach while its beeps can all still play (fb14AnchorInReach).
 - T7's step says "6 or more" (a 6 cap or higher).
+
+## v164 (console 11-26 11:16, on v159)
+- Backup T7 gave Fire Breath (guarded, Mario at 1: a success since v155), but the carry to T8 followed Body Slam / Claw only: every state
+  fell off and T8 had no beep (4 cap). A guarded Fire Breath now carries too: Phase 1's guarded table (p1_extra.json fire_g: no draw of its
+  own, the next menu on the AI + 160), split by FB2B_GUARD like the others; unguarded it KOs Mario (no Life Shroom left). The HP read
+  expects 1 (FB2_B7HP_EXP.fire). Phase 1's timing, not yet re-measured in phase 2's battle.
