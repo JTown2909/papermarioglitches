@@ -5481,3 +5481,7 @@ new. What that means here:
 - Lakilester's Spiny Flip began 3.3 s after the Phase 1 Charge, 3 s before its lock; v172 timed from FBP1.t, which a lock does not set (it
   was the last attempt's), so the hide was ignored. The Charge burst now stamps FBP1.burstT and the bar-hide steps and the Phase 2 fade time
   from it. test_v170.js (the burst then the hide, no lock yet).
+
+## v174 (console 11-26 13:33)
+- The Phase 1 steps followed (Spiny Flip 3.3 s on -> T2; T2's Power Bounce -> Phase 2 T1), then the Power Bounce screen's close moved Phase 2
+  T1's Charge step on to Cloud Nine's: fbp1Hold timed from FBP1.t (the last attempt's). It holds from this attempt's burst / Power Bounce now.

@@ -25,7 +25,7 @@ function fbp1Reset() { Object.assign(FBP1, { t: null, seed: null, outcome: null,
 fbp1Reset();
 function fbp1T1I() { return RT().findIndex(x => x.fb14 === 1 && x.fb14role === 'charge'); }
 const fbp1StepI = k => RT().findIndex(x => x[k]);
-function fbp1Hold(t) { return !!FBP1 && FBP1.t != null && (t != null ? t : performance.now()) - FBP1.t < FBP1_HOLD; }
+function fbp1Hold(t) { const t0 = Math.max(FBP1.t || 0, FBP1.burstT || 0, FBP1.pbT || 0); return !!FBP1 && t0 > 0 && (t != null ? t : performance.now()) - t0 < FBP1_HOLD; }     // v174 (13:33: FBP1.t the last attempt's; the Power Bounce's close moved Phase 2 T1's step on to Cloud Nine's): from this attempt's burst / Power Bounce
 const fbp1Pic = t => (t - FBP1.t0) / FBP1.rate;
 const fbp1PressT = d => FBP1.t0 + (d + 3 - 4.7 + num('off')) * FBP1.rate - num('vlag');     // (fb2PressT with t0 = the burst - 16 frames)
 /* v137 (console 17:28, log b87c9527: a retry with the route left on the Do Nothing step: the reader never armed (fbp1ArmOk held it for
