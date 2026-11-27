@@ -23,9 +23,9 @@ const PAGE = process.argv[2] || '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab
     T.setStep(i5); fb2T5Watch(0, true); out.cleared = FB2HP5.v; out.unset = JSON.stringify(fb2Flags());
     delete window.__fb2OnesTest; delete window.__fb2TensVal; return JSON.stringify(out); })()`));
   console.log('     ' + JSON.stringify(r));
-  ok(r.hp3.v === 3 && r.hp3.f === '[[false,true,1]]', '(1) HP 3 after T5 (Body Slam guarded): T6 cannot be a Body Slam');
-  ok(r.hp2.v === 2 && r.hp2.f === '[[false,true,0.5],[true,false,0.5]]', '(1) HP 2: Body Slam or Claw guarded, half / half');
-  ok(r.hp1.v === 1 && r.hp1.f === '[[true,false,0.5],[true,true,0.5]]', '(1) HP 1: Claw (no T6 Claw) or Fire / Lightning guarded');
+  ok(r.hp3.v === 3 && r.hp3.f === '[[false,true,0.5],[true,false,0.5]]', '(1) HP 3 after T5 (v179: Body Slam or Claw guarded): half / half');
+  ok(r.hp2.v === 2 && r.hp2.f === '[[false,true,1]]', '(1) HP 2 (v179: Body Slam unguarded): T6 cannot be a Body Slam');
+  ok(r.hp1.v === 1 && r.hp1.f === '[[true,true,1]]', '(1) HP 1 (v179: Fire Breath guarded; an unguarded Claw poisons, a lost fight): no restriction');
   ok(r.hp10.v === 10 && r.hp10.f === '[[true,true,0.3333333333333333],[false,true,0.3333333333333333],[true,false,0.3333333333333333]]', '(1) HP 10: not trusted (v162): the three cases');
   ok(r.ko.t5ko && r.ko.v === 10 && r.ko.cands === null, '(3) a steady 0 after T5 then 10 (the Life Shroom): a T5 KO, and T6 searches in full (no carried candidates)');
   ok(!(r.noDanger && r.noDanger.none === 'no Danger') && r.danger !== 'no Danger', '(4) v162: a 10 read does not stop the T6 plan (console 11:07: Mario was at 3); at 1 HP the plan runs');

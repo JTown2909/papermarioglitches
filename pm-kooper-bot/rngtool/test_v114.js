@@ -39,7 +39,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
       out.msg = T.st ? T.st.msg : null; window.__fb2HpTest = null; return out; }, FX);
     console.log('1.', JSON.stringify(r).slice(0, 700));
     ok(r.mainShown && r.backupHidden, '1. before a failure the route shows the main T6 / T7 and hides the backup lines');
-    ok(Math.abs(r.pL - FX.pLucky6) < 0.002, '1. the T6 lock\'s states at the read confirm (c ' + FX.c6 + ') give the console\'s Close Call share (' + r.pL + ', console ' + FX.pLucky6 + ')');
+    ok(Math.abs(r.pL - 0.557) < 0.002, '1. the T6 lock\'s states at the read confirm (c ' + FX.c6 + ') give the Close Call share ' + r.pL + ' (v179: 0.557 with the real Claw timing, FB2_DNDELTA; the console page said ' + FX.pLucky6 + ' on v113\'s)');
     ok(r.hit && !r.evs.includes('fb2Dodged') && r.hit.afterMs > 2200 && r.hit.afterMs < 3300, '1. fb1810: the hit read ' + (r.hit && r.hit.afterMs) + ' ms after the confirm (the units digit 1 -> 0), no dodge (v113: fb2Dodged at 16000 ms on the revive\'s 10)');
     ok(r.backup && r.step && r.step.b7 && r.evs.includes('fb2Backup'), '1. the route switches to the backup T7 step (' + (r.step && r.step.label) + ')');
     ok(r.rl.b6 && r.rl.b7 && r.rl.b8 && !r.rl.main7 && !r.rl.main6, '1. the route panel shows the backup lines in place of T6 / T7 ' + JSON.stringify(r.rl));

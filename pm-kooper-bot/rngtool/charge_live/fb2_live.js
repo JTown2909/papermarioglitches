@@ -65,7 +65,10 @@ function fb2Idle(S, f0, f1, ph) { for (let f = f0; f < f1; f++) fb2Frame1(S, f, 
  * KO'd): Lakilester's Do Nothing confirm on frame P is the lever, Bowser's AI on E = P + 13 (as on T2-T4), the Close Call
  * test FB2_DNDELTA after it, the T7 menu FB2_DNMENU after the test. The popup A draws nothing and moves no draw once P is
  * fixed (the same seed at P for K = 77 / 100 / 130 / none). */
-const FB2_T7_AHEAD = 600, FB2_DNAI = 13, FB2_PMIN = 130, FB2_DNDELTA = { slam: 52, claw: 55, fire: 55 }, FB2_DNMENU = { slam: 101, claw: 134, fire: 134 };
+/* v179 (11-27 guarded test fights c7000003 / d7000004: a T6 Claw tested Close Call 7 frames after the page's frame): v97's "Claw" runs
+ * all followed a T5 Claw, so Bowser could not Claw on T6 and they were Fire Breaths. A real T6 Claw (after a T5 Body Slam or Fire
+ * Breath) tests 62 after the AI and opens the T7 menu 83 after the test (as fb2_route/t6model.py's Claw with Lakilester KO'd). */
+const FB2_T7_AHEAD = 600, FB2_DNAI = 13, FB2_PMIN = 130, FB2_DNDELTA = { slam: 52, claw: 62, fire: 55 }, FB2_DNMENU = { slam: 101, claw: 83, fire: 134 };
 function fb2AI(S0, E, ph, slamOk, clawOk, dn) {
   const DL = dn ? FB2_DNDELTA : FB2_DELTA, MN = dn ? FB2_DNMENU : FB2_MENU;
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null };
@@ -182,10 +185,14 @@ function fb2AtkWatch(t, present) {
   if (!(typeof seriesHold === 'function' && seriesHold('fb2')) && typeof makePlan === 'function') { if (st.plan && st.plan.prof === 'fb2' && st.plan.tPress - performance.now() > 1500) { cancelBeeps(); st.plan = null; } makePlan(); }
 }
 /* T6's (slamOk, clawOk, weight) from the HP after T5 (null: not read) */
+/* v179 (emulator, the 11-27 T5 states at 10 HP, as the console's v136 note): Body Slam leaves 2 unguarded, 3 guarded; Claw 1 and
+ * poisoned unguarded (he dies at T7's start whatever T6 does), 3 guarded; Fire Breath guarded leaves 1 (no poison). The runner
+ * guards: 3 = Body Slam or Claw (Bowser's odds 1/4 each: half / half), 2 = Body Slam, 1 = Fire Breath (v156 read a 3 as a Body
+ * Slam only, and its T6 "Claw" timing was a Fire Breath's: FB2_DNDELTA). [slam allowed on T6, claw allowed on T6, weight] */
 function fb2T5Flags(hp) {
-  if (hp === 3) return [[false, true, 1]];
-  if (hp === 2) return [[false, true, 0.5], [true, false, 0.5]];
-  if (hp === 1) return [[true, false, 0.5], [true, true, 0.5]];
+  if (hp === 3) return [[false, true, 0.5], [true, false, 0.5]];
+  if (hp === 2) return [[false, true, 1]];
+  if (hp === 1) return [[true, true, 1]];
   if (hp === 10) return [[true, true, 1]];
   return null;
 }

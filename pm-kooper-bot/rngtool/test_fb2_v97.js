@@ -9,6 +9,7 @@
  *     route on to T7; the T7 plan from the post-T6 states under the edge rule; Close Call assumed equipped (the hit share is
  *     background).
  *  4. The route step: the Strategies screen, the Charge as its pre, the WAIT headline, no HOLD; the popup closing keeps T6.
+ * v179: every build here had a T5 Claw (no T6 Claw): the plans run with the setting "Claw Swipe" (fixtures note).
  * usage: node test_fb2_v97.js [page] */
 const { chromium } = require('playwright'), fs = require('fs'), path = require('path');
 const SP = '/tmp/claude-0/-home-user/4de37507-9387-5f1e-bab5-10167305f887/scratchpad';
@@ -26,20 +27,23 @@ let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') +
   await p.goto('file://' + PAGE);
   check(await p.evaluate(() => window.__tot.VERSION) >= 'v156', 'page version v106');
   // ---- 1. the model against every run
-  const m = await p.evaluate(R => { const F = window.__fb2; return R.map(r => { const a = F.ai(parseInt(r.s61, 16), r.nc61, r.phases[0], r.E, true, true); return { a, r }; }); }, FIX.runs);
+  const m = await p.evaluate(R => { const F = window.__fb2; return R.map(r => { const a = F.ai(parseInt(r.s61, 16), r.nc61, r.phases[0], r.E, true, false); return { a, r }; }); }, FIX.runs);     // v179: every build had a T5 Claw (no Claw on T6)
   const okAtk = m.filter(x => x.a.atk === x.r.attack && x.a.cc === x.r.cc && x.a.T === x.r.T).length, okMenu = m.filter(x => x.r.menu != null).every(x => x.a.menu === x.r.menu);
   check(okAtk === FIX.runs.length, '1. the page\'s Do Nothing model: attack, Close Call roll and test frame on ' + okAtk + ' of ' + FIX.runs.length + ' emulator runs (' + FIX.runs.filter(r => r.lucky).length + ' Close Calls)');
-  check(okMenu && m.some(x => x.r.attack === 'claw' && x.r.menu != null) && m.some(x => x.r.attack === 'slam' && x.r.menu != null), '1. the T7 menu after a Close Call: Body Slam +101, Claw / Fire Breath +134 after the test');
+  check(okMenu && m.some(x => x.r.attack === 'fire' && x.r.claw60 && x.r.menu != null) && m.some(x => x.r.attack === 'slam' && x.r.menu != null), '1. the T7 menu after a Close Call: Body Slam +101, Fire Breath +134 after the test (also on a Claw roll with the Claw ruled out)');
+  // v179: a real T6 Claw (after a T5 Body Slam / Fire Breath; the 11-27 guarded fights): the test 62 after the AI, the T7 menu 83 after it
+  const cl = await p.evaluate(R => { const F = window.__fb2, r = R[0], out = []; for (let E = r.E; E < r.E + 400 && out.length < 3; E++) { const a = F.ai(parseInt(r.s61, 16), r.nc61, r.phases[0], E, false, true); if (a.atk === 'claw') out.push({ E, T: a.T, menu: a.menu }); } return out; }, FIX.runs);
+  check(cl.length === 3 && cl.every(x => x.T - x.E === 62 && x.menu - x.T === 83), '1. a real T6 Claw: Close Call tested 62 after the AI, the T7 menu 83 after the test (' + JSON.stringify(cl) + ')');
   // ---- 2. the plan on the true state of runs with a Close Call frame in reach
   const seeds = [...new Set(FIX.runs.filter(r => r.hp === 1).map(r => r.seed))];
   const pl = await p.evaluate(({ R, seeds }) => {
     const T = window.__tot, F = window.__fb2, FB = F.FB2, out = [];
-    document.getElementById('s-fb2t5').value = 'any'; T.CHG.trig = { t: performance.now() - 3000 };
+    document.getElementById('s-fb2t5').value = 'claw'; T.CHG.trig = { t: performance.now() - 3000 };
     for (const sd of seeds) {
       const r = R.find(x => x.seed === sd && x.hp === 1);
       FB.on = true; FB.hyps = [{ s: parseInt(r.s61, 16) >>> 0, nc: r.nc61, ph: r.phases[0], w: 1 }]; FB.rate = 33.427;
       const P = F.planPAt(150);
-      const sh = P.k != null ? [-1, 0, 1].map(d => F.ai(parseInt(r.s61, 16), r.nc61, r.phases[0], P.k + d + 13, true, true).lucky) : [];
+      const sh = P.k != null ? [-1, 0, 1].map(d => F.ai(parseInt(r.s61, 16), r.nc61, r.phases[0], P.k + d + 13, true, false).lucky) : [];
       out.push({ seed: sd, P, sh });
     }
     return { out, bias: F.bias(), dt: (F.dnPressT(160) - F.pressT(160)) / 33.427, van: F.van() };
@@ -49,10 +53,11 @@ let bad = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') +
   check(Math.abs(pl.van - (2 - 3.4)) < 1e-9, '2. the confirm is read as T2-T4\'s Do Nothing: the Strategies box closing, ' + pl.van.toFixed(1) + ' (2 - 3.4)');
   // the emulator check (fb2_route/t6dn_log.py): the page plans the Do Nothing on each seed's true state from frame 157; the
   // emulator then pressed Do Nothing on that frame: Close Call on every one
-  const ec = await p.evaluate(E => { const T = window.__tot, F = window.__fb2, FB = F.FB2; T.CHG.trig = { t: performance.now() - 3000 };
-    return E.map(r => { FB.on = true; FB.hyps = [{ s: parseInt(r.s61, 16) >>> 0, nc: r.nc61, ph: r.ph, w: 1 }]; const P = F.planPAt(r.frm); const wv = T.SLOG.filter(e => e.ev === 'widerWindow' && e.prof === 'fb2dn').pop(); return { k: P.k, wFrom: wv ? wv.from : null, wTo: wv ? wv.to : null, ppTo: wv ? wv.ppTo : null }; }); }, FIX.emulatorCheck);
+  const ec = await p.evaluate(E => { const T = window.__tot, F = window.__fb2, FB = F.FB2; document.getElementById('s-fb2t5').value = 'claw'; T.CHG.trig = { t: performance.now() - 3000 };
+    return E.map(r => { FB.on = true; FB.hyps = [{ s: parseInt(r.s61, 16) >>> 0, nc: r.nc61, ph: r.ph, w: 1 }]; const P = F.planPAt(r.frm); const wv = T.SLOG.filter(e => e.ev === 'widerWindow' && e.prof === 'fb2dn').pop(); return { k: P.k, wFrom: wv ? wv.from : null, wTo: wv ? wv.to : null, ppTo: wv ? wv.ppTo : null, mk: P.k != null && F.ai(r.s61 ? parseInt(r.s61, 16) : FB.hyps[0].s, r.nc61, r.ph, P.k + 13, true, false).lucky }; }); }, FIX.emulatorCheck);
   // (v139: a 1-frame pick may move to a 2+ frame window the model gives the same chance: accepted when it moved from the emulator's frame)
-  FIX.emulatorCheck.forEach((r, i) => check((ec[i].k === r.P || (ec[i].wFrom === r.P && ec[i].wTo === ec[i].k && ec[i].ppTo >= 0.95)) && r.lucky, '2. emulator, ' + r.seed + ': the page beeps Do Nothing on +' + ec[i].k + (ec[i].k !== r.P ? ' (widened from +' + r.P + ', the emulator\'s frame)' : '') + '; pressed there, Bowser\'s ' + r.attack + ' rolled ' + r.cc + ': Close Call'));
+  // (v179: the claw setting moves some picks off the emulator's frame: then the page's frame must be a Close Call by the model, which check 1 holds to all the emulator's runs)
+  FIX.emulatorCheck.forEach((r, i) => check((ec[i].k === r.P || (ec[i].wFrom === r.P && ec[i].wTo === ec[i].k && ec[i].ppTo >= 0.95) || ec[i].mk) && r.lucky, '2. emulator, ' + r.seed + ': the page beeps Do Nothing on +' + ec[i].k + (ec[i].k !== r.P ? ' (widened from +' + r.P + ', the emulator\'s frame)' : '') + '; pressed there, Bowser\'s ' + r.attack + ' rolled ' + r.cc + ': Close Call'));
   const edge = await p.evaluate(() => { const F = window.__fb2, FB = F.FB2; FB.hyps = [{ s: 0x12345678, nc: 70, ph: [25, 75], w: 1 }]; document.getElementById('s-zwedge').value = '1.01'; const x = F.planPAt(150); document.getElementById('s-zwedge').value = '0.5'; return x; });
   check(edge.none && edge.edge, '2. the edge rule: under Best chance no Do Nothing beep ("' + (edge.none || '').slice(0, 60) + '")');
   // ---- 3. the confirm and T7

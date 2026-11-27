@@ -1,6 +1,6 @@
 /* v155: the live page for fb14_e2e.py LIVE=1 - one page for the whole fight, fed turn by turn as the test runner plays it (the old
  * test_fb14_page.js replays the fight from T1 for every turn). A JSON command per stdin line, a JSON answer per stdout line:
- *   {cmd:'init', M:{turn, step, lateMs, fbc9, fadeF, noBroad}}       the page opened on that step (VCLOCK: the page's clock = the fed picture's time)
+ *   {cmd:'init', M:{turn, step, lateMs, fbc9, fadeF, noBroad, readxS}}       the page opened on that step (VCLOCK: the page's clock = the fed picture's time)
  *   {cmd:'refs', refM, refS, refB}                                   capture urls of the saved screens (as test_fb14_page.js)
  *   {cmd:'set', fadeF}                                               the fade's battle start (tests), once known
  *   {cmd:'feed', frames:[url...]}                                    pictures fed at 60 fps, continuing the fight's capture index
@@ -26,6 +26,7 @@ const { chromium } = require('playwright'); const readline = require('readline')
         L.realNow = performance.now.bind(performance); L.vt = null; performance.now = () => (L.vt != null ? L.vt : L.realNow());
         if (M.noBroad) window.__fb14NoBroad = true; if (M.fadeF != null) window.__fb14fadeF = M.fadeF; if (M.fbc9) document.getElementById('s-fbc9').value = M.fbc9;
         T.setStep((M.turn || 1) >= 5 ? T.RT().findIndex(s => s.fb5) : T.RT().findIndex(s => s.fb14 === (M.turn || 1) && s.fb14role === (M.step || 'charge')));
+        if (M.readxS != null && T.v111 && T.v111.ev) T.v111.ev('FB14_READX.S = ' + (+M.readxS));     // v179: the emulator capture's Strategies-box read (harness only: the console's v94 +3.4 read 2.3 late here)
         L.lateMs = M.lateMs || 25; L.t0 = null; }
       if (C.cmd === 'set') { if (C.fadeF != null) window.__fb14fadeF = C.fadeF; if (C.truthSeeds) { const o = window.__fb14seeds; window.__fb14seeds = { off: o && C.keepOff ? o.off : C.truthSeeds.off, s: Uint32Array.from(C.truthSeeds.s, x => typeof x === 'string' ? parseInt(x, 16) : x) }; if (C.skipCheck && window.__fb14 && window.__fb14.truthSkipCheck) window.__fb14.truthSkipCheck(); } }
       if (C.cmd === 'refs') { const tg = JSON.parse(localStorage.getItem('tot-targets') || '{}');
@@ -38,11 +39,13 @@ const { chromium } = require('playwright'); const readline = require('readline')
         for (; k < fr.length; k++) { if (k + 8 < fr.length) pre.push(img(fr[k + 8])); const im = await pre[k];
           const tf = L.t0 + L.i * 1000 / 60, w = tf + L.tBase - L.realNow(); if (w > 1) await new Promise(r => setTimeout(r, w));
           L.vt = tf; const vf = new VideoFrame(im, { timestamp: Math.round(L.i * 1e6 / 60) }); im.close();
-          T.V.src = vf; try { T.onFrame(tf); } finally { T.V.src = null; vf.close(); } L.i++; } }
+          T.V.src = vf; try { T.onFrame(tf); } finally { T.V.src = null; vf.close(); } L.i++;
+          { const m = T.st ? T.st.msg : null; if (m !== L.msg) { L.msg = m; (L.msgs = L.msgs || []).push({ t: performance.now(), ev: 'harnessMsg', step: T.step(), msg: m ? String(m).slice(0, 200) : null }); } } } }     // v179: the headline's changes (the T8 that never planned)
       const S = T.SLOG, nw = S.slice(L.slog), cf = t => +((t - L.t0) * 60 / 1000).toFixed(1); L.slog = S.length;
       const fbe = nw.filter(x => /^fb14|^fb2|^fbP1|^charge(Lock|NoLock|Trigger|Narrow|Stream|NotSeen|Retry|Error|Arena)|^fbStream|^step$|^beepsStopped|^screenClosed|^pageError|^fbsWorkerError/.test(x.ev));
+      if (L.msgs && L.msgs.length) { fbe.push(...L.msgs); L.msgs = []; }
       const plans = nw.filter(x => x.ev === 'fb14Plan').map(x => Object.assign({}, x, { tPressCap: x.tPress != null ? cf(x.tPress) : null }));
-      return { i: L.i, t0: L.t0, events: fbe, plans, step: T.step(), fb14: { on: F.FB14.on, states: F.FB14.states.length }, fb2: window.__fb2 && { on: window.__fb2.FB2.on, plan: window.__fb2.FB2.plan } };
+      return { i: L.i, t0: L.t0, events: fbe, plans, step: T.step(), fb14: { on: F.FB14.on, states: F.FB14.states.length }, fb2: window.__fb2 && { on: window.__fb2.FB2.on, plan: window.__fb2.FB2.plan, t7: window.__fb2.FB2.t7 ? { n: window.__fb2.FB2.t7.states.length, plan: window.__fb2.FB2.t7.plan || null, hit: !!window.__fb2.FB2.t7.hit, hpRead: window.__fb2.FB2.t7.hpRead } : null } };
     }, { C, base });
     out.pageErrors = errs.slice(nErr); nErr = errs.length;
     process.stdout.write(JSON.stringify(out) + '\n');

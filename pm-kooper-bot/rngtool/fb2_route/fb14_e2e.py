@@ -381,7 +381,7 @@ if __name__ == '__main__':
         inv = [162] + [149] * int(os.environ['SHROOMS'])
         for i in range(10): r.e.w16(PLAYER_DATA + 0x1B4 + 2 * i, inv[i] if i < len(inv) else 0)
     X = os.path.join(out, 'x1.st'); r.e.save(X)
-    report = dict(seed='%08x' % seed, runner=RUNNER or 'first-plan', dl=DL if RUNNER else None, turns=[]); frames = []; G = 0; GM1 = None; refM = refS = None; truth = []   # truth: the seed before every global step
+    report = dict(seed='%08x' % seed, runner=RUNNER or 'first-plan', dl=DL if RUNNER else None, turns=[]); frames = []; G = 0; GM1 = None; refM = refS = refB = None; truth = []   # truth: the seed before every global step
     # v92 retries: ATTEMPTS=n attempts; attempt a plays T1..ATT_TURNS[a] (default all), then a gap of GAP seconds (default
     # 40-80) with no HUD bar on the screen while the game runs on in the battle (the console's RNG runs on across a retry,
     # v91: 75-89 steps a second), then the phase-2 start state again with the seed the game had at the gap's end
@@ -405,6 +405,9 @@ if __name__ == '__main__':
       last = ATT_TURNS[att - 1] if att - 1 < len(ATT_TURNS) else turns
       if LIVE:
           LM = dict(step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
+          # v179: these renders read Lakilester's Strategies box closing 2.3 frames later than the console clips that set FB14_READX.S 3.4
+          # (every fight: T2 +2.4, T4 +2.3, T6 +1.3 .. +3.2 on the exact press), which cost T6's carry into T7; READXS='' keeps the page's
+          if os.environ.get('READXS', '1.1') != '': LM['readxS'] = float(os.environ.get('READXS', '1.1'))
           LP = LivePage(urlbase, LM, open(os.path.join(out, 'live_page.log'), 'a'))
       backup = False; won = None
       if FULL: last = 8
@@ -441,6 +444,9 @@ if __name__ == '__main__':
         else: sa.idle(WAIT)
         if pa == 'cloud_nine' and refM is None: refM = ('a', t, R0 + 10)
         if pa != 'cloud_nine' and refS is None: refS = ('a', t, R0 + 10)
+        # v179: the Power Bounce target screen (the page's jr_B: on console Time Out's own screen, targets.timeout): without it the
+        # live page never saw T7 / T8's target screen (autoPlan), so the backup T8 never planned (b7000002)
+        if ma == 'power_bounce' and refB is None: refB = ('a', t, R0 + 10)
         jpg = capsim(sa.d, sa.n, os.path.join(out, tg + 'a_cap'), seed + t + 100 * att)
         segA = ['%s/%sa_cap_j/%s' % (rel, tg, f) for f in jpg]
         man = dict(frames=frames + segA, step='charge' if start == 1 else 'lever', turn=start, lateMs=int(os.environ.get('LATEMS', '25')), fbc9='skip' if SKIP else 'bar')
@@ -453,10 +459,10 @@ if __name__ == '__main__':
             # clock on its own turn's confirm, so the truth offset follows it (v101's trace kept T1's: post-hit "no true state")
             man['truthSeeds'] = dict(off=-GM1, s=truth + sa.s0, zeros=zeros)
         # the reference screens: capture frames of those game frames (2 per game frame)
-        for nm, ref in (('refM', refM), ('refS', refS)):
+        for nm, ref in (('refM', refM), ('refS', refS), ('refB', refB)):
             if ref and ref[1] == t and ('ref_' + nm) not in report: man[nm] = len(frames) + ncap(ref[2])
             elif ref: man[nm] = report['ref_' + nm]
-        for nm in ('refM', 'refS'):
+        for nm in ('refM', 'refS', 'refB'):
             if nm in man: report['ref_' + nm] = man[nm]
         ok = lambda o, tt: o['hp'] == hp0 and o['shroom'] == sh0 and o['menu'] and (tt != 4 or o['wave'])
         if FULL and t >= 5:      # v155: T5 any (alive); T6 the Close Call (no hit); backup T7 neither the wave (4 HP) nor the shield (no change); T7 / T8 Power Bounce: Bowser down
@@ -486,7 +492,7 @@ if __name__ == '__main__':
             return plans, rinfo, skinfo, kS, d, blind, tgt, pstep
         if LIVE:      # v155: the live page: this turn's pictures fed as played, up to the runner's press (decided on what the page has shown so far)
             if t == start and os.environ.get('FADEB0') and start == 1: LP.cmd(dict(cmd='set', fadeF=13.5 - (int(os.environ['FADEB0']) + GM1)))
-            for nm, ref in (('refM', refM), ('refS', refS)):
+            for nm, ref in (('refM', refM), ('refS', refS), ('refB', refB)):
                 if ref and ref[1] == t and ('ref_' + nm) in report and not LP.sent.get(nm): LP.cmd(dict(cmd='refs', **{nm: segA[ncap(ref[2])]})); LP.sent[nm] = True
             if os.environ.get('TRUTH'): z0 = [e.get('turn') for e in LP.res['events'] if e.get('ev') == 'fb14Lock' and e.get('M') == 0]; LP.cmd(dict(cmd='set', truthSeeds=dict(off=-(GMS.get(z0[-1], GM1) if z0 else GM1), s=truth + sa.s0), skipCheck=t == 2))   # (diagnostic: fb14TruthPlan in the live page; the clock's zero: the last fresh M 0 lock's turn, so a relock within this turn is not followed)
             idx = 0; pst = None
@@ -516,7 +522,7 @@ if __name__ == '__main__':
             if kh is not None: forced = dict(k_was=kS, k=kh); kS = kh
         row = dict(attempt=att, turn=t, botfix=botfix, pre=pre, K=K, M=G + M, R0=G + R0, plan=plans[0] if plans else None, nplans=len(plans), confirm_global=G + R0 + 1 + d, blind=blind, runner=rinfo, forced=forced,
                    skip=dict(k=kS, global_=G + R0 + 1 + d + kS, info=skinfo) if skm else None,
-                   page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('fb2') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
+                   page=dict(late=res.get('late'), fb14=res.get('fb14'), fb2=res.get('fb2'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('fb2') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream') or e.get('ev') == 'harnessMsg'][-60:]))
         if PLANCHECK: row['plancheck'] = plan_check(r, Y, res, len(frames), R0, GM1, G, GMS, t, pa, lambda o: ok(o, t), dC if skm else None)
         if ((FULL and t >= 6) or os.environ.get('SCANALL') == '1') and ma == 'charge' and not skm and os.environ.get('SCAN6', '1') == '1':     # v156: which Do Nothing frames around the press work (the truth for the page's T6 / backup T7 window)
             sc = {}
