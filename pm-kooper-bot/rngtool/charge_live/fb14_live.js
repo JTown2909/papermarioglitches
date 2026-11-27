@@ -579,12 +579,17 @@ function fb14Input(kind, Fc, turn, shifts, tRef, off) {
   // v110: only the (state, shift) pairs the cap can keep are cloned (the cap keeps the likeliest by w x lw; 12000 states x 7
   // shifts were all cloned and keyed, then 72000 of them dropped)
   // (shifts that change nothing for a state make copies the cap merges: the threshold is lowered until the cap is full)
+  // v178 (e2e a7000001 live: the box's onset and its end both read a frame late, the skip's k = 265 exact; the AI placed at the
+  // absolute 469, the true state's (Cloud Nine +1, skip -1) pair capped out, T2's 94% beep on states without the truth): the skip
+  // is placed on each state's own Cloud Nine frame + k (the box's two reads share their offset), its own spread narrower
+  const skRel = kind === 'skip' && FB14_SKIP_REL && FB14.box && FB14.box.P != null ? Fc - FB14.box.P : null;
+  if (skRel != null) shifts = FB14_SKSHIFTS_REL;
   const SH = shifts || [[0, 1]], MX = fb14K('maxc', FB14_MAXH); let vMin = 0, vs = null, K = MX;
   if (shifts && FB14.states.length * SH.length > MX) { vs = new Float64Array(FB14.states.length * SH.length); let i = 0; for (const S of FB14.states) { const v = S.w * (S.lw == null ? 1 : S.lw); for (const [, wd] of SH) vs[i++] = v * wd; } vs.sort(); vMin = vs[vs.length - MX]; }
   for (;;) { out.length = 0;
   for (const S of FB14.states) for (const [d, wd] of SH) {
     if (vMin > 0 && S.w * (S.lw == null ? 1 : S.lw) * wd < vMin) continue;
-    const F = Fc + d - S.l; if (S.f > F + (kind === 'chg' ? 13 : kind === 'jelly' ? FB14_JELLY : kind === 'skip' ? FB14_SKIP.ai : 13)) continue;   // too late for this state (should not happen: the horizon trails the inputs)
+    const F = (skRel != null && S.p1 != null ? S.p1 + skRel : Fc - S.l) + d; if (S.f > F + (kind === 'chg' ? 13 : kind === 'jelly' ? FB14_JELLY : kind === 'skip' ? FB14_SKIP.ai : 13)) continue;   // too late for this state (should not happen: the horizon trails the inputs)
     const T = shifts ? fbClone(S) : S; T.w = S.w * wd; if (kind === 'chg') T.mk = Fc + d;
     fbInputEv(T, kind, F, turn);
     out.push(T);
@@ -1625,6 +1630,7 @@ function fb14Confirm(tObs, stp, shifts, src) {
 const FB14_BOX = { x0: 50, x1: 270, y0: 84, y1: 103, gw: 22, gh: 4, frac: 0.55, need: 2 };
 // the skip into the carried states on the panel's -3 .. +3 (the same press chain, the offset transferred: not borne out on console);
 // the plan keeps FB14_SKIP_M frames off each end of the message (a transfer off by up to ~2.7 frames still lands inside)
+const FB14_SKIP_REL = true, FB14_SKSHIFTS_REL = [[-2, 0.05], [-1, 0.2], [0, 0.5], [1, 0.2], [2, 0.05]];
 const FB14_SKSHIFTS = [[-3, 0.03], [-2, 0.06], [-1, 0.16], [0, 0.44], [1, 0.19], [2, 0.08], [3, 0.04]], FB14_SKUNC = [[-1, 0.2], [0, 0.6], [1, 0.2]], FB14_SKIP_M = 3;
 function fb14BoxBox() { const [SX, OX, SY, OY] = chgMap(), B = FB14_BOX; return { x: (OX + B.x0 * SX) / 1280, y: (OY + B.y0 * SY) / 720, w: (B.x1 - B.x0) * SX / 1280, h: (B.y1 - B.y0) * SY / 720 }; }
 const fbBoxPx = (g, i) => { const R = g[i], G = g[i + 1], B = g[i + 2]; return R > 140 && G > 128 && B > 95 && R - B > 8 && R - B < 85 && Math.abs(R - G) < 35; };
