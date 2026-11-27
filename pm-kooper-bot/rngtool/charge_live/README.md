@@ -5503,7 +5503,7 @@ new. What that means here:
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
 
-## v177 (published Nov 27; emulator full fights: T1-T4 7 of 8 survived, both losses on 1-frame holes inside the planned window)
+## v177 (published Nov 27; emulator full fights: T1-T4 6 of 8 survived, both losses on 1-frame holes inside the planned window)
 - Every carried lock takes the Charge's fresh fits too (FB14_CARRY_FRESH; console 18:49 / 18:53 T2, 19:08 / 19:14 T4: the true seeds, the
   carried matches ruled out by the coin; 18:59's T2 after a hit, carried + fresh, worked). A narrowed carried lock runs the whole read in the
   background (no beep hold) and locks again with the fresh fits when it is in (fb14CarryFreshIn).
