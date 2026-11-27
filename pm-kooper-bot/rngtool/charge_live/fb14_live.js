@@ -1291,6 +1291,11 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   // v101: the skip's frames are the message's (P + 258 .. P + 311 of the box onset's P, else of Cloud Nine's reading): the
   // whole window, FB14_SKIP_M frames in from each end
   if (skp) { const [w0, w1] = fb14SkipWin(); from = Math.max(from, w0); W = w1 - from;
+    // v176 (console 11-26 18:59 T1: the lock came 8 s in, the plan aimed 441 of 437-442; the box's onset put the window's end at 440 and the
+    // replan, starting a new plan's lead on, called the window over with 440 still 1.85 s off): a replan (FB14.prevPlan) may start as soon as
+    // a whole beep series still fits
+    if (W < 0 && cAt == null && FB14.prevPlan) { let f2 = Math.max(w0, Math.ceil(fbPic(now) + 1)); const g = Math.min(num('gapms') || 500, 500); for (let i = 0; i < 300 && fbPressT(f2) - (nBeeps() - 1) * g <= now + FB14_PLAN_MS + 60; i++) f2++;
+      if (f2 <= w1) { slog('fb14SkipReach', { from, to: f2, end: w1 }); from = f2; W = w1 - from; } }
     if (W < 0) { const pl = { none: 'the message window is over', turn, sk: true }; FB14.plan = pl; if (cAt != null) return pl; st.msg = 'No edge: Cloud Nine\'s message window is over. ' + fb14BlindText(1)[0].toUpperCase() + fb14BlindText(1).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'skip window over' }); cancelBeeps(); fb14Show(); render(); return true; } }
   const L = fb14Sample(Wg.list, FB14_NSAMPLE), PD = cAt != null ? PRESS_ERR : pressDist(), D = Math.max(...PD.map(x => Math.abs(x[0]))), X = 10;
   const keyT = turn >= 2 && turn <= 4 && !skp && cAt == null && !window.__noKeyLater, keyS = turn === 4 ? FB14_KEY_S4 : FB14_KEY_S, KF = keyT ? Math.round(keyS * 1000 / fbRate()) : 0;     // v124: T4 (the wave must miss Mario) may wait FB14_KEY_S more for a 90% frame (zwChoose's key look-ahead); v126: T2 and T3 too (the runner: T2-T7 menus can wait; T1's Lakilester menu closes by itself, so not T1)

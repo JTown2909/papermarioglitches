@@ -5495,3 +5495,10 @@ new. What that means here:
   FBP1_MANIP on, FBP1_GOAL 4, no coin wait (FBP1_GIVEUP 0.5). On the 13:33 console Phase 1: the lock (4492 states) -> 17400, the coin to the
   T2 target screen fits (doubt 0, 8439 kept), the clip's guarded Body Slam leads (0.62), a 4+ plan (pp 0.93, 0.57 with the press spread,
   1 frame). The bar's hide at the Power Bounce reads the press as the target screen's close. test_v175.js (fixtures/console_v175.json).
+
+## v176 (console 11-26 18:59)
+- T1 "gave up": the lock came on the re-read 8 s in and planned 441 (window 437-442); Cloud Nine's message box then put the skip window's end
+  at 440 and the replan, starting a new plan's lead (1.5 s) on, found no room ("skip window over") with 440 still ~1.85 s off. A T1 skip
+  replan may now start as soon as a whole beep series fits (fb14SkipReach), as v163 did for the other turns.
+- (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
+  matched 373 / 177 and the coin ruled them out: open.)
