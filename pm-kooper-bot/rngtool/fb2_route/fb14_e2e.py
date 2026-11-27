@@ -530,7 +530,7 @@ if __name__ == '__main__':
         na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
         jb0 = 0
         if LIVE and skm and jb:      # v177 (harness): the page already saw a's Cloud Nine stretch up to the skip (b replays it from the confirm): not fed twice
-            jb0 = max(0, min(len(jb), fedA - ncap(R0 + dC)))
+            jb0 = max(0, min(len(jb), ncap(kS)))     # (b's step 0 is a's R0 + dC; the page saw a's pictures before step R0 + dC + kS: b from the one where its step kS shows)
         if LIVE: na = fedA; LP.feed(['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb[jb0:]])     # (the page saw a up to the press; then Bowser's turn)
         frames = frames + segA[:na] + ['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb[jb0:]]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
