@@ -114,7 +114,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
     console.log('   ' + L + ' T' + turn + ' post-hit fresh lock: before ' + JSON.stringify(H[L + 'before']) + ' after ' + JSON.stringify(H[L + 'after']));
   }
   if (H.fb1516after) {
-    ok(H.fb1516after.afterHit && H.fb1516after.w8000[1] < 0.5 && H.fb1516before.w8000[1] > 0.9, '4. fb1516 T2 (the window took in the hit): the menu coin across the hit is not used: 8 s on, doubt ' + H.fb1516before.w8000[1] + ' -> ' + H.fb1516after.w8000[1] + ' (' + H.fb1516before.w8000[0] + ' -> ' + H.fb1516after.w8000[0] + ' states)');
+    ok(H.fb1516after.afterHit && H.fb1516after.w8000[1] < 0.5 && H.fb1516before.w8000[1] > H.fb1516after.w8000[1] + 0.05, /* v177: the carried lock takes the fresh fits too (the no-hit-time baseline is no longer > 0.9) */ '4. fb1516 T2 (the window took in the hit): the menu coin across the hit is not used: 8 s on, doubt ' + H.fb1516before.w8000[1] + ' -> ' + H.fb1516after.w8000[1] + ' (' + H.fb1516before.w8000[0] + ' -> ' + H.fb1516after.w8000[0] + ' states)');
     ok(H.fb1548after.w8000[1] <= H.fb1548before.w8000[1] + 1e-9 && H.fb1548after.w8000[0] > 0, '4. fb1548 T4 (the window took in the hit and the revive flashes): the same or better (' + JSON.stringify(H.fb1548after.w8000) + ')');
     ok(!H.fb1203after.afterHit && H.fb1203after.n === H.fb1203before.n, '4. fb1203 T4 (the menu came after the revive): the window is kept, the lock unchanged');
   }

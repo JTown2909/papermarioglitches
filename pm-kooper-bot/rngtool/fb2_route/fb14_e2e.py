@@ -526,8 +526,11 @@ if __name__ == '__main__':
         if endA and not os.environ.get('KEEP'): shutil.rmtree(sb.d, ignore_errors=True)
         jb = [] if endA else capsim(sb.d, sb.n, os.path.join(out, tg + 'b_cap'), seed + 10 + t + 100 * att)
         na = ncap(R0 + 1 + d)                                      # capture frames of a before the confirm's picture
-        if LIVE: na = fedA; LP.feed(['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb])     # (the page saw a up to the press; then Bowser's turn)
-        frames = frames + segA[:na] + ['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb]
+        jb0 = 0
+        if LIVE and skm and jb:      # v177 (harness): the page already saw a's Cloud Nine stretch up to the skip (b replays it from the confirm): not fed twice
+            jb0 = max(0, min(len(jb), fedA - ncap(R0 + dC)))
+        if LIVE: na = fedA; LP.feed(['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb[jb0:]])     # (the page saw a up to the press; then Bowser's turn)
+        frames = frames + segA[:na] + ['%s/%sb_cap_j/%s' % (rel, tg, f) for f in jb[jb0:]]
         G += R0 + 1 + d + sb.n; truth += sa.s0[:R0] + sb.s0
         json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
         json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
