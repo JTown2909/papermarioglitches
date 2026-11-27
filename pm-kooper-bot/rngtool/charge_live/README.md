@@ -5503,7 +5503,7 @@ new. What that means here:
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
 
-## v179 (Nov 27): T6's Claw timing; T5's HP read for a guarding runner; the backup T8's beep in the e2e
+## v179 (published Nov 27): T6's Claw timing; T5's HP read for a guarding runner; the guarded backup T7 measured
 
 Found in the guarded live full fights on v178 (a7000001 - d7000004, the harness guarding every hit from T5 on as the runner does).
 
@@ -5524,6 +5524,16 @@ Found in the guarded live full fights on v178 (a7000001 - d7000004, the harness 
   press: T2 +2.4, T4 +2.3, T6 +1.3 .. +3.2): T2-T4's +-3 hedge held it, T6's carry into T7 did not (a7: P read 231 for 228,
   pLucky 0.13, T7 5 HP short). READXS=1.1 in the harness only. The report keeps the page's headline and T7 carry.
 - The harness guard works on all three T5 attacks (A two frames before the HP drop): T6 at 1 HP + poison was v178's harness.
+- **The guarded backup T7, measured** (det/b7meas.py: the T6 hit, the Life Shroom, T7 Charge to 15, Do Nothing on 120-140 frames
+  each from three T6 states, the runner's guard): Body Slam 10 sparks on +69, the T8 menu on +145, Mario at 3; Claw 10 sparks on +64,
+  +127, Mario at 3; Fire Breath no draw, +161, Mario at 1. FB2B_MENU_G was Phase 1's 144 / 126 / 160, a frame early each. Unguarded
+  the Body Slam's 212 and every draw matched FB2B_HIT. A guarded Lightning also leaves 1 (+172) but its draws vary: not carried.
+- **Carry fresh, second fault** (d7000004 T2: the carried lock kept none of the true states, then "the coin disagrees", T2 / T3
+  blind): the background read set res.trigT from the reader after it re-armed (null), and fb14Lock read CHG.trig.t of null. It
+  keeps the lock's time.
+- **Live full fights on v179** (b7000002, d7000004; c7000003's tab crashed at T2): T1-T4 2 of 2 (d7 blind on T2 / T3 before the
+  carry fix), T6 Close Call 2 of 2 (the Strategies read within 0.5 frame), T7 Power Bounce 0 of 2 on the page's own 6-bounce odds
+  (37 %, 45 %; 5 bounces both, Bowser at 5 / 15).
 - test_v110's 3 and 5 fail on v178 too (not this change).
 
 ## v178 (published Nov 27): T2 / T4 Charge frames held +-3; T1's skip on each state's own Cloud Nine frame
