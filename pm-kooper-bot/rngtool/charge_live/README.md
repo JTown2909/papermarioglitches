@@ -5502,3 +5502,9 @@ new. What that means here:
   replan may now start as soon as a whole beep series fits (fb14SkipReach), as v163 did for the other turns.
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
+
+## v177 (in test: emulator full fights before publishing)
+- Every carried lock takes the Charge's fresh fits too (FB14_CARRY_FRESH; console 18:49 / 18:53 T2, 19:08 / 19:14 T4: the true seeds, the
+  carried matches ruled out by the coin; 18:59's T2 after a hit, carried + fresh, worked). A narrowed carried lock runs the whole read in the
+  background (no beep hold) and locks again with the fresh fits when it is in (fb14CarryFreshIn).
+- T4 does not beep on a disputed lock (coin warning; console 19:14: 0.80 doubt, the beep, no wave).

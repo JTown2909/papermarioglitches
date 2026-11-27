@@ -449,7 +449,9 @@ function fb14Lock(res) {
   // v146 (console 11-24 20:56 T2 after T1's hit: the narrowed read matched the carry and buildFresh threw on its light fits, no
   // H.hy: chargeError, the lock half done): a narrowed read goes on to the refine (the whole fit list), which locks again here
   if (keep && how === 'carried' && afterHit && H.light) { [FB14.trigTurn, FB14.trigStep] = trig0; slog('fb14HitFreshLight', { turn, M, carried: keep.length }); FB14.holdRefine = { turn, t: performance.now() }; return 'light'; }
-  if (keep && how === 'carried' && afterHit) { const fr = buildFresh(); if (fr.length) { const sc = keep.reduce((x, S) => x + S.w, 0) || 1, sf = fr.reduce((x, S) => x + S.w, 0) || 1;
+  // v177 (console 11-26 18:49 / 18:53 T2, 19:08 / 19:14 T4: the true seed, its carried matches ruled out by the coin, no beep or a wrong one;
+  // 18:59 T2 after T1's hit, carried + fresh, 88% and a miss): every carried lock takes this Charge's fresh fits too (FB14_CARRY_FRESH)
+  if (keep && how === 'carried' && (afterHit || FB14_CARRY_FRESH) && !H.light) { const fr = buildFresh(); if (fr.length) { const sc = keep.reduce((x, S) => x + S.w, 0) || 1, sf = fr.reduce((x, S) => x + S.w, 0) || 1;
     fr.forEach(S => { S.w *= FB14_HIT_FRESH / (1 - FB14_HIT_FRESH) * sc / sf; }); slog('fb14HitFresh', { turn, M, carried: keep.length, fresh: fr.length }); keep = keep.concat(fr); fresh = fr; if (window.__fb14seeds) FB14.tLockCtx = { H, M, P, J: !!J }; } }
   const sum = keep.reduce((x, S) => x + S.w, 0); keep.forEach(S => { S.w /= sum; S.lw = 1; S.err = 0; });
   // the menu's coin before the Charge weighs the fits now (fbBackShines), before any are dropped for the cap: with the
@@ -1323,6 +1325,7 @@ function fb14Plan(cAt) {      // cAt (tests): plan as if the screen showed on cl
   if (window.__fb14seeds && !C.none && C.target != null) { const Tl = Wg.list.filter(S => fb14IsTrue(S)), TlS = Tl.filter(fb14IsTrueS), nS = TlS.length, allS = FB14.states.filter(fb14IsTrueS), nAll = allS.length; if (allS.length) FB14.tRef = fbClone(allS[0]); else if (FB14.tRef) fb14TruthDiv(h); if (Tl.length) { const sh = fb14Share(Tl, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn)); const by = {}; for (const S of Tl) { const k = S.p1 + '/' + S.l; (by[k] = by[k] || []).push(S); } const per = {}; for (const k in by) per[k] = Array.from(fb14Share(by[k], C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2));
     slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: Tl.length, nS, nAll, topK: fb14TruthTop(Wg.list), topA: fb14TruthTop(FB14.states), why: nS ? undefined : fb14TruthWhy(h), shS: nS ? Array.from(fb14ShareSync(TlS, C.target - 2, C.target + 2, turn, skp ? 'skip' : fb14Kind(turn))).map(x => +x.toFixed(2)) : undefined, sh: Array.from(sh).map(x => +x.toFixed(2)), p1: [...new Set(Tl.map(S => S.p1))].slice(0, 8), per }); } else slog('fb14TruthPlan', { turn, target: C.target, pp: +C.pp.toFixed(3), fresh: FB14.how !== 'carried', n: 0, nS: 0, nAll, topA: fb14TruthTop(FB14.states), why: fb14TruthWhy(h) }); }
   if (coinWarn && !C.none && C.pp < fb14Blind(turn) + FB14_COINWARN_GAIN) C.none = 'coin';
+  if (coinWarn && !C.none && turn === 4) C.none = 'coin';     // v177 (console 11-26 19:14: T4 beeped with the coin disagreeing, 0.80, and no wave came): T4 does not beep on a disputed lock
   if (C.none === 'coin') { const pl = { none: 'coin', turn, best: C.pp, doubt: +Wg.doubt.toFixed(3), coinWarn: true }; FB14.plan = pl; if (cAt != null) return pl;
     st.msg = 'No edge (the coin disagrees): this turn\'s Charge agreed with the carried seed, but the coin since does not (' + Math.round(100 * Wg.doubt) + '% that the states are off). The best frame would be ' + Math.round(100 * (C.pp || 0)) + '%, no better than blind. ' + fb14BlindText(turn)[0].toUpperCase() + fb14BlindText(turn).slice(1) + '.'; slog('fb14NoEdge', { turn, why: 'coin', best: +(C.pp || 0).toFixed(3), doubt: +Wg.doubt.toFixed(3) }); cancelBeeps(); fb14Show(); render(); return true; }
   if (C.none) { const pl = { none: C.none, turn, best: C.pp, spread: C.p }; FB14.plan = pl; if (cAt != null) return pl;
@@ -1418,7 +1421,7 @@ function fb14Broad(C, Wg, turn, d, PD) {
  * pp - tol, a 1-frame window at 0.41, broad 0.49): a replan picks by the realistic chance (the press spread over the kept
  * states' share, no higher than the same over every state the coin has not ruled out, fb14Broad's states) among frames that
  * clear the perfect-press bar; nearness to the turn's first frame only breaks ties within FB14_ANCHOR_RTOL. */
-const FB14_ANCHOR_RTOL = 0.03, FB14_NARROW_GAIN = 0.1, FB14_FREEZE_MS = 1200;
+const FB14_CARRY_FRESH = true, FB14_ANCHOR_RTOL = 0.03, FB14_NARROW_GAIN = 0.1, FB14_FREEZE_MS = 1200;
 function fb14Anchor(C, from, W, turn, PD, nKept) {
   FB14.anchor = FB14.anchor || {}; const A = FB14.anchor[turn];
   if (C.none || C.target == null) return C;
