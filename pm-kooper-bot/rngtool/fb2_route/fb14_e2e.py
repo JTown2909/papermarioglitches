@@ -464,6 +464,7 @@ if __name__ == '__main__':
             if t == start and os.environ.get('FADEB0') and start == 1: LP.cmd(dict(cmd='set', fadeF=13.5 - (int(os.environ['FADEB0']) + GM1)))
             for nm, ref in (('refM', refM), ('refS', refS)):
                 if ref and ref[1] == t and ('ref_' + nm) in report and not LP.sent.get(nm): LP.cmd(dict(cmd='refs', **{nm: segA[ncap(ref[2])]})); LP.sent[nm] = True
+            if os.environ.get('TRUTH'): z0 = [e.get('turn') for e in LP.res['events'] if e.get('ev') == 'fb14Lock' and e.get('M') == 0]; LP.cmd(dict(cmd='set', truthSeeds=dict(off=-(GMS.get(z0[-1], GM1) if z0 else GM1), s=truth + sa.s0)))   # (diagnostic: fb14TruthPlan in the live page; the clock's zero: the last fresh M 0 lock's turn, so a relock within this turn is not followed)
             idx = 0; pst = None
             while True:
                 lim = ncap(pst) if pst is not None else len(segA)
@@ -480,6 +481,7 @@ if __name__ == '__main__':
             res = LP.res; fedA = idx
         else:
             res = run_page(urlbase, out, man, 'a%dt%d' % (att, t))
+            if os.environ.get('SAVERES') == '1': json.dump(res, open(os.path.join(out, 'res_a%dt%d.json' % (att, t)), 'w'))   # (diagnostic: every plan and event the page made)
             plans, rinfo, skinfo, kS, d, blind, tgt, pstep = decide(res)
         forced = None
         if '%d.%d' % (att, t) in FORCE and not skm:

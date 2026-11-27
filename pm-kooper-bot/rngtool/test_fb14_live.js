@@ -27,7 +27,7 @@ const { chromium } = require('playwright'); const readline = require('readline')
         if (M.noBroad) window.__fb14NoBroad = true; if (M.fadeF != null) window.__fb14fadeF = M.fadeF; if (M.fbc9) document.getElementById('s-fbc9').value = M.fbc9;
         T.setStep((M.turn || 1) >= 5 ? T.RT().findIndex(s => s.fb5) : T.RT().findIndex(s => s.fb14 === (M.turn || 1) && s.fb14role === (M.step || 'charge')));
         L.lateMs = M.lateMs || 25; L.t0 = null; }
-      if (C.cmd === 'set') { if (C.fadeF != null) window.__fb14fadeF = C.fadeF; }
+      if (C.cmd === 'set') { if (C.fadeF != null) window.__fb14fadeF = C.fadeF; if (C.truthSeeds) { const o = window.__fb14seeds; window.__fb14seeds = { off: o && C.keepOff ? o.off : C.truthSeeds.off, s: Uint32Array.from(C.truthSeeds.s, x => typeof x === 'string' ? parseInt(x, 16) : x) }; } }
       if (C.cmd === 'refs') { const tg = JSON.parse(localStorage.getItem('tot-targets') || '{}');
         for (const [cat, u] of [['M', C.refM], ['S', C.refS], ['B', C.refB]]) { if (!u) continue; const im = await img(u), vf = new VideoFrame(im, { timestamp: 0 });
           const keep = T.V.src; T.V.src = vf; const g = F.sample(BOX[cat], 24, 16), ref = []; for (let k = 0; k < g.length; k += 4) ref.push((g[k] + g[k + 1] + g[k + 2]) / 3); T.V.src = keep; vf.close(); im.close(); tg['jr_' + cat] = { box: BOX[cat], ref }; }
