@@ -99,9 +99,10 @@ const FB2B_RECAST = 15, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new 
 // v164 (console 11-26 11:16: the backup T7 gave Fire Breath, guarded, Mario at 1; no state followed it and T8 had no beep): Phase 1's
 // guarded Fire Breath (p1_extra.json fire_g: no draw of its own, the next menu on the AI + 160); unguarded it KOs Mario (no Life Shroom left)
 // v179 (emulator, the backup T7 itself: det/b7meas.py on the 11-27 c7 / d7 T6 states, Mario 10 after the Life Shroom, 15 charges, the runner's
-// guard): guarded Body Slam 10 sparks on +69 and the T8 menu on +145 (6 runs), guarded Fire Breath no draw and +161 (27 runs; Mario at 1):
+// guard): guarded Body Slam 10 sparks on +69 and the T8 menu on +145 (6 runs), guarded Fire Breath no draw and +161 (41 runs; Mario at 1), guarded Claw 10 sparks on +64 and +127 (6 runs; Mario at 3);
+// a guarded Lightning leaves 1 too (+172, its draws vary: not carried):
 // Phase 1's menus were a frame early here (the unguarded Body Slam's 212 and its draws matched exactly, 4 runs)
-const FB2B_HIT_G = { claw: { 64: new Array(10).fill(359) }, slam: { 69: new Array(10).fill(359) }, fire: {} }, FB2B_MENU_G = { claw: 126, slam: 145, fire: 161 }, FB2B_GUARD = 0.7;
+const FB2B_HIT_G = { claw: { 64: new Array(10).fill(359) }, slam: { 69: new Array(10).fill(359) }, fire: {} }, FB2B_MENU_G = { claw: 127, slam: 145, fire: 161 }, FB2B_GUARD = 0.7;
 function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null }, ri = m => { const r = R.randInt(S.s, m); S.s = r[0]; return r[1]; };
   for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
@@ -536,7 +537,7 @@ function fb2HpWatch(t, present) {
 const FB2_ONES = [68, 27, 76, 36], FB2_ONES_T = {"0": "000000000011110000111110011111100110011001100010111001100111111000111100", "9": "011111001111111011000110111001001111110000111100000110000011100000111000", "8": "011111001111110011000110111011100111110011111110111001111111111001111100", "7": "001111100111111111100110010001100000110000011000000110000001100000111000", "6": "000110000011100000110000011110000111110011100110110001100111111001111100", "5": "000111100111111001110000011111001111111011100111000011100001110000111000", "4": "000110000011100001110000011110001110110011001110111111101111110000011000", "3": "001110000111111011111110000011000001100000001100010011101111111001111100", "2": "000110000111110011111110111111100001110000111000011100001111111011111110", "1": "000011000011110001111100001111000001100000011000000110000011100000110000"};
 // v136 (the runner: a guarded Body Slam and a guarded Claw both leave 3, a guarded Fire Breath 1 - v135's table was a guess from code
 // comments and dropped the right states after a guarded Claw): the HP is logged, it weighs nothing (FB2_B7HP_ON) until measured
-const FB2_B7HP_ON = false, FB2_B7HP_N = 20, FB2_B7HP_W = 0.02, FB2_B7HP_SAME = 12000, FB2_B7HP_EXP = { slam: [2, 3], claw: [1, 2], fire: [0, 1] };
+const FB2_B7HP_ON = false, FB2_B7HP_N = 20, FB2_B7HP_W = 0.02, FB2_B7HP_SAME = 12000, FB2_B7HP_EXP = { slam: [2, 3], claw: [1, 3], fire: [0, 1] };     // v179: a guarded Claw leaves 3 (emulator)
 function fb2OnesMask() {
   if (window.__fb2OnesTest) return window.__fb2OnesTest();     // (tests: a mask string)
   const [SX, OX, SY, OY] = chgMap(), [x0, y0, x1, y1] = FB2_ONES, g = sample({ x: (OX + x0 * SX) / 1280, y: (OY + y0 * SY) / 720, w: (x1 - x0) * SX / 1280, h: (y1 - y0) * SY / 720 }, 8, 9);
