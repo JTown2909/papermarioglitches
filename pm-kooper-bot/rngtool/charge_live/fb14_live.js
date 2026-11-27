@@ -594,6 +594,8 @@ function fb14Input(kind, Fc, turn, shifts, tRef, off) {
     fbInputEv(T, kind, F, turn);
     out.push(T);
   }
+  if (window.__fb14seeds && kind === 'skip') { const v = T => T.w * (T.lw == null ? 1 : T.lw), tr = out.filter(T => fb14IsTrue(T)), trS = tr.filter(fb14IsTrueS), srt = out.map(v).sort((a, b) => b - a), rk = T => srt.findIndex(x => x <= v(T));     // (diagnostic: v178)
+    slog('fb14TruthSkipIn', { out: out.length, skRel, tr: tr.length, trS: trS.length, rkS: trS.slice(0, 5).map(rk), p1S: trS.slice(0, 5).map(T => T.p1), p1T: [...new Set(tr.map(T => T.p1))].slice(0, 8), rkT: tr.slice(0, 200).map(rk).sort((a, b) => a - b).slice(0, 5) }); }
   if (!shifts) break; const capd = fb14Cap(kind === 'chg' && turn === 4 ? fb14WaveSplit(out) : out);
   if (vMin > 0 && capd.length < MX && K < vs.length) { K = Math.min(vs.length, 2 * K); vMin = K >= vs.length ? 0 : vs[vs.length - K]; continue; }
   FB14.states = capd; break; }
@@ -777,7 +779,12 @@ function fb14TruthZero(t0) { const T = window.__fb14seeds; if (!T || !T.zt || !T
 function fb14TruthLost(at) { const T = window.__fb14seeds, K = FB14.tTrue; if (!K) return; FB14.tTrue = null; const C = fbClone(K.S); let first = null;
   for (let k = 0; k < 6000; k++) { const i = C.f + C.l - T.off; if (i < 0 || i >= T.s.length) break; if ((C.s >>> 0) !== (T.s[i] >>> 0)) { first = C.f; break; } fbStep(C); }
   slog('fb14TruthLost', { at, from: K.at, f0: K.S.f, first, out: JSON.stringify(C.out).slice(0, 300), shroom: C.shroom, rv: C.rv, gd: C.gd, ev: first == null ? null : K.S.ev.concat(C.ev).filter(e => Math.abs(e.f - first) < 400).map(e => e.k + '@' + e.f + (e.turn ? '/t' + e.turn : '')).filter((x, j, a) => a.indexOf(x) === j).slice(0, 30) }); }
-function fb14Truth(at) { if (!window.__fb14seeds) return; { const sT = FB14.states.filter(fb14IsTrue).slice(0, 50).find(fb14IsTrueS);     /* v150: the seed-matching ones only (the full find ran 12000 x 90 frames, slowing the e2e's page) */ if (sT) FB14.tTrue = { S: fbClone(sT), at }; else fb14TruthLost(at); }
+// v178 (diagnostic): the true state kept at Cloud Nine's confirm, replayed with the skip at each k once the trace holds the skip
+function fb14TruthSkipCheck() { const K = FB14.tCn; if (!K || !window.__fb14seeds) return null; const rows = [];
+  for (let k = FB14_SKIP.lo - 5; k <= FB14_SKIP.hi + 5; k++) { const C = fbClone(K); fbSkipEv(C, C.p1 + k, 1); while (C.f < C.p1 + k - 3) fbStep(C); const x = fb14TruthScore(C, 0); if (x.r > 0.98 || rows.length < 3) rows.push([k, +x.r.toFixed(3), x.first]); }
+  const best = rows.filter(r => r[1] > 0.98).map(r => r[0]), none = (() => { const C = fbClone(K); while (C.f < (FB14.sk || C.p1 + 265) - 3) fbStep(C); return fb14TruthScore(C, 0); })();
+  const out = { p1: K.p1, f: K.f, kOk: best.slice(0, 12), noSkip: [+none.r.toFixed(3), none.first], box: FB14.box ? FB14.box.P : null, sk: FB14.sk }; slog('fb14TruthSkipCheck', out); return out; }
+function fb14Truth(at) { if (!window.__fb14seeds) return; if (at === 'input-cn1') { const c = FB14.states.filter(fb14IsTrue).slice(0, 50).find(fb14IsTrueS); if (c) FB14.tCn = fbClone(c); } { const sT = FB14.states.filter(fb14IsTrue).slice(0, 50).find(fb14IsTrueS);     /* v150: the seed-matching ones only (the full find ran 12000 x 90 frames, slowing the e2e's page) */ if (sT) FB14.tTrue = { S: fbClone(sT), at }; else fb14TruthLost(at); }
   const L = FB14.states, n = L.filter(fb14IsTrue).length; let tot = 0, tw = 0; for (const S of L) { const v = S.w * (S.lw || 1); tot += v; if (fb14IsTrue(S)) tw += v; } slog('fb14Truth', { at, states: L.length, trueStates: n, strict: L.filter(fb14IsTrueS).length, trueShare: tot ? +(tw / tot).toFixed(4) : 0 }); fb14TruthPh(at); }
 /* ---- the coin: shines (clock frame of the draw) and the stretches the coin was watched ---- */
 // the coin is kept in page time (ms) and read on the clock when the states are weighed: a lock re-anchors the clock, and
@@ -1944,6 +1951,7 @@ window.__fb14 = { v103: { boltLik: (S, h, b, c) => fb14BoltLik(S, h, b, c), SIG:
   sample: (b, w, h) => sample(b, w, h), tick: t => { FB14.tickH = null; fb14Tick(t); }, carryGone: () => fb14CarryGone(), reloadTargets: () => { targets = JSON.parse(localStorage.getItem('tot-targets') || '{}'); useTarget(); } };   // for tests
 window.__fb14.v105 = { end48: (x0, M, q, c, pa) => fbEnd48(x0, M, q, c, pa), BIN: FB14_BIN, AV: FB14_AV, COMBOS: FB14_COMBOS };   // for tests (v105)
 window.__fb14.v104 = { broad: (C, Wg, t, d, PD) => fb14Broad(C, Wg, t, d, PD), blind: t => fb14Blind(t), truthScore: (S, d) => fb14TruthScore(S, d), isTrueS: S => fb14IsTrueS(S) };
+window.__fb14.truthSkipCheck = () => fb14TruthSkipCheck();
 window.__fb14.v102 = { truthZero: t => fb14TruthZero(t), freshOpen: h => fb14FreshOpen(h), FRESH_D: FB14_FRESH_D, isTrue: S => fb14IsTrue(S) };   // for tests (v102)
 window.__fb14.v108 = { keepIfOrphan: (P, w) => fb14KeepIfOrphan(P, w) };
 window.__fb14.v110 = { t5Watch: (t, pr) => fb14T5Watch(t, pr), t3Hides: (t, pr) => fb14T3Hides(t, pr), falseBurst: () => fb14FalseBurst(), trigger: () => fb14Trigger(), T5_HIDE: FB14_T5_HIDE, T5_BACK: FB14_T5_BACK, key: S => fb14Key(S), prefetch: () => fb14Prefetch(), K: (k, d) => fb14K(k, d) };
