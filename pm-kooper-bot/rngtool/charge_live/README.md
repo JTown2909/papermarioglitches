@@ -5503,6 +5503,23 @@ new. What that means here:
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
 
+## v178 (published Nov 27): T2 / T4 Charge frames held +-3; T1's skip on each state's own Cloud Nine frame
+
+Found with true seeds sent to the live e2e page (fb14TruthPlan, fb14TruthSkipCheck; diagnostics only under window.__fb14seeds).
+
+- **The cause of v177's "1-frame holes"** (a7000001 T2: a 94% beep, the beep frame hit, the next frame dodged): the page's states
+  held no true state. T2's Charge was read at 754; the true frame (replayed from the true state kept at Cloud Nine's confirm)
+  is 757, outside FB14_CHGD's +-2. **FB14_CHGD is now +-3** (weights .04/.08/.2/.36/.2/.08/.04): the same fight's T2 lock holds
+  3 strict true states, fb14ClockFix lands on 757, the plan's 99.8% is the true state's 5 of 5 frames.
+- **The skip** (FB14_SKIP_REL): placed on each state's own Cloud Nine frame + the box's k (its onset and end are read on one
+  chain), its own spread +-2. In the same fight the true k is 266 from the true Cloud Nine frame 202 (read k 265).
+- The model with the true state is exact: non-live scans T2 / T4 (`SCANALL=1`) matched the true state's frames 5 of 5.
+- **Harness fixes:** a Cloud Nine skip stretch was fed to the page twice (265 frames late from T2 on: 13 plans, a 46 s press);
+  the b segment now starts at its own step kS picture. `SAVERES=1`, `SCANALL=1`, true seeds in live fights.
+- **Live full fights on v178** (a7000001, b7000002): T1-T4 8 of 8 (v177 6 of 8). Not fixed: T6 at 1 HP (both fights: every
+  frame d-12..d+12 hits, the page said 0.68); the backup T7 (0.94 / 0.95 claimed, 1-3 frames of 25 dodge in the scans); T8
+  Power Bounce not planned.
+
 ## v177 (published Nov 27; emulator full fights: T1-T4 6 of 8 survived, both losses on 1-frame holes inside the planned window)
 - Every carried lock takes the Charge's fresh fits too (FB14_CARRY_FRESH; console 18:49 / 18:53 T2, 19:08 / 19:14 T4: the true seeds, the
   carried matches ruled out by the coin; 18:59's T2 after a hit, carried + fresh, worked). A narrowed carried lock runs the whole read in the
