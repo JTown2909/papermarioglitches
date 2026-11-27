@@ -1892,7 +1892,7 @@ async function fb14Refine(res, G) {
   try { return await fb14Refine1(res, G); } finally { FB14.refining = false; }
 }
 async function fb14Refine1(res, G) {
-  res.trigT = fb14TrigT();      // v94: on the burst's frame 3 (fb14TrigPhase)
+  { const tt = fb14TrigT(); if (tt != null || res.trigT == null) res.trigT = tt; }      // v94: on the burst's frame 3 (fb14TrigPhase). v179: a carry-fresh read keeps the lock's (the reader re-armed after the lock: 'carry fresh: reading t of null', d7000004 T2)
   try {
     const top = res.top && res.top[0]; if (!top || !G || !CHG.cen || !chgSearch.mod) return res;
     const shifted = d => fbShiftG(G, d);
