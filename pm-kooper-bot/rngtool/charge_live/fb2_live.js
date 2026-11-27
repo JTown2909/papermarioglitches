@@ -43,15 +43,20 @@ const fb2Leg = () => { const s = typeof isRoute === 'function' && isRoute() && R
 function fb2Reset() { if (!FB2) return; Object.assign(FB2, { rate: typeof chgRate === 'function' && typeof consoleRate === 'function' ? chgRate() : null, on: false, hyps: null, plan: null, plans: [], pObs: null, kObs: null, kSeen: null, kHow: null, t7: null, popup: null, why: null, taps: [], vis: [], visFrom: null, pT: null, hpw: null }); fb2Show(); }
 const fb2nb = (f, p1, p2) => (FB2_P130.includes(((f + p1) % 130 + 130) % 130) ? 1 : 0) + (FB2_P220.includes(((f + p2) % 220 + 220) % 220) ? 1 : 0);     // (v142: negative frames)
 /* the window patterns (bolt counts on rays frames 0..47 = confirm + 13..60) and the phase pairs behind each */
-function fb2Patterns() {
-  if (fb2Patterns.c) return fb2Patterns.c;
+/* v179 (console log v109b, Nov 15, T6 -> T7: with the dodge seen, only states on the pair 58 / 73 fit Bowser's coin - doubt 0.02 on
+ * v118's mod-5 pairs; v143's mod 10 dropped them and every state missed the coin, doubt 0.73): on console T6's pair can be
+ * p130 = p220 mod 5 but not mod 10 (the emulator's are mod 10 at every turn). T6 / the backup T7 (the 'fb2' read) take the mod-5
+ * pairs again, those off mod 10 at FB2_PH5_W (0.5: the console log fits at both of test_v110 5's times, 0.488 / 0.042; 0.25 gave 0.55); T1-T4 and Phase 1 keep mod 10. */
+let FB2_PH5_W = 0.5;
+function fb2Patterns(m) {
+  m = m || 10; fb2Patterns.c = fb2Patterns.c || {}; if (fb2Patterns.c[m]) return fb2Patterns.c[m];
   const idx = new Map(), list = [];
-  for (let p2 = 0; p2 < 220; p2++) for (let p1 = p2 % 10; p1 < 130; p1 += 10) {     // v143: both loops start with the battle (p130 = p220 mod 10)
+  for (let p2 = 0; p2 < 220; p2++) for (let p1 = p2 % m; p1 < 130; p1 += m) {     // v143: both loops start with the battle (p130 = p220 mod 10)
     const r = []; for (let n = 0; n < 48; n++) r.push(fb2nb(n + 13, p1, p2));
     const k = r.join(''); let i = idx.get(k); if (i == null) { i = list.length; idx.set(k, i); list.push({ r, ph: [] }); } list[i].ph.push([p1, p2]);
   }
   const bytes = new Uint8Array(list.length * 52); list.forEach((x, i) => x.r.forEach((v, n) => { bytes[i * 52 + n] = v; }));
-  return (fb2Patterns.c = { list, bytes });
+  return (fb2Patterns.c[m] = { list, bytes });
 }
 /* ---- the model (t6pay.c / t6model.py) ---- */
 function fb2Frame1(S, f, ph) {      // the idle draws of frame f: bolts, coin, step
@@ -237,15 +242,15 @@ function fb2T7Cands() {
 }
 /* the lock: hypotheses from the worker's (pattern, q) pairs */
 function fb2Lock(res) {
-  const P = fb2Patterns(), hy = res.fb2 && res.fb2.hyps; if (!hy || !hy.pairs.length) { FB2.why = 'no hypotheses'; fb2Show(); return; }
+  const P = fb2Patterns(5), hy = res.fb2 && res.fb2.hyps; if (!hy || !hy.pairs.length) { FB2.why = 'no hypotheses'; fb2Show(); return; }
   const seen = new Map(), H = [];
   for (const [p, q, sc, s48, nc48] of hy.pairs) for (const ph of P.list[p].ph) {
     const key = s48 + ':' + nc48 + ':' + ph[0] + ':' + ph[1]; if (seen.has(key)) continue;
-    const h = { s: s48 >>> 0, nc: nc48 + 13, ph, w: 1 }; seen.set(key, h); H.push(h);
+    const h = { s: s48 >>> 0, nc: nc48 + 13, ph, w: (ph[0] - ph[1]) % 10 === 0 ? 1 : FB2_PH5_W }; seen.set(key, h); H.push(h);
   }
-  const wsum = H.length; H.forEach(h => { h.w = 1 / wsum; });
+  const wsum = H.reduce((a, h) => a + h.w, 0); H.forEach(h => { h.w /= wsum; });
   const Hk = H.length > FB2_MAXH ? H.filter((h, i) => i % Math.ceil(H.length / FB2_MAXH) === 0) : H;   // too many: an even sample
-  Hk.forEach(h => { h.w = 1 / Hk.length; });
+  { const ws = Hk.reduce((a, h) => a + h.w, 0); Hk.forEach(h => { h.w /= ws; }); }
   Object.assign(FB2, { on: true, hyps: Hk, pairs: hy.pairs.length, best: hy.best, kObs: null, plan: null, plans: [], t7: null, taps: [], vis: [], visFrom: null, tLock: performance.now() });
   if (!fb2BackupOn() && res.top && res.top[0] && typeof CHG !== 'undefined' && CHG.trig) FB2_T6 = { seed: res.top[0].seed >>> 0, t: CHG.trig.t };     // v120: the backup T7's search starts from it
   slog('fb2Lock', { pairs: hy.pairs.length, hyps: H.length, states: new Set(H.map(h => h.s + ':' + h.nc)).size, kSeen: FB2.kSeen });

@@ -135,7 +135,7 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   { const p = await open({ prof: 'endgame', duproute: 'charge' });
     const rows = await p.evaluate(() => [...document.querySelectorAll('#route-list li')].map(l => l.textContent));
     const i = rows.indexOf('Ultra Boots Laki Final Bowser');
-    ok(i >= 0 && rows.slice(i + 1, i + 6).join('|') === 'Phase 1:|T1: Charge; Do Nothing|★T2: Bounce x5; Do Nothing|T3: Star Beam|Phase 2:', '3. Ultra Boots Laki Final Bowser: Phase 1 lines (T2 starred: beeped since v132) before Phase 2 (' + rows.slice(i, i + 8).join(' | ') + ')');
+    ok(i >= 0 && rows.slice(i + 1, i + 6).join('|') === 'Phase 1:|T1: Charge; Spiny Flip|★T2: Bounce x4; Spiny Flip|T3: Star Beam|Phase 2:'     /* the runner's route since (Spiny Flip, Bounce x4) */, '3. Ultra Boots Laki Final Bowser: Phase 1 lines (T2 starred: beeped since v132) before Phase 2 (' + rows.slice(i, i + 8).join(' | ') + ')');
     const d = rows.indexOf('Duplighosts'); ok(rows.slice(d + 1, d + 3).join('|') === '★T1: Charge; Do Nothing|T2: Jump x2; Power Bomb', '3. Duplighosts (Charge route): ' + rows.slice(d + 1, d + 3).join(' | '));
     await p.close(); }
   ok(!errs.length, 'no page errors ' + errs.slice(0, 3).join(' | '));

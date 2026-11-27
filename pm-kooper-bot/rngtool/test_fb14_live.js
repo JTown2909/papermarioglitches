@@ -10,8 +10,8 @@
 const { chromium } = require('playwright'); const readline = require('readline');
 (async () => {
   const base = process.argv[2];
-  const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
-  const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+  const b = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required', '--js-flags=--max-old-space-size=4096'] });     // v179: two tabs crashed at T2 under load (a bigger heap; the crash logged)
+  const p = await b.newPage(); const errs = []; p.on('pageerror', e => errs.push(String(e))); p.on('crash', () => { try { process.stderr.write('page crash at ' + new Date().toISOString() + ' rss ' + JSON.stringify(process.memoryUsage()) + '\n'); } catch (e) {} }); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
   await p.addInitScript(() => { localStorage.setItem('tot-boxes', JSON.stringify({ coin: { x: 1080 / 1280, y: 40 / 720, w: 40 / 1280, h: 52 / 720 }, target: { x: 0.36, y: 0.265, w: 0.08, h: 0.06 } })); });
   await p.goto(base + '/tot.html');
   const rl = readline.createInterface({ input: process.stdin }); let nErr = 0;

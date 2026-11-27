@@ -849,7 +849,7 @@ function chgSearch(maps, opts) {
           if (++ready === nw) deal();
         } else if (m.type === 'done') { busy--; stats.tasks += m.n; stats.skipped += m.skipped; gthr[0] = Math.max(gthr[0], m.thr[0]); gthr[1] = Math.max(gthr[1], m.thr[1]); if (!busy) finish(); }
       };
-      w.postMessage({ type: 'init', mod, S: maps.S, C: maps.C, N: opts.N || CHG_N, ND: CHG_ND, K: P.bolts ? CHG_K_FB2 : opts.wide ? CHG_K_WIDE : CHG_K, pat: P.bolts || P.aura ? fb2Patterns().bytes : null });
+      w.postMessage({ type: 'init', mod, S: maps.S, C: maps.C, N: opts.N || CHG_N, ND: CHG_ND, K: P.bolts ? CHG_K_FB2 : opts.wide ? CHG_K_WIDE : CHG_K, pat: P.bolts || P.aura ? fb2Patterns(P.bolts ? 5 : 10).bytes : null });     /* v179: T6 / backup T7 on the mod-5 pairs (fb2Lock) */
     }
   });
 }

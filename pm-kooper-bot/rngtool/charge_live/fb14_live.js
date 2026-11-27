@@ -51,7 +51,8 @@ const FB14_WAVEB_P = 0.08;
 /* v87: a T2 / T4 Charge's frame on the clock, read off its burst: -2 .. +2 (the e2e T2 Charge read 2 frames off), and the
  * narrowed search's fit tolerance on the carried stream (fb1Stage2) */
 // v178 (e2e a7000001 live: T2's Charge read at 754, the true frame 757 outside +-2; the carried lock held no true state and beeped 94%): +-3
-const FB14_CHGD = [[-3, 0.04], [-2, 0.08], [-1, 0.2], [0, 0.36], [1, 0.2], [2, 0.08], [3, 0.04]], FB14_NTOL = 0.03;
+// v179 (d7000004 T2: the Charge read on 826, the true frame 830; v178's a7000001 T2 757 for 754: both late of the read): -4 .. +5
+const FB14_CHGD = [[-4, 0.015], [-3, 0.035], [-2, 0.075], [-1, 0.19], [0, 0.34], [1, 0.19], [2, 0.08], [3, 0.045], [4, 0.02], [5, 0.01]], FB14_NTOL = 0.03;
 const FB14_BLIND = { 1: 0.495, 2: 0.495, 3: 0.495, 4: 0.39 };
 // the Peach Beam confirm -> the T6 Charge's rays frame 0: random numbers drawn = frames + this (t5_steps.py: Close Call
 // 8654-8764, Bowser's hit 9116-9351; with margin for lag frames)
