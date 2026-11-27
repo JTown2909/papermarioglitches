@@ -5503,6 +5503,29 @@ new. What that means here:
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
 
+## v179 (Nov 27): T6's Claw timing; T5's HP read for a guarding runner; the backup T8's beep in the e2e
+
+Found in the guarded live full fights on v178 (a7000001 - d7000004, the harness guarding every hit from T5 on as the runner does).
+
+- **T6 Claw** (c7000003: a 91% Do Nothing beep, Bowser clawed on the beep frame, the frame before dodged): a real T6 Claw tests
+  Close Call **62** frames after Bowser's AI and opens the T7 menu **83** after the test (the page had 55 / 134: Fire Breath's).
+  v97's emulator "Claw" runs (fixtures/fb2_t6dn.json) all followed a T5 Claw, so Bowser could not Claw on T6 and its RandInt(60) < 20
+  gave a Fire Breath. Emulator, the c7 / d7 T5 states: T5 Body Slam or Fire Breath -> T6 Claw 62 / 83 (26 runs); T5 Claw -> no T6
+  Claw. The same timing is fb2_route/t6model.py's Claw (Lakilester KO'd). The T7 carry after a T6 Claw dodge was 44 frames off too (the menu at 145 after the AI, not 189).
+- **T5's HP for T6** (fb2T5Flags): guarded (as the runner plays) a Body Slam and a Claw both leave 3, a Fire Breath 1 (no poison);
+  unguarded a Body Slam leaves 2, a Claw 1 and poisoned (a lost fight), a Fire Breath KOs (the Life Shroom: 10). v156 read 3 as a
+  Body Slam only (after a guarded Claw it allowed the T6 Claw and forbade the Body Slam: the reverse of the game); now 3 = Body Slam or Claw half / half, 2 = Body
+  Slam, 1 = Fire Breath.
+- **"carry fresh: Cannot set properties of null (setting 'trigT')"** on every T4 carried lock: the background read took CHG.res after
+  the lock had reset it. It takes it before the lock.
+- **Harness** (fb2_route/fb14_e2e.py): the live page had no Power Bounce target-screen reference (jr_B; on console Time Out's own
+  screen), so it never saw T7 / T8's target screen and the backup T8 never planned (b7000002: no beep, a blind press). Added.
+  These renders read the Strategies box closing 2.3 frames after the console clips that set FB14_READX.S (every fight, the exact
+  press: T2 +2.4, T4 +2.3, T6 +1.3 .. +3.2): T2-T4's +-3 hedge held it, T6's carry into T7 did not (a7: P read 231 for 228,
+  pLucky 0.13, T7 5 HP short). READXS=1.1 in the harness only. The report keeps the page's headline and T7 carry.
+- The harness guard works on all three T5 attacks (A two frames before the HP drop): T6 at 1 HP + poison was v178's harness.
+- test_v110's 3 and 5 fail on v178 too (not this change).
+
 ## v178 (published Nov 27): T2 / T4 Charge frames held +-3; T1's skip on each state's own Cloud Nine frame
 
 Found with true seeds sent to the live e2e page (fb14TruthPlan, fb14TruthSkipCheck; diagnostics only under window.__fb14seeds).
