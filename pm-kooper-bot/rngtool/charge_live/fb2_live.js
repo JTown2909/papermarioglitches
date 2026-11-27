@@ -98,7 +98,10 @@ const FB2B_RECAST = 15, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new 
  * FB2B_GUARD of the weight guarded. */
 // v164 (console 11-26 11:16: the backup T7 gave Fire Breath, guarded, Mario at 1; no state followed it and T8 had no beep): Phase 1's
 // guarded Fire Breath (p1_extra.json fire_g: no draw of its own, the next menu on the AI + 160); unguarded it KOs Mario (no Life Shroom left)
-const FB2B_HIT_G = { claw: { 64: new Array(10).fill(359) }, slam: { 69: new Array(10).fill(359) }, fire: {} }, FB2B_MENU_G = { claw: 126, slam: 144, fire: 160 }, FB2B_GUARD = 0.7;
+// v179 (emulator, the backup T7 itself: det/b7meas.py on the 11-27 c7 / d7 T6 states, Mario 10 after the Life Shroom, 15 charges, the runner's
+// guard): guarded Body Slam 10 sparks on +69 and the T8 menu on +145 (6 runs), guarded Fire Breath no draw and +161 (27 runs; Mario at 1):
+// Phase 1's menus were a frame early here (the unguarded Body Slam's 212 and its draws matched exactly, 4 runs)
+const FB2B_HIT_G = { claw: { 64: new Array(10).fill(359) }, slam: { 69: new Array(10).fill(359) }, fire: {} }, FB2B_MENU_G = { claw: 126, slam: 145, fire: 161 }, FB2B_GUARD = 0.7;
 function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null }, ri = m => { const r = R.randInt(S.s, m); S.s = r[0]; return r[1]; };
   for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
