@@ -492,7 +492,7 @@ if __name__ == '__main__':
                    skip=dict(k=kS, global_=G + R0 + 1 + d + kS, info=skinfo) if skm else None,
                    page=dict(late=res.get('late'), fb14=res.get('fb14'), errors=res.get('pageErrors'), panels=res.get('panels'), events=[e for e in res.get('events', []) if e.get('ev', '').startswith('fb14') or e.get('ev', '').startswith('fb2') or e.get('ev', '').startswith('charge') or e.get('ev', '').startswith('fbStream')][-40:]))
         if PLANCHECK: row['plancheck'] = plan_check(r, Y, res, len(frames), R0, GM1, G, GMS, t, pa, lambda o: ok(o, t), dC if skm else None)
-        if FULL and ma == 'charge' and t >= 6 and os.environ.get('SCAN6', '1') == '1':     # v156: which Do Nothing frames around the press work (the truth for the page's T6 / backup T7 window)
+        if ((FULL and t >= 6) or os.environ.get('SCANALL') == '1') and ma == 'charge' and not skm and os.environ.get('SCAN6', '1') == '1':     # v156: which Do Nothing frames around the press work (the truth for the page's T6 / backup T7 window)
             sc = {}
             for dd in range(max(0, d - 12), min(WAIT - 1, d + 12) + 1):
                 tmp = Seg(r, os.path.join(out, 'tmp')); tmp.load(Y, False); tmp.idle(dd, False); play_after_confirm(tmp, pa, False); sc[dd - d] = 1 if ok(outcome(r), t) else 0
