@@ -55,10 +55,10 @@ const LOG = process.env.LOG || '/root/.claude/uploads/4de37507-9387-5f1e-bab5-10
     return { guard: X.guard, n: X.s1.length, split: run(mk(undefined)), fixed: run(mk(X.guard ? 1 : 0)) }; }))`));
   for (const x of r3) { const g = x.guard != null; ok(x.fixed.bad == null && (g ? x.split.kbad == null && x.split.bad != null : x.split.bad == null && x.split.kbad != null) && x.split.kid && Math.abs(x.split.kw - 0.7) < 1e-9,
     '3. T3 Body Slam ' + (g ? 'guarded' : 'unguarded') + ': ' + x.n + ' frames exact as the ' + (g ? 'guarded copy' : 'state itself') + ' of the split (the other copy off from frame ' + (g ? x.split.bad : x.split.kbad) + ')'); }
-  // (4) the backup T7's Body Slam / Claw carry: guarded and unguarded copies, the guarded one with only the 10 sparks
+  // (4) the backup T7's Body Slam / Claw carry: guarded and unguarded copies, the guarded one with only the 10 sparks (v179: T8 menus 145 / 127, measured on the backup T7)
   const r4 = JSON.parse(await E(`(() => { const out = {}; for (let s = 1; s < 6000 && Object.keys(out).length < 2; s++) { const S0 = { s: (s * 2654435761) >>> 0, nc: 99999 }; const a = fb2AI7(S0, 100, [44, 194], true, true);
       if ((a.atk === 'slam' || a.atk === 'claw') && !out[a.atk]) { const g = fb2AI7(S0, 100, [44, 194], true, true, true); let n = 0, x = a.S.s >>> 0; const y = g.S.s >>> 0; out[a.atk] = { T: a.T - 100, Tg: g.T - 100, gd: [a.gd, g.gd], same: x === y }; } } return JSON.stringify(out); })()`));
-  ok(r4.slam && r4.slam.T === 212 && r4.slam.Tg === 144 && r4.claw && r4.claw.T === 279 && r4.claw.Tg === 126 && !r4.slam.same && !r4.claw.same, '4. the backup T7 hit guarded: the T8 menu on AI + ' + (r4.slam && r4.slam.Tg) + ' (slam) / ' + (r4.claw && r4.claw.Tg) + ' (claw), other draws than unguarded');
+  ok(r4.slam && r4.slam.T === 212 && r4.slam.Tg === 145 && r4.claw && r4.claw.T === 279 && r4.claw.Tg === 127 && !r4.slam.same && !r4.claw.same, '4. the backup T7 hit guarded: the T8 menu on AI + ' + (r4.slam && r4.slam.Tg) + ' (slam) / ' + (r4.claw && r4.claw.Tg) + ' (claw), other draws than unguarded');
   ok(await E(`String(fb2SetP).includes('FB2B_GUARD')`) === true, '4. the T8 carry keeps both copies (FB2B_GUARD of the weight guarded)');
   // (5) the backup T7's hit read off the HP ones digit
   const r5 = JSON.parse(await E(`(() => { const V = window.__fb2.v134, T = V.T, out = { ok: 0, n: 0 };
