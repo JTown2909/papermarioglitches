@@ -179,11 +179,34 @@ def partner_items(pa):
     return [(0, UP, 10), (A, 0, 20), (0, DOWN, 10)]
 
 
+AUTOG = {'on': False}      # v178 (harness): set per turn (T5 on): the runner guards Bowser's hit (an A 2 frames before Mario's HP changes)
+AUTOG_D = int(os.environ.get('AUTOG_D', '2'))
+
+
+def autoguard_k(seg, pa, cap=4000):
+    """dry run from the state just after the confirm step: the first frame (after the confirm) where Mario's HP changes, else None;
+    the emulator is put back (the guard press is chosen from it: the console runner guards each hit, "ナイス")"""
+    e = seg.r.e; tmp = os.path.join(seg.d, '_ag.st'); e.save(tmp); hp0 = e.s8(PLAYER_DATA + 2); k = 0; h = None
+    while k < cap:
+        seg.r.step(0, 0); k += 1
+        hpn = e.s8(PLAYER_DATA + 2)
+        if hpn != hp0: h = k if hpn < hp0 else None; break
+        if bstate(e) == 13 and k > 30: break
+    e.load(tmp)
+    return h
+
+
 def play_after_confirm(seg, pa, shot, cap=4000, skip=None):
     """the confirm A, then (Cloud Nine) its three A presses, Bowser's turn to the next Mario menu. v101 skip: one A on the
     confirm + skip (steps after the confirm's own step), Cloud Nine's message skip (cn_skip.py: + 255 .. + 314 moves Bowser's AI)"""
     seg.step(A, 0, shot); k0 = seg.n
     sk = lambda k: skip is not None and k + 1 == skip
+    if AUTOG['on'] and pa != 'cloud_nine':      # v178: the runner's guard on this Bowser turn's hit (the dry run's frame - AUTOG_D)
+        h = autoguard_k(seg, pa, cap)
+        n = 0; gk = (h - AUTOG_D) if h is not None else None
+        while bstate(seg.r.e) != 13 and n < cap:
+            k = seg.n - k0; seg.step(A if (gk is not None and k + 1 == gk) else 0, 0, shot); n += 1
+        return
     if pa == 'cloud_nine':
         for i in range(259):
             k = seg.n - k0; seg.step(A if k in (132, 152, 172) or (GUARD and k == 400) or sk(k) else 0, 0, shot)
@@ -388,6 +411,7 @@ if __name__ == '__main__':
       for t in range(start, last + 1):
         if FULL and t == 8 and not backup: break
         spec = turn_spec(t, backup); ma = spec[0]
+        AUTOG['on'] = GUARD and t >= 5 and os.environ.get('AUTOG', '1') == '1'
         items, pa = mario_items(t, spec)
         tg = 'a%dt%d' % (att, t)       # v92: per attempt (a retry's renders must not overwrite the earlier attempt's pictures)
         sa = Seg(r, os.path.join(out, tg + 'a')); sa.load(X)
