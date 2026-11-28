@@ -42,7 +42,7 @@ const { chromium } = require('playwright'); const readline = require('readline')
           T.V.src = vf; try { T.onFrame(tf); } finally { T.V.src = null; vf.close(); } L.i++;
           { const m = T.st ? T.st.msg : null; if (m !== L.msg) { L.msg = m; (L.msgs = L.msgs || []).push({ t: performance.now(), ev: 'harnessMsg', step: T.step(), msg: m ? String(m).slice(0, 200) : null }); } } } }     // v179: the headline's changes (the T8 that never planned)
       const S = T.SLOG, nw = S.slice(L.slog), cf = t => +((t - L.t0) * 60 / 1000).toFixed(1); L.slog = S.length;
-      const fbe = nw.filter(x => /^fb14|^fb2|^fbP1|^charge(Lock|NoLock|Trigger|Narrow|Stream|NotSeen|Retry|Error|Arena)|^fbStream|^step$|^beepsStopped|^screenClosed|^pageError|^fbsWorkerError/.test(x.ev));
+      const fbe = nw.filter(x => /^fb14|^fb2|^fbP1|^bolt|^charge(Lock|NoLock|Trigger|Narrow|Stream|NotSeen|Retry|Error|Arena)|^fbStream|^step$|^beepsStopped|^screenClosed|^pageError|^fbsWorkerError/.test(x.ev));
       if (L.msgs && L.msgs.length) { fbe.push(...L.msgs); L.msgs = []; }
       const plans = nw.filter(x => x.ev === 'fb14Plan').map(x => Object.assign({}, x, { tPressCap: x.tPress != null ? cf(x.tPress) : null }));
       return { i: L.i, t0: L.t0, events: fbe, plans, step: T.step(), fb14: { on: F.FB14.on, states: F.FB14.states.length }, fb2: window.__fb2 && { on: window.__fb2.FB2.on, plan: window.__fb2.FB2.plan, t7: window.__fb2.FB2.t7 ? { n: window.__fb2.FB2.t7.states.length, plan: window.__fb2.FB2.t7.plan || null, hit: !!window.__fb2.FB2.t7.hit, hpRead: window.__fb2.FB2.t7.hpRead } : null } };
