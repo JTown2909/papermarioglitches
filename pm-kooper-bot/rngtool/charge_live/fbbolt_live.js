@@ -158,6 +158,7 @@ function fbbRead(C) {
     const res = fbbApply(R);
     slog('boltRead', { kind: R.kind, clk: R.k, F1: R.F1, frames: n, bt: R.bt || undefined, type: R.best.type, u: R.best.u % 120, L0: R.best.L0, cost: +R.best.c.toFixed(2), ms: R.ms, ...res });
     if (R.k === 'fb2' && typeof fb2Truth === 'function') fb2Truth('bolt' + R.F1);     // v182 (diagnostic)
+    if (R.k === 'fb14' && typeof fb14Truth === 'function') fb14Truth('bolt' + R.F1);
     // v165 (console 11-26 11:22, the backup T7: a bolt read 2.3 s after its Do Nothing plan nulled it; makePlan does not remake a T6 / T7 Do
     // Nothing plan, so its beeps played with no strip, no % box and no press read): the Do Nothing step's plan is left alone
     const dnStep = (() => { const z = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; return !!(z && z.turn === 'fb2_k'); })();

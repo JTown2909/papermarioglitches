@@ -123,7 +123,10 @@ function fbbScore(obs, types, done, ms) {
 }
 // the best (type, L0, u) of a table, and the cost of every u at it
 function fbbBest(C) { let b = null; for (const ty in C) for (let L0 = FBB_L[0]; L0 <= FBB_L[1]; L0++) { const a = C[ty][L0]; if (!a) continue; for (let u = 0; u < 360; u++) if (!b || a[u] < b.c) b = { c: a[u], type: +ty, L0, u }; } return b; }
-const FBB_T = 0.4, FBB_T5 = 1.0, FBB_FLOOR = 0.1;     // FBB_T5: the front-right bolt (emulator: the true value's cost gap up to 1.02, vs 0.62 on the sky bolts)      // the likelihood's temperature (px of cost) and its floor (a misread never cuts a state)
+// v182 (e2e b7000002 with the true seeds, fb2Truth: T6's lock 81 % true, then two T7-menu reads took the T7 states' true share to 8 % and
+// 5 % - one with the right value 51 / 52 on another draw frame, one a misread - and T7 planned 97 % on the rest, 3 bounces): with the
+// onset fix a fight reads ~35 bolts, so one read may cut less: temperature 0.8 (was 0.4), floor 0.25 (was 0.1)
+const FBB_T = 0.8, FBB_T5 = 1.0, FBB_FLOOR = 0.25;     // FBB_T5: the front-right bolt (emulator: the true value's cost gap up to 1.02, vs 0.62 on the sky bolts)      // the likelihood's temperature (px of cost) and its floor (a misread never cuts a state)
 // a state's factor: its own sky bolt (type, value v) drawn d0 frames before the first picture's frame (lifetime L0 = d0 + 1)
 function fbbLik(R, type, v, L0) {
   const a = R.C[type] && R.C[type][L0]; if (!a) return FBB_FLOOR;
