@@ -276,7 +276,8 @@ function fb2Lock(res) {
   { const ws = Hk.reduce((a, h) => a + h.w, 0); Hk.forEach(h => { h.w /= ws; }); }
   FB2.d14 = (typeof FB14 !== 'undefined' && FB14.t0 != null && typeof CHG !== 'undefined' && CHG.trig && typeof fbPic === 'function') ? Math.round(fbPic(CHG.trig.t) - 16) : null;     // v182 (diagnostic): this clock's frame 0 on fb14's, for fb2Truth
   Object.assign(FB2, { on: true, hyps: Hk, pairs: hy.pairs.length, best: hy.best, kObs: null, plan: null, plans: [], t7: null, taps: [], vis: [], visFrom: null, tLock: performance.now() });
-  if (!fb2BackupOn() && res.top && res.top[0] && typeof CHG !== 'undefined' && CHG.trig) FB2_T6 = { seed: res.top[0].seed >>> 0, t: CHG.trig.t };     // v120: the backup T7's search starts from it
+  if (!fb2BackupOn() && res.top && res.top[0] && typeof CHG !== 'undefined' && CHG.trig) FB2_T6 = { seed: res.top[0].seed >>> 0, t: CHG.trig.t };
+  fb2Truth('lock6');     // v120: the backup T7's search starts from it
   slog('fb2Lock', { pairs: hy.pairs.length, hyps: H.length, states: new Set(H.map(h => h.s + ':' + h.nc)).size, kSeen: FB2.kSeen });
   // v97: the lever is Lakilester's Do Nothing (the popup A plays no part): a confirm seen before the lock is applied now
   if (FB2.pObs != null) { FB2.plan = { none: 'the lock came after the Do Nothing confirm' }; fb2SetP(FB2.pObs); } else fb2PlanP();
@@ -369,7 +370,11 @@ function fb2TopHyps() {     // a systematic sample by weight (each kept one stan
 }
 /* v182 (diagnostic, the e2e's true seeds only, window.__fb14seeds): how many of the T6 seeds / T7 states are the game's, and their weight share */
 function fb2Truth(at) {
-  const T = window.__fb14seeds; if (!T || FB2.d14 == null) return; const ix = f => { const i = f + FB2.d14 - T.off; return i >= 0 && i < T.s.length ? T.s[i] >>> 0 : null; };
+  const T = window.__fb14seeds; if (!T || (FB2.d14 == null && T.off2 == null)) return;
+  const base = f => (T.off2 != null ? f - T.off2 : f + FB2.d14 - T.off), ix = f => { const i = base(f); return i >= 0 && i < T.s.length ? T.s[i] >>> 0 : null; };
+  if (at === 'lock6' && FB2.hyps) { const pos = new Map(); T.s.forEach((v, i) => { if (!pos.has(v >>> 0)) pos.set(v >>> 0, []); pos.get(v >>> 0).push(i); }); const dh = {};
+    for (const h of FB2.hyps.slice(0, 400)) for (const i of pos.get(h.s >>> 0) || []) { const d = i - base(61); if (Math.abs(d) <= 400) dh[d] = (dh[d] || 0) + 1; }
+    slog('fb2TruthOff', { deltas: dh, off2: T.off2, d14: FB2.d14 }); }     // a seed of the lock found in the truth: its frame against the one expected
   let n = 0, nt = 0, w = 0, wt = 0;
   if (FB2.t7 && FB2.t7.states && FB2.t7.states.length) for (const o of FB2.t7.states) { n++; w += o.w; if ((o.a.S.s >>> 0) === ix(o.a.T + 1 + (o.l || 0))) { nt++; wt += o.w; } }
   else if (FB2.hyps) for (const h of FB2.hyps) { n++; w += h.w; if (FB2_LAGS.some(([l]) => (h.s >>> 0) === ix(61 + l))) { nt++; wt += h.w; } }
