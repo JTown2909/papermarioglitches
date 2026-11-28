@@ -43,7 +43,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
     { setup(); FB.pendChg = { M, turn: 2 }; T.CHG.state = 'search'; const pr0 = T.CHG.prof; T.CHG.prof = { id: 'fb1' }; const c = X.chgCands(), N = T.CHG.narrow14, h1 = X.held();
       N.done = true; N.ok = true; const h2 = X.held(); X.advance(M + 400); const f = Math.max(...FB.states.map(S => S.f));
       const how = X.lock(res(0)), h3 = X.held();
-      out.narrow = { cands: c ? c.length : 0, hasTrue: !!c && c.includes(x >>> 0), dTrue: N.dmap.get(x >>> 0) ? [...N.dmap.get(x >>> 0)] : null, h1, h2, h3, f, how, used: N.used, pend: FB.pendChg, mk: [...new Set(FB.states.map(S => S.mk))], nTrue: FB.states.filter(S => { const C = X.fbClone(S); X.fbRun(C, M + 61); return (C.s >>> 0) === s61; }).length };
+      out.narrow = { nd: X.FB14_CHGD.length, cands: c ? c.length : 0, hasTrue: !!c && c.includes(x >>> 0), dTrue: N.dmap.get(x >>> 0) ? [...N.dmap.get(x >>> 0)] : null, h1, h2, h3, f, how, used: N.used, pend: FB.pendChg, mk: [...new Set(FB.states.map(S => S.mk))], nTrue: FB.states.filter(S => { const C = X.fbClone(S); X.fbRun(C, M + 61); return (C.s >>> 0) === s61; }).length };
       T.CHG.state = 'idle'; T.CHG.prof = pr0; }
     // 3. the cap
     { const Lc = []; for (let i = 0; i < X.FB14_MAXH + 1; i++) Lc.push(X.fbNew({ s: i + 1, nc: 0, f: 0, c: new Uint8Array(20), ph: [0, 0], l: 0, w: 1, lw: 0.001 }));
@@ -57,7 +57,7 @@ let fails = 0; const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ')
   console.log(JSON.stringify(r));
   check(r.late.ran > L.turns[1].M + 61 && r.late.how === 'carried' && r.late.nTrue >= 1 && r.late.shKept, '1. a lock after the states ran past the rays (to ' + r.late.ran + '): carried, the game\'s state kept with its coin history ' + JSON.stringify(r.late));
   check(r.coin.how === 'carried' && r.coin.nTrue >= 1, '2. the fit\'s coin 11 frames off: the seed after the rays still matches ' + JSON.stringify(r.coin));
-  check(r.narrow.hasTrue && r.narrow.cands <= 5 * 41 && r.narrow.h1 && r.narrow.h2 && !r.narrow.h3, '4. narrowed T2: the game\'s seed among ' + r.narrow.cands + ' candidates; the Charge held while the search runs and until the lock');
+  check(r.narrow.hasTrue && r.narrow.cands <= r.narrow.nd * 41 &&     /* one candidate per carried state and Charge frame (v180: FB14_CHGD -4 .. +5) */ r.narrow.h1 && r.narrow.h2 && !r.narrow.h3, '4. narrowed T2: the game\'s seed among ' + r.narrow.cands + ' candidates; the Charge held while the search runs and until the lock');
   check(r.narrow.f <= L.turns[1].M + 10, '4. no state ran past the held Charge (' + r.narrow.f + ')');
   check(r.narrow.how === 'carried' && r.narrow.used && r.narrow.pend === null && r.narrow.nTrue >= 1 && r.narrow.mk.length === 1 && r.narrow.mk[0] === L.turns[1].M, '4. the direct lock: carried, the held Charge applied at the shift that drew the rays (' + r.narrow.mk + ')');
   check(r.cap.n === r.cap.maxh && r.cap.kept, '3. the cap (' + r.cap.maxh + ') keeps the state the coin favours (w 0.01 x lw 1 over w 1 x lw 0.001)');
