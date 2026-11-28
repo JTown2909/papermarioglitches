@@ -5503,6 +5503,20 @@ new. What that means here:
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
 
+## v180 (published Nov 28): T6's lightning pairs as on console; T2 / T4 Charge frames -4 .. +5
+
+- **T6 / backup T7 locks take the mod-5 lightning pairs again** (FB2_PH5_W 0.5 for those off mod 10). test_v110 5 (console log
+  v109b, T6 -> T7: with the dodge seen, Bowser's coin) had failed since v143: only states on the pair 58 / 73 (58 = 73 mod 5, not
+  mod 10) fit it (v118: doubt 0.02); v143's mod-10 rule, right in every emulator fixture, dropped them (doubt 0.73). Bisected over
+  builds of v134 / v140 / v141 / v142 / v143-145. Now 0.488 / 0.042 at the log's two times. T1-T4 and Phase 1 keep mod 10.
+- **T2 / T4 Charge frames -4 .. +5** (FB14_CHGD): d7000004 T2's Charge read on 826, the true Mario confirm 830 (fb14Truth: 31 %
+  true before the hold, none after; then the coin said no edge, T2 / T3 blind). Both such misses so far (v178's 757 for 754) were late.
+- **Live full fights on v180** (c7000003, d7000004): T1-T6 2 of 2 each turn (d7's T2 / T3 now planned and missed), T6 Close Call
+  dodged at the page's 76 % / 62 %; c7's T7 Power Bounce short on the page's own 32 % (Bowser at 5). d7 stopped at T7 on a full
+  disk (rerun).
+- test_v110 3 (the route's Phase 1 lines as they are now) and test_fb14_v87 4 (the candidate cap per Charge frame) updated; the
+  whole suite passes (test_v131's timing passes with the machine idle).
+
 ## v179 (published Nov 27): T6's Claw timing; T5's HP read for a guarding runner; the guarded backup T7 measured
 
 Found in the guarded live full fights on v178 (a7000001 - d7000004, the harness guarding every hit from T5 on as the runner does).
