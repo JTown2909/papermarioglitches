@@ -5517,6 +5517,9 @@ new. What that means here:
 - **The harness scored those T7s as short**: the b10 build has Bowser at 80, but on the runner's route (v161) Phase 1 leaves 77
   and T7 is Power Bounce x6 (75) then Spiny Flip (2). BOWSER_HP=77 now, and the main T7 counts Bowser at 2 or less after the
   bounces as down. Re-scored: T7 3 of 4 since v179 (d7 v179, c7 / d7 v180; b7000002 v179: 5 bounces on the page's 45 %).
+- **The backup ending, live on v180** (d7000004, FORCE_HIT=1.6: Bowser made to hit on T6, Bowser at 77): the Life Shroom, the
+  backup T7 Charge + Do Nothing on the page's beep (88 %: Bowser's attack left Mario at 1, guarded), then **T8's Power Bounce on the
+  page's beep (65 %): Bowser down**. T8 beeped this time (v179's harness fix: the target-screen reference).
 - test_v110 3 (the route's Phase 1 lines as they are now) and test_fb14_v87 4 (the candidate cap per Charge frame) updated; the
   whole suite passes (test_v131's timing passes with the machine idle).
 
