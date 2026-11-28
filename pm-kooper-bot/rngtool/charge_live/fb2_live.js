@@ -274,6 +274,7 @@ function fb2Lock(res) {
   const wsum = H.reduce((a, h) => a + h.w, 0); H.forEach(h => { h.w /= wsum; });
   const Hk = H.length > FB2_MAXH ? H.filter((h, i) => i % Math.ceil(H.length / FB2_MAXH) === 0) : H;   // too many: an even sample
   { const ws = Hk.reduce((a, h) => a + h.w, 0); Hk.forEach(h => { h.w /= ws; }); }
+  FB2.d14 = (typeof FB14 !== 'undefined' && FB14.t0 != null && typeof CHG !== 'undefined' && CHG.trig && typeof fbPic === 'function') ? Math.round(fbPic(CHG.trig.t) - 16) : null;     // v182 (diagnostic): this clock's frame 0 on fb14's, for fb2Truth
   Object.assign(FB2, { on: true, hyps: Hk, pairs: hy.pairs.length, best: hy.best, kObs: null, plan: null, plans: [], t7: null, taps: [], vis: [], visFrom: null, tLock: performance.now() });
   if (!fb2BackupOn() && res.top && res.top[0] && typeof CHG !== 'undefined' && CHG.trig) FB2_T6 = { seed: res.top[0].seed >>> 0, t: CHG.trig.t };     // v120: the backup T7's search starts from it
   slog('fb2Lock', { pairs: hy.pairs.length, hyps: H.length, states: new Set(H.map(h => h.s + ':' + h.nc)).size, kSeen: FB2.kSeen });
@@ -365,6 +366,14 @@ function fb2TopHyps() {     // a systematic sample by weight (each kept one stan
   const tot = H.reduce((a, h) => a + h.w, 0), step = tot / FB2_HMAX, out = []; let acc = 0, next = step / 2;
   for (const h of H) { acc += h.w; while (acc >= next && out.length < FB2_HMAX) { out.push(Object.assign({}, h, { w: step })); next += step; } }
   FB2.topH = { src: H, list: out }; return out;
+}
+/* v182 (diagnostic, the e2e's true seeds only, window.__fb14seeds): how many of the T6 seeds / T7 states are the game's, and their weight share */
+function fb2Truth(at) {
+  const T = window.__fb14seeds; if (!T || FB2.d14 == null) return; const ix = f => { const i = f + FB2.d14 - T.off; return i >= 0 && i < T.s.length ? T.s[i] >>> 0 : null; };
+  let n = 0, nt = 0, w = 0, wt = 0;
+  if (FB2.t7 && FB2.t7.states && FB2.t7.states.length) for (const o of FB2.t7.states) { n++; w += o.w; if ((o.a.S.s >>> 0) === ix(o.a.T + 1 + (o.l || 0))) { nt++; wt += o.w; } }
+  else if (FB2.hyps) for (const h of FB2.hyps) { n++; w += h.w; if (FB2_LAGS.some(([l]) => (h.s >>> 0) === ix(61 + l))) { nt++; wt += h.w; } }
+  slog('fb2Truth', { at, n, trueN: nt, trueShare: w ? +(wt / w).toFixed(4) : 0 });
 }
 function fb2SetP(c) {
   const b7 = fb2BackupOn(), F = fb2Flags(), out = [], shifts = typeof FB14_SHIFTS_S !== 'undefined' ? FB14_SHIFTS_S : [[0, 1]], F0 = Math.round(c);
@@ -672,7 +681,7 @@ function fb2PlanT7(cScr) {
   if (cScr == null) { cancelBeeps(); playBeeps(plan.tPress);
     const r7 = fb2Rate(), w7 = pk.ok ? pk.run : { start: d, end: d, length: 1 };      // v109: the strip's frames (7 bounces for most states), as T6
     st.msg = null; st.plan = { tMade: now, w: { start: w7.start, end: w7.end, length: w7.length }, target: d, tPress: plan.tPress, tLast: plan.tPress - (d - 0.5 + num('off')) * r7, rate: r7, carried: true, from, to: from + W, first: from - 1, prof: 'fb2', tab: e7.map(v => (1 - dz) * v >= Math.min(0.5, 0.8 * (1 - dz) * Math.max(...e7))), chance: e7.map(v => +((1 - dz) * v).toFixed(3)), tab4: null,     /* v123 (console 09:16: a 42% plan with no frame at 50% showed no colours): the best frames are coloured, dimmed by their chance */ mix: { p: plan.p7, pp: plan.pp7, win: plan.win, doubt: dz, groups: S.length, zw: true } }; }
-  slog('fb2PlanT7', plan); fb2Show(); if (cScr == null) render(); return true;
+  slog('fb2PlanT7', plan); fb2Truth('planT7'); fb2Show(); if (cScr == null) render(); return true;
 }
 function fb2Show() {
   const el = $('fb2-status'); if (!el) return;
