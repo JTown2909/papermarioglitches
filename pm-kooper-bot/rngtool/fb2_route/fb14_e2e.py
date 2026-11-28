@@ -646,5 +646,5 @@ if __name__ == '__main__':
         truth += s5.s0; json.dump(dict(GM1=GM1, s0=['%08x' % x for x in truth]), open(os.path.join(out, 'truth.json'), 'w'))
     json.dump(report, open(os.path.join(out, 'report.json'), 'w'), indent=1)
     if not os.environ.get('KEEP'):          # v87: the capture frames too (only report / page / manifest json stay)
-        for jd in glob.glob(os.path.join(out, '*_cap_j')): shutil.rmtree(jd, ignore_errors=True)
+        for jd in ([] if os.environ.get('KEEPJ') else glob.glob(os.path.join(out, '*_cap_j'))): shutil.rmtree(jd, ignore_errors=True)     # v182: KEEPJ=1 keeps the pictures (the bolt reader's offline check)
         for x in glob.glob(os.path.join(out, '*.st')): os.remove(x)
