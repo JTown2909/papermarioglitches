@@ -5503,6 +5503,21 @@ new. What that means here:
 - (18:59's T2 after T1's hit: matched 70 + the hit's fresh fits, 88%, missed; T4 93%. 18:49 / 18:53's T2 carries with no hit before them
   matched 373 / 177 and the coin ruled them out: open.)
 
+## v181 (published Nov 28): the backup T7's guarded Lightning carries to T8; T5's hit frame reads Body Slam vs Claw
+
+- **Guarded Lightning Blast on the backup T7** (Mario lives at 1): its draws were the effect's 10 particles' respawns, named "aura"
+  in the log (fb2_route/lb_model.py's rule): made on AI + 19 (360, 10 x (10, 20 = p)), each respawned (359, after the coin) on
+  +38 + p and every 20 frames before +69; rand_int(7) on +69; the strike's 3 x 359 on +99 and no dodge test when guarded; the T8
+  menu on +172. det/b7rows.py: every seed from the Do Nothing to the T8 menu matched; fixtures/fb2_b7_lightning.json, test_v181.
+  The T8 Power Bounce now beeps after it (it had no states).
+- **3 HP after T5: Body Slam or Claw from the hit's frame** (fb2T5Hit): after T5's Do Nothing the first picture under 10 HP is
+  the hit (emulator: Body Slam +82, Claw +77, Fire Breath +70). Two live fights (a7000001, b7000002, both guarded Fire Breath on
+  +70) read 72.7: FB2_T5HIT.lag 2.7. The flags at 3 HP are weighed N(dt; 82 / 77 + 2.7, 2.5), held to 20 / 80 (two samples, one
+  attack); unread: half / half as before.
+- **Live full fights on v181** (Bowser at 77): a7000001 T1-T5, T6 hit (61 %), the backup T7 (74 %), **T8 Bowser down**;
+  b7000002 T1-T6 (85 %), T7 5 bounces on the page's 27 % (short). The harness tab crashes: the renderer reaches 1.1 GB while
+  T2's carried lock and its background read run together (a 1 s memory log); two fights at a time.
+
 ## v180 (published Nov 28): T6's lightning pairs as on console; T2 / T4 Charge frames -4 .. +5
 
 - **T6 / backup T7 locks take the mod-5 lightning pairs again** (FB2_PH5_W 0.5 for those off mod 10). test_v110 5 (console log
