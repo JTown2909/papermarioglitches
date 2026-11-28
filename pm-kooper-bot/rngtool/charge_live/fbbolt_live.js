@@ -97,12 +97,20 @@ function fbbCamWins(k) {
   return W;
 }
 function fbbCamMoving(ck) { const F = Math.round(ck.F); return fbbCamWins(ck.k).some(([a, b]) => F >= a && F <= b); }
+function fbbChargeDue() {
+  const z = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; if (!z) return true;
+  if (z.fb14role === 'charge') return true;                                   // T1-T4's Charge steps
+  if (z.turn === 'fb2_k') return !(typeof FB2 !== 'undefined' && FB2.on);      // T6 / the backup T7 before its Charge's lock
+  return false;                                                                // a lever step, the Peach Beam, T7 / T8's Power Bounce
+}
 function fbbFrame(t, present) {
   if (window.__noBoltRead) return;
   const ck = fbbClock(t); if (!ck) return;
   let bt = false; if (!present && ck.k === 'fb14') { const W = fbbBtWin(), F = Math.round(ck.F); bt = !!W && F >= W[0] && F <= W[1]; }
   const moving = present && fbbCamMoving(ck);     // v135: Bowser's turn moves the camera
-  const busy = (!present && !bt) || moving || (typeof CHG !== 'undefined' && (CHG.state === 'armed' || CHG.state === 'capture'));
+  // v182 (e2e b7000002: 2 bolt reads in the whole fight, none from T6 to T7): the reader is armed through most menus, waiting for the
+  // next Charge; a bolt read only yields to it where a Charge can come now (fbbChargeDue), not on a lever step or T7 / T8's Power Bounce
+  const busy = (!present && !bt) || moving || (typeof CHG !== 'undefined' && (CHG.state === 'capture' || (CHG.state === 'armed' && fbbChargeDue())));
   const C = FBB.col;
   if (C) {     // collecting: one picture per game frame after the onset's
     if (bt) C.bt = true;
