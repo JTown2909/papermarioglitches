@@ -217,7 +217,8 @@ function fb2AtkWatch(t, present) {
  * Slam only, and its T6 "Claw" timing was a Fire Breath's: FB2_DNDELTA). [slam allowed on T6, claw allowed on T6, weight] */
 /* v181: the hit's frame after T5's Do Nothing (emulator, c7000003's T5 guarded: Body Slam +82, Claw +77, Fire Breath +70 on Mario's HP;
  * FB2_T5HIT.lag: the first picture under 10 after that, calibrated live), weighed as N(dt; mean, sd) and held to [lo, 1 - lo] */
-const FB2_T5HIT = { slam: 82, claw: 77, lag: 0, sd: 2, lo: 0.15, on: false };
+// calibrated live (e2e b7000002 v181: a guarded Fire Breath hit on +70, the page read 72.7): lag 2.7; held to 20 / 80 (one sample)
+const FB2_T5HIT = { slam: 82, claw: 77, lag: 2.7, sd: 2.5, lo: 0.2, on: true };
 function fb2T5HitW() { const H = FB2_T5HIT; if (!H.on || FB2HP5.dt == null) return null; const g = m => Math.exp(-0.5 * Math.pow((FB2HP5.dt - m - H.lag) / H.sd, 2));
   const a = g(H.slam), b = g(H.claw); if (!(a + b > 1e-6)) return null; return Math.min(1 - H.lo, Math.max(H.lo, a / (a + b))); }
 function fb2T5Flags(hp) {

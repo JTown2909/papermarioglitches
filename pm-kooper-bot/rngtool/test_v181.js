@@ -16,5 +16,9 @@ let fails = 0; const ok = (c, m) => { console.log((c ? 'ok   ' : 'FAIL ') + m); 
   console.log('     ' + JSON.stringify(r));
   ok(r.g.atk === 'ko' && r.g.lucky && r.g.T === 172 && r.g.s === FX.sAfterT, 'guarded Lightning Blast: carried, the T8 menu on AI + 172, the seed after it ' + r.g.s + ' (emulator model ' + FX.sAfterT + ')');
   ok(r.u.atk === 'ko' && !r.u.lucky && r.u.ok7, 'unguarded: a KO (no carry to T8; counted as not the wave / shield)');
+  // the T5 hit's frame weighs Body Slam vs Claw at 3 HP (v181: Body Slam +82, Claw +77; the page reads +2.7 later; held to 20 / 80)
+  const w = JSON.parse(await E(`(() => { const out = {}; for (const [k, dt] of [['slam', 84.7], ['claw', 79.7], ['mid', 82.2], ['none', null]]) { FB2HP5.dt = dt; out[k] = fb2T5Flags(3); } FB2HP5.dt = null; return JSON.stringify(out); })()`));
+  console.log('     ' + JSON.stringify(w));
+  ok(w.slam[0][2] === 0.8 && w.claw[1][2] === 0.8 && Math.abs(w.mid[0][2] - 0.5) < 0.05 && w.none[0][2] === 0.5, 'HP 3: the hit on +82 (read 84.7) weighs Body Slam 80 %, on +77 Claw 80 %, between them half / half, unread half / half');
   await b.close(); console.log(fails ? fails + ' FAILED' : 'all ok'); process.exit(fails ? 1 : 0);
 })();
