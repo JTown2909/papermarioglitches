@@ -5511,9 +5511,11 @@ new. What that means here:
   builds of v134 / v140 / v141 / v142 / v143-145. Now 0.488 / 0.042 at the log's two times. T1-T4 and Phase 1 keep mod 10.
 - **T2 / T4 Charge frames -4 .. +5** (FB14_CHGD): d7000004 T2's Charge read on 826, the true Mario confirm 830 (fb14Truth: 31 %
   true before the hold, none after; then the coin said no edge, T2 / T3 blind). Both such misses so far (v178's 757 for 754) were late.
-- **Live full fights on v180** (c7000003, d7000004): T1-T6 2 of 2 each turn (d7's T2 / T3 now planned and missed), T6 Close Call
-  dodged at the page's 76 % / 62 %; c7's T7 Power Bounce short on the page's own 32 % (Bowser at 5). d7 stopped at T7 on a full
-  disk (rerun).
+- **Live full fights on v180** (c7000003, d7000004, d7 again after a full disk): T1-T6 every turn of all three (d7's T2 / T3 now
+  planned and missed), T6 Close Call dodged at the page's 76 % / 62 % / 62 %, and **T7 6 bounces in all three** (Bowser 80 -> 5).
+- **The harness scored those T7s as short**: the b10 build has Bowser at 80, but on the runner's route (v161) Phase 1 leaves 77
+  and T7 is Power Bounce x6 (75) then Spiny Flip (2). BOWSER_HP=77 now, and the main T7 counts Bowser at 2 or less after the
+  bounces as down. Re-scored: T7 4 of 5 since v179 (b7000002 v179: 5 bounces on the page's 45 %).
 - test_v110 3 (the route's Phase 1 lines as they are now) and test_fb14_v87 4 (the candidate cap per Charge frame) updated; the
   whole suite passes (test_v131's timing passes with the machine idle).
 
