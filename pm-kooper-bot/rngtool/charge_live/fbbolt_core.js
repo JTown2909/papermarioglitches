@@ -46,10 +46,13 @@ function fbbVerts(u, L, S, E) {
 }
 // the drawn centre line of bolt `type` (1-4 the sky bolts, 5 the front right) (u, L) on the raster: 12 points and which of the 11 segments are drawn
 const FBB_CACHE = new Map();
-function fbbLine(type, u, L) {
-  const key = (type * 16 + L) * 360 + u; let r = FBB_CACHE.get(key); if (r) return r;
+// v182: a camera other than the menus' (cam: { key, M }: gCameras[1]'s perspective matrix (16) and viewport (4), as the Charge read's tables)
+function fbbProjM(M, x, y, z) { const v0 = x * M[0] + y * M[4] + z * M[8] + M[12], v1 = x * M[1] + y * M[5] + z * M[9] + M[13], v3 = x * M[3] + y * M[7] + z * M[11] + M[15];
+  return [(M[18] + M[16] / 2 * (1 + v0 / v3)) * 2, (M[19] + M[17] / 2 * (1 - v1 / v3)) * 2]; }
+function fbbLine(type, u, L, cam) {
+  const key = (cam ? cam.key + ':' : '') + ((type * 16 + L) * 360 + u); let r = FBB_CACHE.get(key); if (r) return r;
   const b = fbbEnds(type), { V, w } = fbbVerts(u, L, [b[0], b[1]], [b[3], b[4]]), P = new Float32Array(24), ok = new Uint8Array(11);
-  for (let i = 0; i < 12; i++) { const p = fbbProj(V[i][0], V[i][1], b[2] + (b[5] - b[2]) * i / 11); P[2 * i] = p[0]; P[2 * i + 1] = p[1]; }     // the vertices' z: start to end (deltaZ 0)
+  for (let i = 0; i < 12; i++) { const z = b[2] + (b[5] - b[2]) * i / 11, p = cam ? fbbProjM(cam.M, V[i][0], V[i][1], z) : fbbProj(V[i][0], V[i][1], z); P[2 * i] = p[0]; P[2 * i + 1] = p[1]; }     // the vertices' z: start to end (deltaZ 0)
   for (let i = 0; i < 11; i++) ok[i] = w[i] > 0 && w[i + 1] > 0 ? 1 : 0;
   r = { P, ok }; if (FBB_CACHE.size > 40000) FBB_CACHE.clear(); FBB_CACHE.set(key, r); return r;
 }
@@ -92,20 +95,21 @@ function fbbCost1(line, o) {
  * read as another): each sky bolt is scored against the violet inside its own corridor only (every line it can draw,
  * widened by FBB_COR px), so another bolt or Bowser's glow elsewhere does not count against it */
 const FBB_COR = 14, FBB_CORS = {};
-function fbbCorridor(type) {
-  if (FBB_CORS[type]) return FBB_CORS[type];
+function fbbCorridor(type, cam) {
+  const ck = (cam ? cam.key + ':' : '') + type; if (FBB_CORS[ck]) return FBB_CORS[ck];
   const W = 640, H = 480, m = new Uint8Array(W * H);
-  for (let L = 1; L <= 8; L++) for (let u = 0; u < 360; u += 2) { const { P, ok } = fbbLine(type, u, L);
+  for (let L = 1; L <= 8; L++) for (let u = 0; u < 360; u += 2) { const { P, ok } = fbbLine(type, u, L, cam);
     for (let j = 0; j < 11; j++) { if (!ok[j]) continue; const ax = P[2 * j], ay = P[2 * j + 1], bx = P[2 * j + 2], by = P[2 * j + 3], n = Math.ceil(Math.hypot(bx - ax, by - ay) / 4) + 1;
       for (let t = 0; t <= n; t++) { const x = Math.round(ax + (bx - ax) * t / n), y = Math.round(ay + (by - ay) * t / n); if (x >= 0 && y >= 0 && x < W && y < H) m[y * W + x] = 1; } } }
   const d = fbbEdt(m, W, H), c = new Uint8Array(W * H); for (let i = 0; i < c.length; i++) c[i] = d[i] <= FBB_COR ? 1 : 0;
-  return (FBB_CORS[type] = c);
+  if (Object.keys(FBB_CORS).length > 24) for (const k in FBB_CORS) delete FBB_CORS[k];     // v182: held cameras add their own
+  return (FBB_CORS[ck] = c);
 }
 // one picture's evidence for one sky bolt: its corridor's violet only (o.m: the picture's new violet)
 function fbbObsFor(o, type) {
   const key = 't' + type; if (o[key]) return o[key];
-  const cor = fbbCorridor(type), W = 640, m = new Uint8Array(o.m.length); for (let i = 0; i < m.length; i++) m[i] = o.m[i] && cor[i] ? 1 : 0;
-  return (o[key] = fbbObs(m, W, 480, o.box));
+  const cor = fbbCorridor(type, o.cam), W = 640, m = new Uint8Array(o.m.length); for (let i = 0; i < m.length; i++) m[i] = o.m[i] && cor[i] ? 1 : 0;
+  const r = fbbObs(m, W, 480, o.box); r.cam = o.cam; return (o[key] = r);
 }
 /* the cost table of a bolt seen on pictures obs[k] (consecutive game frames from the first): C[type][L0][u] = mean cost,
  * L0 = the lifetime on the first picture (FBB_L), type 1-4. done(C) when finished; slices of at most `ms` ms (setTimeout). */
@@ -115,7 +119,7 @@ function fbbScore(obs, types, done, ms) {
   const run = () => { const t0 = Date.now();
     while (j < jobs.length) { const [ty, L0] = jobs[j];
       const ob = obs.map(o => fbbObsFor(o, ty));
-      for (; u < 360; u++) { let s = 0; for (let k = 0; k < ob.length; k++) s += fbbCost1(fbbLine(ty, u, L0 + k), ob[k]); C[ty][L0][u] = s / ob.length;
+      for (; u < 360; u++) { let s = 0; for (let k = 0; k < ob.length; k++) s += fbbCost1(fbbLine(ty, u, L0 + k, ob[k].cam), ob[k]); C[ty][L0][u] = s / ob.length;
         if (ms && Date.now() - t0 > ms) { u++; return setTimeout(run, 0); } }
       u = 0; j++; }
     done(C); };
@@ -129,4 +133,4 @@ function fbbLik(R, type, v, L0) {
   const a = R.C[type] && R.C[type][L0]; if (!a) return FBB_FLOOR;
   return FBB_FLOOR + (1 - FBB_FLOOR) * Math.exp(-(a[v] - R.best.c) / (type === 5 ? FBB_T5 : FBB_T));
 }
-if (typeof module !== 'undefined') module.exports = { FBB_FR, FBB_FRSLOT, fbbEnds, fbbCorridor, fbbObsFor, FBB_SKY, FBB_SKYZ, FBB_SLOT, FBB_CAM, FBB_L, fbbProj, fbbVerts, fbbLine, fbbEdt, fbbObs, fbbCost1, fbbScore, fbbBest, fbbLik, FBB_T, FBB_FLOOR };
+if (typeof module !== 'undefined') module.exports = { fbbProjM, FBB_FR, FBB_FRSLOT, fbbEnds, fbbCorridor, fbbObsFor, FBB_SKY, FBB_SKYZ, FBB_SLOT, FBB_CAM, FBB_L, fbbProj, fbbVerts, fbbLine, fbbEdt, fbbObs, fbbCost1, fbbScore, fbbBest, fbbLik, FBB_T, FBB_FLOOR };

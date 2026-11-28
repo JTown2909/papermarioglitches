@@ -59,8 +59,9 @@ function fbbBoxMask(key, B) {
 // sky: in the box's upper part (a sky bolt comes down from the top; a front bolt reaches the box's bottom edge: the v127
 // clip test). front right: spread over at least K.wide of the box's width (a sky bolt's foot is a blob), and no sky onset
 // in the last 10 frames (bolt 2's foot lands in this box)
-function fbbOnset(kind, F) {
-  const K = FBB_KINDS[kind], b = fbbBoxMask(kind, K.box()); if (!b) return false;
+function fbbOnset(kind, F, cam) {
+  if (cam && kind !== 'sky') return false;     // v182: the front-right bolt only on the menus' camera
+  const K = FBB_KINDS[kind], b = fbbBoxMask(kind, cam ? fbbCamBox(cam) : K.box()); if (!b) return false;
   const D = FBB.det[kind] || (FBB.det[kind] = { grid: null, quiet: 0 }), { m, w, h } = b;
   if (!D.grid || D.grid.length !== m.length) { D.grid = Float32Array.from(m); D.quiet = 0; return false; }
   let nw = 0, ys = 0, x0 = 1e9, x1 = -1; for (let i = 0; i < m.length; i++) { if (m[i] && D.grid[i] < 0.3) { nw++; ys += Math.floor(i / w); const x = i % w; if (x < x0) x0 = x; if (x > x1) x1 = x; } D.grid[i] = 0.9 * D.grid[i] + 0.1 * m[i]; }
@@ -104,6 +105,37 @@ function fbbCamWins(k) {
   return W;
 }
 function fbbCamMoving(ck) { const F = Math.round(ck.F); return fbbCamWins(ck.k).some(([a, b]) => F >= a && F <= b); }
+/* v182 (emulator, t6cam logs: gCameras[1] every frame of 13 dodged T6 turns): after a dodged attack the camera is NOT the menus' from
+ * AI + 188 (v135's FBB_CAMEND): it swings until ~AI + 120, then holds a view of its own (the arena's centre at 626, 151 on the raster,
+ * the same for Fire Breath, Body Slam and Claw on AI + 124 .. 194 and 203 .. 410), the T7 menu included, and only from ~AI + 420
+ * returns to the menus' camera; sky bolts 1, 3 and 4 stay in the picture. In that held view a bolt is read on its own camera
+ * (FB2_ATK_CAMS, fbbolt_core.js fbbProjM); elsewhere in AI - 2 .. AI + FBB_DODGE_END no bolt is read. fb2: T6's dodge (the main
+ * T7 step); fb14: each Do Nothing turn Bowser missed (T2-T4 have T6's flow); the backup T7 and hit turns as before. */
+const FB2_ATK_CAMS = /*FB2_ATK_CAMS*/null, FBB_HOLD = [[124, 194], [203, 410]], FBB_DODGE_END = 440;
+function fbbDodgeAIs(k) {
+  const out = [];
+  if (k === 'fb2' && typeof FB2 !== 'undefined' && FB2.pObs != null && !(typeof fb2BackupOn === 'function' && fb2BackupOn()) && FB2.t7 && !FB2.t7.hit) out.push(Math.round(FB2.pObs) + 13);
+  if (k === 'fb14' && typeof FB14 !== 'undefined') for (const x of (FB14.inputs || [])) { if (x.kind !== 'nothing') continue;
+    const hit = FB14.hits && FB14.hits[x.turn] || FB14.hit === x.turn; if (hit) continue;
+    const F = x.t != null && FB14.t0 != null && typeof fbPic === 'function' ? Math.round(fbPic(x.t) - (x.off || 0)) : x.F; out.push(F + FBB_AIOFF.nothing); }
+  return out;
+}
+// the camera a picture on clock frame F was drawn with: null (the menus'), { key, M } (a held view), or 'blocked' (moving, or not known)
+function fbbCamAt(ck) {
+  const F = Math.round(ck.F);
+  for (const ai of fbbDodgeAIs(ck.k)) { const r = F - ai; if (r < -2 || r > FBB_DODGE_END) continue;
+    if (!FB2_ATK_CAMS || !FBB_HOLD.some(([a, b]) => r >= a && r <= b)) return 'blocked';
+    const M = FB2_ATK_CAMS.fire[r - FB2_ATK_CAMS.from]; return { key: 'h' + M.slice(0, 16).map(v => v.toFixed(3)).join(','), M }; }
+  return fbbCamMoving(ck) ? 'blocked' : null;
+}
+// a sky onset box for a held camera: the four sky bolts' ends projected, widened (capture units, as fbBoltBox)
+const FBB_CAMBOX = {};
+function fbbCamBox(cam) {
+  const c = FBB_CAMBOX[cam.key]; if (c) return c;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9; for (const ty of [1, 2, 3, 4]) { const b = fbbEnds(ty); for (const [x, y, z] of [[b[0], b[1], b[2]], [b[3], b[4], b[5]]]) { const p = fbbProjM(cam.M, x, y, z); x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); y0 = Math.min(y0, p[1]); y1 = Math.max(y1, p[1]); } }
+  x0 = Math.max(24, x0 - 20) / 2; x1 = Math.min(616, x1 + 20) / 2; y0 = Math.max(40, y0) / 2; y1 = Math.min(440, y1) / 2;     // 320-space
+  const [SX, OX, SY, OY] = chgMap(); return (FBB_CAMBOX[cam.key] = { x: (OX + x0 * SX) / 1280, y: (OY + y0 * SY) / 720, w: (x1 - x0) * SX / 1280, h: (y1 - y0) * SY / 720 });
+}
 function fbbChargeDue() {
   const z = typeof isRoute === 'function' && isRoute() && RT()[routeStep]; if (!z) return true;
   if (z.fb14role === 'charge') return true;                                   // T1-T4's Charge steps
@@ -114,7 +146,9 @@ function fbbFrame(t, present) {
   if (window.__noBoltRead) return;
   const ck = fbbClock(t); if (!ck) return;
   let bt = false; if (!present && ck.k === 'fb14') { const W = fbbBtWin(), F = Math.round(ck.F); bt = !!W && F >= W[0] && F <= W[1]; }
-  const moving = present && fbbCamMoving(ck);     // v135: Bowser's turn moves the camera
+  const cs = fbbCamAt(ck), cam = cs && cs !== 'blocked' ? cs : null;     // v182: the held view after a dodge reads on its own camera
+  const moving = present && cs === 'blocked';     // v135: Bowser's turn moves the camera
+  if ((cam ? cam.key : null) !== (FBB.camKey || null)) { FBB.camKey = cam ? cam.key : null; FBB.det = {}; FBB.base = null; if (FBB.col) { slog('boltReadDrop', { kind: FBB.col.kind, why: 'camera changed', got: FBB.col.pics.length }); FBB.col = null; } }
   // v182 (e2e b7000002: 2 bolt reads in the whole fight, none from T6 to T7): the reader is armed through most menus, waiting for the
   // next Charge; a bolt read only yields to it where a Charge can come now (fbbChargeDue), not on a lever step or T7 / T8's Power Bounce
   const busy = (!present && !bt) || moving || (typeof CHG !== 'undefined' && (CHG.state === 'capture' || (CHG.state === 'armed' && fbbChargeDue())));
@@ -123,7 +157,7 @@ function fbbFrame(t, present) {
     if (bt) C.bt = true;
     if (busy || ck.k !== C.k) { slog('boltReadDrop', { kind: C.kind, why: moving ? 'camera moving' : busy ? 'menu closed' : 'clock changed', got: C.pics.length }); FBB.col = null; return; }
     const F = Math.round(ck.F), nf = FBB_KINDS[C.kind].nf;
-    if (F > C.Fon && !C.pics.some(p => p.F === F) && C.pics.length < nf) C.pics.push({ F, m: fbbGrab() });
+    if (F > C.Fon && !C.pics.some(p => p.F === F) && C.pics.length < nf) C.pics.push({ F, m: fbbGrab(), cam });
     if (C.pics.length >= nf || F > C.Fon + nf + 3) { FBB.col = null; fbbRead(C); }
     return;
   }
@@ -132,9 +166,9 @@ function fbbFrame(t, present) {
   // v129 (lag): the onset boxes every other picture (the lifetime is read from the shape: the onset's own frame is not needed)
   if ((FBB.tick = (FBB.tick || 0) + 1) % 2) return;
   for (const kind of ['sky', 'fr']) {
-    if (fbbOnset(kind, F) && FBB.base && !FBB.busy) {
+    if (fbbOnset(kind, F, cam) && FBB.base && !FBB.busy) {
       if (kind === 'sky') FBB.lastOn = F;
-      FBB.col = { kind, k: ck.k, Fon: F, ton: t, base: FBB.base, pics: [], bt }; slog('boltOnset', { kind, clk: ck.k, F, n: FBB.det[kind].n }); return;
+      FBB.col = { kind, k: ck.k, Fon: F, ton: t, base: FBB.base, pics: [], bt, cam }; slog('boltOnset', { kind, clk: ck.k, F, n: FBB.det[kind].n, cam: cam ? 'held' : undefined }); return;
     }
   }
   const D = FBB.det.sky;
@@ -147,7 +181,7 @@ function fbbRead(C) {
   if (C.k === 'fb14' && typeof FB14 !== 'undefined' && FB14.holdRefine && performance.now() - FB14.holdRefine.t < FB14_HOLD_MS) { slog('boltReadDrop', { kind: C.kind, why: 'full read pending' }); return; }
   const K = FBB_KINDS[C.kind], P = C.pics.slice().sort((a, b) => a.F - b.F); let n = 1; while (n < P.length && P[n].F === P[0].F + n) n++;
   if (n < 3) { slog('boltReadDrop', { kind: C.kind, why: 'frames', got: P.length, run: n }); return; }
-  const obs = P.slice(0, n).map(p => { const m = p.m; for (let i = 0; i < m.length; i++) if (C.base[i]) m[i] = 0; return fbbObs(m, 640, 480, [0, 60, 640, 480]); });
+  const obs = P.slice(0, n).map(p => { const m = p.m; for (let i = 0; i < m.length; i++) if (C.base[i]) m[i] = 0; const o = fbbObs(m, 640, 480, [0, 60, 640, 480]); o.cam = p.cam || null; return o; });
   if (obs.every(o => o.n < 30)) { slog('boltReadDrop', { kind: C.kind, why: 'no violet', got: n }); return; }
   FBB.busy = true; const t0 = performance.now();
   const L = FBB_L.slice(); FBB_L[0] = K.L0[0]; FBB_L[1] = K.L0[1];
