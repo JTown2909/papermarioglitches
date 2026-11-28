@@ -210,6 +210,7 @@ def play_after_confirm(seg, pa, shot, cap=4000, skip=None):
     sk = lambda k: skip is not None and k + 1 == skip
     if AUTOG['on'] and pa != 'cloud_nine':      # v178: the runner's guard on this Bowser turn's hit (the dry run's frame - AUTOG_D)
         h = autoguard_k(seg, pa, cap)
+        if shot: print('guard: HP changes %s frames after the confirm' % h, flush=True)     # v181: T5's hit frame (Body Slam 82 / Claw 77 / Fire 70), for fb2T5Hit
         n = 0; gk = (h - AUTOG_D) if h is not None else None
         while bstate(seg.r.e) != 13 and n < cap:
             k = seg.n - k0; seg.step(A if (gk is not None and k + 1 == gk) else 0, 0, shot); n += 1

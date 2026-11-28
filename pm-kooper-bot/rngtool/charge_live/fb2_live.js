@@ -181,6 +181,10 @@ function fb2T5Watch(t, present) {
   // before T6's Charge is the one after the attack; a steady 0 on the way is a KO (the Life Shroom revived Mario)
   const B = window.__fb2OnesTest ? { since: -1e9 } : (typeof JRT !== 'undefined' ? JRT.bar : null); if (!present || !B || !B.since || t - B.since < 6 * FRAME) return;
   const tens = window.__fb2OnesTest ? (window.__fb2TensVal != null ? window.__fb2TensVal : 0) : (typeof jrTens === 'function' ? jrTens() : 1);
+  // v181: the first picture under 10 after T5's Do Nothing is Bowser's hit: its frame tells a Body Slam (+82) from a Claw (+77)
+  if (tens >= JR_TENS_MIN) FB2HP5.seen10 = t;
+  else if (FB2HP5.c5 != null && FB2HP5.tHit == null && FB2HP5.seen10 != null && t - FB2HP5.seen10 < 4 * FRAME && t > FB2HP5.c5 && t - FB2HP5.c5 < 8000) {
+    FB2HP5.tHit = t; FB2HP5.dt = (t - FB2HP5.c5) / fb2Rate() + (typeof fb14Van === 'function' ? fb14Van('S') : 2); slog('fb2T5Hit', { dt: +FB2HP5.dt.toFixed(2), w: fb2T5HitW() }); }
   const d = tens >= JR_TENS_MIN ? 10 : fb2OnesDigit(fb2OnesMask()); if (d == null) { FB2HP5.run = 0; return; }
   if (d === FB2HP5.d) FB2HP5.run++; else { FB2HP5.d = d; FB2HP5.run = 1; }
   if (FB2HP5.run === FB2_T5HP_N) {
@@ -211,8 +215,13 @@ function fb2AtkWatch(t, present) {
  * poisoned unguarded (he dies at T7's start whatever T6 does), 3 guarded; Fire Breath guarded leaves 1 (no poison). The runner
  * guards: 3 = Body Slam or Claw (Bowser's odds 1/4 each: half / half), 2 = Body Slam, 1 = Fire Breath (v156 read a 3 as a Body
  * Slam only, and its T6 "Claw" timing was a Fire Breath's: FB2_DNDELTA). [slam allowed on T6, claw allowed on T6, weight] */
+/* v181: the hit's frame after T5's Do Nothing (emulator, c7000003's T5 guarded: Body Slam +82, Claw +77, Fire Breath +70 on Mario's HP;
+ * FB2_T5HIT.lag: the first picture under 10 after that, calibrated live), weighed as N(dt; mean, sd) and held to [lo, 1 - lo] */
+const FB2_T5HIT = { slam: 82, claw: 77, lag: 0, sd: 2, lo: 0.15, on: false };
+function fb2T5HitW() { const H = FB2_T5HIT; if (!H.on || FB2HP5.dt == null) return null; const g = m => Math.exp(-0.5 * Math.pow((FB2HP5.dt - m - H.lag) / H.sd, 2));
+  const a = g(H.slam), b = g(H.claw); if (!(a + b > 1e-6)) return null; return Math.min(1 - H.lo, Math.max(H.lo, a / (a + b))); }
 function fb2T5Flags(hp) {
-  if (hp === 3) return [[false, true, 0.5], [true, false, 0.5]];
+  if (hp === 3) { const w = fb2T5HitW(); return w == null ? [[false, true, 0.5], [true, false, 0.5]] : [[false, true, w], [true, false, 1 - w]]; }
   if (hp === 2) return [[false, true, 1]];
   if (hp === 1) return [[true, true, 1]];
   if (hp === 10) return [[true, true, 1]];
@@ -331,7 +340,7 @@ function fb2PlanP(kAt) {      // kAt (tests): plan as if the earliest beepable f
 /* the Do Nothing confirm (the Strategies box closing on T6's step): its frame into the states, the press into the learned
  * correction, the route on to T7 */
 function fb2Confirm(tObs) {
-  if (!CHG.trig) { slog('fb2ConfirmNoTrig', { at: Math.round(tObs) }); return; }
+  if (!CHG.trig) { slog('fb2ConfirmNoTrig', { at: Math.round(tObs) }); if (typeof FB2HP5 !== 'undefined' && !fb2BackupOn()) { FB2HP5.c5 = tObs; FB2HP5.tHit = null; FB2HP5.dt = null; } return; }     // v181: T5's Do Nothing, for the hit's time
   const c = fb2Pic(tObs) - (typeof fb14Van === 'function' ? fb14Van('S') : -1.4), P = FB2.plan && FB2.plan.k != null ? FB2.plan : null;
   // v109 (console fb0722 T5: a Strategies-like close 87 frames after a false trigger moved the route to T7): without a T6 lock, a
   // close before FB2_PMIN - 20 frames after the trigger is not the Do Nothing (console Do Nothing confirms: 149-392)
