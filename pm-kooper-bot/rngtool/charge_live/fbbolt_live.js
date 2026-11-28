@@ -11,7 +11,7 @@
  * drew (fbStep, S.b0-b3); one that has not is run to it on a copy. Phase 2 (FB2): the T6 seeds (FB2.hyps, from frame 61)
  * and the T7 states (FB2.t7.states, from Bowser's T6 turn) are run to it on a copy. Logged: boltOnset, boltRead (the best
  * reading, how much weight the states kept), boltReadDrop; the plan is made again unless its beeps are under 1.5 s away. */
-const FBB_MS = 15, FBB_BASE_EVERY = 16, FBB_ON = 30, FBB_QUIET = 4;
+const FBB_MS = 15, FBB_BASE_EVERY = 16, FBB_ON = 30, FBB_QUIET = 4, FBB_JUMP = { on: 40, k: 3 };
 const FBB_KINDS = {
   sky: { types: [1, 2, 3, 4], nf: 5, L0: [2, 4], on: FBB_ON, box: () => fbBoltBox(), upper: true },
   fr: { types: [5], nf: 4, L0: [2, 3], on: 20, box: () => fbbFrBox(), wide: 0.4 } };
@@ -64,7 +64,14 @@ function fbbOnset(kind, F) {
   const D = FBB.det[kind] || (FBB.det[kind] = { grid: null, quiet: 0 }), { m, w, h } = b;
   if (!D.grid || D.grid.length !== m.length) { D.grid = Float32Array.from(m); D.quiet = 0; return false; }
   let nw = 0, ys = 0, x0 = 1e9, x1 = -1; for (let i = 0; i < m.length; i++) { if (m[i] && D.grid[i] < 0.3) { nw++; ys += Math.floor(i / w); const x = i % w; if (x < x0) x0 = x; if (x > x1) x1 = x; } D.grid[i] = 0.9 * D.grid[i] + 0.1 * m[i]; }
-  const ok = nw >= K.on && D.quiet >= FBB_QUIET && (!K.upper || ys / nw < h * 0.6) && (!K.wide || (x1 - x0 >= K.wide * w && F - FBB.lastOn > 10));
+  // v182 (emulator ground truth, det/boltgt.py: 500 menu frames, 22 bolt draws): Bowser's aura and the arena flicker put 8+ new violet
+  // pixels in the sky box on 57 % of pictures, so FBB_QUIET pictures in a row almost never came and 1 bolt of 22 started a read.
+  // A jump also counts: FBB_JUMP.on new pixels and FBB_JUMP.k x the last 4 pictures' most (9 of 22 there, none false; the rest
+  // barely reach the box)
+  const H = D.hist || (D.hist = []), prev = H.length ? Math.max(...H) : 1e9; H.push(nw); if (H.length > 4) H.shift();
+  const jump = nw >= Math.max(K.on, FBB_JUMP.on) && nw >= FBB_JUMP.k * prev + 20 && F - (D.lastF != null ? D.lastF : -1e9) > 8;
+  const ok = nw >= K.on && (D.quiet >= FBB_QUIET || jump) && (!K.upper || ys / nw < h * 0.6) && (!K.wide || (x1 - x0 >= K.wide * w && F - FBB.lastOn > 10));
+  if (ok) D.lastF = F;
   D.quiet = nw < K.on / 4 ? D.quiet + 1 : 0;
   if (ok) { D.quiet = 0; D.n = nw; }
   return ok;
