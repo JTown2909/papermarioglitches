@@ -125,6 +125,13 @@ def bot_items(r, X, spec, pre):
     return mario_items(0, spec)[0], dict(failed=True)
 
 
+SPINY = int(os.environ.get('SPINY_DMG', '2'))
+def spiny_finish(r):
+    """v180: the main T7 is Power Bounce then Lakilester's Spiny Flip (2): Bowser at 2 or less after the bounces is down on the turn"""
+    bh = r.bowser_hp()
+    return bh is not None and bh[0] <= SPINY
+
+
 def bowser_down(r):
     """Bowser's HP at 0, or the battle over with Mario standing (a game over is not a win)"""
     bh = r.bowser_hp()
@@ -375,6 +382,9 @@ if __name__ == '__main__':
     rng = random.Random(seed); os.makedirs(out, exist_ok=True)
     r = Run('e2e', log=False)
     r.load(build + '/t%d_menu.st' % start); r.seed(seed)            # DIAGNOSTIC: gRandSeed at that menu (setup only)
+    # v180: Bowser's Phase 2 HP on the runner's route (README v161: 99 - Phase 1's 2 + 6 + 5 + 4 + 3 + 2 = 77; the build had 80, so the
+    # main T7's 6 bounces (75) + Spiny Flip (2) were scored as short) - DIAGNOSTIC write at the menu
+    if os.environ.get('BOWSER_HP', '77'): r.set_bowser_hp(int(os.environ.get('BOWSER_HP', '77')))
     # v155: SHROOMS=n: the route's Life Shrooms (the runner carries 3; the build has 1) - DIAGNOSTIC inventory write at the menu (no draw):
     # the Jelly (162) first, then n Life Shrooms (149)
     if os.environ.get('SHROOMS'):
@@ -398,6 +408,7 @@ if __name__ == '__main__':
         r.load(X)
         for i in range(gN): r.step(0)
         sc = r.e.u32(SEED); r.load(build + '/t%d_menu.st' % start); r.seed(sc)   # DIAGNOSTIC: the stream continues (console retry)
+        if os.environ.get('BOWSER_HP', '77'): r.set_bowser_hp(int(os.environ.get('BOWSER_HP', '77')))
         X = os.path.join(out, 'x1_a%d.st' % att); r.e.save(X)
         bf = black_frame(out, os.path.join(SERVE, frames[-1])); frames = frames + [os.path.relpath(bf, SERVE)] * int(gap * 60)
         G += gN + 1; GM1 = None; dead = False
@@ -537,11 +548,11 @@ if __name__ == '__main__':
             if skm: tmp.idle(d, False); play_after_confirm(tmp, pa, False, skip=kS + dd)     # v101: the skip one frame early / late
             elif ma == 'power_bounce': tmp.idle(d + dd, False); play_pb(tmp, False)
             else: tmp.idle(d + dd, False); play_after_confirm(tmp, pa, False)
-            nb[dd] = outcome(r); nb[dd]['down'] = bowser_down(r)
+            nb[dd] = outcome(r); nb[dd]['down'] = bowser_down(r) or (t == 7 and not backup and spiny_finish(r))
         sb = Seg(r, os.path.join(out, tg + 'b')); sb.load(Y, False); sb.idle(d, False); sb.n = 0
         if ma == 'power_bounce': play_pb(sb, True)
         else: play_after_confirm(sb, pa, True, skip=kS if skm else None)
-        oc = outcome(r); oc['down'] = bowser_down(r); oc['bowser_hp'] = r.bowser_hp()
+        oc = outcome(r); oc['down'] = bowser_down(r) or (t == 7 and not backup and spiny_finish(r)); oc['bowser_hp'] = r.bowser_hp()
         nxt = os.path.join(out, 'x%d.st' % (t + 1)); r.e.save(nxt); X = nxt
         row.update(outcome=oc, minus1=nb[-1], plus1=nb[1], s0_rays0_true='%08x' % sa.s0[M + 13] if t != 3 else None)
         if row_scan is not None: row['scan'] = row_scan
