@@ -1,0 +1,26 @@
+{
+ "note": "v181 fb2_route det/b7rows.py: the backup T7 (c7000003 T6 state, the Life Shroom, T7 Charge to 15), Do Nothing on P = frame 0, Bowser's Lightning Blast guarded (Mario 10 -> 1). Frames from P; the emulator log runs to frame 184 (every seed matched on the model); sAfterT: the seed after the T8 menu frame E + 172 (one frame past the log, on the fitted phases and the coin). Numbers only.",
+ "s0": "8b7824f1",
+ "nc0": 41,
+ "ph": [
+  43,
+  163
+ ],
+ "E": 13,
+ "hp": 1,
+ "sAfterT": "276d0622",
+ "evt": [
+  [
+   100,
+   61
+  ],
+  [
+   100,
+   90
+  ],
+  [
+   110,
+   28
+  ]
+ ]
+}

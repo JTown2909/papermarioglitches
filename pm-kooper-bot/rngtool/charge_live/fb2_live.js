@@ -108,6 +108,11 @@ const FB2B_RECAST = 15, FB2B_X3 = 30, FB2B_HIT = { claw: { 64: [100].concat(new 
 // a guarded Lightning leaves 1 too (+172, its draws vary: not carried):
 // Phase 1's menus were a frame early here (the unguarded Body Slam's 212 and its draws matched exactly, 4 runs)
 const FB2B_HIT_G = { claw: { 64: new Array(10).fill(359) }, slam: { 69: new Array(10).fill(359) }, fire: {} }, FB2B_MENU_G = { claw: 127, slam: 145, fire: 161 }, FB2B_GUARD = 0.7;
+/* v181 (emulator, the backup T7: det/b7rows.py, every frame's seed matched from the AI to the T8 menu): a guarded Lightning Blast
+ * (Mario at 1) carries to T8: its effect made on AI + 19 (rand_int 360, then 10 x (10, 20 = p)), each of the 10 respawned (a 359,
+ * after the coin) on +19 + 19 + p and every 20 frames after while before +19 + 50 (fb2_route/lb_model.py), rand_int(7) on +69, the
+ * strike's 3 x rand_int(359) on +99 with no dodge test; the T8 menu on +172 (fixtures/fb2_b7_lightning.json, test_v181.js). Unguarded it is a KO (no Life Shroom left). */
+const FB2B_LB = { e: 19, r7: 69, bolt: 99, menu: 172 };
 function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   const S = { s: S0.s, nc: S0.nc, coins: S0.coins ? S0.coins.slice() : null }, ri = m => { const r = R.randInt(S.s, m); S.s = r[0]; return r[1]; };
   for (let i = fb2nb(E, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
@@ -117,8 +122,16 @@ function fb2AI7(S0, E, ph, slamOk, clawOk, gd) {
   else { const v3 = ri(110); if (v3 < 20) atk = 'wave'; else if (v3 < FB2B_X3) atk = 'ko'; else if (ri(80) < 20 && slamOk) atk = 'slam'; else atk = ri(60) < 20 && clawOk ? 'claw' : 'fire'; }
   if (E === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([E, c >= 70]); }
   S.s = R.adv(S.s);
-  const good = atk === 'slam' || atk === 'claw' || (atk === 'fire' && !!gd); let T = E;     // v164: a guarded Fire Breath carries to T8 too
-  if (good) { const H = (gd ? FB2B_HIT_G : FB2B_HIT)[atk]; T = E + (gd ? FB2B_MENU_G : FB2B_MENU)[atk];
+  const good = atk === 'slam' || atk === 'claw' || ((atk === 'fire' || atk === 'ko') && !!gd); let T = E;     // v164: a guarded Fire Breath carries to T8 too; v181: a guarded Lightning as well
+  if (atk === 'ko' && gd) { T = E + FB2B_LB.menu; const resp = {};
+    for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0];
+      if (f === E + FB2B_LB.e) { ri(360); for (let i = 0; i < 10; i++) { ri(10); const p = ri(20); for (let k = f + 19 + p; k < f + 50; k += 20) resp[k] = (resp[k] || 0) + 1; } }
+      if (f === E + FB2B_LB.r7) ri(7);
+      if (f === E + FB2B_LB.bolt) for (let i = 0; i < 3; i++) ri(359);     // the blast's strike (3 x 359; no dodge test when guarded)
+      if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); }
+      for (let i = resp[f] || 0; i; i--) ri(359);
+      S.s = R.adv(S.s); } }
+  else if (good) { const H = (gd ? FB2B_HIT_G : FB2B_HIT)[atk]; T = E + (gd ? FB2B_MENU_G : FB2B_MENU)[atk];
     for (let f = E + 1; f <= T; f++) { for (let i = fb2nb(f, ph[0], ph[1]); i; i--) S.s = R.randInt(S.s, 359)[0]; for (const m of H[f - E] || []) ri(m);
       if (f === S.nc) { const c = ri(100); S.nc += c >= 70 ? 48 : 24; if (S.coins) S.coins.push([f, c >= 70]); } S.s = R.adv(S.s); } }
   return { lucky: good, ok7: atk !== 'wave' && atk !== 'recast',     /* v154 (the runner: "turn 7 shield is a failure"); v155 ("fire or lightning ... both work, you survive one HP"): only the wave and the shield fail; the carry to T8 (lucky) follows Body Slam / Claw only (their draws are measured) */ cc: null, atk, T, menu: T, S, gd: good ? !!gd : undefined };     // v133 (the runner: the backup T7 is "No Wave or Shield"): the Star Rod recast (his shield) is a success too; the carry follows only Body Slam / Claw
@@ -352,7 +365,7 @@ function fb2SetP(c) {
   for (const h of FB2.hyps) { const S = { s: h.s, nc: h.nc, coins: [] }; let at = 61;
     for (const cb of combos) { fb2Idle(S, at, cb.P + FB2_DNAI, h.ph); at = Math.max(at, cb.P + FB2_DNAI);
       for (const [so, co, wf] of F) { const a = b7 ? fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co) : fb2AI(S, cb.P + FB2_DNAI, h.ph, so, co, true), w = h.w * cb.w * wf;
-        if (b7 && (a.lucky || a.atk === 'fire')) {     // v164: Fire Breath guarded carries (unguarded: a KO)
+        if (b7 && (a.lucky || a.atk === 'fire' || a.atk === 'ko')) {     // v164: Fire Breath guarded carries (unguarded: a KO); v181: the Lightning too
           out.push({ h, l: cb.l, P: cb.P, a, w: w * (1 - FB2B_GUARD) }); out.push({ h, l: cb.l, P: cb.P, a: fb2AI7(S, cb.P + FB2_DNAI, h.ph, so, co, true), w: w * FB2B_GUARD }); }     // v134: guarded or not
         else out.push({ h, l: cb.l, P: cb.P, a, w }); } } }
   const tot = out.reduce((x, o) => x + o.w, 0), luck = out.reduce((x, o) => x + ((b7 ? o.a.ok7 : o.a.lucky) ? o.w : 0), 0) / tot;
@@ -542,7 +555,7 @@ function fb2HpWatch(t, present) {
 const FB2_ONES = [68, 27, 76, 36], FB2_ONES_T = {"0": "000000000011110000111110011111100110011001100010111001100111111000111100", "9": "011111001111111011000110111001001111110000111100000110000011100000111000", "8": "011111001111110011000110111011100111110011111110111001111111111001111100", "7": "001111100111111111100110010001100000110000011000000110000001100000111000", "6": "000110000011100000110000011110000111110011100110110001100111111001111100", "5": "000111100111111001110000011111001111111011100111000011100001110000111000", "4": "000110000011100001110000011110001110110011001110111111101111110000011000", "3": "001110000111111011111110000011000001100000001100010011101111111001111100", "2": "000110000111110011111110111111100001110000111000011100001111111011111110", "1": "000011000011110001111100001111000001100000011000000110000011100000110000"};
 // v136 (the runner: a guarded Body Slam and a guarded Claw both leave 3, a guarded Fire Breath 1 - v135's table was a guess from code
 // comments and dropped the right states after a guarded Claw): the HP is logged, it weighs nothing (FB2_B7HP_ON) until measured
-const FB2_B7HP_ON = false, FB2_B7HP_N = 20, FB2_B7HP_W = 0.02, FB2_B7HP_SAME = 12000, FB2_B7HP_EXP = { slam: [2, 3], claw: [1, 3], fire: [0, 1] };     // v179: a guarded Claw leaves 3 (emulator)
+const FB2_B7HP_ON = false, FB2_B7HP_N = 20, FB2_B7HP_W = 0.02, FB2_B7HP_SAME = 12000, FB2_B7HP_EXP = { slam: [2, 3], claw: [1, 3], fire: [0, 1], ko: [0, 1] };     // v179: a guarded Claw leaves 3 (emulator)
 function fb2OnesMask() {
   if (window.__fb2OnesTest) return window.__fb2OnesTest();     // (tests: a mask string)
   const [SX, OX, SY, OY] = chgMap(), [x0, y0, x1, y1] = FB2_ONES, g = sample({ x: (OX + x0 * SX) / 1280, y: (OY + y0 * SY) / 720, w: (x1 - x0) * SX / 1280, h: (y1 - y0) * SY / 720 }, 8, 9);
@@ -568,7 +581,7 @@ function fb2B7Watch(t, present) {
   if (d === W.d) W.run++; else { W.d = d; W.run = 1; } if (W.run < FB2_B7HP_N || t < FB2.pT + 1500) return;
   T7.hpRead = d; let keep = 0, tot = 0;
   for (const o of T7.states) { const e = FB2_B7HP_EXP[o.a.atk], want = e ? e[o.a.gd ? 1 : 0] : null; tot += o.w; if (want === d) keep += o.w; else if (FB2_B7HP_ON) o.w *= FB2_B7HP_W; }
-  slog('fb2B7Hp', { hp: d, kept: tot ? +(keep / tot).toFixed(3) : 0, states: T7.states.length, afterMs: Math.round(t - FB2.pT), means: d === 3 ? 'Body Slam guarded' : d === 2 ? 'Body Slam, or Claw guarded' : d === 1 ? 'Claw, Fire Breath or Lightning (v155: all a success; v164: Claw and guarded Fire Breath carry to T8, Lightning not modelled)' : d === 4 ? 'the wave' : 'off the model' });
+  slog('fb2B7Hp', { hp: d, kept: tot ? +(keep / tot).toFixed(3) : 0, states: T7.states.length, afterMs: Math.round(t - FB2.pT), means: d === 3 ? 'Body Slam guarded' : d === 2 ? 'Body Slam, or Claw guarded' : d === 1 ? 'Claw, Fire Breath or Lightning (v155: all a success; v164 / v181: Claw, guarded Fire Breath and guarded Lightning carry to T8)' : d === 4 ? 'the wave' : 'off the model' });
   if (FB2_B7HP_ON && (d === 4 || !(d >= 1 && d <= 3))) { st.msg = 'T7: HP ' + d + ' after Bowser\'s attack (' + (d === 4 ? 'the wave: the route is off' : 'not a Body Slam / Claw') + '). T8\'s beep, if any, is off the model.'; }
   fb2Show(); if (typeof render === 'function') render();
 }
@@ -608,7 +621,7 @@ function fb2PlanT7(cScr) {
   if (!FB2.on || !FB2.t7) return false;
   if (FB2.t7.hit) { FB2.t7.plan = { none: 'hit' }; if (cScr != null) return FB2.t7.plan; if (FB2.t7.hitMsg !== true) { FB2.t7.hitMsg = true; slog('fb2NoEdge', { why: 'hit' }); } st.msg = 'No edge: Bowser hit Mario on T6 (the Close Call missed). Press Power Bounce normally.'; fb2Show(); render(); return true; }
   const G = fb2Goal(), TN = fb2BackupOn() ? 'T8' : 'T7', now = performance.now(), cNow = cScr != null ? cScr : fb2Pic(now + num('vlag')), S = fb2Prune(cNow);
-  if (!S.length || S.doubt >= 0.5) { st.msg = 'No edge: the FB2 states the page kept do not fit what it saw in Bowser\'s turn (the coin' + (fb2BackupOn() ? ', or not a Body Slam / Claw' : ', or the popup frame') + '). Press Power Bounce normally.'; FB2.t7.plan = { none: 'no state fits' }; { const dq = S.doubt != null ? Math.round(S.doubt * 20) : null; if (FB2.t7.nsLogged !== dq) { FB2.t7.nsLogged = dq; slog('fb2NoEdge', { doubt: S.doubt != null ? +S.doubt.toFixed(3) : null, states: S.length }); } }     /* v123: logged when the doubt moves 5 points (console 09:05: 314 lines in 5 s) */ fb2Show(); render(); return true; }
+  if (!S.length || S.doubt >= 0.5) { st.msg = 'No edge: the FB2 states the page kept do not fit what it saw in Bowser\'s turn (the coin' + (fb2BackupOn() ? ', or not a Body Slam / Claw / guarded Fire Breath or Lightning' : ', or the popup frame') + '). Press Power Bounce normally.'; FB2.t7.plan = { none: 'no state fits' }; { const dq = S.doubt != null ? Math.round(S.doubt * 20) : null; if (FB2.t7.nsLogged !== dq) { FB2.t7.nsLogged = dq; slog('fb2NoEdge', { doubt: S.doubt != null ? +S.doubt.toFixed(3) : null, states: S.length }); } }     /* v123: logged when the doubt moves 5 points (console 09:05: 314 lines in 5 s) */ fb2Show(); render(); return true; }
   const tot = S.reduce((a, o) => a + o.w, 0), W = Math.max(0, Math.round(Math.max(1, num('zwwin')) * 1000 / fb2Rate()));
   let from = Math.ceil(cNow + num('lead') * 1000 / fb2Rate() + 1);
   if (cScr == null) for (let i = 0; i < 300 && fb2PressT(from) < earliestPress(now); i++) from++;   // every beep still ahead
