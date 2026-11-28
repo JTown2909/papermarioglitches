@@ -29,6 +29,7 @@ const { chromium } = require('playwright'); const readline = require('readline')
         if (M.readxS != null && T.v111 && T.v111.ev) T.v111.ev('FB14_READX.S = ' + (+M.readxS));     // v179: the emulator capture's Strategies-box read (harness only: the console's v94 +3.4 read 2.3 late here)
         L.lateMs = M.lateMs || 25; L.t0 = null; }
       if (C.cmd === 'set') { if (C.fadeF != null) window.__fb14fadeF = C.fadeF; if (C.truthSeeds) { const o = window.__fb14seeds; window.__fb14seeds = { off: o && C.keepOff ? o.off : C.truthSeeds.off, s: Uint32Array.from(C.truthSeeds.s, x => typeof x === 'string' ? parseInt(x, 16) : x) }; if (C.skipCheck && window.__fb14 && window.__fb14.truthSkipCheck) window.__fb14.truthSkipCheck(); } }
+      if (C.cmd === 'eval') { let r; try { r = T.v111.ev(C.src); } catch (e) { r = 'ERR ' + e; } return { ev: typeof r === 'string' ? r : JSON.stringify(r) }; }     // v182 (diagnostics)
       if (C.cmd === 'refs') { const tg = JSON.parse(localStorage.getItem('tot-targets') || '{}');
         for (const [cat, u] of [['M', C.refM], ['S', C.refS], ['B', C.refB]]) { if (!u) continue; const im = await img(u), vf = new VideoFrame(im, { timestamp: 0 });
           const keep = T.V.src; T.V.src = vf; const g = F.sample(BOX[cat], 24, 16), ref = []; for (let k = 0; k < g.length; k += 4) ref.push((g[k] + g[k + 1] + g[k + 2]) / 3); T.V.src = keep; vf.close(); im.close(); tg['jr_' + cat] = { box: BOX[cat], ref }; }
